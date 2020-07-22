@@ -1,0 +1,25 @@
+[package]
+name = "taskwarrior-tui"
+version = "0.1.0"
+authors = ["Dheepak Krishnamurthy <me@kdheepak.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+default = ["termion-backend"]
+termion-backend = ["tui/termion", "termion"]
+crossterm-backend = ["tui/crossterm", "crossterm"]
+
+[dependencies]
+clap = "*"
+tui = "0.10.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+task-hookrs = "0.7.0"
+termion = { version = "1.5.4", optional = true }
+crossterm = { version = "0.14.2", optional = true }
+rand = "0.7"
+shlex = "0.1.1"
+chrono = "0.4"
+unicode-width = "0.1"
