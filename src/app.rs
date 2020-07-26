@@ -5,13 +5,13 @@ use std::cmp::Ordering;
 use std::convert::TryInto;
 use std::process::Command;
 
+use task_hookrs::date::Date;
 use task_hookrs::import::import;
 use task_hookrs::task::Task;
 use task_hookrs::uda::UDAValue;
-use task_hookrs::date::Date;
 use unicode_width::UnicodeWidthStr;
 
-use chrono::{Local, DateTime, TimeZone, Duration, NaiveDateTime};
+use chrono::{DateTime, Duration, Local, NaiveDateTime, TimeZone};
 
 use tui::{
     backend::{Backend, TermionBackend},
@@ -19,7 +19,7 @@ use tui::{
     style::{Color, Modifier, Style},
     terminal::Frame,
     text::Text,
-    widgets::{BarChart, Block, Borders, Row, Paragraph, Table, TableState},
+    widgets::{BarChart, Block, Borders, Paragraph, Row, Table, TableState},
     Terminal,
 };
 
@@ -90,11 +90,14 @@ impl App {
 
     pub fn draw(&mut self, f: &mut Frame<impl Backend>) {
         let rects = Layout::default()
-            .constraints([
-                Constraint::Percentage(48),
-                Constraint::Percentage(48),
-                Constraint::Max(3),
-            ].as_ref())
+            .constraints(
+                [
+                    Constraint::Percentage(48),
+                    Constraint::Percentage(48),
+                    Constraint::Max(3),
+                ]
+                .as_ref(),
+            )
             .split(f.size());
         self.draw_task_report(f, rects[0]);
         self.draw_task_details(f, rects[1]);
@@ -121,7 +124,12 @@ impl App {
 
     fn draw_task_details(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
         if self.tasks.len() == 0 {
-            f.render_widget(Block::default().borders(Borders::ALL).title("Task not found"), rect);
+            f.render_widget(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title("Task not found"),
+                rect,
+            );
             return ();
         }
         let selected = self.state.selected().unwrap_or_default();
@@ -130,11 +138,17 @@ impl App {
             .arg(format!("{}", task_id))
             .output()
             .expect(
-                &format!("Unable to show details for `task {}`. Check documentation for more information", task_id)[..]
-            );
+            &format!(
+                "Unable to show details for `task {}`. Check documentation for more information",
+                task_id
+            )[..],
+        );
         let data = String::from_utf8(output.stdout).unwrap();
-        let p = Paragraph::new(Text::from(&data[..]))
-            .block(Block::default().borders(Borders::ALL).title(format!("Task {}", task_id)));
+        let p = Paragraph::new(Text::from(&data[..])).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(format!("Task {}", task_id)),
+        );
         f.render_widget(p, rect);
     }
 
@@ -146,7 +160,10 @@ impl App {
 
         let (tasks, headers, widths) = self.task_report();
         if tasks.len() == 0 {
-            f.render_widget(Block::default().borders(Borders::ALL).title("Task next"), rect);
+            f.render_widget(
+                Block::default().borders(Borders::ALL).title("Task next"),
+                rect,
+            );
             return ();
         }
         let header = headers.iter();
@@ -155,7 +172,9 @@ impl App {
             .map(|i| Row::StyledData(i.iter(), normal_style));
         let constraints: Vec<Constraint> = widths
             .iter()
-            .map(|i| Constraint::Percentage(std::cmp::min(50, std::cmp::max(*i, 5)).try_into().unwrap()))
+            .map(|i| {
+                Constraint::Percentage(std::cmp::min(50, std::cmp::max(*i, 5)).try_into().unwrap())
+            })
             .collect();
 
         let t = Table::new(header, rows)
@@ -344,9 +363,8 @@ impl App {
                 self.tasks = i;
                 self.tasks.sort_by(cmp);
             }
-            _ => ()
+            _ => (),
         }
-
     }
 }
 

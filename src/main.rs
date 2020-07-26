@@ -7,7 +7,8 @@ mod util;
 #[allow(dead_code)]
 mod app;
 
-use crate::util::{Event, Events, Config};
+use crate::util::{Config, Event, Events};
+use std::time::Duration;
 use std::{error::Error, io};
 use termion::{
     event::Key,
@@ -17,7 +18,6 @@ use termion::{
 };
 use tui::{backend::TermionBackend, Terminal};
 use unicode_width::UnicodeWidthStr;
-use std::time::Duration;
 
 use app::App;
 use app::InputMode;
@@ -37,7 +37,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut terminal = setup_terminal()?;
 
     // Setup event handlers
-    let events = Events::with_config(Config{
+    let events = Events::with_config(Config {
         exit_key: Key::Char('q'),
         tick_rate: Duration::from_secs(5),
     });
@@ -53,16 +53,16 @@ fn main() -> Result<(), Box<dyn Error>> {
             match app.input_mode {
                 InputMode::Normal => match input {
                     Key::Ctrl('c') | Key::Char('q') => break,
-                    Key::Char('r')                  => app.update(),
-                    Key::Down | Key::Char('j')      => app.next(),
-                    Key::Up | Key::Char('k')        => app.previous(),
+                    Key::Char('r') => app.update(),
+                    Key::Down | Key::Char('j') => app.next(),
+                    Key::Up | Key::Char('k') => app.previous(),
                     Key::Char('i') => {
                         app.input_mode = InputMode::Command;
                     }
-                    _ => {},
+                    _ => {}
                 },
                 InputMode::Command => match input {
-                     Key::Char('\n') | Key::Esc => {
+                    Key::Char('\n') | Key::Esc => {
                         app.input_mode = InputMode::Normal;
                     }
                     Key::Char(c) => {
