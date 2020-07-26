@@ -49,33 +49,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         terminal.draw(|mut frame| app.draw(&mut frame)).unwrap();
 
         // Handle input
-        if let Event::Input(input) = events.next()? {
-            match app.input_mode {
-                InputMode::Normal => match input {
-                    Key::Ctrl('c') | Key::Char('q') => break,
-                    Key::Char('r') => app.update(),
-                    Key::Down | Key::Char('j') => app.next(),
-                    Key::Up | Key::Char('k') => app.previous(),
-                    Key::Char('i') => {
-                        app.input_mode = InputMode::Command;
-                    }
-                    _ => {}
-                },
-                InputMode::Command => match input {
-                    Key::Char('\n') | Key::Esc => {
-                        app.input_mode = InputMode::Normal;
-                    }
-                    Key::Char(c) => {
-                        app.filter.push(c);
-                        app.update();
-                    }
-                    Key::Backspace => {
-                        app.filter.pop();
-                        app.update();
-                    }
-                    _ => {}
-                },
-            }
+        match events.next()? {
+            Event::Input(input) => app.handle_input(input),
+            Event::Tick => app.handle_tick(),
+        }
+
+        if app.should_quit {
+            break
         }
     }
 

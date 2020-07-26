@@ -23,6 +23,10 @@ use tui::{
     Terminal,
 };
 
+use termion::event::Key;
+use crate::util::{Config, Event, Events};
+
+
 pub fn cmp(t1: &Task, t2: &Task) -> Ordering {
     let urgency1 = match &t1.uda()["urgency"] {
         UDAValue::Str(_) => 0.0,
@@ -366,6 +370,38 @@ impl App {
             _ => (),
         }
     }
+
+    pub fn handle_tick(&mut self) {
+        self.update();
+    }
+
+    pub fn handle_input(&mut self, event: ::termion::event::Key) {
+        match self.input_mode {
+            InputMode::Normal => match event {
+                Key::Ctrl('c') | Key::Char('q') => self.should_quit = true,
+                Key::Char('r') => self.update(),
+                Key::Down | Key::Char('j') => self.next(),
+                Key::Up | Key::Char('k') => self.previous(),
+                Key::Char('i') => {
+                    self.input_mode = InputMode::Command;
+                }
+                _ => {}
+            },
+            InputMode::Command => match event {
+                Key::Char('\n') | Key::Esc => {
+                    self.input_mode = InputMode::Normal;
+                }
+                Key::Char(c) => {
+                    self.filter.push(c);
+                }
+                Key::Backspace => {
+                    self.filter.pop();
+                }
+                _ => {}
+            },
+        }
+    }
+
 }
 
 #[cfg(test)]
