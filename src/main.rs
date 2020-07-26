@@ -18,6 +18,8 @@ use termion::{
 };
 use tui::{backend::TermionBackend, Terminal};
 use unicode_width::UnicodeWidthStr;
+use std::env;
+use std::process::Command;
 
 use app::App;
 use app::InputMode;
@@ -33,13 +35,14 @@ fn setup_terminal() -> Result<Terminal<B>, io::Error> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
+
     // Terminal initialization
     let mut terminal = setup_terminal()?;
 
     // Setup event handlers
     let mut events = Events::with_config(Config {
         exit_key: Key::Char('q'),
-        tick_rate: Duration::from_secs(1),
+        tick_rate: Duration::from_millis(250),
     });
     events.disable_exit_key();
 
@@ -59,6 +62,5 @@ fn main() -> Result<(), Box<dyn Error>> {
             break
         }
     }
-
     Ok(())
 }
