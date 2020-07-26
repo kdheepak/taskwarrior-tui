@@ -37,10 +37,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut terminal = setup_terminal()?;
 
     // Setup event handlers
-    let events = Events::with_config(Config {
+    let mut events = Events::with_config(Config {
         exit_key: Key::Char('q'),
-        tick_rate: Duration::from_secs(5),
+        tick_rate: Duration::from_secs(1),
     });
+    events.disable_exit_key();
 
     let mut app = App::new();
     app.next();
