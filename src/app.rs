@@ -382,7 +382,7 @@ impl App {
                 Key::Char('r') => self.update(),
                 Key::Down | Key::Char('j') => self.next(),
                 Key::Up | Key::Char('k') => self.previous(),
-                Key::Char('i') => {
+                Key::Char('/') => {
                     self.input_mode = InputMode::Command;
                 }
                 _ => {}
