@@ -1,0 +1,48 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            rust_flags: ''
+          - os: macOS-latest
+            target: x86_64-apple-darwin
+            rust_flags: ''
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            rust_flags: -C target-feature=+crt-static
+    env:
+      RUSTFLAGS: ${{ matrix.rust_flags }}
+      MACOSX_DEPLOYMENT_TARGET: 10.7
+    steps:
+      - uses: actions/checkout@master
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+          default: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --all-features --target=${{ matrix.target }}
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --release --all-features --target=${{ matrix.target }}
+      - run: mv target/${{ matrix.target }}/release/taskwarrior-tui taskwarrior-tui-${{ matrix.target }}
+        if: matrix.os != 'windows-latest'
+      - run: move target\${{ matrix.target }}\release\taskwarrior-tui.exe taskwarrior-tui-${{ matrix.target }}.exe
+        if: matrix.os == 'windows-latest'
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: taskwarrior-tui-*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
