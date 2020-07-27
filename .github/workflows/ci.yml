@@ -31,7 +31,7 @@ jobs:
         if: matrix.os != 'windows-latest'
         with:
           command: build
-          args: --release --target=${{ matrix.target }}
+          args: --release --features=termion-backend --target=${{ matrix.target }}
       - uses: actions-rs/cargo@v1
         if: matrix.os == 'windows-latest'
         with:
