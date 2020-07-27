@@ -18,7 +18,6 @@ use tui::backend::Backend;
 use unicode_width::UnicodeWidthStr;
 
 use app::App;
-use app::InputMode;
 
 fn main() -> Result<(), Box<dyn Error>> {
     // Terminal initialization

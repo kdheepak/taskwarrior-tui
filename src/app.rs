@@ -60,8 +60,8 @@ pub fn vague_format_date_time(dt: &Date) -> String {
     }
 }
 
-pub enum InputMode {
-    Normal,
+pub enum AppMode {
+    Report,
     Command,
 }
 
@@ -72,7 +72,7 @@ pub struct App {
     pub tasks: Vec<Task>,
     pub task_report_labels: Vec<String>,
     pub task_report_columns: Vec<String>,
-    pub input_mode: InputMode,
+    pub mode: AppMode,
 }
 
 impl App {
@@ -84,7 +84,7 @@ impl App {
             task_report_labels: vec![],
             task_report_columns: vec![],
             filter: "status:pending ".to_string(),
-            input_mode: InputMode::Normal,
+            mode: AppMode::Report,
         };
         app.update();
         app
@@ -104,9 +104,9 @@ impl App {
         self.draw_task_report(f, rects[0]);
         self.draw_task_details(f, rects[1]);
         self.draw_command(f, rects[2]);
-        match self.input_mode {
-            InputMode::Normal => (),
-            InputMode::Command => {
+        match self.mode {
+            AppMode::Report => (),
+            AppMode::Command => {
                 // Make the cursor visible and ask tui-rs to put it at the specified coordinates after rendering
                 f.set_cursor(
                     // Put cursor past the end of the input text
@@ -381,20 +381,20 @@ impl App {
     }
 
     pub fn handle_input(&mut self, event: Key) {
-        match self.input_mode {
-            InputMode::Normal => match event {
+        match self.mode {
+            AppMode::Report => match event {
                 Key::Ctrl('c') | Key::Char('q') => self.should_quit = true,
                 Key::Char('r') => self.update(),
                 Key::Down | Key::Char('j') => self.next(),
                 Key::Up | Key::Char('k') => self.previous(),
                 Key::Char('/') => {
-                    self.input_mode = InputMode::Command;
+                    self.mode = AppMode::Command;
                 }
                 _ => {}
             },
-            InputMode::Command => match event {
+            AppMode::Command => match event {
                 Key::Char('\n') | Key::Esc => {
-                    self.input_mode = InputMode::Normal;
+                    self.mode = AppMode::Report;
                 }
                 Key::Char(c) => {
                     self.filter.push(c);
