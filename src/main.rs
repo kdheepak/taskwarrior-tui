@@ -7,21 +7,20 @@ mod util;
 #[allow(dead_code)]
 mod app;
 
-use crate::util::{EventConfig, Event, Events, setup_terminal, destruct_terminal};
-use std::time::{Duration, Instant};
+use crate::util::{destruct_terminal, setup_terminal, Event, EventConfig, Events};
+use std::env;
 use std::error::Error;
-use std::io::{stdout, Write};
 use std::io;
+use std::io::{stdout, Write};
+use std::process::Command;
+use std::time::{Duration, Instant};
 use tui::backend::Backend;
 use unicode_width::UnicodeWidthStr;
-use std::env;
-use std::process::Command;
 
 use app::App;
 use app::InputMode;
 
 fn main() -> Result<(), Box<dyn Error>> {
-
     // Terminal initialization
     let mut terminal = setup_terminal();
     terminal.clear()?;
@@ -45,7 +44,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         if app.should_quit {
             destruct_terminal(terminal);
-            break
+            break;
         }
     }
     Ok(())

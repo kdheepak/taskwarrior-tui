@@ -7,11 +7,10 @@ use crossterm::{
 #[cfg(feature = "crossterm")]
 use tui::{backend::CrosstermBackend, Terminal};
 
-
 #[cfg(all(feature = "termion", not(feature = "crossterm")))]
 use termion::{
     event,
-    input::{TermRead,MouseTerminal},
+    input::{MouseTerminal, TermRead},
     raw::{IntoRawMode, RawTerminal},
     screen::AlternateScreen,
 };
@@ -45,21 +44,21 @@ pub enum Key {
 
 #[derive(Debug, Clone, Copy)]
 pub struct EventConfig {
-  pub tick_rate: Duration,
+    pub tick_rate: Duration,
 }
 
 impl Default for EventConfig {
-  fn default() -> EventConfig {
-    EventConfig {
-      tick_rate: Duration::from_millis(5),
+    fn default() -> EventConfig {
+        EventConfig {
+            tick_rate: Duration::from_millis(5),
+        }
     }
-  }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub enum Event<I> {
-  Input(I),
-  Tick,
+    Input(I),
+    Tick,
 }
 
 #[cfg(feature = "crossterm")]
@@ -78,9 +77,9 @@ pub fn destruct_terminal(mut terminal: Terminal<CrosstermBackend<io::Stdout>>) {
     terminal.show_cursor().unwrap();
 }
 
-
 #[cfg(all(feature = "termion", not(feature = "crossterm")))]
-pub fn setup_terminal() -> Terminal<TermionBackend<AlternateScreen<MouseTerminal<RawTerminal<io::Stdout>>>>> {
+pub fn setup_terminal(
+) -> Terminal<TermionBackend<AlternateScreen<MouseTerminal<RawTerminal<io::Stdout>>>>> {
     let stdout = io::stdout().into_raw_mode().unwrap();
     let stdout = MouseTerminal::from(stdout);
     let stdout = AlternateScreen::from(stdout);
@@ -89,68 +88,69 @@ pub fn setup_terminal() -> Terminal<TermionBackend<AlternateScreen<MouseTerminal
 }
 
 #[cfg(all(feature = "termion", not(feature = "crossterm")))]
-pub fn destruct_terminal(terminal: Terminal<TermionBackend<AlternateScreen<MouseTerminal<RawTerminal<io::Stdout>>>>> ) {
+pub fn destruct_terminal(
+    terminal: Terminal<TermionBackend<AlternateScreen<MouseTerminal<RawTerminal<io::Stdout>>>>>,
+) {
 }
 
-
 pub struct Events {
-  rx: mpsc::Receiver<Event<Key>>,
+    rx: mpsc::Receiver<Event<Key>>,
 }
 
 impl Events {
-  /// Constructs an new instance of `Events` with the default config.
-  pub fn new(tick_rate: u64) -> Events {
-    Events::with_config(EventConfig {
-      tick_rate: Duration::from_millis(tick_rate),
-      ..Default::default()
-    })
-  }
+    /// Constructs an new instance of `Events` with the default config.
+    pub fn new(tick_rate: u64) -> Events {
+        Events::with_config(EventConfig {
+            tick_rate: Duration::from_millis(tick_rate),
+            ..Default::default()
+        })
+    }
 
-  #[cfg(feature = "crossterm")]
-  pub fn with_config(config: EventConfig) -> Events {
-    use crossterm::event::{KeyCode::*, KeyModifiers};
-    let (tx, rx) = mpsc::channel();
+    #[cfg(feature = "crossterm")]
+    pub fn with_config(config: EventConfig) -> Events {
+        use crossterm::event::{KeyCode::*, KeyModifiers};
+        let (tx, rx) = mpsc::channel();
 
-    let event_tx = tx.clone();
-    thread::spawn(move || {
-      loop {
-        // poll for tick rate duration, if no event, sent tick event.
-        if event::poll(config.tick_rate).unwrap() {
-          if let event::Event::Key(key) = event::read().unwrap() {
-            let key = match key.code {
-                Backspace => Key::Backspace,
-                Enter => Key::Char('\n'),
-                Left => Key::Left,
-                Right => Key::Right,
-                Up => Key::Up,
-                Down => Key::Down,
-                Home => Key::Home,
-                End => Key::End,
-                PageUp => Key::PageUp,
-                PageDown => Key::PageDown,
-                Tab => Key::Char('\t'),
-                BackTab => Key::BackTab,
-                Delete => Key::Delete,
-                Insert => Key::Insert,
-                F(k) => Key::F(k),
-                Null => Key::Null,
-                Esc => Key::Esc,
-                Char(c) => match key.modifiers {
-                    KeyModifiers::NONE | KeyModifiers::SHIFT => Key::Char(c),
-                    KeyModifiers::CONTROL => Key::Ctrl(c),
-                    KeyModifiers::ALT => Key::Alt(c),
-                    _ => Key::Null,
-                },
-            };
-            event_tx.send(Event::Input(key)).unwrap();
-          }
-        }
+        let event_tx = tx.clone();
+        thread::spawn(move || {
+            loop {
+                // poll for tick rate duration, if no event, sent tick event.
+                if event::poll(config.tick_rate).unwrap() {
+                    if let event::Event::Key(key) = event::read().unwrap() {
+                        let key = match key.code {
+                            Backspace => Key::Backspace,
+                            Enter => Key::Char('\n'),
+                            Left => Key::Left,
+                            Right => Key::Right,
+                            Up => Key::Up,
+                            Down => Key::Down,
+                            Home => Key::Home,
+                            End => Key::End,
+                            PageUp => Key::PageUp,
+                            PageDown => Key::PageDown,
+                            Tab => Key::Char('\t'),
+                            BackTab => Key::BackTab,
+                            Delete => Key::Delete,
+                            Insert => Key::Insert,
+                            F(k) => Key::F(k),
+                            Null => Key::Null,
+                            Esc => Key::Esc,
+                            Char(c) => match key.modifiers {
+                                KeyModifiers::NONE | KeyModifiers::SHIFT => Key::Char(c),
+                                KeyModifiers::CONTROL => Key::Ctrl(c),
+                                KeyModifiers::ALT => Key::Alt(c),
+                                _ => Key::Null,
+                            },
+                        };
+                        event_tx.send(Event::Input(key)).unwrap();
+                    }
+                }
 
-        event_tx.send(Event::Tick).unwrap();
-      }
-    });
-    Events { rx }
-  }
+                event_tx.send(Event::Tick).unwrap();
+            }
+        });
+        Events { rx }
+    }
 
     #[cfg(all(feature = "termion", not(feature = "crossterm")))]
     pub fn with_config(config: EventConfig) -> Events {
@@ -199,12 +199,12 @@ impl Events {
                 thread::sleep(config.tick_rate);
             })
         };
-        Events {rx}
+        Events { rx }
     }
 
-  /// Attempts to read an event.
-  /// This function will block the current thread.
-  pub fn next(&self) -> Result<Event<Key>, mpsc::RecvError> {
-    self.rx.recv()
-  }
+    /// Attempts to read an event.
+    /// This function will block the current thread.
+    pub fn next(&self) -> Result<Event<Key>, mpsc::RecvError> {
+        self.rx.recv()
+    }
 }

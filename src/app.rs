@@ -14,7 +14,7 @@ use unicode_width::UnicodeWidthStr;
 use chrono::{DateTime, Duration, Local, NaiveDateTime, TimeZone};
 
 use tui::{
-    backend::{Backend},
+    backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     terminal::Frame,
@@ -23,7 +23,7 @@ use tui::{
     Terminal,
 };
 
-use crate::util::{Key};
+use crate::util::Key;
 
 pub fn cmp(t1: &Task, t2: &Task) -> Ordering {
     let urgency1 = match &t1.uda()["urgency"] {
@@ -140,11 +140,11 @@ impl App {
             .arg(format!("{}", task_id))
             .output()
             .expect(
-            &format!(
+                &format!(
                 "Unable to show details for `task {}`. Check documentation for more information",
                 task_id
             )[..],
-        );
+            );
         let data = String::from_utf8(output.stdout).unwrap();
         let p = Paragraph::new(Text::from(&data[..])).block(
             Block::default()
@@ -277,7 +277,7 @@ impl App {
     }
     pub fn next(&mut self) {
         if self.tasks.len() == 0 {
-            return
+            return;
         }
         let i = match self.state.selected() {
             Some(i) => {
@@ -293,7 +293,7 @@ impl App {
     }
     pub fn previous(&mut self) {
         if self.tasks.len() == 0 {
-            return
+            return;
         }
         let i = match self.state.selected() {
             Some(i) => {
@@ -406,7 +406,6 @@ impl App {
             },
         }
     }
-
 }
 
 #[cfg(test)]
