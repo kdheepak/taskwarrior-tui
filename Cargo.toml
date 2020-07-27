@@ -1,6 +1,6 @@
 [package]
 name = "taskwarrior-tui"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Dheepak Krishnamurthy <me@kdheepak.com>"]
 edition = "2018"
 
