@@ -11,30 +11,58 @@ jobs:
             target: x86_64-apple-darwin
             rust_flags: ''
             features: ''
+            target_binary: 'target/x86_64-apple-darwin/release/taskwarrior-tui'
+            binary: 'taskwarrior-tui-x86_64-apple-darwin'
+            upx_args: --best
+            strip: true
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             rust_flags: ''
             features: ''
+            target_binary: 'target/x86_64-unknown-linux-gnu/release/taskwarrior-tui'
+            binary: 'taskwarrior-tui-x86_64-unknown-linux-gnu'
+            upx_args: --best --lzma
+            strip: true
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             rust_flags: ''
             features: ''
+            target_binary: 'target/x86_64-unknown-linux-musl/release/taskwarrior-tui'
+            binary: 'taskwarrior-tui-x86_64-unknown-linux-musl'
+            upx_args: --best --lzma
+            strip: true
           - os: ubuntu-latest
             target: i686-unknown-linux-musl
             rust_flags: ''
             features: ''
+            target_binary: 'target/i686-unknown-linux-musl/release/taskwarrior-tui'
+            binary: 'taskwarrior-tui-i686-unknown-linux-musl'
+            upx_args: --best --lzma
+            strip: true
           - os: windows-latest
             target: x86_64-pc-windows-gnu
             rust_flags: -C target-feature=+crt-static
             features: '--no-default-features --features=crossterm-backend'
+            target_binary: 'target\x86_64-pc-windows-gnu\release\taskwarrior-tui.exe'
+            binary: 'taskwarrior-tui-x86_64-pc-windows-gnu.exe'
+            upx_args: -9
+            strip: false
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             rust_flags: -C target-feature=+crt-static
             features: '--no-default-features --features=crossterm-backend'
+            target_binary: 'target\x86_64-pc-windows-msvc\release\taskwarrior-tui.exe'
+            binary: 'taskwarrior-tui-x86_64-pc-windows-msvc.exe'
+            upx_args: -9
+            strip: false
           - os: windows-latest
             target: i686-pc-windows-msvc
             rust_flags: -C target-feature=+crt-static
             features: '--no-default-features --features=crossterm-backend'
+            target_binary: 'target\i686-pc-windows-msvc\release\taskwarrior-tui.exe'
+            binary: 'taskwarrior-tui-i686-pc-windows-msvc.exe'
+            upx_args: -9
+            strip: false
     env:
       RUSTFLAGS: ${{ matrix.rust_flags }}
       MACOSX_DEPLOYMENT_TARGET: 10.7
@@ -53,10 +81,13 @@ jobs:
       # with:
         # command: test
         # args: --release --target=${{ matrix.target }}
-      - run: mv target/${{ matrix.target }}/release/taskwarrior-tui taskwarrior-tui-${{ matrix.target }}
-        if: matrix.os != 'windows-latest'
-      - run: move target\${{ matrix.target }}\release\taskwarrior-tui.exe taskwarrior-tui-${{ matrix.target }}.exe
-        if: matrix.os == 'windows-latest'
+      - name: Compress binaries
+        uses: svenstaro/upx-action@v2
+        with:
+          file: ${{ matrix.target_binary }}
+          args: ${{ matrix.upx_args }}
+          strip: ${{ matrix.strip }}
+      - run: mv ${{ matrix.target_binary }} ${{ matrix.binary }}
       - name: Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
