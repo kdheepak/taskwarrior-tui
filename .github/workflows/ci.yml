@@ -20,31 +20,19 @@ jobs:
             rust_flags: ''
             features: ''
           - os: ubuntu-latest
-            target: i686-unknown-linux-gnu
-            rust_flags: ''
-            features: ''
-          - os: ubuntu-latest
             target: i686-unknown-linux-musl
             rust_flags: ''
             features: ''
-          - os: ubuntu-latest
-            target: arm-unknown-linux-gnueabihf
-            rust_flags: ''
-            features: ''
-          - os: windows-latest
-            target: i686-pc-windows-gnu
-            rust_flags: -C target-feature=+crt-static
-            features: '--no-default-features --features=crossterm-backend'
-          - os: windows-latest
-            target: i686-pc-windows-msvc
-            rust_flags: -C target-feature=+crt-static
-            features: '--no-default-features --features=crossterm-backend'
           - os: windows-latest
             target: x86_64-pc-windows-gnu
             rust_flags: -C target-feature=+crt-static
             features: '--no-default-features --features=crossterm-backend'
           - os: windows-latest
             target: x86_64-pc-windows-msvc
+            rust_flags: -C target-feature=+crt-static
+            features: '--no-default-features --features=crossterm-backend'
+          - os: windows-latest
+            target: i686-pc-windows-msvc
             rust_flags: -C target-feature=+crt-static
             features: '--no-default-features --features=crossterm-backend'
     env:
