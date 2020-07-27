@@ -25,8 +25,6 @@ use tui::{
 
 use crate::util::{Key};
 
-use crossterm::event::KeyCode;
-
 pub fn cmp(t1: &Task, t2: &Task) -> Ordering {
     let urgency1 = match &t1.uda()["urgency"] {
         UDAValue::Str(_) => 0.0,
