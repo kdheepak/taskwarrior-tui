@@ -7,16 +7,12 @@ mod util;
 #[allow(dead_code)]
 mod app;
 
-use crate::util::{Config, Event, Events};
-use std::time::Duration;
-use std::{error::Error, io};
-use termion::{
-    event::Key,
-    input::MouseTerminal,
-    raw::{IntoRawMode, RawTerminal},
-    screen::AlternateScreen,
-};
-use tui::{backend::TermionBackend, Terminal};
+use crate::util::{EventConfig, Event, Events, setup_terminal, destruct_terminal};
+use std::time::{Duration, Instant};
+use std::error::Error;
+use std::io::{stdout, Write};
+use std::io;
+use tui::backend::Backend;
 use unicode_width::UnicodeWidthStr;
 use std::env;
 use std::process::Command;
@@ -24,27 +20,16 @@ use std::process::Command;
 use app::App;
 use app::InputMode;
 
-type B = TermionBackend<AlternateScreen<MouseTerminal<RawTerminal<io::Stdout>>>>;
-
-fn setup_terminal() -> Result<Terminal<B>, io::Error> {
-    let stdout = io::stdout().into_raw_mode()?;
-    let stdout = MouseTerminal::from(stdout);
-    let stdout = AlternateScreen::from(stdout);
-    let backend = TermionBackend::new(stdout);
-    Terminal::new(backend)
-}
-
 fn main() -> Result<(), Box<dyn Error>> {
 
     // Terminal initialization
-    let mut terminal = setup_terminal()?;
+    let mut terminal = setup_terminal();
+    terminal.clear()?;
 
     // Setup event handlers
-    let mut events = Events::with_config(Config {
-        exit_key: Key::Char('q'),
+    let events = Events::with_config(EventConfig {
         tick_rate: Duration::from_millis(250),
     });
-    events.disable_exit_key();
 
     let mut app = App::new();
     app.next();
@@ -59,6 +44,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
 
         if app.should_quit {
+            destruct_terminal(terminal);
             break
         }
     }

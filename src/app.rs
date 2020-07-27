@@ -14,7 +14,7 @@ use unicode_width::UnicodeWidthStr;
 use chrono::{DateTime, Duration, Local, NaiveDateTime, TimeZone};
 
 use tui::{
-    backend::{Backend, TermionBackend},
+    backend::{Backend},
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     terminal::Frame,
@@ -23,9 +23,9 @@ use tui::{
     Terminal,
 };
 
-use termion::event::Key;
-use crate::util::{Config, Event, Events};
+use crate::util::{Key};
 
+use crossterm::event::KeyCode;
 
 pub fn cmp(t1: &Task, t2: &Task) -> Ordering {
     let urgency1 = match &t1.uda()["urgency"] {
@@ -382,7 +382,7 @@ impl App {
         self.update();
     }
 
-    pub fn handle_input(&mut self, event: ::termion::event::Key) {
+    pub fn handle_input(&mut self, event: Key) {
         match self.input_mode {
             InputMode::Normal => match event {
                 Key::Ctrl('c') | Key::Char('q') => self.should_quit = true,
