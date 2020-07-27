@@ -143,7 +143,7 @@ impl App {
                 &format!(
                 "Unable to show details for `task {}`. Check documentation for more information",
                 task_id
-            )[..],
+                )[..],
             );
         let data = String::from_utf8(output.stdout).unwrap();
         let p = Paragraph::new(Text::from(&data[..])).block(
@@ -380,6 +380,35 @@ impl App {
         self.update();
     }
 
+    pub fn task_done(&mut self) {
+        if self.tasks.len() == 0 {
+            return
+        }
+        let selected = self.state.selected().unwrap_or_default();
+        let task_id = self.tasks[selected].id().unwrap_or_default();
+        let output = Command::new("task")
+            .arg("done")
+            .arg(format!("{}", task_id))
+            .output()
+            .expect(
+                &format!(
+                "Cannot run `task done` for task `{}`. Check documentation for more information",
+                task_id
+                )[..],
+            );
+    }
+
+    pub fn task_undo(&self) {
+        if self.tasks.len() == 0 {
+            return
+        }
+        let output = Command::new("task")
+            .arg("rc.confirmation=off")
+            .arg("undo")
+            .output()
+            .expect("Cannot run `task undo`. Check documentation for more information");
+    }
+
     pub fn handle_input(&mut self, event: Key) {
         match self.mode {
             AppMode::Report => match event {
@@ -387,6 +416,8 @@ impl App {
                 Key::Char('r') => self.update(),
                 Key::Down | Key::Char('j') => self.next(),
                 Key::Up | Key::Char('k') => self.previous(),
+                Key::Char('d') => self.task_done(),
+                Key::Char('u') => self.task_undo(),
                 Key::Char('/') => {
                     self.mode = AppMode::Filter;
                 }
