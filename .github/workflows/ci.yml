@@ -30,11 +30,11 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release --all-features --target=${{ matrix.target }}
+          args: --release --target=${{ matrix.target }}
     # - uses: actions-rs/cargo@v1
       # with:
         # command: test
-        # args: --release --all-features --target=${{ matrix.target }}
+        # args: --release --target=${{ matrix.target }}
       - run: mv target/${{ matrix.target }}/release/taskwarrior-tui taskwarrior-tui-${{ matrix.target }}
         if: matrix.os != 'windows-latest'
       - run: move target\${{ matrix.target }}\release\taskwarrior-tui.exe taskwarrior-tui-${{ matrix.target }}.exe
