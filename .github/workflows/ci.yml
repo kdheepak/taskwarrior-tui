@@ -6,7 +6,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
@@ -14,9 +14,9 @@ jobs:
           - os: macOS-latest
             target: x86_64-apple-darwin
             rust_flags: ''
-        # - os: windows-latest
-          # target: x86_64-pc-windows-msvc
-          # rust_flags: -C target-feature=+crt-static
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            rust_flags: -C target-feature=+crt-static
     env:
       RUSTFLAGS: ${{ matrix.rust_flags }}
       MACOSX_DEPLOYMENT_TARGET: 10.7
@@ -28,9 +28,15 @@ jobs:
           target: ${{ matrix.target }}
           default: true
       - uses: actions-rs/cargo@v1
+        if: matrix.os != 'windows-latest'
         with:
           command: build
           args: --release --target=${{ matrix.target }}
+      - uses: actions-rs/cargo@v1
+        if: matrix.os == 'windows-latest'
+        with:
+          command: build
+          args: --release --features=crossterm-backend --target=${{ matrix.target }}
     # - uses: actions-rs/cargo@v1
       # with:
         # command: test
