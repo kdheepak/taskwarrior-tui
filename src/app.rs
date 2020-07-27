@@ -278,6 +278,9 @@ impl App {
         self.export_headers();
     }
     pub fn next(&mut self) {
+        if self.tasks.len() == 0 {
+            return
+        }
         let i = match self.state.selected() {
             Some(i) => {
                 if i >= self.tasks.len() - 1 {
@@ -291,6 +294,9 @@ impl App {
         self.state.select(Some(i));
     }
     pub fn previous(&mut self) {
+        if self.tasks.len() == 0 {
+            return
+        }
         let i = match self.state.selected() {
             Some(i) => {
                 if i == 0 {
@@ -344,6 +350,7 @@ impl App {
     pub fn export_tasks(&mut self) {
         let mut task = Command::new("task");
 
+        task.arg("rc.json.array=on");
         task.arg("export");
 
         match split(&self.filter) {
@@ -416,6 +423,8 @@ mod tests {
     fn test_app() {
         let mut app = App::new();
         app.update();
+
+        println!("{:?}", app.tasks);
 
         println!("{:?}", app.task_report_columns);
         println!("{:?}", app.task_report_labels);
