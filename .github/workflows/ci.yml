@@ -11,12 +11,15 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             rust_flags: ''
+            features: ''
           - os: macOS-latest
             target: x86_64-apple-darwin
             rust_flags: ''
+            features: ''
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             rust_flags: -C target-feature=+crt-static
+            features: '--no-default-features --features=crossterm-backend'
     env:
       RUSTFLAGS: ${{ matrix.rust_flags }}
       MACOSX_DEPLOYMENT_TARGET: 10.7
@@ -28,15 +31,9 @@ jobs:
           target: ${{ matrix.target }}
           default: true
       - uses: actions-rs/cargo@v1
-        if: matrix.os != 'windows-latest'
         with:
           command: build
-          args: --release --features=termion-backend --target=${{ matrix.target }}
-      - uses: actions-rs/cargo@v1
-        if: matrix.os == 'windows-latest'
-        with:
-          command: build
-          args: --release --features=crossterm-backend --target=${{ matrix.target }}
+          args: --release ${{matrix.features}} --target=${{ matrix.target }}
     # - uses: actions-rs/cargo@v1
       # with:
         # command: test
