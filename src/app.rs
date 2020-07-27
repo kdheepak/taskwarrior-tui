@@ -62,7 +62,7 @@ pub fn vague_format_date_time(dt: &Date) -> String {
 
 pub enum AppMode {
     Report,
-    Command,
+    Filter,
 }
 
 pub struct App {
@@ -106,7 +106,7 @@ impl App {
         self.draw_command(f, rects[2]);
         match self.mode {
             AppMode::Report => (),
-            AppMode::Command => {
+            AppMode::Filter => {
                 // Make the cursor visible and ask tui-rs to put it at the specified coordinates after rendering
                 f.set_cursor(
                     // Put cursor past the end of the input text
@@ -120,7 +120,7 @@ impl App {
 
     fn draw_command(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
         let p = Paragraph::new(Text::from(&self.filter[..]))
-            .block(Block::default().borders(Borders::ALL).title("Command"));
+            .block(Block::default().borders(Borders::ALL).title("Filter"));
         f.render_widget(p, rect);
     }
 
@@ -388,11 +388,11 @@ impl App {
                 Key::Down | Key::Char('j') => self.next(),
                 Key::Up | Key::Char('k') => self.previous(),
                 Key::Char('/') => {
-                    self.mode = AppMode::Command;
+                    self.mode = AppMode::Filter;
                 }
                 _ => {}
             },
-            AppMode::Command => match event {
+            AppMode::Filter => match event {
                 Key::Char('\n') | Key::Esc => {
                     self.mode = AppMode::Report;
                 }
