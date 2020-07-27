@@ -13,13 +13,13 @@ crossterm-backend = ["tui/crossterm", "crossterm"]
 
 [dependencies]
 clap = "*"
-tui = "0.10.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 task-hookrs = "0.7.0"
-termion = { version = "1.5", optional = true, default-features = false }
-crossterm = { version = "0.17", optional = true, default-features = false }
 rand = "0.7"
 shlex = "0.1.1"
 chrono = "0.4"
 unicode-width = "0.1"
+tui = { version = "0.10.0", optional = true, default-features = false }
+termion = { version = "1.5", optional = true, default-features = false }
+crossterm = { version = "0.17", optional = true, default-features = false }
