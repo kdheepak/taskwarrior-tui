@@ -80,7 +80,6 @@ jobs:
         shell: bash
         run: |
           cd target/${{ matrix.target }}/release
-          strip taskwarrior-tui${{ matrix.binary_postfix }}
           tar czvf taskwarrior-tui-${{ matrix.target }}.tar.gz taskwarrior-tui${{ matrix.binary_postfix }}
           if [[ ${{ runner.os }} == 'Windows' ]]; then
             certutil -hashfile taskwarrior-tui-${{ matrix.target }}.tar.gz sha256 | grep -E [A-Fa-f0-9]{64} > taskwarrior-tui-${{ matrix.target }}.sha256
