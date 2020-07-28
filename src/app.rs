@@ -120,7 +120,7 @@ impl App {
     }
 
     pub fn draw(&mut self, f: &mut Frame<impl Backend>) {
-        while self.state.selected().unwrap_or_default() >= self.tasks.len() {
+        while self.tasks.len() != 0 && self.state.selected().unwrap_or_default() >= self.tasks.len() {
             self.previous();
         }
         let rects = Layout::default()
@@ -138,6 +138,7 @@ impl App {
         match self.mode {
             AppMode::Report => self.draw_command(f, rects[2], &self.filter[..], "Filter"),
             AppMode::Filter => {
+                f.render_widget(Clear, rects[2]);
                 f.set_cursor(
                     rects[2].x + self.filter.width() as u16 + 1,
                     rects[2].y + 1,
