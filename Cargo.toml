@@ -9,7 +9,6 @@ edition = "2018"
 [features]
 default = ["crossterm-backend"]
 crossterm-backend = ["tui/crossterm", "crossterm"]
-termion-backend = ["tui/termion", "termion"]
 
 [dependencies]
 clap = "*"
@@ -21,5 +20,4 @@ shlex = "0.1"
 chrono = "0.4"
 unicode-width = "0.1"
 tui = { version = "0.10", optional = true, default-features = false }
-termion = { version = "1.5", optional = true, default-features = false }
 crossterm = { version = "0.17", optional = true, default-features = false }

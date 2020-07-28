@@ -7,17 +7,6 @@ use crossterm::{
 #[cfg(feature = "crossterm")]
 use tui::{backend::CrosstermBackend, Terminal};
 
-#[cfg(all(feature = "termion", not(feature = "crossterm")))]
-use termion::{
-    event,
-    input::{MouseTerminal, TermRead},
-    raw::{IntoRawMode, RawTerminal},
-    screen::{AlternateScreen,ToMainScreen, ToAlternateScreen},
-};
-#[cfg(all(feature = "termion", not(feature = "crossterm")))]
-use tui::{backend::TermionBackend, Terminal};
-
-
 use std::io::{self, Write};
 use std::{sync::mpsc, thread, time::Duration};
 use std::sync::{
@@ -72,22 +61,6 @@ pub fn destruct_terminal(mut terminal: Terminal<CrosstermBackend<io::Stdout>>) {
     disable_raw_mode().unwrap();
     execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture).unwrap();
     terminal.show_cursor().unwrap();
-}
-
-#[cfg(all(feature = "termion", not(feature = "crossterm")))]
-pub fn setup_terminal(
-) -> Terminal<TermionBackend<AlternateScreen<MouseTerminal<RawTerminal<io::Stdout>>>>> {
-    let raw_stdout = io::stdout().into_raw_mode().unwrap();
-    let stdout = MouseTerminal::from(raw_stdout);
-    let stdout = AlternateScreen::from(stdout);
-    let backend = TermionBackend::new(stdout);
-    Terminal::new(backend).unwrap()
-}
-
-#[cfg(all(feature = "termion", not(feature = "crossterm")))]
-pub fn destruct_terminal(
-    terminal: Terminal<TermionBackend<AlternateScreen<MouseTerminal<RawTerminal<io::Stdout>>>>>,
-) {
 }
 
 pub struct Events {
@@ -153,81 +126,10 @@ impl Events {
         Events { rx, tx, pause_stdin }
     }
 
-    #[cfg(all(feature = "termion", not(feature = "crossterm")))]
-    pub fn with_config(config: EventConfig) -> Events {
-        use termion::event::Key::*;
-        let (tx, rx) = mpsc::channel();
-        let pause_stdin = Arc::new(Mutex::new(false));
-        let input_handle = {
-            let tx = tx.clone();
-            let pause_stdin = pause_stdin.clone();
-            thread::spawn(move || {
-                let stdin = io::stdin();
-                for evt in stdin.keys() {
-                    while *pause_stdin.lock().unwrap() {
-                        thread::sleep(config.tick_rate);
-                    }
-                    if let Ok(key) = evt {
-                        let key = match key {
-                            Backspace => Key::Backspace,
-                            Left => Key::Left,
-                            Right => Key::Right,
-                            Up => Key::Up,
-                            Down => Key::Down,
-                            Home => Key::Home,
-                            End => Key::End,
-                            PageUp => Key::PageUp,
-                            PageDown => Key::PageDown,
-                            BackTab => Key::BackTab,
-                            Delete => Key::Delete,
-                            Insert => Key::Insert,
-                            F(c) => Key::F(c),
-                            Char(c) => Key::Char(c),
-                            Alt(c) => Key::Alt(c),
-                            Ctrl(c) => Key::Ctrl(c),
-                            Null => Key::Null,
-                            Esc => Key::Esc,
-                            _ => Key::Null,
-                        };
-                        if let Err(err) = tx.send(Event::Input(key)) {
-                            eprintln!("{}", err);
-                            return;
-                        }
-                    }
-                }
-            })
-        };
-        let tick_handle = {
-            let tx = tx.clone();
-            thread::spawn(move || loop {
-                if tx.send(Event::Tick).is_err() {
-                    break;
-                }
-                thread::sleep(config.tick_rate);
-            })
-        };
-        Events { rx, tx, pause_stdin }
-    }
-
     /// Attempts to read an event.
     /// This function will block the current thread.
     pub fn next(&self) -> Result<Event<Key>, mpsc::RecvError> {
         self.rx.recv()
-    }
-
-    #[cfg(all(feature = "termion", not(feature = "crossterm")))]
-    pub fn pause_event_loop(&self, terminal: & mut Terminal<TermionBackend<AlternateScreen<MouseTerminal<RawTerminal<io::Stdout>>>>>) {
-        *self.pause_stdin.lock().unwrap() = true;
-        std::thread::sleep(std::time::Duration::from_millis(50));
-        write!(terminal.backend_mut(), "{}", ToMainScreen).unwrap();
-    }
-
-    #[cfg(all(feature = "termion", not(feature = "crossterm")))]
-    pub fn resume_event_loop(&self, terminal: & mut Terminal<TermionBackend<AlternateScreen<MouseTerminal<RawTerminal<io::Stdout>>>>>) {
-        write!(terminal.backend_mut(), "{}", ToAlternateScreen).unwrap();
-        std::thread::sleep(std::time::Duration::from_millis(50));
-        *self.pause_stdin.lock().unwrap() = false;
-        terminal.resize(terminal.size().unwrap()).unwrap();
     }
 
     #[cfg(feature = "crossterm")]

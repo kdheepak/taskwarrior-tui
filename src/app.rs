@@ -23,16 +23,6 @@ use tui::{
     Terminal,
 };
 
-#[cfg(all(feature = "termion", not(feature = "crossterm")))]
-use tui::backend::TermionBackend;
-#[cfg(all(feature = "termion", not(feature = "crossterm")))]
-use termion::{
-    event,
-    input::{MouseTerminal, TermRead},
-    raw::{IntoRawMode, RawTerminal},
-    screen::AlternateScreen,
-};
-
 pub fn cmp(t1: &Task, t2: &Task) -> Ordering {
     let urgency1 = match &t1.uda()["urgency"] {
         UDAValue::Str(_) => 0.0,
