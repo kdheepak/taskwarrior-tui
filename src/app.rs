@@ -420,17 +420,18 @@ impl App {
 
         // TODO: fix vim hanging
         match r {
-            Ok(mut child) => {
-                child
-                    .wait()
+            Ok(child) => {
+                let output = child
+                    .wait_with_output()
                     .expect(
                         &format!(
                         "Cannot run `task edit` for task `{}`. Check documentation for more information",
                         task_id
                         )[..],
                     );
-                // TODO: should we sleep here to show output of the editor?
-                // std::thread::sleep(std::time::Duration::from_millis(500));
+                if !output.status.success() {
+                    // TODO: show error message here
+                }
             }
             _ => {
                 println!("Vim failed to start");
