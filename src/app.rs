@@ -23,7 +23,15 @@ use tui::{
     Terminal,
 };
 
-use crate::util::Key;
+#[cfg(all(feature = "termion", not(feature = "crossterm")))]
+use tui::backend::TermionBackend;
+#[cfg(all(feature = "termion", not(feature = "crossterm")))]
+use termion::{
+    event,
+    input::{MouseTerminal, TermRead},
+    raw::{IntoRawMode, RawTerminal},
+    screen::AlternateScreen,
+};
 
 pub fn cmp(t1: &Task, t2: &Task) -> Ordering {
     let urgency1 = match &t1.uda()["urgency"] {
@@ -431,7 +439,8 @@ impl App {
                         task_id
                         )[..],
                     );
-                println!("Opening task ...");
+                // TODO: should we sleep here to show output of the editor?
+                // std::thread::sleep(std::time::Duration::from_millis(500));
             }
             _ => {
                 println!("Vim failed to start");
@@ -439,40 +448,12 @@ impl App {
         }
     }
 
-    pub fn handle_input(&mut self, event: Key) {
-        match self.mode {
-            AppMode::Report => match event {
-                Key::Ctrl('c') | Key::Char('q') => self.should_quit = true,
-                Key::Char('r') => self.update(),
-                Key::Down | Key::Char('j') => self.next(),
-                Key::Up | Key::Char('k') => self.previous(),
-                Key::Char('d') => self.task_done(),
-                Key::Char('u') => self.task_undo(),
-                Key::Char('e') => self.task_edit(),
-                Key::Char('/') => {
-                    self.mode = AppMode::Filter;
-                }
-                _ => {}
-            },
-            AppMode::Filter => match event {
-                Key::Char('\n') | Key::Esc => {
-                    self.mode = AppMode::Report;
-                }
-                Key::Char(c) => {
-                    self.filter.push(c);
-                }
-                Key::Backspace => {
-                    self.filter.pop();
-                }
-                _ => {}
-            },
-        }
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::app::App;
+    use crate::util::setup_terminal;
     use std::io::stdin;
 
     use task_hookrs::import::import;
@@ -492,6 +473,10 @@ mod tests {
         println!("{:?}", t);
         println!("{:?}", t);
         println!("{:?}", t);
+        app.next();
+        app.next();
+        app.next();
+        app.task_edit();
         // if let Ok(tasks) = import(stdin()) {
         //     for task in tasks {
         //         println!("Task: {}, entered {:?} is {} -> {}",

@@ -11,23 +11,20 @@ jobs:
             target: x86_64-apple-darwin
             rust_flags: ''
             features: ''
-            target_binary: 'target/x86_64-apple-darwin/release/taskwarrior-tui'
-            binary: 'taskwarrior-tui-x86_64-apple-darwin'
+            binary_postfix: ''
             upx_args: --best
             strip: true
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             rust_flags: ''
             features: ''
-            target_binary: 'target/x86_64-unknown-linux-gnu/release/taskwarrior-tui'
-            binary: 'taskwarrior-tui-x86_64-unknown-linux-gnu'
+            binary_postfix: ''
             upx_args: --best --lzma
             strip: true
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             rust_flags: ''
             features: ''
-            target_binary: 'target/x86_64-unknown-linux-musl/release/taskwarrior-tui'
             binary: 'taskwarrior-tui-x86_64-unknown-linux-musl'
             upx_args: --best --lzma
             strip: true
@@ -35,32 +32,28 @@ jobs:
             target: i686-unknown-linux-musl
             rust_flags: ''
             features: ''
-            target_binary: 'target/i686-unknown-linux-musl/release/taskwarrior-tui'
-            binary: 'taskwarrior-tui-i686-unknown-linux-musl'
+            binary_postfix: ''
             upx_args: --best --lzma
             strip: true
           - os: windows-latest
             target: x86_64-pc-windows-gnu
             rust_flags: -C target-feature=+crt-static
-            features: '--no-default-features --features=crossterm-backend'
-            target_binary: 'target\x86_64-pc-windows-gnu\release\taskwarrior-tui.exe'
-            binary: 'taskwarrior-tui-x86_64-pc-windows-gnu.exe'
+            features: ''
+            binary_postfix: 'exe'
             upx_args: -9
             strip: false
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             rust_flags: -C target-feature=+crt-static
-            features: '--no-default-features --features=crossterm-backend'
-            target_binary: 'target\x86_64-pc-windows-msvc\release\taskwarrior-tui.exe'
-            binary: 'taskwarrior-tui-x86_64-pc-windows-msvc.exe'
+            features: ''
+            binary_postfix: 'exe'
             upx_args: -9
             strip: false
           - os: windows-latest
             target: i686-pc-windows-msvc
             rust_flags: -C target-feature=+crt-static
-            features: '--no-default-features --features=crossterm-backend'
-            target_binary: 'target\i686-pc-windows-msvc\release\taskwarrior-tui.exe'
-            binary: 'taskwarrior-tui-i686-pc-windows-msvc.exe'
+            features: ''
+            binary_postfix: 'exe'
             upx_args: -9
             strip: false
     env:
@@ -77,21 +70,28 @@ jobs:
         with:
           command: build
           args: --release ${{matrix.features}} --target=${{ matrix.target }}
-    # - uses: actions-rs/cargo@v1
-      # with:
-        # command: test
-        # args: --release --target=${{ matrix.target }}
       - name: Compress binaries
         uses: svenstaro/upx-action@v2
         with:
-          file: ${{ matrix.target_binary }}
+          file: target/${{ matrix.target }}/release/taskwarrior-tui${{ matrix.binary_postfix }}
           args: ${{ matrix.upx_args }}
           strip: ${{ matrix.strip }}
-      - run: mv ${{ matrix.target_binary }} ${{ matrix.binary }}
-      - name: Release
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Packaging binary
+        shell: bash
+        run: |
+          cd target/${{ matrix.target }}/release
+          strip taskwarrior-tui${{ matrix.binary_postfix }}
+          tar czvf taskwarrior-tui-${{ matrix.target }}.tar.gz taskwarrior-tui${{ matrix.binary_postfix }}
+          if [[ ${{ runner.os }} == 'Windows' ]]; then
+            certutil -hashfile taskwarrior-tui-${{ matrix.target }}.tar.gz sha256 | grep -E [A-Fa-f0-9]{64} > taskwarrior-tui-${{ matrix.target }}.sha256
+          else
+            shasum -a 256 taskwarrior-tui-${{ matrix.target }}.tar.gz > taskwarrior-tui-${{ matrix.target }}.sha256
+          fi
+      - name: Releasing assets
         uses: softprops/action-gh-release@v1
         with:
-          files: taskwarrior-tui-*
+          files: |
+            target/${{ matrix.target }}/release/taskwarrior-tui-${{ matrix.target }}.tar.gz
+            target/${{ matrix.target }}/release/taskwarrior-tui-${{ matrix.target }}.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

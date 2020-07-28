@@ -17,7 +17,17 @@ use std::time::{Duration, Instant};
 use tui::backend::Backend;
 use unicode_width::UnicodeWidthStr;
 
-use app::App;
+use app::{App, AppMode};
+use crate::util::Key;
+
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
+
+const APP_VERSION: &'static str = env!("CARGO_PKG_VERSION");
+const APP_NAME: &'static str = env!("CARGO_PKG_NAME");
+
 
 fn main() -> Result<(), Box<dyn Error>> {
     // Terminal initialization
@@ -37,7 +47,39 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         // Handle input
         match events.next()? {
-            Event::Input(input) => app.handle_input(input),
+            Event::Input(input) => {
+                    match app.mode {
+                        AppMode::Report => match input {
+                            Key::Ctrl('c') | Key::Char('q') => app.should_quit = true,
+                            Key::Char('r') => app.update(),
+                            Key::Down | Key::Char('j') => app.next(),
+                            Key::Up | Key::Char('k') => app.previous(),
+                            Key::Char('d') => app.task_done(),
+                            Key::Char('u') => app.task_undo(),
+                            Key::Char('e') => {
+                                events.pause_event_loop(&mut terminal);
+                                app.task_edit();
+                                events.resume_event_loop(&mut terminal);
+                            },
+                            Key::Char('/') => {
+                                app.mode = AppMode::Filter;
+                            }
+                            _ => {}
+                        },
+                        AppMode::Filter => match input {
+                            Key::Char('\n') | Key::Esc => {
+                                app.mode = AppMode::Report;
+                            }
+                            Key::Char(c) => {
+                                app.filter.push(c);
+                            }
+                            Key::Backspace => {
+                                app.filter.pop();
+                            }
+                            _ => {}
+                        },
+                    }
+                }
             Event::Tick => app.handle_tick(),
         }
 
