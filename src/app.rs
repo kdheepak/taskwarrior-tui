@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Result;
-use shlex::split;
+use shlex;
 use std::cmp::Ordering;
 use std::convert::TryInto;
 use std::process::Command;
@@ -425,7 +425,7 @@ impl App {
         task.arg("rc.json.array=on");
         task.arg("export");
 
-        match split(&self.filter) {
+        match shlex::split(&self.filter) {
             Some(cmd) => {
                 for s in cmd {
                     task.arg(&s);
@@ -474,10 +474,23 @@ impl App {
         }
         let selected = self.state.selected().unwrap_or_default();
         let task_id = self.tasks[selected].id().unwrap_or_default();
-        let output = Command::new("task")
+        let mut command = Command::new("task");
+        command
             .arg("modify")
-            .arg(format!("{}", task_id))
-            .arg(format!("{}", self.modify))
+            .arg(format!("{}", task_id));
+
+        match shlex::split(&self.modify) {
+            Some(cmd) => {
+                for s in cmd {
+                    command.arg(&s);
+                }
+            }
+            None => {
+                command.arg("");
+            }
+        }
+
+        let output = command
             .output()
             .expect("Cannot run `task modify`. Check documentation for more information");
 
@@ -489,9 +502,22 @@ impl App {
             return
         }
 
-        let output = Command::new("task")
-            .arg("add")
-            .arg(format!("{}", self.command))
+        let mut command = Command::new("task");
+        command
+            .arg("add");
+
+        match shlex::split(&self.command) {
+            Some(cmd) => {
+                for s in cmd {
+                    command.arg(&s);
+                }
+            }
+            None => {
+                command.arg("");
+            }
+        }
+
+        let output = command
             .output()
             .expect("Cannot run `task add`. Check documentation for more information");
 
