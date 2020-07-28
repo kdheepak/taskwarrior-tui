@@ -6,10 +6,12 @@
 
 A Taskwarrior TUI written in Rust.
 
+![taskwarrior-tui](https://user-images.githubusercontent.com/1813121/88654924-40896880-d08b-11ea-8709-b29cc970da4c.gif)
+
 ## Installation
 
 **Manual**
 
-1. Download the latest binary for your OS.
-2. `cd` to the file you just downloaded and unzip.
-3. `cd` to taskwarrior-tui and run with `./taskwarrior-tui`.
+1. Download the tar.gz file for your OS from [the latest release](https://github.com/kdheepak/taskwarrior-tui/releases/latest).
+2. Unzip the tar.gz file
+3. Run with `./taskwarrior-tui`.
