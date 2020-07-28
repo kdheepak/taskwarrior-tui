@@ -91,6 +91,7 @@ pub enum AppMode {
     Filter,
     AddTask,
     LogTask,
+    ModifyTask,
 }
 
 pub struct App {
@@ -98,6 +99,7 @@ pub struct App {
     pub state: TableState,
     pub filter: String,
     pub command: String,
+    pub modify: String,
     pub tasks: Vec<Task>,
     pub task_report_labels: Vec<String>,
     pub task_report_columns: Vec<String>,
@@ -114,6 +116,7 @@ impl App {
             task_report_columns: vec![],
             filter: "status:pending ".to_string(),
             command: "".to_string(),
+            modify: "".to_string(),
             mode: AppMode::Report,
         };
         app.update();
@@ -137,14 +140,24 @@ impl App {
         self.draw_task_report(f, rects[0]);
         self.draw_task_details(f, rects[1]);
         match self.mode {
-            AppMode::Report => self.draw_command(f, rects[2], &self.filter[..], "Filter"),
+            AppMode::Report => self.draw_command(f, rects[2], &self.filter[..], "Filter Tasks"),
             AppMode::Filter => {
                 f.render_widget(Clear, rects[2]);
                 f.set_cursor(
                     rects[2].x + self.filter.width() as u16 + 1,
                     rects[2].y + 1,
                 );
-                self.draw_command(f, rects[2], &self.filter[..], "Filter");
+                self.draw_command(f, rects[2], &self.filter[..], "Filter Tasks");
+            },
+            AppMode::ModifyTask => {
+                f.set_cursor(
+                    // Put cursor past the end of the input text
+                    rects[2].x + self.modify.width() as u16 + 1,
+                    // Move one line down, from the border to the input line
+                    rects[2].y + 1,
+                );
+                f.render_widget(Clear, rects[2]);
+                self.draw_command(f, rects[2], &self.modify[..], "Modify Task");
             },
             AppMode::LogTask => {
                 f.set_cursor(
@@ -445,6 +458,22 @@ impl App {
         self.command = "".to_string();
     }
 
+    pub fn task_modify(&mut self) {
+        if self.tasks.len() == 0 {
+            return
+        }
+        let selected = self.state.selected().unwrap_or_default();
+        let task_id = self.tasks[selected].id().unwrap_or_default();
+        let output = Command::new("task")
+            .arg("modify")
+            .arg(format!("{}", task_id))
+            .arg(format!("{}", self.modify))
+            .output()
+            .expect("Cannot run `task modify`. Check documentation for more information");
+
+        self.modify = "".to_string();
+    }
+
     pub fn task_add(&mut self) {
         if self.tasks.len() == 0 {
             return
@@ -588,6 +617,13 @@ impl App {
         }
     }
 
+    pub fn task_current(&self) -> Option<Task> {
+        if self.tasks.len() == 0 {
+            return None
+        }
+        let selected = self.state.selected().unwrap_or_default();
+        return Some(self.tasks[selected].clone());
+    }
 }
 
 #[cfg(test)]

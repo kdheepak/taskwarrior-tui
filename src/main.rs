@@ -63,6 +63,13 @@ fn main() -> Result<(), Box<dyn Error>> {
                                 app.task_edit();
                                 events.resume_event_loop(&mut terminal);
                             },
+                            Key::Char('m') => {
+                                app.mode = AppMode::ModifyTask;
+                                match app.task_current() {
+                                    Some(t) => app.modify = t.description().to_string(),
+                                    None => app.modify = "".to_string(),
+                                }
+                            }
                             Key::Char('l') => {
                                 app.mode = AppMode::LogTask;
                             }
@@ -71,6 +78,23 @@ fn main() -> Result<(), Box<dyn Error>> {
                             }
                             Key::Char('/') => {
                                 app.mode = AppMode::Filter;
+                            }
+                            _ => {}
+                        },
+                        AppMode::ModifyTask => match input {
+                            Key::Char('\n') => {
+                                app.task_modify();
+                                app.mode = AppMode::Report;
+                            }
+                            Key::Esc => {
+                                app.modify = "".to_string();
+                                app.mode = AppMode::Report;
+                            }
+                            Key::Char(c) => {
+                                app.modify.push(c);
+                            }
+                            Key::Backspace => {
+                                app.modify.pop();
                             }
                             _ => {}
                         },
