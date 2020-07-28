@@ -434,6 +434,54 @@ impl App {
         self.command = "".to_string();
     }
 
+    pub fn task_virtual_tags(& self) -> String {
+        let selected = self.state.selected().unwrap_or_default();
+        let task_id = self.tasks[selected].id().unwrap_or_default();
+        let output = Command::new("task")
+            .arg(format!("{}", task_id))
+            .output()
+            .expect(
+                &format!(
+                "Cannot run `task {}`. Check documentation for more information",
+                task_id
+                )[..],
+            );
+        let data = String::from_utf8(output.stdout).unwrap();
+        for line in data.split("\n") {
+            if line.starts_with("Virtual tags") {
+                let line = line.to_string();
+                let line = line.replace("Virtual tags", "");
+                return line;
+            }
+        }
+        "".to_string()
+    }
+
+    pub fn task_start_or_stop(&mut self) {
+        if self.tasks.len() == 0 {
+            return
+        }
+        let selected = self.state.selected().unwrap_or_default();
+        let task_id = self.tasks[selected].id().unwrap_or_default();
+        let mut command = "start";
+        for tag in self.task_virtual_tags().split(" ") {
+            if tag == "ACTIVE" {
+                command = "stop"
+            }
+        }
+
+        let output = Command::new("task")
+            .arg(command)
+            .arg(format!("{}", task_id))
+            .output()
+            .expect(
+                &format!(
+                "Cannot run `task done` for task `{}`. Check documentation for more information",
+                task_id
+                )[..],
+            );
+    }
+
     pub fn task_done(&mut self) {
         if self.tasks.len() == 0 {
             return
@@ -511,19 +559,25 @@ mod tests {
         let mut app = App::new();
         app.update();
 
-        println!("{:?}", app.tasks);
+        //println!("{:?}", app.tasks);
 
-        println!("{:?}", app.task_report_columns);
-        println!("{:?}", app.task_report_labels);
+        //println!("{:?}", app.task_report_columns);
+        //println!("{:?}", app.task_report_labels);
 
         let (t, h, c) = app.task_report();
-        println!("{:?}", t);
-        println!("{:?}", t);
-        println!("{:?}", t);
         app.next();
         app.next();
-        app.next();
-        app.task_edit();
+        let selected = app.state.selected().unwrap_or_default();
+        let task_id = app.tasks[selected].id().unwrap_or_default();
+        let mut command = "start";
+        for tag in app.tasks[selected].tags().unwrap_or(&vec![]) {
+            if tag == "ACTIVE" {
+                command = "stop"
+            }
+        }
+        println!("{:?}", app.tasks[selected]);
+        println!("{:?}", app.tasks[selected].tags().unwrap_or(&vec![]));
+        println!("{}", app.task_virtual_tags());
         // if let Ok(tasks) = import(stdin()) {
         //     for task in tasks {
         //         println!("Task: {}, entered {:?} is {} -> {}",
