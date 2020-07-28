@@ -409,6 +409,36 @@ impl App {
             .expect("Cannot run `task undo`. Check documentation for more information");
     }
 
+    pub fn task_edit(&self) {
+        if self.tasks.len() == 0 {
+            return
+        }
+        let selected = self.state.selected().unwrap_or_default();
+        let task_id = self.tasks[selected].id().unwrap_or_default();
+        let r = Command::new("task")
+            .arg("edit")
+            .arg(format!("{}", task_id))
+            .spawn();
+
+        // TODO: fix vim hanging
+        match r {
+            Ok(mut child) => {
+                child
+                    .wait()
+                    .expect(
+                        &format!(
+                        "Cannot run `task edit` for task `{}`. Check documentation for more information",
+                        task_id
+                        )[..],
+                    );
+                println!("Opening task ...");
+            }
+            _ => {
+                println!("Vim failed to start");
+            }
+        }
+    }
+
     pub fn handle_input(&mut self, event: Key) {
         match self.mode {
             AppMode::Report => match event {
@@ -418,6 +448,7 @@ impl App {
                 Key::Up | Key::Char('k') => self.previous(),
                 Key::Char('d') => self.task_done(),
                 Key::Char('u') => self.task_undo(),
+                Key::Char('e') => self.task_edit(),
                 Key::Char('/') => {
                     self.mode = AppMode::Filter;
                 }
