@@ -482,6 +482,26 @@ impl App {
             );
     }
 
+    pub fn task_delete(&self) {
+        if self.tasks.len() == 0 {
+            return
+        }
+        let selected = self.state.selected().unwrap_or_default();
+        let task_id = self.tasks[selected].id().unwrap_or_default();
+
+        let output = Command::new("task")
+            .arg("rc.confirmation=off")
+            .arg("delete")
+            .arg(format!("{}", task_id))
+            .output()
+            .expect(
+                &format!(
+                "Cannot run `task delete` for task `{}`. Check documentation for more information",
+                task_id
+                )[..],
+            );
+    }
+
     pub fn task_done(&mut self) {
         if self.tasks.len() == 0 {
             return

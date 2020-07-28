@@ -55,6 +55,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                             Key::Down | Key::Char('j') => app.next(),
                             Key::Up | Key::Char('k') => app.previous(),
                             Key::Char('d') => app.task_done(),
+                            Key::Char('x') => app.task_delete(),
                             Key::Char('s') => app.task_start_or_stop(),
                             Key::Char('u') => app.task_undo(),
                             Key::Char('e') => {
