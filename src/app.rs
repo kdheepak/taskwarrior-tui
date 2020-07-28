@@ -128,56 +128,66 @@ impl App {
             self.previous();
         }
         let rects = Layout::default()
+            .direction(Direction::Vertical)
             .constraints(
                 [
-                    Constraint::Percentage(48),
-                    Constraint::Percentage(48),
-                    Constraint::Max(3),
+                    Constraint::Min(0),
+                    Constraint::Length(3),
                 ]
                 .as_ref(),
             )
             .split(f.size());
-        self.draw_task_report(f, rects[0]);
-        self.draw_task_details(f, rects[1]);
+        let task_rects = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(
+                [
+                    Constraint::Percentage(50),
+                    Constraint::Percentage(50),
+                ]
+                .as_ref(),
+            )
+            .split(rects[0]);
+        self.draw_task_report(f, task_rects[0]);
+        self.draw_task_details(f, task_rects[1]);
         match self.mode {
-            AppMode::Report => self.draw_command(f, rects[2], &self.filter[..], "Filter Tasks"),
+            AppMode::Report => self.draw_command(f, rects[1], &self.filter[..], "Filter Tasks"),
             AppMode::Filter => {
-                f.render_widget(Clear, rects[2]);
+                f.render_widget(Clear, rects[1]);
                 f.set_cursor(
-                    rects[2].x + self.filter.width() as u16 + 1,
-                    rects[2].y + 1,
+                    rects[1].x + self.filter.width() as u16 + 1,
+                    rects[1].y + 1,
                 );
-                self.draw_command(f, rects[2], &self.filter[..], "Filter Tasks");
+                self.draw_command(f, rects[1], &self.filter[..], "Filter Tasks");
             },
             AppMode::ModifyTask => {
                 f.set_cursor(
                     // Put cursor past the end of the input text
-                    rects[2].x + self.modify.width() as u16 + 1,
+                    rects[1].x + self.modify.width() as u16 + 1,
                     // Move one line down, from the border to the input line
-                    rects[2].y + 1,
+                    rects[1].y + 1,
                 );
-                f.render_widget(Clear, rects[2]);
-                self.draw_command(f, rects[2], &self.modify[..], "Modify Task");
+                f.render_widget(Clear, rects[1]);
+                self.draw_command(f, rects[1], &self.modify[..], "Modify Task");
             },
             AppMode::LogTask => {
                 f.set_cursor(
                     // Put cursor past the end of the input text
-                    rects[2].x + self.command.width() as u16 + 1,
+                    rects[1].x + self.command.width() as u16 + 1,
                     // Move one line down, from the border to the input line
-                    rects[2].y + 1,
+                    rects[1].y + 1,
                 );
-                f.render_widget(Clear, rects[2]);
-                self.draw_command(f, rects[2], &self.command[..], "Log Task");
+                f.render_widget(Clear, rects[1]);
+                self.draw_command(f, rects[1], &self.command[..], "Log Task");
             },
             AppMode::AddTask => {
                 f.set_cursor(
                     // Put cursor past the end of the input text
-                    rects[2].x + self.command.width() as u16 + 1,
+                    rects[1].x + self.command.width() as u16 + 1,
                     // Move one line down, from the border to the input line
-                    rects[2].y + 1,
+                    rects[1].y + 1,
                 );
-                f.render_widget(Clear, rects[2]);
-                self.draw_command(f, rects[2], &self.command[..], "Add Task");
+                f.render_widget(Clear, rects[1]);
+                self.draw_command(f, rects[1], &self.command[..], "Add Task");
             },
         }
     }
