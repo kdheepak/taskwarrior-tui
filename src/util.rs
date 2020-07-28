@@ -104,11 +104,11 @@ impl Events {
         let (tx, rx) = mpsc::channel();
         let pause_stdin = Arc::new(Mutex::new(false));
         let pause_stdin = pause_stdin.clone();
-        let event_tx = tx.clone();
-        thread::spawn(move || {
-            loop {
-                // poll for tick rate duration, if no event, sent tick event.
-                if event::poll(config.tick_rate).unwrap() {
+        let input_handle = {
+            let tx = tx.clone();
+            thread::spawn(move || {
+                loop {
+                    // poll for tick rate duration, if no event, sent tick event.
                     if let event::Event::Key(key) = event::read().unwrap() {
                         let key = match key.code {
                             Backspace => Key::Backspace,
@@ -135,13 +135,21 @@ impl Events {
                                 _ => Key::Null,
                             },
                         };
-                        event_tx.send(Event::Input(key)).unwrap();
+                        tx.send(Event::Input(key)).unwrap();
                     }
                 }
+            })
+        };
+        let tick_handle = {
+            let tx = tx.clone();
+            thread::spawn(move || loop {
+                if tx.send(Event::Tick).is_err() {
+                    break;
+                }
+                thread::sleep(config.tick_rate);
+            })
+        };
 
-                event_tx.send(Event::Tick).unwrap();
-            }
-        });
         Events { rx, tx, pause_stdin }
     }
 
