@@ -63,11 +63,31 @@ fn main() -> Result<(), Box<dyn Error>> {
                                 app.task_edit();
                                 events.resume_event_loop(&mut terminal);
                             },
+                            Key::Char('l') => {
+                                app.mode = AppMode::LogTask;
+                            }
                             Key::Char('a') => {
                                 app.mode = AppMode::AddTask;
                             }
                             Key::Char('/') => {
                                 app.mode = AppMode::Filter;
+                            }
+                            _ => {}
+                        },
+                        AppMode::LogTask => match input {
+                            Key::Char('\n') => {
+                                app.task_log();
+                                app.mode = AppMode::Report;
+                            }
+                            Key::Esc => {
+                                app.command = "".to_string();
+                                app.mode = AppMode::Report;
+                            }
+                            Key::Char(c) => {
+                                app.command.push(c);
+                            }
+                            Key::Backspace => {
+                                app.command.pop();
                             }
                             _ => {}
                         },

@@ -90,6 +90,7 @@ pub enum AppMode {
     Report,
     Filter,
     AddTask,
+    LogTask,
 }
 
 pub struct App {
@@ -144,6 +145,16 @@ impl App {
                     rects[2].y + 1,
                 );
                 self.draw_command(f, rects[2], &self.filter[..], "Filter");
+            },
+            AppMode::LogTask => {
+                f.set_cursor(
+                    // Put cursor past the end of the input text
+                    rects[2].x + self.command.width() as u16 + 1,
+                    // Move one line down, from the border to the input line
+                    rects[2].y + 1,
+                );
+                f.render_widget(Clear, rects[2]);
+                self.draw_command(f, rects[2], &self.command[..], "Log Task");
             },
             AppMode::AddTask => {
                 f.set_cursor(
@@ -418,6 +429,20 @@ impl App {
 
     pub fn handle_tick(&mut self) {
         self.update();
+    }
+
+    pub fn task_log(&mut self) {
+        if self.tasks.len() == 0 {
+            return
+        }
+
+        let output = Command::new("task")
+            .arg("log")
+            .arg(format!("{}", self.command))
+            .output()
+            .expect("Cannot run `task log`. Check documentation for more information");
+
+        self.command = "".to_string();
     }
 
     pub fn task_add(&mut self) {
