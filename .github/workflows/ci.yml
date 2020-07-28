@@ -39,21 +39,21 @@ jobs:
             target: x86_64-pc-windows-gnu
             rust_flags: -C target-feature=+crt-static
             features: ''
-            binary_postfix: 'exe'
+            binary_postfix: '.exe'
             upx_args: -9
             strip: false
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             rust_flags: -C target-feature=+crt-static
             features: ''
-            binary_postfix: 'exe'
+            binary_postfix: '.exe'
             upx_args: -9
             strip: false
           - os: windows-latest
             target: i686-pc-windows-msvc
             rust_flags: -C target-feature=+crt-static
             features: ''
-            binary_postfix: 'exe'
+            binary_postfix: '.exe'
             upx_args: -9
             strip: false
     env:
