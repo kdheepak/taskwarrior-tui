@@ -19,7 +19,7 @@ use tui::{
     style::{Color, Modifier, Style},
     terminal::Frame,
     text::Text,
-    widgets::{BarChart, Block, Borders, Paragraph, Row, Table, TableState},
+    widgets::{BarChart, Clear, Block, Borders, Paragraph, Row, Table, TableState},
     Terminal,
 };
 
@@ -58,15 +58,45 @@ pub fn vague_format_date_time(dt: &Date) -> String {
     }
 }
 
+
+fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+    let popup_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(
+            [
+                Constraint::Percentage((100 - percent_y) / 2),
+                Constraint::Percentage(percent_y),
+                Constraint::Percentage((100 - percent_y) / 2),
+            ]
+            .as_ref(),
+        )
+        .split(r);
+
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints(
+            [
+                Constraint::Percentage((100 - percent_x) / 2),
+                Constraint::Percentage(percent_x),
+                Constraint::Percentage((100 - percent_x) / 2),
+            ]
+            .as_ref(),
+        )
+        .split(popup_layout[1])[1]
+}
+
+
 pub enum AppMode {
     Report,
     Filter,
+    AddTask,
 }
 
 pub struct App {
     pub should_quit: bool,
     pub state: TableState,
     pub filter: String,
+    pub command: String,
     pub tasks: Vec<Task>,
     pub task_report_labels: Vec<String>,
     pub task_report_columns: Vec<String>,
@@ -82,6 +112,7 @@ impl App {
             task_report_labels: vec![],
             task_report_columns: vec![],
             filter: "status:pending ".to_string(),
+            command: "".to_string(),
             mode: AppMode::Report,
         };
         app.update();
@@ -101,24 +132,31 @@ impl App {
             .split(f.size());
         self.draw_task_report(f, rects[0]);
         self.draw_task_details(f, rects[1]);
-        self.draw_command(f, rects[2]);
         match self.mode {
-            AppMode::Report => (),
+            AppMode::Report => self.draw_command(f, rects[2], &self.filter[..], "Filter"),
             AppMode::Filter => {
-                // Make the cursor visible and ask tui-rs to put it at the specified coordinates after rendering
+                f.set_cursor(
+                    rects[2].x + self.filter.width() as u16 + 1,
+                    rects[2].y + 1,
+                );
+                self.draw_command(f, rects[2], &self.filter[..], "Filter");
+            },
+            AppMode::AddTask => {
                 f.set_cursor(
                     // Put cursor past the end of the input text
-                    rects[2].x + self.filter.width() as u16 + 1,
+                    rects[2].x + self.command.width() as u16 + 1,
                     // Move one line down, from the border to the input line
                     rects[2].y + 1,
-                )
-            }
+                );
+                f.render_widget(Clear, rects[2]);
+                self.draw_command(f, rects[2], &self.command[..], "Add Task");
+            },
         }
     }
 
-    fn draw_command(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
-        let p = Paragraph::new(Text::from(&self.filter[..]))
-            .block(Block::default().borders(Borders::ALL).title("Filter"));
+    fn draw_command(&self, f: &mut Frame<impl Backend>, rect: Rect, text: &str, title: &str) {
+        let p = Paragraph::new(Text::from(text))
+            .block(Block::default().borders(Borders::ALL).title(title));
         f.render_widget(p, rect);
     }
 
@@ -378,6 +416,20 @@ impl App {
         self.update();
     }
 
+    pub fn task_add(&mut self) {
+        if self.tasks.len() == 0 {
+            return
+        }
+
+        let output = Command::new("task")
+            .arg("add")
+            .arg(format!("{}", self.command))
+            .output()
+            .expect("Cannot run `task add`. Check documentation for more information");
+
+        self.command = "".to_string();
+    }
+
     pub fn task_done(&mut self) {
         if self.tasks.len() == 0 {
             return
@@ -394,6 +446,7 @@ impl App {
                 task_id
                 )[..],
             );
+        self.previous()
     }
 
     pub fn task_undo(&self) {
