@@ -1,8 +1,15 @@
 [package]
 name = "taskwarrior-tui"
 version = "0.3.0"
+license = "MIT"
+description = "A Taskwarrior Terminal User Interface"
+repository = "https://github.com/kdheepak/taskwarrior-tui/"
+homepage = "https://kdheepak.com/taskwarrior-tui"
+readme = "README.md"
 authors = ["Dheepak Krishnamurthy <me@kdheepak.com>"]
 edition = "2018"
+keywords = ["taskwarrior", "tui"]
+categories = ["command-line-utilities"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
