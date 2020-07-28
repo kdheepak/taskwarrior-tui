@@ -120,6 +120,9 @@ impl App {
     }
 
     pub fn draw(&mut self, f: &mut Frame<impl Backend>) {
+        while self.state.selected().unwrap_or_default() >= self.tasks.len() {
+            self.previous();
+        }
         let rects = Layout::default()
             .constraints(
                 [
@@ -446,7 +449,6 @@ impl App {
                 task_id
                 )[..],
             );
-        self.previous()
     }
 
     pub fn task_undo(&self) {
