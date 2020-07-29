@@ -15,11 +15,11 @@ use chrono::{DateTime, Duration, Local, NaiveDateTime, TimeZone};
 
 use tui::{
     backend::Backend,
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Direction, Layout, Rect, Alignment},
     style::{Color, Modifier, Style},
     terminal::Frame,
-    text::Text,
-    widgets::{BarChart, Clear, Block, Borders, Paragraph, Row, Table, TableState},
+    text::{Text, Spans, Span},
+    widgets::{BarChart, Clear, Block, Borders, Paragraph, Row, Table, Wrap, TableState},
     Terminal,
 };
 
@@ -92,6 +92,7 @@ pub enum AppMode {
     AddTask,
     LogTask,
     ModifyTask,
+    HelpPopup,
 }
 
 pub struct App {
@@ -189,8 +190,53 @@ impl App {
                 f.render_widget(Clear, rects[1]);
                 self.draw_command(f, rects[1], &self.command[..], "Add Task");
             },
+            AppMode::HelpPopup => {
+                self.draw_command(f, rects[1], &self.filter[..], "Filter Tasks");
+                self.draw_help_popup(f, f.size());
+            }
         }
     }
+
+    fn draw_help_popup(&self, f: &mut Frame<impl Backend>, rect: Rect) {
+        let text = vec![
+            Spans::from(""),
+            Spans::from(vec![Span::from("    /") , Span::from("    ") , Span::from(Span::styled("task {string}              ", Style::default().add_modifier(Modifier::BOLD))) , Span::from("    ") , Span::from("- Filter task report")])           ,
+            Spans::from(""),
+            Spans::from(vec![Span::from("    a") , Span::from("    ") , Span::from(Span::styled("task add {string}          ", Style::default().add_modifier(Modifier::BOLD))) , Span::from("    ") , Span::from("- Add new task")])                 ,
+            Spans::from(""),
+            Spans::from(vec![Span::from("    d") , Span::from("    ") , Span::from(Span::styled("task done {selected}       ", Style::default().add_modifier(Modifier::BOLD))) , Span::from("    ") , Span::from("- Mark task as done")])            ,
+            Spans::from(""),
+            Spans::from(vec![Span::from("    e") , Span::from("    ") , Span::from(Span::styled("task edit {selected}       ", Style::default().add_modifier(Modifier::BOLD))) , Span::from("    ") , Span::from("- Open selected task in editor")]) ,
+            Spans::from(""),
+            Spans::from(vec![Span::from("    j") , Span::from("    ") , Span::from(Span::styled("{selected+=1}              ", Style::default().add_modifier(Modifier::BOLD))) , Span::from("    ") , Span::from("- Move down in task report")])     ,
+            Spans::from(""),
+            Spans::from(vec![Span::from("    k") , Span::from("    ") , Span::from(Span::styled("{selected-=1}              ", Style::default().add_modifier(Modifier::BOLD))) , Span::from("    ") , Span::from("- Move up in task report")])       ,
+            Spans::from(""),
+            Spans::from(vec![Span::from("    l") , Span::from("    ") , Span::from(Span::styled("task log {string}          ", Style::default().add_modifier(Modifier::BOLD))) , Span::from("    ") , Span::from("- Log new task")])                 ,
+            Spans::from(""),
+            Spans::from(vec![Span::from("    m") , Span::from("    ") , Span::from(Span::styled("task modify {string}       ", Style::default().add_modifier(Modifier::BOLD))) , Span::from("    ") , Span::from("- Modify selected task")])         ,
+            Spans::from(""),
+            Spans::from(vec![Span::from("    q") , Span::from("    ") , Span::from(Span::styled("exit                       ", Style::default().add_modifier(Modifier::BOLD))) , Span::from("    ") , Span::from("- Quit")])                         ,
+            Spans::from(""),
+            Spans::from(vec![Span::from("    s") , Span::from("    ") , Span::from(Span::styled("task start/stop {selected} ", Style::default().add_modifier(Modifier::BOLD))) , Span::from("    ") , Span::from("- Toggle start and stop")])        ,
+            Spans::from(""),
+            Spans::from(vec![Span::from("    u") , Span::from("    ") , Span::from(Span::styled("task undo                  ", Style::default().add_modifier(Modifier::BOLD))) , Span::from("    ") , Span::from("- Undo")])                         ,
+            Spans::from(""),
+            Spans::from(vec![Span::from("    ?") , Span::from("    ") , Span::from(Span::styled("help                       ", Style::default().add_modifier(Modifier::BOLD))) , Span::from("    ") , Span::from("- Show this help menu")])          ,
+            Spans::from(""),
+        ];
+        let paragraph = Paragraph::new(text)
+            .block(
+                Block::default()
+                .title("Help")
+                .borders(Borders::ALL)
+            )
+            .alignment(Alignment::Left);
+        let area = centered_rect(80, 90, rect);
+        f.render_widget(Clear, area);
+        f.render_widget(paragraph, area);
+    }
+
 
     fn draw_command(&self, f: &mut Frame<impl Backend>, rect: Rect, text: &str, title: &str) {
         let p = Paragraph::new(Text::from(text))

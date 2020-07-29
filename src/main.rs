@@ -76,11 +76,20 @@ fn main() -> Result<(), Box<dyn Error>> {
                             Key::Char('a') => {
                                 app.mode = AppMode::AddTask;
                             }
+                            Key::Char('?') => {
+                                app.mode = AppMode::HelpPopup;
+                            }
                             Key::Char('/') => {
                                 app.mode = AppMode::Filter;
                             }
                             _ => {}
                         },
+                        AppMode::HelpPopup => match input {
+                            Key::Esc => {
+                                app.mode = AppMode::Report;
+                            }
+                            _ => {}
+                        }
                         AppMode::ModifyTask => match input {
                             Key::Char('\n') => {
                                 app.task_modify();
