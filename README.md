@@ -30,3 +30,4 @@ A Taskwarrior TUI written in Rust.
 - `q`: `exit`                       - Quit
 - `s`: `task start/stop {selected}` - Toggle start and stop
 - `u`: `task undo`                  - Undo
+- `?`: `help`                       - Help menu
