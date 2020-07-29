@@ -249,7 +249,7 @@ impl App {
         let constraints: Vec<Constraint> = widths
             .iter()
             .map(|i| {
-                Constraint::Percentage(std::cmp::min(50, std::cmp::max(*i, 5)).try_into().unwrap())
+                Constraint::Percentage(std::cmp::min(70, std::cmp::max(*i, 5)).try_into().unwrap())
             })
             .collect();
 
