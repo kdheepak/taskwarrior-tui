@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use shlex;
 use std::cmp::Ordering;
 use std::convert::TryInto;
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::error::Error;
 use std::result::Result;
 
@@ -705,15 +705,15 @@ impl App {
                 match output {
                     Ok(output) => {
                         if !output.status.success() {
-                            return Err(format!("Something went wrong. Cannot run `task edit` for task `{}`. Check documentation for more information", task_id));
+                            return Err(format!("`task edit` for task `{}` failed. {}{}", task_id, String::from_utf8(output.stdout).unwrap(), String::from_utf8(output.stderr).unwrap()));
                         } else {
                             return Ok(());
                         }
                     },
-                    Err(_) => Err(format!("Something went wrong. Cannot run `task edit` for task `{}`. Check documentation for more information", task_id)),
+                    Err(err) => Err(format!("Cannot run `task edit` for task `{}`. {}", task_id, err)),
                 }
             }
-            _ => Err(format!("Something went wrong. Cannot start `task edit` for task `{}`. Check documentation for more information", task_id))
+            _ => Err(format!("Cannot start `task edit` for task `{}`. Check documentation for more information", task_id))
         }
     }
 
