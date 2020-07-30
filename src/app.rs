@@ -1,9 +1,10 @@
 use serde::{Deserialize, Serialize};
-use serde_json::Result;
 use shlex;
 use std::cmp::Ordering;
 use std::convert::TryInto;
 use std::process::Command;
+use std::error::Error;
+use std::result::Result;
 
 use task_hookrs::date::Date;
 use task_hookrs::import::import;
@@ -93,6 +94,7 @@ pub enum AppMode {
     LogTask,
     ModifyTask,
     HelpPopup,
+    TaskError,
 }
 
 pub struct App {
@@ -100,6 +102,7 @@ pub struct App {
     pub state: TableState,
     pub filter: String,
     pub command: String,
+    pub error: String,
     pub modify: String,
     pub tasks: Vec<Task>,
     pub task_report_labels: Vec<String>,
@@ -118,6 +121,7 @@ impl App {
             filter: "status:pending ".to_string(),
             command: "".to_string(),
             modify: "".to_string(),
+            error: "".to_string(),
             mode: AppMode::Report,
         };
         app.update();
@@ -189,6 +193,10 @@ impl App {
                 );
                 f.render_widget(Clear, rects[1]);
                 self.draw_command(f, rects[1], &self.command[..], "Add Task");
+            },
+            AppMode::TaskError => {
+                f.render_widget(Clear, rects[1]);
+                self.draw_command(f, rects[1], &self.error[..], "Error");
             },
             AppMode::HelpPopup => {
                 self.draw_command(f, rects[1], &self.filter[..], "Filter Tasks");
@@ -500,23 +508,38 @@ impl App {
         self.update();
     }
 
-    pub fn task_log(&mut self) {
+    pub fn task_log(&mut self) -> Result<(), String>  {
         if self.tasks.len() == 0 {
-            return
+            return Ok(());
         }
 
-        let output = Command::new("task")
-            .arg("log")
-            .arg(format!("{}", self.command))
-            .output()
-            .expect("Cannot run `task log`. Check documentation for more information");
+        let mut command = Command::new("task");
 
-        self.command = "".to_string();
+        command
+            .arg("log");
+
+        match shlex::split(&self.command) {
+            Some(cmd) => {
+                for s in cmd {
+                    command.arg(&s);
+                }
+                let output = command
+                    .output()
+                    .expect("Cannot run `task log`. Check documentation for more information");
+
+                self.command = "".to_string();
+                return Ok(());
+            }
+            None => {
+                return Err(format!("Unable to run `task log` with `{}`", &self.command));
+            }
+        }
+
     }
 
-    pub fn task_modify(&mut self) {
+    pub fn task_modify(&mut self) -> Result<(), String> {
         if self.tasks.len() == 0 {
-            return
+            return Ok(());
         }
         let selected = self.state.selected().unwrap_or_default();
         let task_id = self.tasks[selected].id().unwrap_or_default();
@@ -530,22 +553,22 @@ impl App {
                 for s in cmd {
                     command.arg(&s);
                 }
+                let output = command
+                    .output()
+                    .expect("Cannot run `task modify`. Check documentation for more information");
+
+                self.modify = "".to_string();
+                return Ok(());
             }
             None => {
-                command.arg("");
+                return Err(format!("Unable to run `task modify` with `{}` on task {}", &self.modify, &task_id));
             }
         }
-
-        let output = command
-            .output()
-            .expect("Cannot run `task modify`. Check documentation for more information");
-
-        self.modify = "".to_string();
     }
 
-    pub fn task_add(&mut self) {
+    pub fn task_add(&mut self) -> Result<(), String>  {
         if self.tasks.len() == 0 {
-            return
+            return Ok(());
         }
 
         let mut command = Command::new("task");
@@ -557,17 +580,17 @@ impl App {
                 for s in cmd {
                     command.arg(&s);
                 }
+                let output = command
+                    .output()
+                    .expect("Cannot run `task add`. Check documentation for more information");
+
+                self.command = "".to_string();
+                return Ok(());
             }
             None => {
-                command.arg("");
+                return Err(format!("Unable to run `task add` with `{}`", &self.command));
             }
         }
-
-        let output = command
-            .output()
-            .expect("Cannot run `task add`. Check documentation for more information");
-
-        self.command = "".to_string();
     }
 
     pub fn task_virtual_tags(& self) -> String {
@@ -730,17 +753,8 @@ mod tests {
         let (t, h, c) = app.task_report();
         app.next();
         app.next();
-        let selected = app.state.selected().unwrap_or_default();
-        let task_id = app.tasks[selected].id().unwrap_or_default();
-        let mut command = "start";
-        for tag in app.tasks[selected].tags().unwrap_or(&vec![]) {
-            if tag == "ACTIVE" {
-                command = "stop"
-            }
-        }
-        println!("{:?}", app.tasks[selected]);
-        println!("{:?}", app.tasks[selected].tags().unwrap_or(&vec![]));
-        println!("{}", app.task_virtual_tags());
+        app.modify = "Cannot add this string ' because it has a single quote".to_string();
+        println!("{}", app.modify);
         // if let Ok(tasks) = import(stdin()) {
         //     for task in tasks {
         //         println!("Task: {}, entered {:?} is {} -> {}",

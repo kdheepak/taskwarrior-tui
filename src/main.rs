@@ -92,8 +92,13 @@ fn main() -> Result<(), Box<dyn Error>> {
                         }
                         AppMode::ModifyTask => match input {
                             Key::Char('\n') => {
-                                app.task_modify();
-                                app.mode = AppMode::Report;
+                                match app.task_modify() {
+                                    Ok(_) => app.mode = AppMode::Report,
+                                    Err(e) => {
+                                        app.mode = AppMode::TaskError;
+                                        app.error = e;
+                                    }
+                                }
                             }
                             Key::Esc => {
                                 app.modify = "".to_string();
@@ -109,8 +114,13 @@ fn main() -> Result<(), Box<dyn Error>> {
                         },
                         AppMode::LogTask => match input {
                             Key::Char('\n') => {
-                                app.task_log();
-                                app.mode = AppMode::Report;
+                                match app.task_log() {
+                                    Ok(_) => app.mode = AppMode::Report,
+                                    Err(e) => {
+                                        app.mode = AppMode::TaskError;
+                                        app.error = e;
+                                    }
+                                }
                             }
                             Key::Esc => {
                                 app.command = "".to_string();
@@ -126,8 +136,13 @@ fn main() -> Result<(), Box<dyn Error>> {
                         },
                         AppMode::AddTask => match input {
                             Key::Char('\n') => {
-                                app.task_add();
-                                app.mode = AppMode::Report;
+                                match app.task_add() {
+                                    Ok(_) => app.mode = AppMode::Report,
+                                    Err(e) => {
+                                        app.mode = AppMode::TaskError;
+                                        app.error = e;
+                                    }
+                                }
                             }
                             Key::Esc => {
                                 app.command = "".to_string();
@@ -150,6 +165,12 @@ fn main() -> Result<(), Box<dyn Error>> {
                             }
                             Key::Backspace => {
                                 app.filter.pop();
+                            }
+                            _ => {}
+                        },
+                        AppMode::TaskError => match input {
+                            Key::Esc => {
+                                app.mode = AppMode::Report;
                             }
                             _ => {}
                         },
