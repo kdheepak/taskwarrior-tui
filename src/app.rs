@@ -266,20 +266,19 @@ impl App {
         let task_id = self.tasks[selected].id().unwrap_or_default();
         let output = Command::new("task")
             .arg(format!("{}", task_id))
-            .output()
-            .expect(
-                &format!(
-                "Unable to show details for `task {}`. Check documentation for more information",
-                task_id
-                )[..],
-            );
-        let data = String::from_utf8(output.stdout).unwrap();
-        let p = Paragraph::new(Text::from(&data[..])).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(format!("Task {}", task_id)),
-        );
-        f.render_widget(p, rect);
+            .output();
+        match output {
+            Ok(output) => {
+                let data = String::from_utf8(output.stdout).unwrap();
+                let p = Paragraph::new(Text::from(&data[..])).block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .title(format!("Task {}", task_id)),
+                );
+                f.render_widget(p, rect);
+            },
+            Err(_) => (),
+        }
     }
 
     fn draw_task_report(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
@@ -593,37 +592,37 @@ impl App {
         }
     }
 
-    pub fn task_virtual_tags(& self) -> String {
+    pub fn task_virtual_tags(& self) -> Result<String, String> {
         let selected = self.state.selected().unwrap_or_default();
         let task_id = self.tasks[selected].id().unwrap_or_default();
         let output = Command::new("task")
             .arg(format!("{}", task_id))
-            .output()
-            .expect(
-                &format!(
-                "Cannot run `task {}`. Check documentation for more information",
-                task_id
-                )[..],
-            );
-        let data = String::from_utf8(output.stdout).unwrap();
-        for line in data.split("\n") {
-            if line.starts_with("Virtual tags") {
-                let line = line.to_string();
-                let line = line.replace("Virtual tags", "");
-                return line;
-            }
+            .output();
+
+        match output {
+            Ok(output) => {
+                let data = String::from_utf8(output.stdout).unwrap();
+                for line in data.split("\n") {
+                    if line.starts_with("Virtual tags") {
+                        let line = line.to_string();
+                        let line = line.replace("Virtual tags", "");
+                        return Ok(line);
+                    }
+                }
+                return Err(format!("Cannot find any tags for `task {}`. Check documentation for more information", task_id))
+            },
+            Err(_) => Err(format!("Cannot run `task {}`. Check documentation for more information", task_id))
         }
-        "".to_string()
     }
 
-    pub fn task_start_or_stop(&mut self) {
+    pub fn task_start_or_stop(&mut self) -> Result<(), String> {
         if self.tasks.len() == 0 {
-            return
+            return Ok(());
         }
         let selected = self.state.selected().unwrap_or_default();
         let task_id = self.tasks[selected].id().unwrap_or_default();
         let mut command = "start";
-        for tag in self.task_virtual_tags().split(" ") {
+        for tag in self.task_virtual_tags()?.split(" ") {
             if tag == "ACTIVE" {
                 command = "stop"
             }
@@ -632,13 +631,11 @@ impl App {
         let output = Command::new("task")
             .arg(command)
             .arg(format!("{}", task_id))
-            .output()
-            .expect(
-                &format!(
-                "Cannot run `task done` for task `{}`. Check documentation for more information",
-                task_id
-                )[..],
-            );
+            .output();
+        match output {
+            Ok(_) => Ok(()),
+            Err(_) => Err(format!("Cannot run `task done` for task `{}`. Check documentation for more information", task_id)),
+        }
     }
 
     pub fn task_delete(&self) {

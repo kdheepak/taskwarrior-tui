@@ -56,7 +56,13 @@ fn main() -> Result<(), Box<dyn Error>> {
                             Key::Up | Key::Char('k') => app.previous(),
                             Key::Char('d') => app.task_done(),
                             Key::Char('x') => app.task_delete(),
-                            Key::Char('s') => app.task_start_or_stop(),
+                            Key::Char('s') => match app.task_start_or_stop() {
+                                Ok(_) => (),
+                                Err(e) => {
+                                    app.mode = AppMode::TaskError;
+                                    app.error = e;
+                                }
+                            },
                             Key::Char('u') => app.task_undo(),
                             Key::Char('e') => {
                                 events.pause_event_loop(&mut terminal);
