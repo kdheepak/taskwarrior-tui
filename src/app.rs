@@ -674,15 +674,19 @@ impl App {
             );
     }
 
-    pub fn task_undo(&self) {
+    pub fn task_undo(&self) -> Result<(), String> {
         if self.tasks.len() == 0 {
-            return
+            return Ok(());
         }
         let output = Command::new("task")
             .arg("rc.confirmation=off")
             .arg("undo")
-            .output()
-            .expect("Cannot run `task undo`. Check documentation for more information");
+            .output();
+
+        match output {
+            Ok(_) => Ok(()),
+            Err(_) => Err("Cannot run `task undo`. Check documentation for more information".to_string()),
+        }
     }
 
     pub fn task_edit(&self) {
