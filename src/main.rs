@@ -54,7 +54,13 @@ fn main() -> Result<(), Box<dyn Error>> {
                             Key::Char('r') => app.update(),
                             Key::Down | Key::Char('j') => app.next(),
                             Key::Up | Key::Char('k') => app.previous(),
-                            Key::Char('d') => app.task_done(),
+                            Key::Char('d') => match app.task_done() {
+                                Ok(_) => (),
+                                Err(e) => {
+                                    app.mode = AppMode::TaskError;
+                                    app.error = e;
+                                }
+                            },
                             Key::Char('x') => match app.task_delete() {
                                 Ok(_) => (),
                                 Err(e) => {

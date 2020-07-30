@@ -656,22 +656,20 @@ impl App {
         }
     }
 
-    pub fn task_done(&mut self) {
+    pub fn task_done(&mut self) -> Result<(), String> {
         if self.tasks.len() == 0 {
-            return
+            return Ok(());
         }
         let selected = self.state.selected().unwrap_or_default();
         let task_id = self.tasks[selected].id().unwrap_or_default();
         let output = Command::new("task")
             .arg("done")
             .arg(format!("{}", task_id))
-            .output()
-            .expect(
-                &format!(
-                "Cannot run `task done` for task `{}`. Check documentation for more information",
-                task_id
-                )[..],
-            );
+            .output();
+        match output {
+            Ok(_) => Ok(()),
+            Err(_) => Err(format!("Cannot run `task done` for task `{}`. Check documentation for more information", task_id))
+        }
     }
 
     pub fn task_undo(&self) -> Result<(), String> {
