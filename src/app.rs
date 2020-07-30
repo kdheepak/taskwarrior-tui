@@ -687,9 +687,9 @@ impl App {
         }
     }
 
-    pub fn task_edit(&self) {
+    pub fn task_edit(&self) -> Result<(), String> {
         if self.tasks.len() == 0 {
-            return
+            return Ok(());
         }
         let selected = self.state.selected().unwrap_or_default();
         let task_id = self.tasks[selected].id().unwrap_or_default();
@@ -698,24 +698,22 @@ impl App {
             .arg(format!("{}", task_id))
             .spawn();
 
-        // TODO: fix vim hanging
         match r {
             Ok(child) => {
                 let output = child
-                    .wait_with_output()
-                    .expect(
-                        &format!(
-                        "Cannot run `task edit` for task `{}`. Check documentation for more information",
-                        task_id
-                        )[..],
-                    );
-                if !output.status.success() {
-                    // TODO: show error message here
+                    .wait_with_output();
+                match output {
+                    Ok(output) => {
+                        if !output.status.success() {
+                            return Err(format!("Something went wrong. Cannot run `task edit` for task `{}`. Check documentation for more information", task_id));
+                        } else {
+                            return Ok(());
+                        }
+                    },
+                    Err(_) => Err(format!("Something went wrong. Cannot run `task edit` for task `{}`. Check documentation for more information", task_id)),
                 }
             }
-            _ => {
-                println!("Vim failed to start");
-            }
+            _ => Err(format!("Something went wrong. Cannot start `task edit` for task `{}`. Check documentation for more information", task_id))
         }
     }
 

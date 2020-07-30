@@ -84,8 +84,15 @@ fn main() -> Result<(), Box<dyn Error>> {
                             },
                             Key::Char('e') => {
                                 events.pause_event_loop(&mut terminal);
-                                app.task_edit();
+                                let r = app.task_edit();
                                 events.resume_event_loop(&mut terminal);
+                                match r {
+                                    Ok(_) => (),
+                                    Err(e) => {
+                                        app.mode = AppMode::TaskError;
+                                        app.error = e;
+                                    }
+                                }
                             },
                             Key::Char('m') => {
                                 app.mode = AppMode::ModifyTask;
@@ -193,10 +200,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                             _ => {}
                         },
                         AppMode::TaskError => match input {
-                            Key::Esc => {
+                            _ => {
                                 app.mode = AppMode::Report;
                             }
-                            _ => {}
                         },
                     }
                 }
