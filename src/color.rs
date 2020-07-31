@@ -48,9 +48,9 @@ pub struct TColor {
     pub tag: RGB,
     pub tagged: RGB,
     pub uda_priority: RGB,
-    pub uda_priority_H: RGB,
-    pub uda_priority_L: RGB,
-    pub uda_priority_M: RGB,
+    pub uda_priority_h: RGB,
+    pub uda_priority_l: RGB,
+    pub uda_priority_m: RGB,
     pub undo_after: RGB,
     pub undo_before: RGB,
     pub until: RGB,
@@ -74,7 +74,7 @@ impl TColor {
 
         let data = String::from_utf8(output.stdout).expect("Unable to convert stdout to string");
 
-        let mut enabled = true;
+        let enabled = true;
         let mut active = RGB {
             r: 0.0,
             g: 0.0,
@@ -275,17 +275,17 @@ impl TColor {
             g: 0.0,
             b: 0.0,
         };
-        let mut uda_priority_H = RGB {
+        let mut uda_priority_h = RGB {
             r: 0.0,
             g: 0.0,
             b: 0.0,
         };
-        let mut uda_priority_L = RGB {
+        let mut uda_priority_l = RGB {
             r: 0.0,
             g: 0.0,
             b: 0.0,
         };
-        let mut uda_priority_M = RGB {
+        let mut uda_priority_m = RGB {
             r: 0.0,
             g: 0.0,
             b: 0.0,
@@ -433,13 +433,13 @@ impl TColor {
                 uda_priority = get_color(line);
             }
             if line.starts_with("uda.priority.H") {
-                uda_priority_H = get_color(line);
+                uda_priority_h = get_color(line);
             }
             if line.starts_with("uda.priority.L") {
-                uda_priority_L = get_color(line);
+                uda_priority_l = get_color(line);
             }
             if line.starts_with("uda.priority.M") {
-                uda_priority_M = get_color(line);
+                uda_priority_m = get_color(line);
             }
             if line.starts_with("undo.after") {
                 undo_after = get_color(line);
@@ -497,9 +497,9 @@ impl TColor {
             tag: tag,
             tagged: tagged,
             uda_priority: uda_priority,
-            uda_priority_H: uda_priority_H,
-            uda_priority_L: uda_priority_L,
-            uda_priority_M: uda_priority_M,
+            uda_priority_h: uda_priority_h,
+            uda_priority_l: uda_priority_l,
+            uda_priority_m: uda_priority_m,
             undo_after: undo_after,
             undo_before: undo_before,
             until: until,
