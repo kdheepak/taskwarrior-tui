@@ -8,9 +8,7 @@ use crossterm::{
 use tui::{backend::CrosstermBackend, Terminal};
 
 use std::io::{self, Write};
-use std::sync::{
-    Arc, Mutex,
-};
+use std::sync::{Arc, Mutex};
 use std::{sync::mpsc, thread, time::Duration};
 
 #[derive(Debug, Clone, Copy)]

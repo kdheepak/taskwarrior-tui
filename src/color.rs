@@ -58,64 +58,258 @@ pub struct TColor {
 }
 
 pub fn get_color(line: &str) -> RGB {
-    RGB { r: 0.0, g: 0.0, b: 0.0 }
+    RGB {
+        r: 0.0,
+        g: 0.0,
+        b: 0.0,
+    }
 }
 
 impl TColor {
-
     pub fn default() -> Self {
-        let output = Command::new("task").arg("show").output().expect("Unable to run `task show`");
+        let output = Command::new("task")
+            .arg("show")
+            .output()
+            .expect("Unable to run `task show`");
 
         let data = String::from_utf8(output.stdout).expect("Unable to convert stdout to string");
 
         let mut enabled = true;
-        let mut active = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut alternate = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut blocked = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut blocking = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut burndown_done = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut burndown_pending = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut burndown_started = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut calendar_due = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut calendar_due_today = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut calendar_holiday = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut calendar_overdue = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut calendar_today = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut calendar_weekend = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut calendar_weeknumber = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut completed = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut debug = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut deleted = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut due = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut due_today = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut error = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut footnote = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut header = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut history_add = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut history_delete = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut history_done = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut label = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut label_sort = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut overdue = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut project = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut recurring = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut scheduled = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut summary_background = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut summary_bar = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut sync_added = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut sync_changed = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut sync_rejected = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut tag_next = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut tag = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut tagged = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut uda_priority = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut uda_priority_H = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut uda_priority_L = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut uda_priority_M = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut undo_after = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut undo_before = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut until = RGB{r: 0.0, g: 0.0, b: 0.0};
-        let mut warning = RGB{r: 0.0, g: 0.0, b: 0.0};
+        let mut active = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut alternate = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut blocked = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut blocking = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut burndown_done = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut burndown_pending = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut burndown_started = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut calendar_due = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut calendar_due_today = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut calendar_holiday = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut calendar_overdue = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut calendar_today = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut calendar_weekend = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut calendar_weeknumber = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut completed = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut debug = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut deleted = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut due = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut due_today = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut error = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut footnote = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut header = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut history_add = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut history_delete = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut history_done = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut label = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut label_sort = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut overdue = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut project = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut recurring = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut scheduled = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut summary_background = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut summary_bar = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut sync_added = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut sync_changed = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut sync_rejected = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut tag_next = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut tag = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut tagged = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut uda_priority = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut uda_priority_H = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut uda_priority_L = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut uda_priority_M = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut undo_after = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut undo_before = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut until = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+        let mut warning = RGB {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
 
         for line in data.split('\n') {
             if line.starts_with("active") {
@@ -262,55 +456,54 @@ impl TColor {
         }
 
         Self {
-            enabled             : enabled             ,
-            active              : active              ,
-            alternate           : alternate           ,
-            blocked             : blocked             ,
-            blocking            : blocking            ,
-            burndown_done       : burndown_done       ,
-            burndown_pending    : burndown_pending    ,
-            burndown_started    : burndown_started    ,
-            calendar_due        : calendar_due        ,
-            calendar_due_today  : calendar_due_today  ,
-            calendar_holiday    : calendar_holiday    ,
-            calendar_overdue    : calendar_overdue    ,
-            calendar_today      : calendar_today      ,
-            calendar_weekend    : calendar_weekend    ,
-            calendar_weeknumber : calendar_weeknumber ,
-            completed           : completed           ,
-            debug               : debug               ,
-            deleted             : deleted             ,
-            due                 : due                 ,
-            due_today           : due_today           ,
-            error               : error               ,
-            footnote            : footnote            ,
-            header              : header              ,
-            history_add         : history_add         ,
-            history_delete      : history_delete      ,
-            history_done        : history_done        ,
-            label               : label               ,
-            label_sort          : label_sort          ,
-            overdue             : overdue             ,
-            project             : project             ,
-            recurring           : recurring           ,
-            scheduled           : scheduled           ,
-            summary_background  : summary_background  ,
-            summary_bar         : summary_bar         ,
-            sync_added          : sync_added          ,
-            sync_changed        : sync_changed        ,
-            sync_rejected       : sync_rejected       ,
-            tag_next            : tag_next            ,
-            tag                 : tag                 ,
-            tagged              : tagged              ,
-            uda_priority        : uda_priority        ,
-            uda_priority_H      : uda_priority_H      ,
-            uda_priority_L      : uda_priority_L      ,
-            uda_priority_M      : uda_priority_M      ,
-            undo_after          : undo_after          ,
-            undo_before         : undo_before         ,
-            until               : until               ,
-            warning             : warning             ,
+            enabled: enabled,
+            active: active,
+            alternate: alternate,
+            blocked: blocked,
+            blocking: blocking,
+            burndown_done: burndown_done,
+            burndown_pending: burndown_pending,
+            burndown_started: burndown_started,
+            calendar_due: calendar_due,
+            calendar_due_today: calendar_due_today,
+            calendar_holiday: calendar_holiday,
+            calendar_overdue: calendar_overdue,
+            calendar_today: calendar_today,
+            calendar_weekend: calendar_weekend,
+            calendar_weeknumber: calendar_weeknumber,
+            completed: completed,
+            debug: debug,
+            deleted: deleted,
+            due: due,
+            due_today: due_today,
+            error: error,
+            footnote: footnote,
+            header: header,
+            history_add: history_add,
+            history_delete: history_delete,
+            history_done: history_done,
+            label: label,
+            label_sort: label_sort,
+            overdue: overdue,
+            project: project,
+            recurring: recurring,
+            scheduled: scheduled,
+            summary_background: summary_background,
+            summary_bar: summary_bar,
+            sync_added: sync_added,
+            sync_changed: sync_changed,
+            sync_rejected: sync_rejected,
+            tag_next: tag_next,
+            tag: tag,
+            tagged: tagged,
+            uda_priority: uda_priority,
+            uda_priority_H: uda_priority_H,
+            uda_priority_L: uda_priority_L,
+            uda_priority_M: uda_priority_M,
+            undo_after: undo_after,
+            undo_before: undo_before,
+            until: until,
+            warning: warning,
         }
     }
-
 }

@@ -126,7 +126,8 @@ impl TTApp {
     }
 
     pub fn draw(&mut self, f: &mut Frame<impl Backend>) {
-        while !self.tasks.is_empty() && self.state.selected().unwrap_or_default() >= self.tasks.len()
+        while !self.tasks.is_empty()
+            && self.state.selected().unwrap_or_default() >= self.tasks.len()
         {
             self.previous();
         }
@@ -337,14 +338,14 @@ impl TTApp {
         let task_id = self.tasks[selected].id().unwrap_or_default();
         let output = Command::new("task").arg(format!("{}", task_id)).output();
         if let Ok(output) = output {
-                let data = String::from_utf8(output.stdout).unwrap();
-                let p = Paragraph::new(Text::from(&data[..])).block(
-                    Block::default()
-                        .borders(Borders::ALL)
-                        .title(format!("Task {}", task_id)),
-                );
-                f.render_widget(p, rect);
-            }
+            let data = String::from_utf8(output.stdout).unwrap();
+            let p = Paragraph::new(Text::from(&data[..])).block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(format!("Task {}", task_id)),
+            );
+            f.render_widget(p, rect);
+        }
     }
 
     fn draw_task_report(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
@@ -453,8 +454,8 @@ impl TTApp {
         let mut widths: Vec<i16> = vec![0; tasks[0].len()];
         for task in &tasks {
             for (i, attr) in task.iter().enumerate() {
-                widths[i] = attr.len() as i16 * 100
-                    / task.iter().map(|s| s.len() as i16).sum::<i16>()
+                widths[i] =
+                    attr.len() as i16 * 100 / task.iter().map(|s| s.len() as i16).sum::<i16>()
             }
         }
 
@@ -581,8 +582,7 @@ impl TTApp {
                 for s in cmd {
                     command.arg(&s);
                 }
-                let output = command
-                    .output();
+                let output = command.output();
                 match output {
                     Ok(_) => {
                         self.command = "".to_string();
@@ -593,9 +593,7 @@ impl TTApp {
                     )
                 }
             }
-            None => {
-                Err(format!("Unable to run `task log` with `{}`", &self.command))
-            }
+            None => Err(format!("Unable to run `task log` with `{}`", &self.command)),
         }
     }
 
@@ -613,8 +611,7 @@ impl TTApp {
                 for s in cmd {
                     command.arg(&s);
                 }
-                let output = command
-                    .output();
+                let output = command.output();
                 match output {
                     Ok(_) => {
                         self.modify = "".to_string();
@@ -625,12 +622,10 @@ impl TTApp {
                     )
                 }
             }
-            None => {
-                Err(format!(
-                    "Unable to run `task modify` with `{}` on task {}",
-                    &self.modify, &task_id
-                ))
-            }
+            None => Err(format!(
+                "Unable to run `task modify` with `{}` on task {}",
+                &self.modify, &task_id
+            )),
         }
     }
 
@@ -647,21 +642,19 @@ impl TTApp {
                 for s in cmd {
                     command.arg(&s);
                 }
-                let output = command
-                    .output();
+                let output = command.output();
                 match output {
                     Ok(_) => {
                         self.command = "".to_string();
                         Ok(())
-                    },
+                    }
                     Err(_) => Err(
-                        "Cannot run `task add`. Check documentation for more information".to_string(),
-                    )
+                        "Cannot run `task add`. Check documentation for more information"
+                            .to_string(),
+                    ),
                 }
             }
-            None => {
-                Err(format!("Unable to run `task add` with `{}`", &self.command))
-            }
+            None => Err(format!("Unable to run `task add` with `{}`", &self.command)),
         }
     }
 
@@ -713,8 +706,7 @@ impl TTApp {
             Ok(_) => Ok(()),
             Err(_) => Err(format!(
                 "Cannot run `task {}` for task `{}`. Check documentation for more information",
-                command,
-                task_id,
+                command, task_id,
             )),
         }
     }
