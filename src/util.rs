@@ -8,11 +8,11 @@ use crossterm::{
 use tui::{backend::CrosstermBackend, Terminal};
 
 use std::io::{self, Write};
-use std::{sync::mpsc, thread, time::Duration};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex,
 };
+use std::{sync::mpsc, thread, time::Duration};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Key {
@@ -70,7 +70,6 @@ pub struct Events {
 }
 
 impl Events {
-
     #[cfg(feature = "crossterm")]
     pub fn with_config(config: EventConfig) -> Events {
         use crossterm::event::{KeyCode::*, KeyModifiers};
@@ -123,7 +122,11 @@ impl Events {
             })
         };
 
-        Events { rx, tx, pause_stdin }
+        Events {
+            rx,
+            tx,
+            pause_stdin,
+        }
     }
 
     /// Attempts to read an event.
@@ -133,7 +136,7 @@ impl Events {
     }
 
     #[cfg(feature = "crossterm")]
-    pub fn pause_event_loop(&self, terminal: & mut Terminal<CrosstermBackend<io::Stdout>>) {
+    pub fn pause_event_loop(&self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
         *self.pause_stdin.lock().unwrap() = true;
         std::thread::sleep(std::time::Duration::from_millis(50));
         disable_raw_mode().unwrap();
@@ -142,7 +145,7 @@ impl Events {
     }
 
     #[cfg(feature = "crossterm")]
-    pub fn resume_event_loop(&self, terminal: & mut Terminal<CrosstermBackend<io::Stdout>>) {
+    pub fn resume_event_loop(&self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
         enable_raw_mode().unwrap();
         execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture).unwrap();
         std::thread::sleep(std::time::Duration::from_millis(50));

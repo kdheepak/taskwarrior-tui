@@ -2,8 +2,8 @@ use serde::{Deserialize, Serialize};
 use shlex;
 use std::cmp::Ordering;
 use std::convert::TryInto;
-use std::process::{Command, Stdio};
 use std::error::Error;
+use std::process::{Command, Stdio};
 use std::result::Result;
 
 use task_hookrs::date::Date;
@@ -16,11 +16,11 @@ use chrono::{DateTime, Duration, Local, NaiveDateTime, TimeZone};
 
 use tui::{
     backend::Backend,
-    layout::{Constraint, Direction, Layout, Rect, Alignment},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     terminal::Frame,
-    text::{Text, Spans, Span},
-    widgets::{BarChart, Clear, Block, Borders, Paragraph, Row, Table, Wrap, TableState},
+    text::{Span, Spans, Text},
+    widgets::{BarChart, Block, Borders, Clear, Paragraph, Row, Table, TableState, Wrap},
     Terminal,
 };
 
@@ -59,7 +59,6 @@ pub fn vague_format_date_time(dt: &Date) -> String {
     }
 }
 
-
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
     let popup_layout = Layout::default()
         .direction(Direction::Vertical)
@@ -85,7 +84,6 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
         )
         .split(popup_layout[1])[1]
 }
-
 
 pub enum AppMode {
     Report,
@@ -131,28 +129,17 @@ impl TaskwarriorTUIApp {
     }
 
     pub fn draw(&mut self, f: &mut Frame<impl Backend>) {
-        while self.tasks.len() != 0 && self.state.selected().unwrap_or_default() >= self.tasks.len() {
+        while self.tasks.len() != 0 && self.state.selected().unwrap_or_default() >= self.tasks.len()
+        {
             self.previous();
         }
         let rects = Layout::default()
             .direction(Direction::Vertical)
-            .constraints(
-                [
-                    Constraint::Min(0),
-                    Constraint::Length(3),
-                ]
-                .as_ref(),
-            )
+            .constraints([Constraint::Min(0), Constraint::Length(3)].as_ref())
             .split(f.size());
         let task_rects = Layout::default()
             .direction(Direction::Vertical)
-            .constraints(
-                [
-                    Constraint::Percentage(50),
-                    Constraint::Percentage(50),
-                ]
-                .as_ref(),
-            )
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
             .split(rects[0]);
         self.draw_task_report(f, task_rects[0]);
         self.draw_task_details(f, task_rects[1]);
@@ -160,40 +147,28 @@ impl TaskwarriorTUIApp {
             AppMode::Report => self.draw_command(f, rects[1], &self.filter[..], "Filter Tasks"),
             AppMode::Filter => {
                 f.render_widget(Clear, rects[1]);
-                f.set_cursor(
-                    rects[1].x + self.cursor_location as u16 + 1,
-                    rects[1].y + 1,
-                );
+                f.set_cursor(rects[1].x + self.cursor_location as u16 + 1, rects[1].y + 1);
                 self.draw_command(f, rects[1], &self.filter[..], "Filter Tasks");
-            },
+            }
             AppMode::ModifyTask => {
-                f.set_cursor(
-                    rects[1].x + self.cursor_location as u16 + 1,
-                    rects[1].y + 1,
-                );
+                f.set_cursor(rects[1].x + self.cursor_location as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
                 self.draw_command(f, rects[1], &self.modify[..], "Modify Task");
-            },
+            }
             AppMode::LogTask => {
-                f.set_cursor(
-                    rects[1].x + self.cursor_location as u16 + 1,
-                    rects[1].y + 1,
-                );
+                f.set_cursor(rects[1].x + self.cursor_location as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
                 self.draw_command(f, rects[1], &self.command[..], "Log Task");
-            },
+            }
             AppMode::AddTask => {
-                f.set_cursor(
-                    rects[1].x + self.cursor_location as u16 + 1,
-                    rects[1].y + 1,
-                );
+                f.set_cursor(rects[1].x + self.cursor_location as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
                 self.draw_command(f, rects[1], &self.command[..], "Add Task");
-            },
+            }
             AppMode::TaskError => {
                 f.render_widget(Clear, rects[1]);
                 self.draw_command(f, rects[1], &self.error[..], "Error");
-            },
+            }
             AppMode::HelpPopup => {
                 self.draw_command(f, rects[1], &self.filter[..], "Filter Tasks");
                 self.draw_help_popup(f, f.size());
@@ -204,43 +179,146 @@ impl TaskwarriorTUIApp {
     fn draw_help_popup(&self, f: &mut Frame<impl Backend>, rect: Rect) {
         let text = vec![
             Spans::from(""),
-            Spans::from(vec![Span::from("    /") , Span::from("    ") , Span::from(Span::styled("task {string}              ", Style::default().add_modifier(Modifier::BOLD))) , Span::from("    ") , Span::from("- Filter task report")])           ,
+            Spans::from(vec![
+                Span::from("    /"),
+                Span::from("    "),
+                Span::from(Span::styled(
+                    "task {string}              ",
+                    Style::default().add_modifier(Modifier::BOLD),
+                )),
+                Span::from("    "),
+                Span::from("- Filter task report"),
+            ]),
             Spans::from(""),
-            Spans::from(vec![Span::from("    a") , Span::from("    ") , Span::from(Span::styled("task add {string}          ", Style::default().add_modifier(Modifier::BOLD))) , Span::from("    ") , Span::from("- Add new task")])                 ,
+            Spans::from(vec![
+                Span::from("    a"),
+                Span::from("    "),
+                Span::from(Span::styled(
+                    "task add {string}          ",
+                    Style::default().add_modifier(Modifier::BOLD),
+                )),
+                Span::from("    "),
+                Span::from("- Add new task"),
+            ]),
             Spans::from(""),
-            Spans::from(vec![Span::from("    d") , Span::from("    ") , Span::from(Span::styled("task done {selected}       ", Style::default().add_modifier(Modifier::BOLD))) , Span::from("    ") , Span::from("- Mark task as done")])            ,
+            Spans::from(vec![
+                Span::from("    d"),
+                Span::from("    "),
+                Span::from(Span::styled(
+                    "task done {selected}       ",
+                    Style::default().add_modifier(Modifier::BOLD),
+                )),
+                Span::from("    "),
+                Span::from("- Mark task as done"),
+            ]),
             Spans::from(""),
-            Spans::from(vec![Span::from("    e") , Span::from("    ") , Span::from(Span::styled("task edit {selected}       ", Style::default().add_modifier(Modifier::BOLD))) , Span::from("    ") , Span::from("- Open selected task in editor")]) ,
+            Spans::from(vec![
+                Span::from("    e"),
+                Span::from("    "),
+                Span::from(Span::styled(
+                    "task edit {selected}       ",
+                    Style::default().add_modifier(Modifier::BOLD),
+                )),
+                Span::from("    "),
+                Span::from("- Open selected task in editor"),
+            ]),
             Spans::from(""),
-            Spans::from(vec![Span::from("    j") , Span::from("    ") , Span::from(Span::styled("{selected+=1}              ", Style::default().add_modifier(Modifier::BOLD))) , Span::from("    ") , Span::from("- Move down in task report")])     ,
+            Spans::from(vec![
+                Span::from("    j"),
+                Span::from("    "),
+                Span::from(Span::styled(
+                    "{selected+=1}              ",
+                    Style::default().add_modifier(Modifier::BOLD),
+                )),
+                Span::from("    "),
+                Span::from("- Move down in task report"),
+            ]),
             Spans::from(""),
-            Spans::from(vec![Span::from("    k") , Span::from("    ") , Span::from(Span::styled("{selected-=1}              ", Style::default().add_modifier(Modifier::BOLD))) , Span::from("    ") , Span::from("- Move up in task report")])       ,
+            Spans::from(vec![
+                Span::from("    k"),
+                Span::from("    "),
+                Span::from(Span::styled(
+                    "{selected-=1}              ",
+                    Style::default().add_modifier(Modifier::BOLD),
+                )),
+                Span::from("    "),
+                Span::from("- Move up in task report"),
+            ]),
             Spans::from(""),
-            Spans::from(vec![Span::from("    l") , Span::from("    ") , Span::from(Span::styled("task log {string}          ", Style::default().add_modifier(Modifier::BOLD))) , Span::from("    ") , Span::from("- Log new task")])                 ,
+            Spans::from(vec![
+                Span::from("    l"),
+                Span::from("    "),
+                Span::from(Span::styled(
+                    "task log {string}          ",
+                    Style::default().add_modifier(Modifier::BOLD),
+                )),
+                Span::from("    "),
+                Span::from("- Log new task"),
+            ]),
             Spans::from(""),
-            Spans::from(vec![Span::from("    m") , Span::from("    ") , Span::from(Span::styled("task modify {string}       ", Style::default().add_modifier(Modifier::BOLD))) , Span::from("    ") , Span::from("- Modify selected task")])         ,
+            Spans::from(vec![
+                Span::from("    m"),
+                Span::from("    "),
+                Span::from(Span::styled(
+                    "task modify {string}       ",
+                    Style::default().add_modifier(Modifier::BOLD),
+                )),
+                Span::from("    "),
+                Span::from("- Modify selected task"),
+            ]),
             Spans::from(""),
-            Spans::from(vec![Span::from("    q") , Span::from("    ") , Span::from(Span::styled("exit                       ", Style::default().add_modifier(Modifier::BOLD))) , Span::from("    ") , Span::from("- Quit")])                         ,
+            Spans::from(vec![
+                Span::from("    q"),
+                Span::from("    "),
+                Span::from(Span::styled(
+                    "exit                       ",
+                    Style::default().add_modifier(Modifier::BOLD),
+                )),
+                Span::from("    "),
+                Span::from("- Quit"),
+            ]),
             Spans::from(""),
-            Spans::from(vec![Span::from("    s") , Span::from("    ") , Span::from(Span::styled("task start/stop {selected} ", Style::default().add_modifier(Modifier::BOLD))) , Span::from("    ") , Span::from("- Toggle start and stop")])        ,
+            Spans::from(vec![
+                Span::from("    s"),
+                Span::from("    "),
+                Span::from(Span::styled(
+                    "task start/stop {selected} ",
+                    Style::default().add_modifier(Modifier::BOLD),
+                )),
+                Span::from("    "),
+                Span::from("- Toggle start and stop"),
+            ]),
             Spans::from(""),
-            Spans::from(vec![Span::from("    u") , Span::from("    ") , Span::from(Span::styled("task undo                  ", Style::default().add_modifier(Modifier::BOLD))) , Span::from("    ") , Span::from("- Undo")])                         ,
+            Spans::from(vec![
+                Span::from("    u"),
+                Span::from("    "),
+                Span::from(Span::styled(
+                    "task undo                  ",
+                    Style::default().add_modifier(Modifier::BOLD),
+                )),
+                Span::from("    "),
+                Span::from("- Undo"),
+            ]),
             Spans::from(""),
-            Spans::from(vec![Span::from("    ?") , Span::from("    ") , Span::from(Span::styled("help                       ", Style::default().add_modifier(Modifier::BOLD))) , Span::from("    ") , Span::from("- Show this help menu")])          ,
+            Spans::from(vec![
+                Span::from("    ?"),
+                Span::from("    "),
+                Span::from(Span::styled(
+                    "help                       ",
+                    Style::default().add_modifier(Modifier::BOLD),
+                )),
+                Span::from("    "),
+                Span::from("- Show this help menu"),
+            ]),
             Spans::from(""),
         ];
         let paragraph = Paragraph::new(text)
-            .block(
-                Block::default()
-                .title("Help")
-                .borders(Borders::ALL)
-            )
+            .block(Block::default().title("Help").borders(Borders::ALL))
             .alignment(Alignment::Left);
         let area = centered_rect(80, 90, rect);
         f.render_widget(Clear, area);
         f.render_widget(paragraph, area);
     }
-
 
     fn draw_command(&self, f: &mut Frame<impl Backend>, rect: Rect, text: &str, title: &str) {
         let p = Paragraph::new(Text::from(text))
@@ -260,9 +338,7 @@ impl TaskwarriorTUIApp {
         }
         let selected = self.state.selected().unwrap_or_default();
         let task_id = self.tasks[selected].id().unwrap_or_default();
-        let output = Command::new("task")
-            .arg(format!("{}", task_id))
-            .output();
+        let output = Command::new("task").arg(format!("{}", task_id)).output();
         match output {
             Ok(output) => {
                 let data = String::from_utf8(output.stdout).unwrap();
@@ -272,7 +348,7 @@ impl TaskwarriorTUIApp {
                         .title(format!("Task {}", task_id)),
                 );
                 f.render_widget(p, rect);
-            },
+            }
             Err(_) => (),
         }
     }
@@ -503,15 +579,14 @@ impl TaskwarriorTUIApp {
         self.update();
     }
 
-    pub fn task_log(&mut self) -> Result<(), String>  {
+    pub fn task_log(&mut self) -> Result<(), String> {
         if self.tasks.len() == 0 {
             return Ok(());
         }
 
         let mut command = Command::new("task");
 
-        command
-            .arg("log");
+        command.arg("log");
 
         match shlex::split(&self.command) {
             Some(cmd) => {
@@ -529,7 +604,6 @@ impl TaskwarriorTUIApp {
                 return Err(format!("Unable to run `task log` with `{}`", &self.command));
             }
         }
-
     }
 
     pub fn task_modify(&mut self) -> Result<(), String> {
@@ -539,9 +613,7 @@ impl TaskwarriorTUIApp {
         let selected = self.state.selected().unwrap_or_default();
         let task_id = self.tasks[selected].id().unwrap_or_default();
         let mut command = Command::new("task");
-        command
-            .arg(format!("{}", task_id))
-            .arg("modify");
+        command.arg(format!("{}", task_id)).arg("modify");
 
         match shlex::split(&self.modify) {
             Some(cmd) => {
@@ -556,19 +628,21 @@ impl TaskwarriorTUIApp {
                 return Ok(());
             }
             None => {
-                return Err(format!("Unable to run `task modify` with `{}` on task {}", &self.modify, &task_id));
+                return Err(format!(
+                    "Unable to run `task modify` with `{}` on task {}",
+                    &self.modify, &task_id
+                ));
             }
         }
     }
 
-    pub fn task_add(&mut self) -> Result<(), String>  {
+    pub fn task_add(&mut self) -> Result<(), String> {
         if self.tasks.len() == 0 {
             return Ok(());
         }
 
         let mut command = Command::new("task");
-        command
-            .arg("add");
+        command.arg("add");
 
         match shlex::split(&self.command) {
             Some(cmd) => {
@@ -588,12 +662,10 @@ impl TaskwarriorTUIApp {
         }
     }
 
-    pub fn task_virtual_tags(& self) -> Result<String, String> {
+    pub fn task_virtual_tags(&self) -> Result<String, String> {
         let selected = self.state.selected().unwrap_or_default();
         let task_id = self.tasks[selected].id().unwrap_or_default();
-        let output = Command::new("task")
-            .arg(format!("{}", task_id))
-            .output();
+        let output = Command::new("task").arg(format!("{}", task_id)).output();
 
         match output {
             Ok(output) => {
@@ -605,9 +677,15 @@ impl TaskwarriorTUIApp {
                         return Ok(line);
                     }
                 }
-                return Err(format!("Cannot find any tags for `task {}`. Check documentation for more information", task_id))
-            },
-            Err(_) => Err(format!("Cannot run `task {}`. Check documentation for more information", task_id))
+                return Err(format!(
+                    "Cannot find any tags for `task {}`. Check documentation for more information",
+                    task_id
+                ));
+            }
+            Err(_) => Err(format!(
+                "Cannot run `task {}`. Check documentation for more information",
+                task_id
+            )),
         }
     }
 
@@ -630,13 +708,16 @@ impl TaskwarriorTUIApp {
             .output();
         match output {
             Ok(_) => Ok(()),
-            Err(_) => Err(format!("Cannot run `task done` for task `{}`. Check documentation for more information", task_id)),
+            Err(_) => Err(format!(
+                "Cannot run `task done` for task `{}`. Check documentation for more information",
+                task_id
+            )),
         }
     }
 
     pub fn task_delete(&self) -> Result<(), String> {
         if self.tasks.len() == 0 {
-            return Ok(())
+            return Ok(());
         }
         let selected = self.state.selected().unwrap_or_default();
         let task_id = self.tasks[selected].id().unwrap_or_default();
@@ -648,7 +729,10 @@ impl TaskwarriorTUIApp {
             .output();
         match output {
             Ok(_) => Ok(()),
-            Err(_) => Err(format!("Cannot run `task delete` for task `{}`. Check documentation for more information",task_id)),
+            Err(_) => Err(format!(
+                "Cannot run `task delete` for task `{}`. Check documentation for more information",
+                task_id
+            )),
         }
     }
 
@@ -664,7 +748,10 @@ impl TaskwarriorTUIApp {
             .output();
         match output {
             Ok(_) => Ok(()),
-            Err(_) => Err(format!("Cannot run `task done` for task `{}`. Check documentation for more information", task_id))
+            Err(_) => Err(format!(
+                "Cannot run `task done` for task `{}`. Check documentation for more information",
+                task_id
+            )),
         }
     }
 
@@ -679,7 +766,9 @@ impl TaskwarriorTUIApp {
 
         match output {
             Ok(_) => Ok(()),
-            Err(_) => Err("Cannot run `task undo`. Check documentation for more information".to_string()),
+            Err(_) => {
+                Err("Cannot run `task undo`. Check documentation for more information".to_string())
+            }
         }
     }
 
@@ -696,26 +785,36 @@ impl TaskwarriorTUIApp {
 
         match r {
             Ok(child) => {
-                let output = child
-                    .wait_with_output();
+                let output = child.wait_with_output();
                 match output {
                     Ok(output) => {
                         if !output.status.success() {
-                            return Err(format!("`task edit` for task `{}` failed. {}{}", task_id, String::from_utf8(output.stdout).unwrap(), String::from_utf8(output.stderr).unwrap()));
+                            return Err(format!(
+                                "`task edit` for task `{}` failed. {}{}",
+                                task_id,
+                                String::from_utf8(output.stdout).unwrap(),
+                                String::from_utf8(output.stderr).unwrap()
+                            ));
                         } else {
                             return Ok(());
                         }
-                    },
-                    Err(err) => Err(format!("Cannot run `task edit` for task `{}`. {}", task_id, err)),
+                    }
+                    Err(err) => Err(format!(
+                        "Cannot run `task edit` for task `{}`. {}",
+                        task_id, err
+                    )),
                 }
             }
-            _ => Err(format!("Cannot start `task edit` for task `{}`. Check documentation for more information", task_id))
+            _ => Err(format!(
+                "Cannot start `task edit` for task `{}`. Check documentation for more information",
+                task_id
+            )),
         }
     }
 
     pub fn task_current(&self) -> Option<Task> {
         if self.tasks.len() == 0 {
-            return None
+            return None;
         }
         let selected = self.state.selected().unwrap_or_default();
         return Some(self.tasks[selected].clone());
