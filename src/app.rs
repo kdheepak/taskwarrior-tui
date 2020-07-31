@@ -1,18 +1,14 @@
-use serde::{Deserialize, Serialize};
-use shlex;
 use std::cmp::Ordering;
 use std::convert::TryInto;
-use std::error::Error;
-use std::process::{Command, Stdio};
+use std::process::{Command};
 use std::result::Result;
 
 use task_hookrs::date::Date;
 use task_hookrs::import::import;
 use task_hookrs::task::Task;
 use task_hookrs::uda::UDAValue;
-use unicode_width::UnicodeWidthStr;
 
-use chrono::{DateTime, Duration, Local, NaiveDateTime, TimeZone};
+use chrono::{Local, NaiveDateTime};
 
 use tui::{
     backend::Backend,
@@ -20,8 +16,7 @@ use tui::{
     style::{Color, Modifier, Style},
     terminal::Frame,
     text::{Span, Spans, Text},
-    widgets::{BarChart, Block, Borders, Clear, Paragraph, Row, Table, TableState, Wrap},
-    Terminal,
+    widgets::{Block, Borders, Clear, Paragraph, Row, Table, TableState},
 };
 
 pub fn cmp(t1: &Task, t2: &Task) -> Ordering {
@@ -129,7 +124,7 @@ impl TaskwarriorTUIApp {
     }
 
     pub fn draw(&mut self, f: &mut Frame<impl Backend>) {
-        while self.tasks.len() != 0 && self.state.selected().unwrap_or_default() >= self.tasks.len()
+        while !self.tasks.is_empty() && self.state.selected().unwrap_or_default() >= self.tasks.len()
         {
             self.previous();
         }
@@ -182,10 +177,10 @@ impl TaskwarriorTUIApp {
             Spans::from(vec![
                 Span::from("    /"),
                 Span::from("    "),
-                Span::from(Span::styled(
+                Span::styled(
                     "task {string}              ",
                     Style::default().add_modifier(Modifier::BOLD),
-                )),
+                ),
                 Span::from("    "),
                 Span::from("- Filter task report"),
             ]),
@@ -193,10 +188,10 @@ impl TaskwarriorTUIApp {
             Spans::from(vec![
                 Span::from("    a"),
                 Span::from("    "),
-                Span::from(Span::styled(
+                Span::styled(
                     "task add {string}          ",
                     Style::default().add_modifier(Modifier::BOLD),
-                )),
+                ),
                 Span::from("    "),
                 Span::from("- Add new task"),
             ]),
@@ -204,10 +199,10 @@ impl TaskwarriorTUIApp {
             Spans::from(vec![
                 Span::from("    d"),
                 Span::from("    "),
-                Span::from(Span::styled(
+                Span::styled(
                     "task done {selected}       ",
                     Style::default().add_modifier(Modifier::BOLD),
-                )),
+                ),
                 Span::from("    "),
                 Span::from("- Mark task as done"),
             ]),
@@ -215,10 +210,10 @@ impl TaskwarriorTUIApp {
             Spans::from(vec![
                 Span::from("    e"),
                 Span::from("    "),
-                Span::from(Span::styled(
+                Span::styled(
                     "task edit {selected}       ",
                     Style::default().add_modifier(Modifier::BOLD),
-                )),
+                ),
                 Span::from("    "),
                 Span::from("- Open selected task in editor"),
             ]),
@@ -226,10 +221,10 @@ impl TaskwarriorTUIApp {
             Spans::from(vec![
                 Span::from("    j"),
                 Span::from("    "),
-                Span::from(Span::styled(
+                Span::styled(
                     "{selected+=1}              ",
                     Style::default().add_modifier(Modifier::BOLD),
-                )),
+                ),
                 Span::from("    "),
                 Span::from("- Move down in task report"),
             ]),
@@ -237,10 +232,10 @@ impl TaskwarriorTUIApp {
             Spans::from(vec![
                 Span::from("    k"),
                 Span::from("    "),
-                Span::from(Span::styled(
+                Span::styled(
                     "{selected-=1}              ",
                     Style::default().add_modifier(Modifier::BOLD),
-                )),
+                ),
                 Span::from("    "),
                 Span::from("- Move up in task report"),
             ]),
@@ -248,10 +243,10 @@ impl TaskwarriorTUIApp {
             Spans::from(vec![
                 Span::from("    l"),
                 Span::from("    "),
-                Span::from(Span::styled(
+                Span::styled(
                     "task log {string}          ",
                     Style::default().add_modifier(Modifier::BOLD),
-                )),
+                ),
                 Span::from("    "),
                 Span::from("- Log new task"),
             ]),
@@ -259,10 +254,10 @@ impl TaskwarriorTUIApp {
             Spans::from(vec![
                 Span::from("    m"),
                 Span::from("    "),
-                Span::from(Span::styled(
+                Span::styled(
                     "task modify {string}       ",
                     Style::default().add_modifier(Modifier::BOLD),
-                )),
+                ),
                 Span::from("    "),
                 Span::from("- Modify selected task"),
             ]),
@@ -270,10 +265,10 @@ impl TaskwarriorTUIApp {
             Spans::from(vec![
                 Span::from("    q"),
                 Span::from("    "),
-                Span::from(Span::styled(
+                Span::styled(
                     "exit                       ",
                     Style::default().add_modifier(Modifier::BOLD),
-                )),
+                ),
                 Span::from("    "),
                 Span::from("- Quit"),
             ]),
@@ -281,10 +276,10 @@ impl TaskwarriorTUIApp {
             Spans::from(vec![
                 Span::from("    s"),
                 Span::from("    "),
-                Span::from(Span::styled(
+                Span::styled(
                     "task start/stop {selected} ",
                     Style::default().add_modifier(Modifier::BOLD),
-                )),
+                ),
                 Span::from("    "),
                 Span::from("- Toggle start and stop"),
             ]),
@@ -292,10 +287,10 @@ impl TaskwarriorTUIApp {
             Spans::from(vec![
                 Span::from("    u"),
                 Span::from("    "),
-                Span::from(Span::styled(
+                Span::styled(
                     "task undo                  ",
                     Style::default().add_modifier(Modifier::BOLD),
-                )),
+                ),
                 Span::from("    "),
                 Span::from("- Undo"),
             ]),
@@ -303,10 +298,10 @@ impl TaskwarriorTUIApp {
             Spans::from(vec![
                 Span::from("    ?"),
                 Span::from("    "),
-                Span::from(Span::styled(
+                Span::styled(
                     "help                       ",
                     Style::default().add_modifier(Modifier::BOLD),
-                )),
+                ),
                 Span::from("    "),
                 Span::from("- Show this help menu"),
             ]),
@@ -327,20 +322,19 @@ impl TaskwarriorTUIApp {
     }
 
     fn draw_task_details(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
-        if self.tasks.len() == 0 {
+        if self.tasks.is_empty() {
             f.render_widget(
                 Block::default()
                     .borders(Borders::ALL)
                     .title("Task not found"),
                 rect,
             );
-            return ();
+            return;
         }
         let selected = self.state.selected().unwrap_or_default();
         let task_id = self.tasks[selected].id().unwrap_or_default();
         let output = Command::new("task").arg(format!("{}", task_id)).output();
-        match output {
-            Ok(output) => {
+        if let Ok(output) = output {
                 let data = String::from_utf8(output.stdout).unwrap();
                 let p = Paragraph::new(Text::from(&data[..])).block(
                     Block::default()
@@ -349,23 +343,21 @@ impl TaskwarriorTUIApp {
                 );
                 f.render_widget(p, rect);
             }
-            Err(_) => (),
-        }
     }
 
     fn draw_task_report(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
-        let active_style = Style::default()
+        let _active_style = Style::default()
             .fg(Color::Blue)
             .add_modifier(Modifier::BOLD);
         let normal_style = Style::default();
 
         let (tasks, headers, widths) = self.task_report();
-        if tasks.len() == 0 {
+        if tasks.is_empty() {
             f.render_widget(
                 Block::default().borders(Borders::ALL).title("Task next"),
                 rect,
             );
-            return ();
+            return;
         }
         let header = headers.iter();
         let rows = tasks
@@ -387,7 +379,7 @@ impl TaskwarriorTUIApp {
     }
 
     pub fn get_string_attribute(&self, attribute: &str, task: &Task) -> String {
-        let s = match attribute {
+        match attribute {
             "id" => task.id().unwrap_or_default().to_string(),
             // "entry" => task.entry().unwrap().to_string(),
             "entry" => vague_format_date_time(task.entry()),
@@ -397,13 +389,12 @@ impl TaskwarriorTUIApp {
             },
             "description" => task.description().to_string(),
             "urgency" => match &task.uda()["urgency"] {
-                UDAValue::Str(s) => "0.0".to_string(),
+                UDAValue::Str(_) => "0.0".to_string(),
                 UDAValue::U64(u) => (*u as f64).to_string(),
                 UDAValue::F64(f) => (*f).to_string(),
             },
             _ => "".to_string(),
-        };
-        return s;
+        }
     }
 
     pub fn task_report(&mut self) -> (Vec<Vec<String>>, Vec<String>, Vec<i16>) {
@@ -412,8 +403,8 @@ impl TaskwarriorTUIApp {
         for task in &self.tasks {
             let mut item = vec![];
             for name in &self.task_report_columns {
-                let attribute = name.split(".").collect::<Vec<&str>>()[0];
-                let s = self.get_string_attribute(attribute, task);
+                let attributes: Vec<_> = name.split('.').collect();
+                let s = self.get_string_attribute(attributes[0], task);
                 item.push(s);
             }
             alltasks.push(item)
@@ -421,7 +412,7 @@ impl TaskwarriorTUIApp {
 
         // find which columns are empty
         let null_columns_len;
-        if alltasks.len() > 0 {
+        if !alltasks.is_empty() {
             null_columns_len = alltasks[0].len();
         } else {
             return (vec![], vec![], vec![]);
@@ -460,14 +451,12 @@ impl TaskwarriorTUIApp {
         let mut widths: Vec<i16> = vec![0; tasks[0].len()];
         for task in &tasks {
             for (i, attr) in task.iter().enumerate() {
-                widths[i] = (attr.len() as i16 * 100
-                    / task.iter().map(|s| s.len() as i16).sum::<i16>())
-                .try_into()
-                .unwrap();
+                widths[i] = attr.len() as i16 * 100
+                    / task.iter().map(|s| s.len() as i16).sum::<i16>()
             }
         }
 
-        return (tasks, headers, widths);
+        (tasks, headers, widths)
     }
 
     pub fn update(&mut self) {
@@ -475,7 +464,7 @@ impl TaskwarriorTUIApp {
         self.export_headers();
     }
     pub fn next(&mut self) {
-        if self.tasks.len() == 0 {
+        if self.tasks.is_empty() {
             return;
         }
         let i = match self.state.selected() {
@@ -491,7 +480,7 @@ impl TaskwarriorTUIApp {
         self.state.select(Some(i));
     }
     pub fn previous(&mut self) {
-        if self.tasks.len() == 0 {
+        if self.tasks.is_empty() {
             return;
         }
         let i = match self.state.selected() {
@@ -518,10 +507,10 @@ impl TaskwarriorTUIApp {
             .expect("Unable to run `task show report.next.columns`. Check documentation for more information");
         let data = String::from_utf8(output.stdout).unwrap();
 
-        for line in data.split("\n") {
+        for line in data.split('\n') {
             if line.starts_with("report.next.columns") {
-                let column_names: &str = line.split(" ").collect::<Vec<&str>>()[1];
-                for column in column_names.split(",") {
+                let column_names: &str = line.split(' ').collect::<Vec<&str>>()[1];
+                for column in column_names.split(',') {
                     self.task_report_columns.push(column.to_string());
                 }
             }
@@ -534,10 +523,10 @@ impl TaskwarriorTUIApp {
             .expect("Unable to run `task show report.next.labels`. Check documentation for more information");
         let data = String::from_utf8(output.stdout).unwrap();
 
-        for line in data.split("\n") {
+        for line in data.split('\n') {
             if line.starts_with("report.next.labels") {
-                let label_names: &str = line.split(" ").collect::<Vec<&str>>()[1];
-                for label in label_names.split(",") {
+                let label_names: &str = line.split(' ').collect::<Vec<&str>>()[1];
+                for label in label_names.split(',') {
                     self.task_report_labels.push(label.to_string());
                 }
             }
@@ -563,15 +552,12 @@ impl TaskwarriorTUIApp {
 
         let output = task
             .output()
-            .expect("Unable to run `task export`. Check documentation for more information");
+            .expect("Unable to run `task export`. Check documentation for more information.");
         let data = String::from_utf8(output.stdout).unwrap();
         let imported = import(data.as_bytes());
-        match imported {
-            Ok(i) => {
-                self.tasks = i;
-                self.tasks.sort_by(cmp);
-            }
-            _ => (),
+        if let Ok(i) = imported {
+            self.tasks = i;
+            self.tasks.sort_by(cmp);
         }
     }
 
@@ -580,7 +566,7 @@ impl TaskwarriorTUIApp {
     }
 
     pub fn task_log(&mut self) -> Result<(), String> {
-        if self.tasks.len() == 0 {
+        if self.tasks.is_empty() {
             return Ok(());
         }
 
@@ -594,20 +580,25 @@ impl TaskwarriorTUIApp {
                     command.arg(&s);
                 }
                 let output = command
-                    .output()
-                    .expect("Cannot run `task log`. Check documentation for more information");
-
-                self.command = "".to_string();
-                return Ok(());
+                    .output();
+                match output {
+                    Ok(_) => {
+                        self.command = "".to_string();
+                        Ok(())
+                    },
+                    Err(_) => Err(
+                        "Cannot run `task log` for task `{}`. Check documentation for more information".to_string(),
+                    )
+                }
             }
             None => {
-                return Err(format!("Unable to run `task log` with `{}`", &self.command));
+                Err(format!("Unable to run `task log` with `{}`", &self.command))
             }
         }
     }
 
     pub fn task_modify(&mut self) -> Result<(), String> {
-        if self.tasks.len() == 0 {
+        if self.tasks.is_empty() {
             return Ok(());
         }
         let selected = self.state.selected().unwrap_or_default();
@@ -621,23 +612,28 @@ impl TaskwarriorTUIApp {
                     command.arg(&s);
                 }
                 let output = command
-                    .output()
-                    .expect("Cannot run `task modify`. Check documentation for more information");
-
-                self.modify = "".to_string();
-                return Ok(());
+                    .output();
+                match output {
+                    Ok(_) => {
+                        self.modify = "".to_string();
+                        Ok(())
+                    },
+                    Err(_) => Err(
+                        format!("Cannot run `task modify` for task `{}`. Check documentation for more information", task_id),
+                    )
+                }
             }
             None => {
-                return Err(format!(
+                Err(format!(
                     "Unable to run `task modify` with `{}` on task {}",
                     &self.modify, &task_id
-                ));
+                ))
             }
         }
     }
 
     pub fn task_add(&mut self) -> Result<(), String> {
-        if self.tasks.len() == 0 {
+        if self.tasks.is_empty() {
             return Ok(());
         }
 
@@ -650,14 +646,19 @@ impl TaskwarriorTUIApp {
                     command.arg(&s);
                 }
                 let output = command
-                    .output()
-                    .expect("Cannot run `task add`. Check documentation for more information");
-
-                self.command = "".to_string();
-                return Ok(());
+                    .output();
+                match output {
+                    Ok(_) => {
+                        self.command = "".to_string();
+                        Ok(())
+                    },
+                    Err(_) => Err(
+                        "Cannot run `task add`. Check documentation for more information".to_string(),
+                    )
+                }
             }
             None => {
-                return Err(format!("Unable to run `task add` with `{}`", &self.command));
+                Err(format!("Unable to run `task add` with `{}`", &self.command))
             }
         }
     }
@@ -670,17 +671,17 @@ impl TaskwarriorTUIApp {
         match output {
             Ok(output) => {
                 let data = String::from_utf8(output.stdout).unwrap();
-                for line in data.split("\n") {
+                for line in data.split('\n') {
                     if line.starts_with("Virtual tags") {
                         let line = line.to_string();
                         let line = line.replace("Virtual tags", "");
                         return Ok(line);
                     }
                 }
-                return Err(format!(
+                Err(format!(
                     "Cannot find any tags for `task {}`. Check documentation for more information",
                     task_id
-                ));
+                ))
             }
             Err(_) => Err(format!(
                 "Cannot run `task {}`. Check documentation for more information",
@@ -690,13 +691,13 @@ impl TaskwarriorTUIApp {
     }
 
     pub fn task_start_or_stop(&mut self) -> Result<(), String> {
-        if self.tasks.len() == 0 {
+        if self.tasks.is_empty() {
             return Ok(());
         }
         let selected = self.state.selected().unwrap_or_default();
         let task_id = self.tasks[selected].id().unwrap_or_default();
         let mut command = "start";
-        for tag in self.task_virtual_tags()?.split(" ") {
+        for tag in self.task_virtual_tags()?.split(' ') {
             if tag == "ACTIVE" {
                 command = "stop"
             }
@@ -709,14 +710,15 @@ impl TaskwarriorTUIApp {
         match output {
             Ok(_) => Ok(()),
             Err(_) => Err(format!(
-                "Cannot run `task done` for task `{}`. Check documentation for more information",
-                task_id
+                "Cannot run `task {}` for task `{}`. Check documentation for more information",
+                command,
+                task_id,
             )),
         }
     }
 
     pub fn task_delete(&self) -> Result<(), String> {
-        if self.tasks.len() == 0 {
+        if self.tasks.is_empty() {
             return Ok(());
         }
         let selected = self.state.selected().unwrap_or_default();
@@ -737,7 +739,7 @@ impl TaskwarriorTUIApp {
     }
 
     pub fn task_done(&mut self) -> Result<(), String> {
-        if self.tasks.len() == 0 {
+        if self.tasks.is_empty() {
             return Ok(());
         }
         let selected = self.state.selected().unwrap_or_default();
@@ -756,7 +758,7 @@ impl TaskwarriorTUIApp {
     }
 
     pub fn task_undo(&self) -> Result<(), String> {
-        if self.tasks.len() == 0 {
+        if self.tasks.is_empty() {
             return Ok(());
         }
         let output = Command::new("task")
@@ -773,7 +775,7 @@ impl TaskwarriorTUIApp {
     }
 
     pub fn task_edit(&self) -> Result<(), String> {
-        if self.tasks.len() == 0 {
+        if self.tasks.is_empty() {
             return Ok(());
         }
         let selected = self.state.selected().unwrap_or_default();
@@ -789,14 +791,14 @@ impl TaskwarriorTUIApp {
                 match output {
                     Ok(output) => {
                         if !output.status.success() {
-                            return Err(format!(
+                            Err(format!(
                                 "`task edit` for task `{}` failed. {}{}",
                                 task_id,
                                 String::from_utf8(output.stdout).unwrap(),
                                 String::from_utf8(output.stderr).unwrap()
-                            ));
+                            ))
                         } else {
-                            return Ok(());
+                            Ok(())
                         }
                     }
                     Err(err) => Err(format!(
@@ -813,11 +815,11 @@ impl TaskwarriorTUIApp {
     }
 
     pub fn task_current(&self) -> Option<Task> {
-        if self.tasks.len() == 0 {
+        if self.tasks.is_empty() {
             return None;
         }
         let selected = self.state.selected().unwrap_or_default();
-        return Some(self.tasks[selected].clone());
+        Some(self.tasks[selected].clone())
     }
 }
 

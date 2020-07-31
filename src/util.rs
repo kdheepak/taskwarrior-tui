@@ -1,6 +1,6 @@
 #[cfg(feature = "crossterm")]
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, KeyCode},
+    event::{self, DisableMouseCapture, EnableMouseCapture},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -9,7 +9,6 @@ use tui::{backend::CrosstermBackend, Terminal};
 
 use std::io::{self, Write};
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
     Arc, Mutex,
 };
 use std::{sync::mpsc, thread, time::Duration};
@@ -75,8 +74,7 @@ impl Events {
         use crossterm::event::{KeyCode::*, KeyModifiers};
         let (tx, rx) = mpsc::channel();
         let pause_stdin = Arc::new(Mutex::new(false));
-        let pause_stdin = pause_stdin.clone();
-        let input_handle = {
+        let _input_handle = {
             let tx = tx.clone();
             thread::spawn(move || {
                 loop {
@@ -112,7 +110,7 @@ impl Events {
                 }
             })
         };
-        let tick_handle = {
+        let _tick_handle = {
             let tx = tx.clone();
             thread::spawn(move || loop {
                 if tx.send(Event::Tick).is_err() {

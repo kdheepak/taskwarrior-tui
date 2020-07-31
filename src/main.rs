@@ -1,33 +1,18 @@
-#![allow(dead_code)]
-#![allow(unused_imports)]
-#![allow(unused_variables)]
-
 mod util;
 
-#[allow(dead_code)]
 mod app;
 
 use crate::util::{destruct_terminal, setup_terminal, Event, EventConfig, Events};
-use clap::{App, Arg, SubCommand};
+use clap::{App, Arg};
 use std::env;
 use std::error::Error;
-use std::io;
-use std::io::{stdout, Write};
-use std::process::Command;
-use std::time::{Duration, Instant};
-use tui::backend::Backend;
-use unicode_width::UnicodeWidthStr;
+use std::time::Duration;
 
 use crate::util::Key;
 use app::{AppMode, TaskwarriorTUIApp};
 
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
-
-const APP_VERSION: &'static str = env!("CARGO_PKG_VERSION");
-const APP_NAME: &'static str = env!("CARGO_PKG_NAME");
+const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
+const APP_NAME: &str = env!("CARGO_PKG_NAME");
 
 fn main() -> Result<(), Box<dyn Error>> {
     let matches = App::new(APP_NAME)
@@ -49,7 +34,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn tui_main(config: &str) -> Result<(), Box<dyn Error>> {
+fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
     // Terminal initialization
     let mut terminal = setup_terminal();
     terminal.clear()?;
