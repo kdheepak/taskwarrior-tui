@@ -97,7 +97,7 @@ pub enum AppMode {
     TaskError,
 }
 
-pub struct App {
+pub struct TaskwarriorTUIApp {
     pub should_quit: bool,
     pub state: TableState,
     pub cursor_location: usize,
@@ -111,9 +111,9 @@ pub struct App {
     pub mode: AppMode,
 }
 
-impl App {
-    pub fn new() -> App {
-        let mut app = App {
+impl TaskwarriorTUIApp {
+    pub fn new() -> TaskwarriorTUIApp {
+        let mut app = TaskwarriorTUIApp {
             should_quit: false,
             state: TableState::default(),
             tasks: vec![],
@@ -724,7 +724,7 @@ impl App {
 
 #[cfg(test)]
 mod tests {
-    use crate::app::App;
+    use crate::app::TaskwarriorTUIApp;
     use crate::util::setup_terminal;
     use std::io::stdin;
 
@@ -733,7 +733,7 @@ mod tests {
 
     #[test]
     fn test_app() {
-        let mut app = App::new();
+        let mut app = TaskwarriorTUIApp::new();
         app.update();
 
         //println!("{:?}", app.tasks);

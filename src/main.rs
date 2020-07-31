@@ -16,8 +16,9 @@ use std::process::Command;
 use std::time::{Duration, Instant};
 use tui::backend::Backend;
 use unicode_width::UnicodeWidthStr;
+use clap::{Arg, App, SubCommand};
 
-use app::{App, AppMode};
+use app::{TaskwarriorTUIApp, AppMode};
 use crate::util::Key;
 
 use std::sync::{
@@ -30,6 +31,24 @@ const APP_NAME: &'static str = env!("CARGO_PKG_NAME");
 
 
 fn main() -> Result<(), Box<dyn Error>> {
+    let matches = App::new(APP_NAME)
+                          .version(APP_VERSION)
+                          .author("Dheepak Krishnamurthy <@kdheepak>")
+                          .about("A taskwarrior terminal user interface")
+                          .arg(Arg::with_name("config")
+                               .short("c")
+                               .long("config")
+                               .value_name("FILE")
+                               .help("Sets a custom config file")
+                               .takes_value(true))
+                          .get_matches();
+
+    let config = matches.value_of("config").unwrap_or("default.conf");
+    tui_main(config)?;
+    Ok(())
+}
+
+fn tui_main(config: &str) -> Result<(), Box<dyn Error>> {
     // Terminal initialization
     let mut terminal = setup_terminal();
     terminal.clear()?;
@@ -39,7 +58,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         tick_rate: Duration::from_millis(250),
     });
 
-    let mut app = App::new();
+    let mut app = TaskwarriorTUIApp::new();
     app.next();
 
     loop {
