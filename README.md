@@ -19,15 +19,15 @@ A Taskwarrior TUI written in Rust.
 
 ## Usage
 
-- `/`: `task {string}`              - Filter task report
-- `a`: `task add {string}`          - Add new task
-- `d`: `task done {selected}`       - Mark task as done
-- `e`: `task edit {selected}`       - Open selected task in editor
-- `j`: `{selected+=1}`              - Move down in task report
-- `k`: `{selected-=1}`              - Move up in task report
-- `l`: `task log {string}`          - Log new task
-- `m`: `task modify {string}`       - Modify selected task
-- `q`: `exit`                       - Quit
-- `s`: `task start/stop {selected}` - Toggle start and stop
-- `u`: `task undo`                  - Undo
-- `?`: `help`                       - Help menu
+- `/`: `task {string}`                   - Filter task report
+- `a`: `task add {string}`               - Add new task
+- `d`: `task {selected} done`            - Mark task as done
+- `e`: `task {selected} edit`            - Open selected task in editor
+- `j`: `{selected+=1}`                   - Move down in task report
+- `k`: `{selected-=1}`                   - Move up in task report
+- `l`: `task log {string}`               - Log new task
+- `m`: `task {selected} modify {string}` - Modify selected task
+- `q`: `exit`                            - Quit
+- `s`: `task {selected} start/stop`      - Toggle start and stop
+- `u`: `task undo`                       - Undo
+- `?`: `help`                            - Help menu
