@@ -1,6 +1,6 @@
-mod util;
-
 mod app;
+mod color;
+mod util;
 
 use crate::util::{destruct_terminal, setup_terminal, Event, EventConfig, Events};
 use clap::{App, Arg};
@@ -9,7 +9,7 @@ use std::error::Error;
 use std::time::Duration;
 
 use crate::util::Key;
-use app::{AppMode, TaskwarriorTUIApp};
+use app::{AppMode, TTApp};
 
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
@@ -44,7 +44,7 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
         tick_rate: Duration::from_millis(250),
     });
 
-    let mut app = TaskwarriorTUIApp::new();
+    let mut app = TTApp::new();
     app.next();
 
     loop {

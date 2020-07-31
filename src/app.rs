@@ -1,6 +1,8 @@
+use crate::color::{TColor, RGB};
+
 use std::cmp::Ordering;
 use std::convert::TryInto;
-use std::process::{Command};
+use std::process::Command;
 use std::result::Result;
 
 use task_hookrs::date::Date;
@@ -90,7 +92,7 @@ pub enum AppMode {
     TaskError,
 }
 
-pub struct TaskwarriorTUIApp {
+pub struct TTApp {
     pub should_quit: bool,
     pub state: TableState,
     pub cursor_location: usize,
@@ -104,9 +106,9 @@ pub struct TaskwarriorTUIApp {
     pub mode: AppMode,
 }
 
-impl TaskwarriorTUIApp {
-    pub fn new() -> TaskwarriorTUIApp {
-        let mut app = TaskwarriorTUIApp {
+impl TTApp {
+    pub fn new() -> Self {
+        let mut app = Self {
             should_quit: false,
             state: TableState::default(),
             tasks: vec![],
@@ -825,7 +827,7 @@ impl TaskwarriorTUIApp {
 
 #[cfg(test)]
 mod tests {
-    use crate::app::TaskwarriorTUIApp;
+    use crate::app::TTApp;
     use crate::util::setup_terminal;
     use std::io::stdin;
 
@@ -834,7 +836,7 @@ mod tests {
 
     #[test]
     fn test_app() {
-        let mut app = TaskwarriorTUIApp::new();
+        let mut app = TTApp::new();
         app.update();
 
         //println!("{:?}", app.tasks);
