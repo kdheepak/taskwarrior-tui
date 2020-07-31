@@ -100,6 +100,7 @@ pub enum AppMode {
 pub struct App {
     pub should_quit: bool,
     pub state: TableState,
+    pub cursor_location: usize,
     pub filter: String,
     pub command: String,
     pub error: String,
@@ -119,6 +120,7 @@ impl App {
             task_report_labels: vec![],
             task_report_columns: vec![],
             filter: "status:pending ".to_string(),
+            cursor_location: 0,
             command: "".to_string(),
             modify: "".to_string(),
             error: "".to_string(),
@@ -159,16 +161,14 @@ impl App {
             AppMode::Filter => {
                 f.render_widget(Clear, rects[1]);
                 f.set_cursor(
-                    rects[1].x + self.filter.width() as u16 + 1,
+                    rects[1].x + self.cursor_location as u16 + 1,
                     rects[1].y + 1,
                 );
                 self.draw_command(f, rects[1], &self.filter[..], "Filter Tasks");
             },
             AppMode::ModifyTask => {
                 f.set_cursor(
-                    // Put cursor past the end of the input text
-                    rects[1].x + self.modify.width() as u16 + 1,
-                    // Move one line down, from the border to the input line
+                    rects[1].x + self.cursor_location as u16 + 1,
                     rects[1].y + 1,
                 );
                 f.render_widget(Clear, rects[1]);
@@ -176,9 +176,7 @@ impl App {
             },
             AppMode::LogTask => {
                 f.set_cursor(
-                    // Put cursor past the end of the input text
-                    rects[1].x + self.command.width() as u16 + 1,
-                    // Move one line down, from the border to the input line
+                    rects[1].x + self.cursor_location as u16 + 1,
                     rects[1].y + 1,
                 );
                 f.render_widget(Clear, rects[1]);
@@ -186,9 +184,7 @@ impl App {
             },
             AppMode::AddTask => {
                 f.set_cursor(
-                    // Put cursor past the end of the input text
-                    rects[1].x + self.command.width() as u16 + 1,
-                    // Move one line down, from the border to the input line
+                    rects[1].x + self.cursor_location as u16 + 1,
                     rects[1].y + 1,
                 );
                 f.render_widget(Clear, rects[1]);
@@ -544,8 +540,8 @@ impl App {
         let task_id = self.tasks[selected].id().unwrap_or_default();
         let mut command = Command::new("task");
         command
-            .arg("modify")
-            .arg(format!("{}", task_id));
+            .arg(format!("{}", task_id))
+            .arg("modify");
 
         match shlex::split(&self.modify) {
             Some(cmd) => {
@@ -629,8 +625,8 @@ impl App {
         }
 
         let output = Command::new("task")
-            .arg(command)
             .arg(format!("{}", task_id))
+            .arg(command)
             .output();
         match output {
             Ok(_) => Ok(()),
@@ -647,8 +643,8 @@ impl App {
 
         let output = Command::new("task")
             .arg("rc.confirmation=off")
-            .arg("delete")
             .arg(format!("{}", task_id))
+            .arg("delete")
             .output();
         match output {
             Ok(_) => Ok(()),
@@ -663,8 +659,8 @@ impl App {
         let selected = self.state.selected().unwrap_or_default();
         let task_id = self.tasks[selected].id().unwrap_or_default();
         let output = Command::new("task")
-            .arg("done")
             .arg(format!("{}", task_id))
+            .arg("done")
             .output();
         match output {
             Ok(_) => Ok(()),
@@ -694,8 +690,8 @@ impl App {
         let selected = self.state.selected().unwrap_or_default();
         let task_id = self.tasks[selected].id().unwrap_or_default();
         let r = Command::new("task")
-            .arg("edit")
             .arg(format!("{}", task_id))
+            .arg("edit")
             .spawn();
 
         match r {

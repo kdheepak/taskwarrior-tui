@@ -100,18 +100,21 @@ fn main() -> Result<(), Box<dyn Error>> {
                                     Some(t) => app.modify = t.description().to_string(),
                                     None => app.modify = "".to_string(),
                                 }
+                                app.cursor_location = app.modify.len();
                             }
                             Key::Char('l') => {
                                 app.mode = AppMode::LogTask;
                             }
                             Key::Char('a') => {
                                 app.mode = AppMode::AddTask;
+                                app.cursor_location = app.command.len();
                             }
                             Key::Char('?') => {
                                 app.mode = AppMode::HelpPopup;
                             }
                             Key::Char('/') => {
                                 app.mode = AppMode::Filter;
+                                app.cursor_location = app.filter.len();
                             }
                             _ => {}
                         },
@@ -135,11 +138,29 @@ fn main() -> Result<(), Box<dyn Error>> {
                                 app.modify = "".to_string();
                                 app.mode = AppMode::Report;
                             }
+                            Key::Right => {
+                                if app.cursor_location < app.modify.len() {
+                                    app.cursor_location += 1;
+                                }
+                            }
+                            Key::Left => {
+                                if app.cursor_location > 0 {
+                                    app.cursor_location -= 1;
+                                }
+                            }
                             Key::Char(c) => {
-                                app.modify.push(c);
+                                if app.cursor_location < app.modify.len() {
+                                    app.modify.insert(app.cursor_location, c);
+                                } else {
+                                    app.modify.push(c);
+                                }
+                                app.cursor_location += 1;
                             }
                             Key::Backspace => {
-                                app.modify.pop();
+                                if app.cursor_location > 0 {
+                                    app.cursor_location -= 1;
+                                    app.modify.remove(app.cursor_location);
+                                }
                             }
                             _ => {}
                         },
@@ -157,11 +178,29 @@ fn main() -> Result<(), Box<dyn Error>> {
                                 app.command = "".to_string();
                                 app.mode = AppMode::Report;
                             }
+                            Key::Right => {
+                                if app.cursor_location < app.command.len() {
+                                    app.cursor_location += 1;
+                                }
+                            }
+                            Key::Left => {
+                                if app.cursor_location > 0 {
+                                    app.cursor_location -= 1;
+                                }
+                            }
                             Key::Char(c) => {
-                                app.command.push(c);
+                                if app.cursor_location < app.command.len() {
+                                    app.command.insert(app.cursor_location, c);
+                                } else {
+                                    app.command.push(c);
+                                }
+                                app.cursor_location += 1;
                             }
                             Key::Backspace => {
-                                app.command.pop();
+                                if app.cursor_location > 0 {
+                                    app.cursor_location -= 1;
+                                    app.command.remove(app.cursor_location);
+                                }
                             }
                             _ => {}
                         },
@@ -179,11 +218,29 @@ fn main() -> Result<(), Box<dyn Error>> {
                                 app.command = "".to_string();
                                 app.mode = AppMode::Report;
                             }
+                            Key::Right => {
+                                if app.cursor_location < app.command.len() {
+                                    app.cursor_location += 1;
+                                }
+                            }
+                            Key::Left => {
+                                if app.cursor_location > 0 {
+                                    app.cursor_location -= 1;
+                                }
+                            }
                             Key::Char(c) => {
-                                app.command.push(c);
+                                if app.cursor_location < app.command.len() {
+                                    app.command.insert(app.cursor_location, c);
+                                } else {
+                                    app.command.push(c);
+                                }
+                                app.cursor_location += 1;
                             }
                             Key::Backspace => {
-                                app.command.pop();
+                                if app.cursor_location > 0 {
+                                    app.cursor_location -= 1;
+                                    app.command.remove(app.cursor_location);
+                                }
                             }
                             _ => {}
                         },
@@ -191,11 +248,29 @@ fn main() -> Result<(), Box<dyn Error>> {
                             Key::Char('\n') | Key::Esc => {
                                 app.mode = AppMode::Report;
                             }
+                            Key::Right => {
+                                if app.cursor_location < app.filter.len() {
+                                    app.cursor_location += 1;
+                                }
+                            }
+                            Key::Left => {
+                                if app.cursor_location > 0 {
+                                    app.cursor_location -= 1;
+                                }
+                            }
                             Key::Char(c) => {
-                                app.filter.push(c);
+                                if app.cursor_location < app.filter.len() {
+                                    app.filter.insert(app.cursor_location, c);
+                                } else {
+                                    app.filter.push(c);
+                                }
+                                app.cursor_location += 1;
                             }
                             Key::Backspace => {
-                                app.filter.pop();
+                                if app.cursor_location > 0 {
+                                    app.cursor_location -= 1;
+                                    app.filter.remove(app.cursor_location);
+                                }
                             }
                             _ => {}
                         },
