@@ -58,16 +58,32 @@ pub struct TColor {
 }
 
 pub fn get_color(line: &str) -> RGB {
-    RGB {
-        r: 0.0,
-        g: 0.0,
-        b: 0.0,
+    if line.starts_with("color") {
+        RGB {
+            r : 0.0,
+            g : 0.0,
+            b : 0.0,
+        }
+    } else if line.starts_with("rgb") {
+        let c = line.split(" ").collect::<Vec<&str>>()[1];
+        RGB {
+            r : c.as_bytes()[3] as f32,
+            g : c.as_bytes()[4] as f32,
+            b : c.as_bytes()[5] as f32,
+        }
+    } else {
+        RGB {
+            r : 0.0,
+            g : 0.0,
+            b : 0.0,
+        }
     }
 }
 
 impl TColor {
     pub fn default() -> Self {
         let output = Command::new("task")
+            .arg("rc.color=off")
             .arg("show")
             .output()
             .expect("Unable to run `task show`");
@@ -312,145 +328,145 @@ impl TColor {
         };
 
         for line in data.split('\n') {
-            if line.starts_with("active") {
+            if line.starts_with("color.active") {
                 active = get_color(line);
             }
-            if line.starts_with("alternate") {
+            if line.starts_with("color.alternate") {
                 alternate = get_color(line);
             }
-            if line.starts_with("blocked") {
+            if line.starts_with("color.blocked") {
                 blocked = get_color(line);
             }
-            if line.starts_with("blocking") {
+            if line.starts_with("color.blocking") {
                 blocking = get_color(line);
             }
-            if line.starts_with("burndown.done") {
+            if line.starts_with("color.burndown.done") {
                 burndown_done = get_color(line);
             }
-            if line.starts_with("burndown.pending") {
+            if line.starts_with("color.burndown.pending") {
                 burndown_pending = get_color(line);
             }
-            if line.starts_with("burndown.started") {
+            if line.starts_with("color.burndown.started") {
                 burndown_started = get_color(line);
             }
-            if line.starts_with("calendar.due") {
+            if line.starts_with("color.calendar.due") {
                 calendar_due = get_color(line);
             }
-            if line.starts_with("calendar.due.today") {
+            if line.starts_with("color.calendar.due.today") {
                 calendar_due_today = get_color(line);
             }
-            if line.starts_with("calendar.holiday") {
+            if line.starts_with("color.calendar.holiday") {
                 calendar_holiday = get_color(line);
             }
-            if line.starts_with("calendar.overdue") {
+            if line.starts_with("color.calendar.overdue") {
                 calendar_overdue = get_color(line);
             }
-            if line.starts_with("calendar.today") {
+            if line.starts_with("color.calendar.today") {
                 calendar_today = get_color(line);
             }
-            if line.starts_with("calendar.weekend") {
+            if line.starts_with("color.calendar.weekend") {
                 calendar_weekend = get_color(line);
             }
-            if line.starts_with("calendar.weeknumber") {
+            if line.starts_with("color.calendar.weeknumber") {
                 calendar_weeknumber = get_color(line);
             }
-            if line.starts_with("completed") {
+            if line.starts_with("color.completed") {
                 completed = get_color(line);
             }
-            if line.starts_with("debug") {
+            if line.starts_with("color.debug") {
                 debug = get_color(line);
             }
-            if line.starts_with("deleted") {
+            if line.starts_with("color.deleted") {
                 deleted = get_color(line);
             }
-            if line.starts_with("due") {
+            if line.starts_with("color.due") {
                 due = get_color(line);
             }
-            if line.starts_with("due.today") {
+            if line.starts_with("color.due.today") {
                 due_today = get_color(line);
             }
-            if line.starts_with("error") {
+            if line.starts_with("color.error") {
                 error = get_color(line);
             }
-            if line.starts_with("footnote") {
+            if line.starts_with("color.footnote") {
                 footnote = get_color(line);
             }
-            if line.starts_with("header") {
+            if line.starts_with("color.header") {
                 header = get_color(line);
             }
-            if line.starts_with("history.add") {
+            if line.starts_with("color.history.add") {
                 history_add = get_color(line);
             }
-            if line.starts_with("history.delete") {
+            if line.starts_with("color.history.delete") {
                 history_delete = get_color(line);
             }
-            if line.starts_with("history.done") {
+            if line.starts_with("color.history.done") {
                 history_done = get_color(line);
             }
-            if line.starts_with("label") {
+            if line.starts_with("color.label") {
                 label = get_color(line);
             }
-            if line.starts_with("label.sort") {
+            if line.starts_with("color.label.sort") {
                 label_sort = get_color(line);
             }
-            if line.starts_with("overdue") {
+            if line.starts_with("color.overdue") {
                 overdue = get_color(line);
             }
-            if line.starts_with("project.none") {
+            if line.starts_with("color.project.none") {
                 project = get_color(line);
             }
-            if line.starts_with("recurring") {
+            if line.starts_with("color.recurring") {
                 recurring = get_color(line);
             }
-            if line.starts_with("scheduled") {
+            if line.starts_with("color.scheduled") {
                 scheduled = get_color(line);
             }
-            if line.starts_with("summary.background") {
+            if line.starts_with("color.summary.background") {
                 summary_background = get_color(line);
             }
-            if line.starts_with("summary.bar") {
+            if line.starts_with("color.summary.bar") {
                 summary_bar = get_color(line);
             }
-            if line.starts_with("sync.added") {
+            if line.starts_with("color.sync.added") {
                 sync_added = get_color(line);
             }
-            if line.starts_with("sync.changed") {
+            if line.starts_with("color.sync.changed") {
                 sync_changed = get_color(line);
             }
-            if line.starts_with("sync.rejected") {
+            if line.starts_with("color.sync.rejected") {
                 sync_rejected = get_color(line);
             }
-            if line.starts_with("tag.next") {
+            if line.starts_with("color.tag.next") {
                 tag_next = get_color(line);
             }
-            if line.starts_with("tag.none") {
+            if line.starts_with("color.tag.none") {
                 tag = get_color(line);
             }
-            if line.starts_with("tagged") {
+            if line.starts_with("color.tagged") {
                 tagged = get_color(line);
             }
-            if line.starts_with("uda.priority") {
+            if line.starts_with("color.uda.priority") {
                 uda_priority = get_color(line);
             }
-            if line.starts_with("uda.priority.H") {
+            if line.starts_with("color.uda.priority.H") {
                 uda_priority_h = get_color(line);
             }
-            if line.starts_with("uda.priority.L") {
+            if line.starts_with("color.uda.priority.L") {
                 uda_priority_l = get_color(line);
             }
-            if line.starts_with("uda.priority.M") {
+            if line.starts_with("color.uda.priority.M") {
                 uda_priority_m = get_color(line);
             }
-            if line.starts_with("undo.after") {
+            if line.starts_with("color.undo.after") {
                 undo_after = get_color(line);
             }
-            if line.starts_with("undo.before") {
+            if line.starts_with("color.undo.before") {
                 undo_before = get_color(line);
             }
-            if line.starts_with("until") {
+            if line.starts_with("color.until") {
                 until = get_color(line);
             }
-            if line.starts_with("warning") {
+            if line.starts_with("color.warning") {
                 warning = get_color(line);
             }
         }
@@ -505,5 +521,15 @@ impl TColor {
             until: until,
             warning: warning,
         }
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use crate::color::TColor;
+    #[test]
+    fn test_colors() {
+        let tc = TColor::default();
     }
 }
