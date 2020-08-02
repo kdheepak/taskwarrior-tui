@@ -58,24 +58,58 @@ pub struct TColor {
 }
 
 pub fn get_color(line: &str) -> RGB {
-    if line.starts_with("color") {
-        RGB {
+    let sline = line.split(" ").collect::<Vec<&str>>();
+    if sline.len() == 1 {
+        return RGB {
             r : 0.0,
             g : 0.0,
             b : 0.0,
         }
-    } else if line.starts_with("rgb") {
-        let c = line.split(" ").collect::<Vec<&str>>()[1];
-        RGB {
-            r : c.as_bytes()[3] as f32,
-            g : c.as_bytes()[4] as f32,
-            b : c.as_bytes()[5] as f32,
+    }
+    if line.contains(" on ") {
+        let foreground = line.split(" ").collect::<Vec<&str>>()[1];
+        let background = line.split(" ").collect::<Vec<&str>>()[3];
+        if foreground.starts_with("color") {
+            // TODO: get the correct color here
+            RGB {
+                r : 0.0,
+                g : 0.0,
+                b : 0.0,
+            }
+        } else if foreground.starts_with("rgb") {
+            RGB {
+                r : foreground.as_bytes()[3] as f32,
+                g : foreground.as_bytes()[4] as f32,
+                b : foreground.as_bytes()[5] as f32,
+            }
+        } else {
+            RGB {
+                r : 0.0,
+                g : 0.0,
+                b : 0.0,
+            }
         }
     } else {
-        RGB {
-            r : 0.0,
-            g : 0.0,
-            b : 0.0,
+        let foreground = line.split(" ").collect::<Vec<&str>>()[1];
+        if foreground.starts_with("color") {
+            // TODO: get the correct color here
+            RGB {
+                r : 0.0,
+                g : 0.0,
+                b : 0.0,
+            }
+        } else if foreground.starts_with("rgb") {
+            RGB {
+                r : foreground.as_bytes()[3] as f32,
+                g : foreground.as_bytes()[4] as f32,
+                b : foreground.as_bytes()[5] as f32,
+            }
+        } else {
+            RGB {
+                r : 0.0,
+                g : 0.0,
+                b : 0.0,
+            }
         }
     }
 }

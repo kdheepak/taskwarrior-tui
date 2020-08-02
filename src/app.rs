@@ -828,27 +828,27 @@ mod tests {
 
     #[test]
     fn test_app() {
-        let mut app = TTApp::new();
-        app.update();
+        // let mut app = TTApp::new();
+        // app.update();
 
-        //println!("{:?}", app.tasks);
+        // //println!("{:?}", app.tasks);
 
-        //println!("{:?}", app.task_report_columns);
-        //println!("{:?}", app.task_report_labels);
+        // //println!("{:?}", app.task_report_columns);
+        // //println!("{:?}", app.task_report_labels);
 
-        let (t, h, c) = app.task_report();
-        app.next();
-        app.next();
-        app.modify = "Cannot add this string ' because it has a single quote".to_string();
-        println!("{}", app.modify);
-        // if let Ok(tasks) = import(stdin()) {
-        //     for task in tasks {
-        //         println!("Task: {}, entered {:?} is {} -> {}",
-        //                   task.uuid(),
-        //                   task.entry(),
-        //                   task.status(),
-        //                   task.description());
-        //     }
-        // }
+        // let (t, h, c) = app.task_report();
+        // app.next();
+        // app.next();
+        // app.modify = "Cannot add this string ' because it has a single quote".to_string();
+        // println!("{}", app.modify);
+        // // if let Ok(tasks) = import(stdin()) {
+        // //     for task in tasks {
+        // //         println!("Task: {}, entered {:?} is {} -> {}",
+        // //                   task.uuid(),
+        // //                   task.entry(),
+        // //                   task.status(),
+        // //                   task.description());
+        // //     }
+        // // }
     }
 }
