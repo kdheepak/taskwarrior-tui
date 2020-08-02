@@ -1,4 +1,4 @@
-use crate::color::{TColor};
+use crate::color::TColor;
 
 use std::cmp::Ordering;
 use std::convert::TryInto;
@@ -369,20 +369,26 @@ impl TTApp {
         let ctasks = self.tasks.clone();
         let blocking = self.colors.blocking;
         let blocked = self.colors.blocked;
-        let rows = tasks
-            .iter()
-            .enumerate()
-            .map(|(i, val)|
-                if ctasks[i].tags().unwrap_or(&vec![]).join(" ").contains(&"BLOCKED".to_string()) {
-                    Row::StyledData(val.iter(), normal_style)
-                } else if ctasks[i].tags().unwrap_or(&vec![]).contains(&"BLOCKING".to_string()) {
-                    Row::StyledData(val.iter(), normal_style.fg(blocking))
-                } else if ctasks[i].due().is_some() {
-                    Row::StyledData(val.iter(), normal_style)
-                } else {
-                    Row::StyledData(val.iter(), normal_style)
-                }
-            );
+        let rows = tasks.iter().enumerate().map(|(i, val)| {
+            if ctasks[i]
+                .tags()
+                .unwrap_or(&vec![])
+                .join(" ")
+                .contains(&"BLOCKED".to_string())
+            {
+                Row::StyledData(val.iter(), normal_style)
+            } else if ctasks[i]
+                .tags()
+                .unwrap_or(&vec![])
+                .contains(&"BLOCKING".to_string())
+            {
+                Row::StyledData(val.iter(), normal_style.fg(blocking))
+            } else if ctasks[i].due().is_some() {
+                Row::StyledData(val.iter(), normal_style)
+            } else {
+                Row::StyledData(val.iter(), normal_style)
+            }
+        });
         let constraints: Vec<Constraint> = widths
             .iter()
             .map(|i| {

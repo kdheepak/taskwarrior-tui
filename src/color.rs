@@ -345,7 +345,6 @@ impl TColor {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use crate::color::TColor;
