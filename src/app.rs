@@ -1,4 +1,4 @@
-use crate::color::{TColor, RGB};
+use crate::color::{TColor};
 
 use std::cmp::Ordering;
 use std::convert::TryInto;
@@ -104,6 +104,7 @@ pub struct TTApp {
     pub task_report_labels: Vec<String>,
     pub task_report_columns: Vec<String>,
     pub mode: AppMode,
+    pub colors: TColor,
 }
 
 impl TTApp {
@@ -120,6 +121,7 @@ impl TTApp {
             modify: "".to_string(),
             error: "".to_string(),
             mode: AppMode::Report,
+            colors: TColor::default(),
         };
         app.update();
         app
@@ -362,10 +364,25 @@ impl TTApp {
             );
             return;
         }
+        let selected = self.state.selected().unwrap();
         let header = headers.iter();
+        let ctasks = self.tasks.clone();
+        let blocking = self.colors.blocking;
+        let blocked = self.colors.blocked;
         let rows = tasks
             .iter()
-            .map(|i| Row::StyledData(i.iter(), normal_style));
+            .enumerate()
+            .map(|(i, val)|
+                if ctasks[i].tags().unwrap_or(&vec![]).join(" ").contains(&"BLOCKED".to_string()) {
+                    Row::StyledData(val.iter(), normal_style)
+                } else if ctasks[i].tags().unwrap_or(&vec![]).contains(&"BLOCKING".to_string()) {
+                    Row::StyledData(val.iter(), normal_style.fg(blocking))
+                } else if ctasks[i].due().is_some() {
+                    Row::StyledData(val.iter(), normal_style)
+                } else {
+                    Row::StyledData(val.iter(), normal_style)
+                }
+            );
         let constraints: Vec<Constraint> = widths
             .iter()
             .map(|i| {
@@ -658,9 +675,7 @@ impl TTApp {
         }
     }
 
-    pub fn task_virtual_tags(&self) -> Result<String, String> {
-        let selected = self.state.selected().unwrap_or_default();
-        let task_id = self.tasks[selected].id().unwrap_or_default();
+    pub fn task_virtual_tags(&self, task_id: u64) -> Result<String, String> {
         let output = Command::new("task").arg(format!("{}", task_id)).output();
 
         match output {
@@ -692,7 +707,7 @@ impl TTApp {
         let selected = self.state.selected().unwrap_or_default();
         let task_id = self.tasks[selected].id().unwrap_or_default();
         let mut command = "start";
-        for tag in self.task_virtual_tags()?.split(' ') {
+        for tag in self.task_virtual_tags(task_id)?.split(' ') {
             if tag == "ACTIVE" {
                 command = "stop"
             }

@@ -1,115 +1,90 @@
 use std::process::Command;
-
-pub struct RGB {
-    r: f32,
-    g: f32,
-    b: f32,
-}
+use tui::style::Color;
 
 pub struct TColor {
     pub enabled: bool,
-    pub active: RGB,
-    pub alternate: RGB,
-    pub blocked: RGB,
-    pub blocking: RGB,
-    pub burndown_done: RGB,
-    pub burndown_pending: RGB,
-    pub burndown_started: RGB,
-    pub calendar_due: RGB,
-    pub calendar_due_today: RGB,
-    pub calendar_holiday: RGB,
-    pub calendar_overdue: RGB,
-    pub calendar_today: RGB,
-    pub calendar_weekend: RGB,
-    pub calendar_weeknumber: RGB,
-    pub completed: RGB,
-    pub debug: RGB,
-    pub deleted: RGB,
-    pub due: RGB,
-    pub due_today: RGB,
-    pub error: RGB,
-    pub footnote: RGB,
-    pub header: RGB,
-    pub history_add: RGB,
-    pub history_delete: RGB,
-    pub history_done: RGB,
-    pub label: RGB,
-    pub label_sort: RGB,
-    pub overdue: RGB,
-    pub project: RGB,
-    pub recurring: RGB,
-    pub scheduled: RGB,
-    pub summary_background: RGB,
-    pub summary_bar: RGB,
-    pub sync_added: RGB,
-    pub sync_changed: RGB,
-    pub sync_rejected: RGB,
-    pub tag_next: RGB,
-    pub tag: RGB,
-    pub tagged: RGB,
-    pub uda_priority: RGB,
-    pub uda_priority_h: RGB,
-    pub uda_priority_l: RGB,
-    pub uda_priority_m: RGB,
-    pub undo_after: RGB,
-    pub undo_before: RGB,
-    pub until: RGB,
-    pub warning: RGB,
+    pub active: Color,
+    pub alternate: Color,
+    pub blocked: Color,
+    pub blocking: Color,
+    pub burndown_done: Color,
+    pub burndown_pending: Color,
+    pub burndown_started: Color,
+    pub calendar_due: Color,
+    pub calendar_due_today: Color,
+    pub calendar_holiday: Color,
+    pub calendar_overdue: Color,
+    pub calendar_today: Color,
+    pub calendar_weekend: Color,
+    pub calendar_weeknumber: Color,
+    pub completed: Color,
+    pub debug: Color,
+    pub deleted: Color,
+    pub due: Color,
+    pub due_today: Color,
+    pub error: Color,
+    pub footnote: Color,
+    pub header: Color,
+    pub history_add: Color,
+    pub history_delete: Color,
+    pub history_done: Color,
+    pub label: Color,
+    pub label_sort: Color,
+    pub overdue: Color,
+    pub project: Color,
+    pub recurring: Color,
+    pub scheduled: Color,
+    pub summary_background: Color,
+    pub summary_bar: Color,
+    pub sync_added: Color,
+    pub sync_changed: Color,
+    pub sync_rejected: Color,
+    pub tag_next: Color,
+    pub tag: Color,
+    pub tagged: Color,
+    pub uda_priority: Color,
+    pub uda_priority_h: Color,
+    pub uda_priority_l: Color,
+    pub uda_priority_m: Color,
+    pub undo_after: Color,
+    pub undo_before: Color,
+    pub until: Color,
+    pub warning: Color,
 }
 
-pub fn get_color(line: &str) -> RGB {
+pub fn get_color(line: &str) -> Color {
     let sline = line.split(" ").collect::<Vec<&str>>();
     if sline.len() == 1 {
-        return RGB {
-            r : 0.0,
-            g : 0.0,
-            b : 0.0,
-        }
+        return Color::Rgb(0, 0, 0);
     }
     if line.contains(" on ") {
         let foreground = line.split(" ").collect::<Vec<&str>>()[1];
         let background = line.split(" ").collect::<Vec<&str>>()[3];
         if foreground.starts_with("color") {
             // TODO: get the correct color here
-            RGB {
-                r : 0.0,
-                g : 0.0,
-                b : 0.0,
-            }
+            Color::Rgb(0, 0, 0)
         } else if foreground.starts_with("rgb") {
-            RGB {
-                r : foreground.as_bytes()[3] as f32,
-                g : foreground.as_bytes()[4] as f32,
-                b : foreground.as_bytes()[5] as f32,
-            }
+            Color::Rgb(
+                foreground.as_bytes()[3],
+                foreground.as_bytes()[4],
+                foreground.as_bytes()[5],
+            )
         } else {
-            RGB {
-                r : 0.0,
-                g : 0.0,
-                b : 0.0,
-            }
+            Color::Rgb(0, 0, 0)
         }
     } else {
         let foreground = line.split(" ").collect::<Vec<&str>>()[1];
         if foreground.starts_with("color") {
             // TODO: get the correct color here
-            RGB {
-                r : 0.0,
-                g : 0.0,
-                b : 0.0,
-            }
+            Color::Rgb(0, 0, 0)
         } else if foreground.starts_with("rgb") {
-            RGB {
-                r : foreground.as_bytes()[3] as f32,
-                g : foreground.as_bytes()[4] as f32,
-                b : foreground.as_bytes()[5] as f32,
-            }
+            Color::Rgb(
+                foreground.as_bytes()[3],
+                foreground.as_bytes()[4],
+                foreground.as_bytes()[5],
+            )
         } else {
-            RGB {
-                r : 0.0,
-                g : 0.0,
-                b : 0.0,
-            }
+            Color::Rgb(0, 0, 0)
         }
     }
 }
@@ -125,241 +100,53 @@ impl TColor {
         let data = String::from_utf8(output.stdout).expect("Unable to convert stdout to string");
 
         let enabled = true;
-        let mut active = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut alternate = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut blocked = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut blocking = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut burndown_done = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut burndown_pending = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut burndown_started = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut calendar_due = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut calendar_due_today = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut calendar_holiday = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut calendar_overdue = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut calendar_today = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut calendar_weekend = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut calendar_weeknumber = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut completed = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut debug = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut deleted = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut due = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut due_today = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut error = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut footnote = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut header = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut history_add = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut history_delete = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut history_done = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut label = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut label_sort = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut overdue = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut project = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut recurring = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut scheduled = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut summary_background = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut summary_bar = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut sync_added = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut sync_changed = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut sync_rejected = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut tag_next = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut tag = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut tagged = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut uda_priority = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut uda_priority_h = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut uda_priority_l = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut uda_priority_m = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut undo_after = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut undo_before = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut until = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
-        let mut warning = RGB {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
+        let mut active = Color::Black;
+        let mut alternate = Color::Black;
+        let mut blocked = Color::Black;
+        let mut blocking = Color::Black;
+        let mut burndown_done = Color::Black;
+        let mut burndown_pending = Color::Black;
+        let mut burndown_started = Color::Black;
+        let mut calendar_due = Color::Black;
+        let mut calendar_due_today = Color::Black;
+        let mut calendar_holiday = Color::Black;
+        let mut calendar_overdue = Color::Black;
+        let mut calendar_today = Color::Black;
+        let mut calendar_weekend = Color::Black;
+        let mut calendar_weeknumber = Color::Black;
+        let mut completed = Color::Black;
+        let mut debug = Color::Black;
+        let mut deleted = Color::Black;
+        let mut due = Color::Black;
+        let mut due_today = Color::Black;
+        let mut error = Color::Black;
+        let mut footnote = Color::Black;
+        let mut header = Color::Black;
+        let mut history_add = Color::Black;
+        let mut history_delete = Color::Black;
+        let mut history_done = Color::Black;
+        let mut label = Color::Black;
+        let mut label_sort = Color::Black;
+        let mut overdue = Color::Black;
+        let mut project = Color::Black;
+        let mut recurring = Color::Black;
+        let mut scheduled = Color::Black;
+        let mut summary_background = Color::Black;
+        let mut summary_bar = Color::Black;
+        let mut sync_added = Color::Black;
+        let mut sync_changed = Color::Black;
+        let mut sync_rejected = Color::Black;
+        let mut tag_next = Color::Black;
+        let mut tag = Color::Black;
+        let mut tagged = Color::Black;
+        let mut uda_priority = Color::Black;
+        let mut uda_priority_h = Color::Black;
+        let mut uda_priority_l = Color::Black;
+        let mut uda_priority_m = Color::Black;
+        let mut undo_after = Color::Black;
+        let mut undo_before = Color::Black;
+        let mut until = Color::Black;
+        let mut warning = Color::Black;
 
         for line in data.split('\n') {
             if line.starts_with("color.active") {
