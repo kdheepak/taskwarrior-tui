@@ -20,6 +20,8 @@ use tui::{
     text::{Span, Spans, Text},
     widgets::{Block, Borders, Clear, Paragraph, Row, Table, TableState},
 };
+use std::{sync::mpsc, thread, time::Duration};
+use std::sync::{Arc, Mutex};
 
 pub fn cmp(t1: &Task, t2: &Task) -> Ordering {
     let urgency1 = match &t1.uda()["urgency"] {
@@ -100,7 +102,7 @@ pub struct TTApp {
     pub command: String,
     pub error: String,
     pub modify: String,
-    pub tasks: Vec<Task>,
+    pub tasks: Arc<Mutex<Vec<Task>>>,
     pub task_report_labels: Vec<String>,
     pub task_report_columns: Vec<String>,
     pub mode: AppMode,
@@ -112,7 +114,7 @@ impl TTApp {
         let mut app = Self {
             should_quit: false,
             state: TableState::default(),
-            tasks: vec![],
+            tasks: Arc::new(Mutex::new(vec![])),
             task_report_labels: vec![],
             task_report_columns: vec![],
             filter: "status:pending ".to_string(),
@@ -124,12 +126,46 @@ impl TTApp {
             colors: TColor::default(),
         };
         app.update();
+        let handle = {
+            let tasks = app.tasks.clone();
+            let filter = app.filter.clone();
+            thread::spawn(move || loop {
+                let mut task = Command::new("task");
+
+                task.arg("rc.json.array=on");
+                task.arg("export");
+
+                match shlex::split(&filter) {
+                    Some(cmd) => {
+                        for s in cmd {
+                            task.arg(&s);
+                        }
+                    }
+                    None => {
+                        task.arg("");
+                    }
+                }
+
+                let output = task
+                    .output()
+                    .expect("Unable to run `task export`. Check documentation for more information.");
+                let data = String::from_utf8(output.stdout).unwrap();
+                let imported = import(data.as_bytes());
+                if let Ok(i) = imported {
+                    *(tasks.lock().unwrap()) = i;
+                    tasks.lock().unwrap().sort_by(cmp);
+                }
+                thread::sleep(Duration::from_millis(250));
+            })
+        };
         app
     }
 
     pub fn draw(&mut self, f: &mut Frame<impl Backend>) {
-        while !self.tasks.is_empty()
-            && self.state.selected().unwrap_or_default() >= self.tasks.len()
+        let tasks_is_empty = self.tasks.lock().unwrap().is_empty();
+        let tasks_len = self.tasks.lock().unwrap().len();
+        while !tasks_is_empty
+            && self.state.selected().unwrap_or_default() >= tasks_len
         {
             self.previous();
         }
@@ -327,7 +363,7 @@ impl TTApp {
     }
 
     fn draw_task_details(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
-        if self.tasks.is_empty() {
+        if self.tasks.lock().unwrap().is_empty() {
             f.render_widget(
                 Block::default()
                     .borders(Borders::ALL)
@@ -337,7 +373,7 @@ impl TTApp {
             return;
         }
         let selected = self.state.selected().unwrap_or_default();
-        let task_id = self.tasks[selected].id().unwrap_or_default();
+        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let output = Command::new("task").arg(format!("{}", task_id)).output();
         if let Ok(output) = output {
             let data = String::from_utf8(output.stdout).unwrap();
@@ -366,7 +402,7 @@ impl TTApp {
         }
         let selected = self.state.selected().unwrap_or_default();
         let header = headers.iter();
-        let ctasks = self.tasks.clone();
+        let ctasks = self.tasks.lock().unwrap().clone();
         let blocking = self.colors.blocking;
         let blocked = self.colors.blocked;
         let rows = tasks.iter().enumerate().map(|(i, val)| {
@@ -426,11 +462,11 @@ impl TTApp {
     pub fn task_report(&mut self) -> (Vec<Vec<String>>, Vec<String>, Vec<i16>) {
         let mut alltasks = vec![];
         // get all tasks as their string representation
-        for task in &self.tasks {
+        for task in &*(self.tasks.lock().unwrap()) {
             let mut item = vec![];
             for name in &self.task_report_columns {
                 let attributes: Vec<_> = name.split('.').collect();
-                let s = self.get_string_attribute(attributes[0], task);
+                let s = self.get_string_attribute(attributes[0], &task);
                 item.push(s);
             }
             alltasks.push(item)
@@ -489,13 +525,14 @@ impl TTApp {
         self.export_tasks();
         self.export_headers();
     }
+
     pub fn next(&mut self) {
-        if self.tasks.is_empty() {
+        if self.tasks.lock().unwrap().is_empty() {
             return;
         }
         let i = match self.state.selected() {
             Some(i) => {
-                if i >= self.tasks.len() - 1 {
+                if i >= self.tasks.lock().unwrap().len() - 1 {
                     0
                 } else {
                     i + 1
@@ -506,13 +543,13 @@ impl TTApp {
         self.state.select(Some(i));
     }
     pub fn previous(&mut self) {
-        if self.tasks.is_empty() {
+        if self.tasks.lock().unwrap().is_empty() {
             return;
         }
         let i = match self.state.selected() {
             Some(i) => {
                 if i == 0 {
-                    self.tasks.len() - 1
+                    self.tasks.lock().unwrap().len() - 1
                 } else {
                     i - 1
                 }
@@ -523,8 +560,6 @@ impl TTApp {
     }
 
     pub fn export_headers(&mut self) {
-        self.task_report_columns = vec![];
-        self.task_report_labels = vec![];
 
         let output = Command::new("task")
             .arg("show")
@@ -559,7 +594,7 @@ impl TTApp {
         }
     }
 
-    pub fn export_tasks(&mut self) {
+    pub fn export_tasks(&self) {
         let mut task = Command::new("task");
 
         task.arg("rc.json.array=on");
@@ -582,17 +617,13 @@ impl TTApp {
         let data = String::from_utf8(output.stdout).unwrap();
         let imported = import(data.as_bytes());
         if let Ok(i) = imported {
-            self.tasks = i;
-            self.tasks.sort_by(cmp);
+            *(self.tasks.lock().unwrap()) = i;
+            self.tasks.lock().unwrap().sort_by(cmp);
         }
     }
 
-    pub fn handle_tick(&mut self) {
-        self.update();
-    }
-
     pub fn task_log(&mut self) -> Result<(), String> {
-        if self.tasks.is_empty() {
+        if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
 
@@ -621,11 +652,11 @@ impl TTApp {
     }
 
     pub fn task_modify(&mut self) -> Result<(), String> {
-        if self.tasks.is_empty() {
+        if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
         let selected = self.state.selected().unwrap_or_default();
-        let task_id = self.tasks[selected].id().unwrap_or_default();
+        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let mut command = Command::new("task");
         command.arg(format!("{}", task_id)).arg("modify");
 
@@ -704,11 +735,11 @@ impl TTApp {
     }
 
     pub fn task_start_or_stop(&mut self) -> Result<(), String> {
-        if self.tasks.is_empty() {
+        if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
         let selected = self.state.selected().unwrap_or_default();
-        let task_id = self.tasks[selected].id().unwrap_or_default();
+        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let mut command = "start";
         for tag in self.task_virtual_tags(task_id)?.split(' ') {
             if tag == "ACTIVE" {
@@ -730,11 +761,11 @@ impl TTApp {
     }
 
     pub fn task_delete(&self) -> Result<(), String> {
-        if self.tasks.is_empty() {
+        if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
         let selected = self.state.selected().unwrap_or_default();
-        let task_id = self.tasks[selected].id().unwrap_or_default();
+        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
 
         let output = Command::new("task")
             .arg("rc.confirmation=off")
@@ -751,11 +782,11 @@ impl TTApp {
     }
 
     pub fn task_done(&mut self) -> Result<(), String> {
-        if self.tasks.is_empty() {
+        if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
         let selected = self.state.selected().unwrap_or_default();
-        let task_id = self.tasks[selected].id().unwrap_or_default();
+        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let output = Command::new("task")
             .arg(format!("{}", task_id))
             .arg("done")
@@ -770,7 +801,7 @@ impl TTApp {
     }
 
     pub fn task_undo(&self) -> Result<(), String> {
-        if self.tasks.is_empty() {
+        if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
         let output = Command::new("task")
@@ -787,11 +818,11 @@ impl TTApp {
     }
 
     pub fn task_edit(&self) -> Result<(), String> {
-        if self.tasks.is_empty() {
+        if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
         let selected = self.state.selected().unwrap_or_default();
-        let task_id = self.tasks[selected].id().unwrap_or_default();
+        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let r = Command::new("task")
             .arg(format!("{}", task_id))
             .arg("edit")
@@ -827,11 +858,11 @@ impl TTApp {
     }
 
     pub fn task_current(&self) -> Option<Task> {
-        if self.tasks.is_empty() {
+        if self.tasks.lock().unwrap().is_empty() {
             return None;
         }
         let selected = self.state.selected().unwrap_or_default();
-        Some(self.tasks[selected].clone())
+        Some(self.tasks.lock().unwrap()[selected].clone())
     }
 }
 
@@ -846,13 +877,13 @@ mod tests {
 
     #[test]
     fn test_app() {
-        // let mut app = TTApp::new();
-        // app.update();
+        let mut app = TTApp::new();
+        app.update();
 
-        // //println!("{:?}", app.tasks);
+        println!("{:?}", app.tasks);
 
-        // //println!("{:?}", app.task_report_columns);
-        // //println!("{:?}", app.task_report_labels);
+        //println!("{:?}", app.task_report_columns);
+        //println!("{:?}", app.task_report_labels);
 
         // let (t, h, c) = app.task_report();
         // app.next();

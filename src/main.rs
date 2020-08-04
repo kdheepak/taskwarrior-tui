@@ -282,7 +282,7 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                     }
                 },
             },
-            Event::Tick => app.handle_tick(),
+            Event::Tick => (),
         }
 
         if app.should_quit {
