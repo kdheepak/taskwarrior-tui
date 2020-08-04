@@ -134,6 +134,7 @@ impl TTApp {
         let tasks = self.tasks.clone();
         let filter = self.filter.clone();
         thread::spawn(move || loop {
+            thread::sleep(Duration::from_secs(10));
             let mut task = Command::new("task");
 
             task.arg("rc.json.array=on");
@@ -160,26 +161,23 @@ impl TTApp {
                     *(tasks.lock().unwrap()) = i;
                     tasks.lock().unwrap().sort_by(cmp);
                 }
-                {
-                    let mut tasks = tasks.lock().unwrap();
-                    for i in 0..tasks.len() {
-                        let task_id = tasks[i].id().unwrap();
-                        let tags = TTApp::task_virtual_tags(task_id).unwrap();
-                        let task = &mut tasks[i];
-                        match task.tags_mut() {
-                            Some(t) => {
-                                for tag in tags.split(" ") {
-                                    t.push(tag.to_string())
-                                }
-                            },
-                            None => {
-                                task.set_tags(Some(tags.split(" ")))
+                let tasks_len = tasks.lock().unwrap().len();
+                for i in 0..tasks_len {
+                    let task_id = tasks.lock().unwrap()[i].id().unwrap();
+                    let tags = TTApp::task_virtual_tags(task_id).unwrap();
+                    let task = &mut tasks.lock().unwrap()[i];
+                    match task.tags_mut() {
+                        Some(t) => {
+                            for tag in tags.split(" ") {
+                                t.push(tag.to_string())
                             }
+                        },
+                        None => {
+                            task.set_tags(Some(tags.split(" ")))
                         }
                     }
                 }
             }
-            thread::sleep(Duration::from_millis(5000));
         });
     }
 
@@ -648,9 +646,29 @@ impl TTApp {
             .expect("Unable to run `task export`. Check documentation for more information.");
         let data = String::from_utf8(output.stdout).unwrap();
         let imported = import(data.as_bytes());
-        if let Ok(i) = imported {
-            *(self.tasks.lock().unwrap()) = i;
-            self.tasks.lock().unwrap().sort_by(cmp);
+        {
+            if let Ok(i) = imported {
+                *(self.tasks.lock().unwrap()) = i;
+                self.tasks.lock().unwrap().sort_by(cmp);
+            }
+            {
+                let mut tasks = self.tasks.lock().unwrap();
+                for i in 0..tasks.len() {
+                    let task_id = tasks[i].id().unwrap();
+                    let tags = TTApp::task_virtual_tags(task_id).unwrap();
+                    let task = &mut tasks[i];
+                    match task.tags_mut() {
+                        Some(t) => {
+                            for tag in tags.split(" ") {
+                                t.push(tag.to_string())
+                            }
+                        },
+                        None => {
+                            task.set_tags(Some(tags.split(" ")))
+                        }
+                    }
+                }
+            }
         }
     }
 

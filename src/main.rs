@@ -63,28 +63,28 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                     Key::Down | Key::Char('j') => app.next(),
                     Key::Up | Key::Char('k') => app.previous(),
                     Key::Char('d') => match app.task_done() {
-                        Ok(_) => (),
+                        Ok(_) => app.update(),
                         Err(e) => {
                             app.mode = AppMode::TaskError;
                             app.error = e;
                         }
                     },
                     Key::Char('x') => match app.task_delete() {
-                        Ok(_) => (),
+                        Ok(_) => app.update(),
                         Err(e) => {
                             app.mode = AppMode::TaskError;
                             app.error = e;
                         }
                     },
                     Key::Char('s') => match app.task_start_or_stop() {
-                        Ok(_) => (),
+                        Ok(_) => app.update(),
                         Err(e) => {
                             app.mode = AppMode::TaskError;
                             app.error = e;
                         }
                     },
                     Key::Char('u') => match app.task_undo() {
-                        Ok(_) => (),
+                        Ok(_) => app.update(),
                         Err(e) => {
                             app.mode = AppMode::TaskError;
                             app.error = e;
@@ -95,7 +95,7 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                         let r = app.task_edit();
                         events.resume_event_loop(&mut terminal);
                         match r {
-                            Ok(_) => (),
+                            Ok(_) => app.update(),
                             Err(e) => {
                                 app.mode = AppMode::TaskError;
                                 app.error = e;
@@ -134,7 +134,10 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                 },
                 AppMode::ModifyTask => match input {
                     Key::Char('\n') => match app.task_modify() {
-                        Ok(_) => app.mode = AppMode::Report,
+                        Ok(_) => {
+                            app.mode = AppMode::Report;
+                            app.update();
+                        },
                         Err(e) => {
                             app.mode = AppMode::TaskError;
                             app.error = e;
@@ -172,7 +175,10 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                 },
                 AppMode::LogTask => match input {
                     Key::Char('\n') => match app.task_log() {
-                        Ok(_) => app.mode = AppMode::Report,
+                        Ok(_) => {
+                            app.mode = AppMode::Report;
+                            app.update();
+                        }
                         Err(e) => {
                             app.mode = AppMode::TaskError;
                             app.error = e;
@@ -210,7 +216,10 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                 },
                 AppMode::AddTask => match input {
                     Key::Char('\n') => match app.task_add() {
-                        Ok(_) => app.mode = AppMode::Report,
+                        Ok(_) => {
+                            app.mode = AppMode::Report;
+                            app.update();
+                        }
                         Err(e) => {
                             app.mode = AppMode::TaskError;
                             app.error = e;
@@ -249,6 +258,7 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                 AppMode::Filter => match input {
                     Key::Char('\n') | Key::Esc => {
                         app.mode = AppMode::Report;
+                        app.update();
                     }
                     Key::Right => {
                         if app.cursor_location < app.filter.len() {
