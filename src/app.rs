@@ -160,24 +160,26 @@ impl TTApp {
                     *(tasks.lock().unwrap()) = i;
                     tasks.lock().unwrap().sort_by(cmp);
                 }
-                let tasks_len = tasks.lock().unwrap().len();
-                for i in 0..tasks_len {
-                    let task_id = tasks.lock().unwrap()[i].id().unwrap();
-                    let tags = TTApp::task_virtual_tags(task_id).unwrap();
-                    let task = &mut tasks.lock().unwrap()[i];
-                    match task.tags_mut() {
-                        Some(t) => {
-                            for tag in tags.split(" ") {
-                                t.push(tag.to_string())
+                {
+                    let mut tasks = tasks.lock().unwrap();
+                    for i in 0..tasks.len() {
+                        let task_id = tasks[i].id().unwrap();
+                        let tags = TTApp::task_virtual_tags(task_id).unwrap();
+                        let task = &mut tasks[i];
+                        match task.tags_mut() {
+                            Some(t) => {
+                                for tag in tags.split(" ") {
+                                    t.push(tag.to_string())
+                                }
+                            },
+                            None => {
+                                task.set_tags(Some(tags.split(" ")))
                             }
-                        },
-                        None => {
-                            task.set_tags(Some(tags.split(" ")))
                         }
                     }
                 }
             }
-            thread::sleep(Duration::from_millis(1000));
+            thread::sleep(Duration::from_millis(5000));
         });
     }
 
@@ -424,15 +426,23 @@ impl TTApp {
         let header = headers.iter();
         let ctasks = self.tasks.lock().unwrap().clone();
         let blocking = self.colors.blocking;
+        let active = self.colors.active;
         let blocked = self.colors.blocked;
         let rows = tasks.iter().enumerate().map(|(i, val)| {
             if ctasks[i]
                 .tags()
                 .unwrap_or(&vec![])
                 .join(" ")
+                .contains(&"ACTIVE".to_string())
+            {
+                return Row::StyledData(val.iter(), Style::default().fg(active));
+            }
+            if ctasks[i]
+                .tags()
+                .unwrap_or(&vec![])
                 .contains(&"BLOCKED".to_string())
             {
-                Row::StyledData(val.iter(), normal_style)
+                Row::StyledData(val.iter(), normal_style.fg(blocked))
             } else if ctasks[i]
                 .tags()
                 .unwrap_or(&vec![])
@@ -896,13 +906,15 @@ mod tests {
 
     use task_hookrs::import::import;
     use task_hookrs::task::Task;
+    use std::{sync::mpsc, thread, time::Duration};
 
     #[test]
     fn test_app() {
         let mut app = TTApp::new();
         app.update();
 
-        println!("{:?}", app.tasks);
+        thread::sleep(Duration::from_millis(2500));
+        // println!("{:?}", app.tasks);
 
         //println!("{:?}", app.task_report_columns);
         //println!("{:?}", app.task_report_labels);

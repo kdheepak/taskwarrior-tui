@@ -1,6 +1,8 @@
 use std::process::Command;
 use tui::style::Color;
+use std::str;
 
+#[derive(Debug)]
 pub struct TColor {
     pub enabled: bool,
     pub active: Color,
@@ -73,15 +75,16 @@ pub fn get_color(line: &str) -> Color {
             Color::Rgb(0, 0, 0)
         }
     } else {
-        let foreground = line.split(" ").collect::<Vec<&str>>()[1];
+        let foreground = line.split(" ").filter(|x| x.len() > 0).collect::<Vec<&str>>()[1];
         if foreground.starts_with("color") {
             // TODO: get the correct color here
             Color::Rgb(0, 0, 0)
         } else if foreground.starts_with("rgb") {
-            Color::Rgb(
-                foreground.as_bytes()[3],
-                foreground.as_bytes()[4],
-                foreground.as_bytes()[5],
+            let red = (foreground.as_bytes()[3] as char).to_digit(10).unwrap() as u8;
+            let green = (foreground.as_bytes()[4] as char).to_digit(10).unwrap() as u8;
+            let blue = (foreground.as_bytes()[5] as char).to_digit(10).unwrap() as u8;
+            Color::Indexed(
+                16 + red * 36 + green * 6 + blue
             )
         } else {
             Color::Rgb(0, 0, 0)
@@ -293,54 +296,54 @@ impl TColor {
         }
 
         Self {
-            enabled: enabled,
-            active: active,
-            alternate: alternate,
-            blocked: blocked,
-            blocking: blocking,
-            burndown_done: burndown_done,
-            burndown_pending: burndown_pending,
-            burndown_started: burndown_started,
-            calendar_due: calendar_due,
-            calendar_due_today: calendar_due_today,
-            calendar_holiday: calendar_holiday,
-            calendar_overdue: calendar_overdue,
-            calendar_today: calendar_today,
-            calendar_weekend: calendar_weekend,
-            calendar_weeknumber: calendar_weeknumber,
-            completed: completed,
-            debug: debug,
-            deleted: deleted,
-            due: due,
-            due_today: due_today,
-            error: error,
-            footnote: footnote,
-            header: header,
-            history_add: history_add,
-            history_delete: history_delete,
-            history_done: history_done,
-            label: label,
-            label_sort: label_sort,
-            overdue: overdue,
-            project: project,
-            recurring: recurring,
-            scheduled: scheduled,
-            summary_background: summary_background,
-            summary_bar: summary_bar,
-            sync_added: sync_added,
-            sync_changed: sync_changed,
-            sync_rejected: sync_rejected,
-            tag_next: tag_next,
-            tag: tag,
-            tagged: tagged,
-            uda_priority: uda_priority,
-            uda_priority_h: uda_priority_h,
-            uda_priority_l: uda_priority_l,
-            uda_priority_m: uda_priority_m,
-            undo_after: undo_after,
-            undo_before: undo_before,
-            until: until,
-            warning: warning,
+            enabled,
+            active,
+            alternate,
+            blocked,
+            blocking,
+            burndown_done,
+            burndown_pending,
+            burndown_started,
+            calendar_due,
+            calendar_due_today,
+            calendar_holiday,
+            calendar_overdue,
+            calendar_today,
+            calendar_weekend,
+            calendar_weeknumber,
+            completed,
+            debug,
+            deleted,
+            due,
+            due_today,
+            error,
+            footnote,
+            header,
+            history_add,
+            history_delete,
+            history_done,
+            label,
+            label_sort,
+            overdue,
+            project,
+            recurring,
+            scheduled,
+            summary_background,
+            summary_bar,
+            sync_added,
+            sync_changed,
+            sync_rejected,
+            tag_next,
+            tag,
+            tagged,
+            uda_priority,
+            uda_priority_h,
+            uda_priority_l,
+            uda_priority_m,
+            undo_after,
+            undo_before,
+            until,
+            warning,
         }
     }
 }
