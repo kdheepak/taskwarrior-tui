@@ -126,39 +126,41 @@ impl TTApp {
             colors: TColor::default(),
         };
         app.update();
-        let handle = {
-            let tasks = app.tasks.clone();
-            let filter = app.filter.clone();
-            thread::spawn(move || loop {
-                let mut task = Command::new("task");
-
-                task.arg("rc.json.array=on");
-                task.arg("export");
-
-                match shlex::split(&filter) {
-                    Some(cmd) => {
-                        for s in cmd {
-                            task.arg(&s);
-                        }
-                    }
-                    None => {
-                        task.arg("");
-                    }
-                }
-
-                let output = task
-                    .output()
-                    .expect("Unable to run `task export`. Check documentation for more information.");
-                let data = String::from_utf8(output.stdout).unwrap();
-                let imported = import(data.as_bytes());
-                if let Ok(i) = imported {
-                    *(tasks.lock().unwrap()) = i;
-                    tasks.lock().unwrap().sort_by(cmp);
-                }
-                thread::sleep(Duration::from_millis(250));
-            })
-        };
+        app.start_background_thread();
         app
+    }
+
+    pub fn start_background_thread(&self) {
+        let tasks = self.tasks.clone();
+        let filter = self.filter.clone();
+        thread::spawn(move || loop {
+            let mut task = Command::new("task");
+
+            task.arg("rc.json.array=on");
+            task.arg("export");
+
+            match shlex::split(&filter) {
+                Some(cmd) => {
+                    for s in cmd {
+                        task.arg(&s);
+                    }
+                }
+                None => {
+                    task.arg("");
+                }
+            }
+
+            let output = task
+                .output()
+                .expect("Unable to run `task export`. Check documentation for more information.");
+            let data = String::from_utf8(output.stdout).unwrap();
+            let imported = import(data.as_bytes());
+            if let Ok(i) = imported {
+                *(tasks.lock().unwrap()) = i;
+                tasks.lock().unwrap().sort_by(cmp);
+            }
+            thread::sleep(Duration::from_millis(250));
+        });
     }
 
     pub fn draw(&mut self, f: &mut Frame<impl Backend>) {
