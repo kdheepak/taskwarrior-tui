@@ -560,6 +560,8 @@ impl TTApp {
     }
 
     pub fn export_headers(&mut self) {
+        self.task_report_columns = vec![];
+        self.task_report_labels = vec![];
 
         let output = Command::new("task")
             .arg("show")
