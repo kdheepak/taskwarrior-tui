@@ -364,7 +364,7 @@ impl TTApp {
             );
             return;
         }
-        let selected = self.state.selected().unwrap();
+        let selected = self.state.selected().unwrap_or_default();
         let header = headers.iter();
         let ctasks = self.tasks.clone();
         let blocking = self.colors.blocking;
@@ -653,9 +653,6 @@ impl TTApp {
     }
 
     pub fn task_add(&mut self) -> Result<(), String> {
-        if self.tasks.is_empty() {
-            return Ok(());
-        }
 
         let mut command = Command::new("task");
         command.arg("add");
