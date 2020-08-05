@@ -99,6 +99,8 @@ pub struct TTApp {
     pub state: TableState,
     pub cursor_location: usize,
     pub filter: String,
+    pub context_filter: String,
+    pub context_name: String,
     pub command: String,
     pub error: String,
     pub modify: String,
@@ -118,6 +120,8 @@ impl TTApp {
             task_report_labels: vec![],
             task_report_columns: vec![],
             filter: "status:pending ".to_string(),
+            context_filter: "".to_string(),
+            context_name: "".to_string(),
             cursor_location: 0,
             command: "".to_string(),
             modify: "".to_string(),
@@ -125,14 +129,43 @@ impl TTApp {
             mode: AppMode::Report,
             colors: TColor::default(),
         };
+        app.get_context();
         app.update();
         app.start_background_thread();
         app
     }
 
+    pub fn get_context(&mut self) {
+        self.context_name = String::from_utf8(
+                Command::new("task")
+                .arg("_get")
+                .arg("rc.context")
+                .output().unwrap()
+                .stdout
+            ).unwrap();
+        self.context_name = self.context_name
+            .strip_suffix('\n').unwrap().to_string();
+
+        self.context_filter = String::from_utf8(
+                Command::new("task")
+                .arg("_get")
+                .arg(format!("rc.context.{}", self.context_name))
+                .output().unwrap()
+                .stdout
+            ).unwrap();
+        self.context_filter = self.context_filter
+            .strip_suffix('\n').unwrap().to_string();
+    }
+
     pub fn start_background_thread(&self) {
         let tasks = self.tasks.clone();
-        let filter = self.filter.clone();
+        let filter = if self.context_filter != "".to_string() {
+            let t = format!("{} {}", self.filter, self.context_filter);
+            t
+        } else {
+            self.filter.clone()
+        };
+
         thread::spawn(move || loop {
             thread::sleep(Duration::from_secs(10));
             let mut task = Command::new("task");
@@ -630,7 +663,13 @@ impl TTApp {
         task.arg("rc.json.array=on");
         task.arg("export");
 
-        match shlex::split(&self.filter) {
+        let filter = if self.context_filter != "".to_string() {
+            let t = format!("{} {}", self.filter, self.context_filter);
+            t
+        } else {
+            self.filter.clone()
+        };
+        match shlex::split(&filter) {
             Some(cmd) => {
                 for s in cmd {
                     task.arg(&s);
@@ -655,7 +694,7 @@ impl TTApp {
                 let mut tasks = self.tasks.lock().unwrap();
                 for i in 0..tasks.len() {
                     let task_id = tasks[i].id().unwrap();
-                    let tags = TTApp::task_virtual_tags(task_id).unwrap();
+                    let tags = TTApp::task_virtual_tags(task_id).unwrap_or_default();
                     let task = &mut tasks[i];
                     match task.tags_mut() {
                         Some(t) => {
@@ -928,10 +967,8 @@ mod tests {
 
     #[test]
     fn test_app() {
-        let mut app = TTApp::new();
-        app.update();
-
-        thread::sleep(Duration::from_millis(2500));
+        let app = TTApp::new();
+        assert_eq!(app.context_name, "".to_string());
         // println!("{:?}", app.tasks);
 
         //println!("{:?}", app.task_report_columns);
