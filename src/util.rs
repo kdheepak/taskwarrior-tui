@@ -48,7 +48,7 @@ pub enum Event<I> {
 pub fn setup_terminal() -> Terminal<CrosstermBackend<io::Stdout>> {
     enable_raw_mode().unwrap();
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture).unwrap();
+    execute!(stdout, EnterAlternateScreen).unwrap();
     let backend = CrosstermBackend::new(stdout);
     Terminal::new(backend).unwrap()
 }
