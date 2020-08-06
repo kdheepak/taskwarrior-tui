@@ -1,4 +1,4 @@
-use crate::color::TColor;
+use crate::color::TColorConfig;
 
 use std::cmp::Ordering;
 use std::convert::TryInto;
@@ -109,7 +109,7 @@ pub struct TTApp {
     pub task_report_labels: Vec<String>,
     pub task_report_columns: Vec<String>,
     pub mode: AppMode,
-    pub colors: TColor,
+    pub colors: TColorConfig,
 }
 
 impl TTApp {
@@ -128,7 +128,7 @@ impl TTApp {
             modify: "".to_string(),
             error: "".to_string(),
             mode: AppMode::Report,
-            colors: TColor::default(),
+            colors: TColorConfig::default(),
         };
         app.get_context();
         app.update();
@@ -399,9 +399,9 @@ impl TTApp {
         let selected = self.state.selected().unwrap_or_default();
         let header = headers.iter();
         let ctasks = self.tasks.lock().unwrap().clone();
-        let blocking = self.colors.blocking;
-        let active = self.colors.active;
-        let blocked = self.colors.blocked;
+        let blocking = &self.colors.blocking;
+        let active = &self.colors.active;
+        let blocked = &self.colors.blocked;
         let rows = tasks.iter().enumerate().map(|(i, val)| {
             if ctasks[i]
                 .tags()
@@ -409,20 +409,20 @@ impl TTApp {
                 .join(" ")
                 .contains(&"ACTIVE".to_string())
             {
-                return Row::StyledData(val.iter(), Style::default().fg(active));
+                return Row::StyledData(val.iter(), Style::default().fg(active.fg).bg(active.bg));
             }
             if ctasks[i]
                 .tags()
                 .unwrap_or(&vec![])
                 .contains(&"BLOCKED".to_string())
             {
-                Row::StyledData(val.iter(), normal_style.fg(blocked))
+                Row::StyledData(val.iter(), normal_style.fg(blocked.fg).bg(blocked.bg))
             } else if ctasks[i]
                 .tags()
                 .unwrap_or(&vec![])
                 .contains(&"BLOCKING".to_string())
             {
-                Row::StyledData(val.iter(), normal_style.fg(blocking))
+                Row::StyledData(val.iter(), normal_style.fg(blocking.fg).bg(blocked.bg))
             } else if ctasks[i].due().is_some() {
                 Row::StyledData(val.iter(), normal_style)
             } else {

@@ -4,95 +4,113 @@ use std::str;
 
 #[derive(Debug)]
 pub struct TColor {
-    pub enabled: bool,
-    pub active: Color,
-    pub alternate: Color,
-    pub blocked: Color,
-    pub blocking: Color,
-    pub burndown_done: Color,
-    pub burndown_pending: Color,
-    pub burndown_started: Color,
-    pub calendar_due: Color,
-    pub calendar_due_today: Color,
-    pub calendar_holiday: Color,
-    pub calendar_overdue: Color,
-    pub calendar_today: Color,
-    pub calendar_weekend: Color,
-    pub calendar_weeknumber: Color,
-    pub completed: Color,
-    pub debug: Color,
-    pub deleted: Color,
-    pub due: Color,
-    pub due_today: Color,
-    pub error: Color,
-    pub footnote: Color,
-    pub header: Color,
-    pub history_add: Color,
-    pub history_delete: Color,
-    pub history_done: Color,
-    pub label: Color,
-    pub label_sort: Color,
-    pub overdue: Color,
-    pub project: Color,
-    pub recurring: Color,
-    pub scheduled: Color,
-    pub summary_background: Color,
-    pub summary_bar: Color,
-    pub sync_added: Color,
-    pub sync_changed: Color,
-    pub sync_rejected: Color,
-    pub tag_next: Color,
-    pub tag: Color,
-    pub tagged: Color,
-    pub uda_priority: Color,
-    pub uda_priority_h: Color,
-    pub uda_priority_l: Color,
-    pub uda_priority_m: Color,
-    pub undo_after: Color,
-    pub undo_before: Color,
-    pub until: Color,
-    pub warning: Color,
+    pub fg: Color,
+    pub bg: Color,
 }
 
-pub fn get_color(line: &str) -> Color {
+impl TColor {
+    pub fn default() -> Self {
+        TColor {
+            fg: Color::Indexed(0),
+            bg: Color::Indexed(7),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct TColorConfig {
+    pub enabled: bool,
+    pub active: TColor,
+    pub alternate: TColor,
+    pub blocked: TColor,
+    pub blocking: TColor,
+    pub burndown_done: TColor,
+    pub burndown_pending: TColor,
+    pub burndown_started: TColor,
+    pub calendar_due: TColor,
+    pub calendar_due_today: TColor,
+    pub calendar_holiday: TColor,
+    pub calendar_overdue: TColor,
+    pub calendar_today: TColor,
+    pub calendar_weekend: TColor,
+    pub calendar_weeknumber: TColor,
+    pub completed: TColor,
+    pub debug: TColor,
+    pub deleted: TColor,
+    pub due: TColor,
+    pub due_today: TColor,
+    pub error: TColor,
+    pub footnote: TColor,
+    pub header: TColor,
+    pub history_add: TColor,
+    pub history_delete: TColor,
+    pub history_done: TColor,
+    pub label: TColor,
+    pub label_sort: TColor,
+    pub overdue: TColor,
+    pub project: TColor,
+    pub recurring: TColor,
+    pub scheduled: TColor,
+    pub summary_background: TColor,
+    pub summary_bar: TColor,
+    pub sync_added: TColor,
+    pub sync_changed: TColor,
+    pub sync_rejected: TColor,
+    pub tag_next: TColor,
+    pub tag: TColor,
+    pub tagged: TColor,
+    pub uda_priority: TColor,
+    pub uda_priority_h: TColor,
+    pub uda_priority_l: TColor,
+    pub uda_priority_m: TColor,
+    pub undo_after: TColor,
+    pub undo_before: TColor,
+    pub until: TColor,
+    pub warning: TColor,
+}
+
+pub fn get_color(line: &str) -> TColor {
     let sline = line.split(" ").collect::<Vec<&str>>();
     if sline.len() == 1 {
-        return Color::Rgb(0, 0, 0);
+        return TColor::default();
     }
     if line.contains(" on ") {
         let foreground = line.split(" ").collect::<Vec<&str>>()[1];
         let background = line.split(" ").collect::<Vec<&str>>()[3];
         if foreground.starts_with("color") {
             // TODO: get the correct color here
-            Color::Rgb(0, 0, 0)
+            TColor::default()
         } else if foreground.starts_with("rgb") {
-            Color::Rgb(
-                foreground.as_bytes()[3],
-                foreground.as_bytes()[4],
-                foreground.as_bytes()[5],
-            )
+            let red = (foreground.as_bytes()[3] as char).to_digit(10).unwrap() as u8;
+            let green = (foreground.as_bytes()[4] as char).to_digit(10).unwrap() as u8;
+            let blue = (foreground.as_bytes()[5] as char).to_digit(10).unwrap() as u8;
+            TColor{
+                fg: Color::Indexed(16 + red * 36 + green * 6 + blue),
+                bg: Color::Indexed(15),
+            }
         } else {
-            Color::Rgb(0, 0, 0)
+            TColor::default()
         }
     } else {
         let foreground = line.split(" ").filter(|x| x.len() > 0).collect::<Vec<&str>>()[1];
         if foreground.starts_with("color") {
             // TODO: get the correct color here
-            Color::Rgb(0, 0, 0)
+            TColor::default()
         } else if foreground.starts_with("rgb") {
             let red = (foreground.as_bytes()[3] as char).to_digit(10).unwrap() as u8;
             let green = (foreground.as_bytes()[4] as char).to_digit(10).unwrap() as u8;
             let blue = (foreground.as_bytes()[5] as char).to_digit(10).unwrap() as u8;
-            Color::Indexed(
-                16 + red * 36 + green * 6 + blue
-            )
+            TColor{
+                fg: Color::Indexed(16 + red * 36 + green * 6 + blue),
+                bg: Color::Indexed(15),
+            }
         } else {
-            Color::Rgb(0, 0, 0)
+            TColor::default()
         }
     }
 }
 
-impl TColor {
+impl TColorConfig {
     pub fn default() -> Self {
         let output = Command::new("task")
             .arg("rc.color=off")
@@ -103,53 +121,53 @@ impl TColor {
         let data = String::from_utf8(output.stdout).expect("Unable to convert stdout to string");
 
         let enabled = true;
-        let mut active = Color::Black;
-        let mut alternate = Color::Black;
-        let mut blocked = Color::Black;
-        let mut blocking = Color::Black;
-        let mut burndown_done = Color::Black;
-        let mut burndown_pending = Color::Black;
-        let mut burndown_started = Color::Black;
-        let mut calendar_due = Color::Black;
-        let mut calendar_due_today = Color::Black;
-        let mut calendar_holiday = Color::Black;
-        let mut calendar_overdue = Color::Black;
-        let mut calendar_today = Color::Black;
-        let mut calendar_weekend = Color::Black;
-        let mut calendar_weeknumber = Color::Black;
-        let mut completed = Color::Black;
-        let mut debug = Color::Black;
-        let mut deleted = Color::Black;
-        let mut due = Color::Black;
-        let mut due_today = Color::Black;
-        let mut error = Color::Black;
-        let mut footnote = Color::Black;
-        let mut header = Color::Black;
-        let mut history_add = Color::Black;
-        let mut history_delete = Color::Black;
-        let mut history_done = Color::Black;
-        let mut label = Color::Black;
-        let mut label_sort = Color::Black;
-        let mut overdue = Color::Black;
-        let mut project = Color::Black;
-        let mut recurring = Color::Black;
-        let mut scheduled = Color::Black;
-        let mut summary_background = Color::Black;
-        let mut summary_bar = Color::Black;
-        let mut sync_added = Color::Black;
-        let mut sync_changed = Color::Black;
-        let mut sync_rejected = Color::Black;
-        let mut tag_next = Color::Black;
-        let mut tag = Color::Black;
-        let mut tagged = Color::Black;
-        let mut uda_priority = Color::Black;
-        let mut uda_priority_h = Color::Black;
-        let mut uda_priority_l = Color::Black;
-        let mut uda_priority_m = Color::Black;
-        let mut undo_after = Color::Black;
-        let mut undo_before = Color::Black;
-        let mut until = Color::Black;
-        let mut warning = Color::Black;
+        let mut active = TColor::default();
+        let mut alternate = TColor::default();
+        let mut blocked = TColor::default();
+        let mut blocking = TColor::default();
+        let mut burndown_done = TColor::default();
+        let mut burndown_pending = TColor::default();
+        let mut burndown_started = TColor::default();
+        let mut calendar_due = TColor::default();
+        let mut calendar_due_today = TColor::default();
+        let mut calendar_holiday = TColor::default();
+        let mut calendar_overdue = TColor::default();
+        let mut calendar_today = TColor::default();
+        let mut calendar_weekend = TColor::default();
+        let mut calendar_weeknumber = TColor::default();
+        let mut completed = TColor::default();
+        let mut debug = TColor::default();
+        let mut deleted = TColor::default();
+        let mut due = TColor::default();
+        let mut due_today = TColor::default();
+        let mut error = TColor::default();
+        let mut footnote = TColor::default();
+        let mut header = TColor::default();
+        let mut history_add = TColor::default();
+        let mut history_delete = TColor::default();
+        let mut history_done = TColor::default();
+        let mut label = TColor::default();
+        let mut label_sort = TColor::default();
+        let mut overdue = TColor::default();
+        let mut project = TColor::default();
+        let mut recurring = TColor::default();
+        let mut scheduled = TColor::default();
+        let mut summary_background = TColor::default();
+        let mut summary_bar = TColor::default();
+        let mut sync_added = TColor::default();
+        let mut sync_changed = TColor::default();
+        let mut sync_rejected = TColor::default();
+        let mut tag_next = TColor::default();
+        let mut tag = TColor::default();
+        let mut tagged = TColor::default();
+        let mut uda_priority = TColor::default();
+        let mut uda_priority_h = TColor::default();
+        let mut uda_priority_l = TColor::default();
+        let mut uda_priority_m = TColor::default();
+        let mut undo_after = TColor::default();
+        let mut undo_before = TColor::default();
+        let mut until = TColor::default();
+        let mut warning = TColor::default();
 
         for line in data.split('\n') {
             if line.starts_with("color.active") {
@@ -350,9 +368,9 @@ impl TColor {
 
 #[cfg(test)]
 mod tests {
-    use crate::color::TColor;
+    use crate::color::TColorConfig;
     #[test]
     fn test_colors() {
-        let tc = TColor::default();
+        let tc = TColorConfig::default();
     }
 }
