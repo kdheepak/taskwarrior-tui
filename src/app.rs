@@ -902,6 +902,8 @@ impl TTApp {
             }
         }
 
+        // other virtual tags
+        // TODO: support all virtual tags that taskwarrior supports
         for i in 0..tasks.len() {
             match tasks[i].status() {
                 TaskStatus::Waiting => add_tag(&mut tasks[i], "WAITING".to_string()),
