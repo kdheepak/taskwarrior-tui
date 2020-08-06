@@ -527,7 +527,6 @@ impl TTApp {
 
     pub fn update(&mut self) {
         self.export_tasks();
-        self.dependency_scan();
         self.update_tags();
         self.export_headers();
     }
@@ -881,8 +880,10 @@ impl TTApp {
         Some(self.tasks.lock().unwrap()[selected].clone())
     }
 
-    pub fn dependency_scan(&mut self) {
+    pub fn update_tags(&mut self) {
         let tasks = &mut*self.tasks.lock().unwrap();
+
+        // dependency scan
         for l_i in 0..tasks.len() {
             let default_deps = vec![];
             let deps = tasks[l_i].depends().unwrap_or(&default_deps).clone();
@@ -900,10 +901,7 @@ impl TTApp {
                 }
             }
         }
-    }
 
-    pub fn update_tags(&mut self) {
-        let tasks = &mut*self.tasks.lock().unwrap();
         for i in 0..tasks.len() {
             match tasks[i].status() {
                 TaskStatus::Waiting => add_tag(&mut tasks[i], "WAITING".to_string()),
