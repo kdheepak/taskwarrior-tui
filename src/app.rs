@@ -6,6 +6,7 @@ use std::process::Command;
 use std::result::Result;
 
 use task_hookrs::date::Date;
+use task_hookrs::status::TaskStatus;
 use task_hookrs::import::import;
 use task_hookrs::task::Task;
 use task_hookrs::uda::UDAValue;
@@ -131,7 +132,6 @@ impl TTApp {
         };
         app.get_context();
         app.update();
-        app.start_background_thread();
         app
     }
 
@@ -584,6 +584,8 @@ impl TTApp {
 
     pub fn update(&mut self) {
         self.export_tasks();
+        self.dependency_scan();
+        self.update_tags();
         self.export_headers();
     }
 
@@ -689,24 +691,6 @@ impl TTApp {
             if let Ok(i) = imported {
                 *(self.tasks.lock().unwrap()) = i;
                 self.tasks.lock().unwrap().sort_by(cmp);
-            }
-            {
-                let mut tasks = self.tasks.lock().unwrap();
-                for i in 0..tasks.len() {
-                    let task_id = tasks[i].id().unwrap();
-                    let tags = TTApp::task_virtual_tags(task_id).unwrap_or_default();
-                    let task = &mut tasks[i];
-                    match task.tags_mut() {
-                        Some(t) => {
-                            for tag in tags.split(" ") {
-                                t.push(tag.to_string())
-                            }
-                        },
-                        None => {
-                            task.set_tags(Some(tags.split(" ")))
-                        }
-                    }
-                }
             }
         }
     }
@@ -952,6 +936,56 @@ impl TTApp {
         }
         let selected = self.state.selected().unwrap_or_default();
         Some(self.tasks.lock().unwrap()[selected].clone())
+    }
+
+    pub fn dependency_scan(&mut self) {
+        let tasks = &mut*self.tasks.lock().unwrap();
+        for l_i in 0..tasks.len() {
+            let default_deps = vec![];
+            let deps = tasks[l_i].depends().unwrap_or(&default_deps).clone();
+            for dep in deps {
+                for r_i in 0..tasks.len() {
+                    if tasks[r_i].uuid() == &dep {
+                        let lstatus = tasks[l_i].status();
+                        let rstatus = tasks[r_i].status();
+                        if lstatus != &TaskStatus::Completed && lstatus != &TaskStatus::Deleted && rstatus != &TaskStatus::Completed && rstatus != &TaskStatus::Deleted {
+                            add_tag(&mut tasks[l_i], "BLOCKED".to_string());
+                            add_tag(&mut tasks[r_i], "BLOCKING".to_string());
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn update_tags(&mut self) {
+        let tasks = &mut*self.tasks.lock().unwrap();
+        for i in 0..tasks.len() {
+            match tasks[i].status() {
+                TaskStatus::Waiting => add_tag(&mut tasks[i], "WAITING".to_string()),
+                TaskStatus::Completed => add_tag(&mut tasks[i], "COMPLETED".to_string()),
+                TaskStatus::Pending => add_tag(&mut tasks[i], "PENDING".to_string()),
+                TaskStatus::Deleted => add_tag(&mut tasks[i], "DELETED".to_string()),
+                TaskStatus::Recurring => (),
+            }
+            if tasks[i].start().is_some() { add_tag(&mut tasks[i], "ACTIVE".to_string()); }
+            if tasks[i].scheduled().is_some() { add_tag(&mut tasks[i], "SCHEDULED".to_string()); }
+            if tasks[i].parent().is_some() { add_tag(&mut tasks[i], "INSTANCE".to_string()); }
+            if tasks[i].until().is_some() { add_tag(&mut tasks[i], "UNTIL".to_string()); }
+            if tasks[i].annotations().is_some() { add_tag(&mut tasks[i], "ANNOTATED".to_string()); }
+            if tasks[i].tags().is_some() { add_tag(&mut tasks[i], "TAGGED".to_string()); }
+            if tasks[i].mask().is_some() { add_tag(&mut tasks[i], "TEMPLATE".to_string()); }
+            if tasks[i].project().is_some() { add_tag(&mut tasks[i], "PROJECT".to_string()); }
+            if tasks[i].priority().is_some() { add_tag(&mut tasks[i], "PROJECT".to_string()); }
+        }
+    }
+}
+
+pub fn add_tag(task: &mut Task, tag: String) {
+    match task.tags_mut() {
+        Some(t) => t.push(tag.to_string()),
+        None => task.set_tags(Some(vec![tag])),
     }
 }
 
