@@ -6,13 +6,15 @@ use std::process::Command;
 use std::result::Result;
 
 use task_hookrs::date::Date;
-use task_hookrs::status::TaskStatus;
 use task_hookrs::import::import;
+use task_hookrs::status::TaskStatus;
 use task_hookrs::task::Task;
 use task_hookrs::uda::UDAValue;
 
 use chrono::{Local, NaiveDateTime};
 
+use std::sync::{Arc, Mutex};
+use std::{sync::mpsc, thread, time::Duration};
 use tui::{
     backend::Backend,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -21,8 +23,6 @@ use tui::{
     text::{Span, Spans, Text},
     widgets::{Block, Borders, Clear, Paragraph, Row, Table, TableState},
 };
-use std::{sync::mpsc, thread, time::Duration};
-use std::sync::{Arc, Mutex};
 
 pub fn cmp(t1: &Task, t2: &Task) -> Ordering {
     let urgency1 = match &t1.uda()["urgency"] {
@@ -137,32 +137,32 @@ impl TTApp {
 
     pub fn get_context(&mut self) {
         self.context_name = String::from_utf8(
-                Command::new("task")
+            Command::new("task")
                 .arg("_get")
                 .arg("rc.context")
-                .output().unwrap()
-                .stdout
-            ).unwrap();
-        self.context_name = self.context_name
-            .strip_suffix('\n').unwrap().to_string();
+                .output()
+                .unwrap()
+                .stdout,
+        )
+        .unwrap();
+        self.context_name = self.context_name.strip_suffix('\n').unwrap().to_string();
 
         self.context_filter = String::from_utf8(
-                Command::new("task")
+            Command::new("task")
                 .arg("_get")
                 .arg(format!("rc.context.{}", self.context_name))
-                .output().unwrap()
-                .stdout
-            ).unwrap();
-        self.context_filter = self.context_filter
-            .strip_suffix('\n').unwrap().to_string();
+                .output()
+                .unwrap()
+                .stdout,
+        )
+        .unwrap();
+        self.context_filter = self.context_filter.strip_suffix('\n').unwrap().to_string();
     }
 
     pub fn draw(&mut self, f: &mut Frame<impl Backend>) {
         let tasks_is_empty = self.tasks.lock().unwrap().is_empty();
         let tasks_len = self.tasks.lock().unwrap().len();
-        while !tasks_is_empty
-            && self.state.selected().unwrap_or_default() >= tasks_len
-        {
+        while !tasks_is_empty && self.state.selected().unwrap_or_default() >= tasks_len {
             self.previous();
         }
         let rects = Layout::default()
@@ -369,7 +369,9 @@ impl TTApp {
             return;
         }
         let selected = self.state.selected().unwrap_or_default();
-        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
+        let task_id = self.tasks.lock().unwrap()[selected]
+            .id()
+            .unwrap_or_default();
         let output = Command::new("task").arg(format!("{}", task_id)).output();
         if let Ok(output) = output {
             let data = String::from_utf8(output.stdout).unwrap();
@@ -671,7 +673,9 @@ impl TTApp {
             return Ok(());
         }
         let selected = self.state.selected().unwrap_or_default();
-        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
+        let task_id = self.tasks.lock().unwrap()[selected]
+            .id()
+            .unwrap_or_default();
         let mut command = Command::new("task");
         command.arg(format!("{}", task_id)).arg("modify");
 
@@ -699,7 +703,6 @@ impl TTApp {
     }
 
     pub fn task_add(&mut self) -> Result<(), String> {
-
         let mut command = Command::new("task");
         command.arg("add");
 
@@ -754,7 +757,9 @@ impl TTApp {
             return Ok(());
         }
         let selected = self.state.selected().unwrap_or_default();
-        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
+        let task_id = self.tasks.lock().unwrap()[selected]
+            .id()
+            .unwrap_or_default();
         let mut command = "start";
         for tag in TTApp::task_virtual_tags(task_id)?.split(' ') {
             if tag == "ACTIVE" {
@@ -780,7 +785,9 @@ impl TTApp {
             return Ok(());
         }
         let selected = self.state.selected().unwrap_or_default();
-        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
+        let task_id = self.tasks.lock().unwrap()[selected]
+            .id()
+            .unwrap_or_default();
 
         let output = Command::new("task")
             .arg("rc.confirmation=off")
@@ -801,7 +808,9 @@ impl TTApp {
             return Ok(());
         }
         let selected = self.state.selected().unwrap_or_default();
-        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
+        let task_id = self.tasks.lock().unwrap()[selected]
+            .id()
+            .unwrap_or_default();
         let output = Command::new("task")
             .arg(format!("{}", task_id))
             .arg("done")
@@ -837,7 +846,9 @@ impl TTApp {
             return Ok(());
         }
         let selected = self.state.selected().unwrap_or_default();
-        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
+        let task_id = self.tasks.lock().unwrap()[selected]
+            .id()
+            .unwrap_or_default();
         let r = Command::new("task")
             .arg(format!("{}", task_id))
             .arg("edit")
@@ -881,7 +892,7 @@ impl TTApp {
     }
 
     pub fn update_tags(&mut self) {
-        let tasks = &mut*self.tasks.lock().unwrap();
+        let tasks = &mut *self.tasks.lock().unwrap();
 
         // dependency scan
         for l_i in 0..tasks.len() {
@@ -892,7 +903,11 @@ impl TTApp {
                     if tasks[r_i].uuid() == &dep {
                         let lstatus = tasks[l_i].status();
                         let rstatus = tasks[r_i].status();
-                        if lstatus != &TaskStatus::Completed && lstatus != &TaskStatus::Deleted && rstatus != &TaskStatus::Completed && rstatus != &TaskStatus::Deleted {
+                        if lstatus != &TaskStatus::Completed
+                            && lstatus != &TaskStatus::Deleted
+                            && rstatus != &TaskStatus::Completed
+                            && rstatus != &TaskStatus::Deleted
+                        {
                             add_tag(&mut tasks[l_i], "BLOCKED".to_string());
                             add_tag(&mut tasks[r_i], "BLOCKING".to_string());
                         }
@@ -912,15 +927,33 @@ impl TTApp {
                 TaskStatus::Deleted => add_tag(&mut tasks[i], "DELETED".to_string()),
                 TaskStatus::Recurring => (),
             }
-            if tasks[i].start().is_some() { add_tag(&mut tasks[i], "ACTIVE".to_string()); }
-            if tasks[i].scheduled().is_some() { add_tag(&mut tasks[i], "SCHEDULED".to_string()); }
-            if tasks[i].parent().is_some() { add_tag(&mut tasks[i], "INSTANCE".to_string()); }
-            if tasks[i].until().is_some() { add_tag(&mut tasks[i], "UNTIL".to_string()); }
-            if tasks[i].annotations().is_some() { add_tag(&mut tasks[i], "ANNOTATED".to_string()); }
-            if tasks[i].tags().is_some() { add_tag(&mut tasks[i], "TAGGED".to_string()); }
-            if tasks[i].mask().is_some() { add_tag(&mut tasks[i], "TEMPLATE".to_string()); }
-            if tasks[i].project().is_some() { add_tag(&mut tasks[i], "PROJECT".to_string()); }
-            if tasks[i].priority().is_some() { add_tag(&mut tasks[i], "PROJECT".to_string()); }
+            if tasks[i].start().is_some() {
+                add_tag(&mut tasks[i], "ACTIVE".to_string());
+            }
+            if tasks[i].scheduled().is_some() {
+                add_tag(&mut tasks[i], "SCHEDULED".to_string());
+            }
+            if tasks[i].parent().is_some() {
+                add_tag(&mut tasks[i], "INSTANCE".to_string());
+            }
+            if tasks[i].until().is_some() {
+                add_tag(&mut tasks[i], "UNTIL".to_string());
+            }
+            if tasks[i].annotations().is_some() {
+                add_tag(&mut tasks[i], "ANNOTATED".to_string());
+            }
+            if tasks[i].tags().is_some() {
+                add_tag(&mut tasks[i], "TAGGED".to_string());
+            }
+            if tasks[i].mask().is_some() {
+                add_tag(&mut tasks[i], "TEMPLATE".to_string());
+            }
+            if tasks[i].project().is_some() {
+                add_tag(&mut tasks[i], "PROJECT".to_string());
+            }
+            if tasks[i].priority().is_some() {
+                add_tag(&mut tasks[i], "PROJECT".to_string());
+            }
         }
     }
 }
@@ -938,9 +971,9 @@ mod tests {
     use crate::util::setup_terminal;
     use std::io::stdin;
 
+    use std::{sync::mpsc, thread, time::Duration};
     use task_hookrs::import::import;
     use task_hookrs::task::Task;
-    use std::{sync::mpsc, thread, time::Duration};
 
     #[test]
     fn test_app() {

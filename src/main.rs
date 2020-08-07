@@ -137,7 +137,7 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                         Ok(_) => {
                             app.mode = AppMode::Report;
                             app.update();
-                        },
+                        }
                         Err(e) => {
                             app.mode = AppMode::TaskError;
                             app.error = e;
