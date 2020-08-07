@@ -26,6 +26,14 @@ zinit ice wait:2 lucid extract"" from"gh-r" as"command" mv"taskwarrior-tui* -> t
 zinit load kdheepak/taskwarrior-tui
 ```
 
+**Using `cargo`**
+
+```
+git clone https://github.com/kdheepak/taskwarrior-tui.git
+cd taskwarrior-tui
+cargo build --release
+```
+
 ## Usage
 
 - `/`: `task {string}`                   - Filter task report
