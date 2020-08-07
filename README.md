@@ -17,6 +17,15 @@ A Taskwarrior TUI written in Rust.
 2. Unzip the tar.gz file
 3. Run with `./taskwarrior-tui`.
 
+**Using [zdharma/zinit](https://github.com/zdharma/zinit)**
+
+Add the following to your `~/.zshrc`:
+
+```zsh
+zinit ice wait:2 lucid extract"" from"gh-r" as"command" mv"taskwarrior-tui* -> tt"
+zinit load kdheepak/taskwarrior-tui
+```
+
 ## Usage
 
 - `/`: `task {string}`                   - Filter task report
