@@ -11,7 +11,7 @@ use task_hookrs::status::TaskStatus;
 use task_hookrs::task::Task;
 use task_hookrs::uda::UDAValue;
 
-use chrono::{Local, TimeZone, NaiveDateTime};
+use chrono::{Local, NaiveDateTime, TimeZone};
 
 use std::sync::{Arc, Mutex};
 use std::{sync::mpsc, thread, time::Duration};
@@ -1015,7 +1015,9 @@ impl TTApp {
                     if status != &TaskStatus::Completed && status != &TaskStatus::Deleted {
                         let today = Local::now().naive_utc().date();
                         match get_date_state(d) {
-                            DateState::EarlierToday | DateState::LaterToday => add_tag(&mut tasks[i], "TODAY".to_string()),
+                            DateState::EarlierToday | DateState::LaterToday => {
+                                add_tag(&mut tasks[i], "TODAY".to_string())
+                            }
                             _ => (),
                         }
                     }
