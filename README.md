@@ -17,7 +17,7 @@ A Terminal User Interface for Taskwarrior written in Rust.
 2. Unzip the tar.gz file
 3. Run with `./taskwarrior-tui`.
 
-**Using [zdharma/zinit](https://github.com/zdharma/zinit)**
+**Using [`zdharma/zinit`](https://github.com/zdharma/zinit)**
 
 Add the following to your `~/.zshrc`:
 
