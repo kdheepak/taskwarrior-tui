@@ -11,7 +11,7 @@ use task_hookrs::status::TaskStatus;
 use task_hookrs::task::Task;
 use task_hookrs::uda::UDAValue;
 
-use chrono::{Local, NaiveDateTime};
+use chrono::{Local, TimeZone, NaiveDateTime};
 
 use std::sync::{Arc, Mutex};
 use std::{sync::mpsc, thread, time::Duration};
@@ -46,7 +46,9 @@ pub enum DateState {
 }
 
 pub fn get_date_state(reference: &Date) -> DateState {
-    let now = Local::now().naive_utc();
+    let now = Local::now();
+    let reference = TimeZone::from_utc_datetime(now.offset(), reference);
+    let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
 
     if reference.date() < now.date() {
         return DateState::BeforeToday;
@@ -1003,15 +1005,18 @@ impl TTApp {
             if tasks[i].priority().is_some() {
                 add_tag(&mut tasks[i], "PROJECT".to_string());
             }
+            if tasks[i].due().is_some() {
+                add_tag(&mut tasks[i], "DUE".to_string());
+            }
             match tasks[i].due() {
                 Some(d) => {
                     let status = tasks[i].status();
                     // due today
                     if status != &TaskStatus::Completed && status != &TaskStatus::Deleted {
                         let today = Local::now().naive_utc().date();
-                        let d = d.date();
-                        if d == today {
-                            add_tag(&mut tasks[i], "TODAY".to_string());
+                        match get_date_state(d) {
+                            DateState::EarlierToday | DateState::LaterToday => add_tag(&mut tasks[i], "TODAY".to_string()),
+                            _ => (),
                         }
                     }
                 }
