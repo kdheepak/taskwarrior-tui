@@ -74,8 +74,13 @@ impl Events {
         let pause_stdin = Arc::new(Mutex::new(false));
         let _input_handle = {
             let tx = tx.clone();
+            let pause_stdin = pause_stdin.clone();
             thread::spawn(move || {
                 loop {
+                    if *pause_stdin.lock().unwrap() == true {
+                        thread::sleep(Duration::from_millis(250));
+                        continue;
+                    }
                     // poll for tick rate duration, if no event, sent tick event.
                     if let event::Event::Key(key) = event::read().unwrap() {
                         let key = match key.code {
