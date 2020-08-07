@@ -105,8 +105,8 @@ jobs:
         with:
           toolchain: stable
           override: true
-      - uses: actions-rs/cargo@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          command: publish
-          args: --token ${{ secrets.CARGO_API_KEY }} --allow-dirty
+      # - uses: actions-rs/cargo@v1
+      #   if: startsWith(github.ref, 'refs/tags/')
+      #   with:
+      #     command: publish
+      #     args: --token ${{ secrets.CARGO_API_KEY }} --allow-dirty
