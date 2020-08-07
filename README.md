@@ -7,7 +7,7 @@
 
 A Taskwarrior TUI written in Rust.
 
-![taskwarrior-tui](https://user-images.githubusercontent.com/1813121/88654924-40896880-d08b-11ea-8709-b29cc970da4c.gif)
+![taskwarrior-tui](https://user-images.githubusercontent.com/1813121/89620056-4ed64200-d84c-11ea-9153-9e08bc26d3b4.gif)
 
 ## Installation
 
@@ -31,3 +31,5 @@ A Taskwarrior TUI written in Rust.
 - `s`: `task {selected} start/stop`      - Toggle start and stop
 - `u`: `task undo`                       - Undo
 - `?`: `help`                            - Help menu
+
+![taskwarrior-tui](https://user-images.githubusercontent.com/1813121/88654924-40896880-d08b-11ea-8709-b29cc970da4c.gif)
