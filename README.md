@@ -33,3 +33,8 @@ A Taskwarrior TUI written in Rust.
 - `?`: `help`                            - Help menu
 
 ![taskwarrior-tui](https://user-images.githubusercontent.com/1813121/88654924-40896880-d08b-11ea-8709-b29cc970da4c.gif)
+
+## Thanks
+
+- [taskwarrior](https://github.com/GothenburgBitFactory/taskwarrior)
+- [tui-rs](https://github.com/fdehau/tui-rs)
