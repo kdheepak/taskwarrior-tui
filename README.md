@@ -1,9 +1,9 @@
 # Taskwarrior TUI
 
-![CI](https://github.com/kdheepak/taskwarrior-tui/workflows/CI/badge.svg)
-![](https://img.shields.io/github/license/kdheepak/taskwarrior-tui)
+[![CI](https://github.com/kdheepak/taskwarrior-tui/workflows/CI/badge.svg)](https://github.com/kdheepak/taskwarrior-tui/actions?query=workflow%3ACI)
+[![](https://img.shields.io/github/license/kdheepak/taskwarrior-tui)](./LICENSE)
 [![](https://img.shields.io/github/v/release/kdheepak/taskwarrior-tui)](https://github.com/kdheepak/taskwarrior-tui/releases/latest)
-![](https://img.shields.io/static/v1?label=platform&message=linux-32%20%7C%20linux-64%20%7C%20osx-64%20%7C%20win-32%20%7C%20win-64&color=lightgrey)
+[![](https://img.shields.io/static/v1?label=platform&message=linux-32%20%7C%20linux-64%20%7C%20osx-64%20%7C%20win-32%20%7C%20win-64&color=lightgrey)](https://github.com/kdheepak/taskwarrior-tui/releases/latest)
 
 A Terminal User Interface for Taskwarrior written in Rust.
 
