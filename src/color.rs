@@ -98,7 +98,11 @@ pub fn get_tcolor(line: &str) -> TColor {
             bg: get_color(background),
         }
     } else if line.contains("on ") {
-        TColor::default()
+        let background = line.split(" ").collect::<Vec<&str>>()[1];
+        TColor {
+            fg: Color::Indexed(0),
+            bg: get_color(background),
+        }
     } else {
         let foreground = line;
         TColor {
@@ -511,6 +515,6 @@ mod tests {
     #[test]
     fn test_colors() {
         let tc = TColorConfig::default();
-        println!("{:?}", tc.blocked);
+        println!("{:?}", tc.due_today);
     }
 }

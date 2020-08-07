@@ -38,6 +38,30 @@ pub fn cmp(t1: &Task, t2: &Task) -> Ordering {
     urgency2.partial_cmp(&urgency1).unwrap()
 }
 
+pub enum DateState {
+    BeforeToday,
+    EarlierToday,
+    LaterToday,
+    AfterToday,
+}
+
+pub fn get_date_state(reference: &Date) -> DateState {
+    let now = Local::now().naive_utc();
+
+    if reference.date() < now.date() {
+        return DateState::BeforeToday;
+    }
+
+    if reference.date() == now.date() {
+        if reference.time() < now.time() {
+            return DateState::EarlierToday;
+        } else {
+            return DateState::LaterToday;
+        }
+    }
+    return DateState::AfterToday;
+}
+
 pub fn vague_format_date_time(dt: &Date) -> String {
     let now = Local::now().naive_utc();
     let seconds = (now - NaiveDateTime::new(dt.date(), dt.time())).num_seconds();
@@ -407,7 +431,8 @@ impl TTApp {
                 normal_style = normal_style
                     .fg(self.colors.active.fg)
                     .bg(self.colors.active.bg);
-            } else if self.tasks.lock().unwrap()[i]
+            }
+            if self.tasks.lock().unwrap()[i]
                 .tags()
                 .unwrap_or(&vec![])
                 .contains(&"BLOCKING".to_string())
@@ -415,7 +440,8 @@ impl TTApp {
                 normal_style = normal_style
                     .fg(self.colors.blocked.fg)
                     .bg(self.colors.blocked.bg);
-            } else if self.tasks.lock().unwrap()[i]
+            }
+            if self.tasks.lock().unwrap()[i]
                 .tags()
                 .unwrap_or(&vec![])
                 .contains(&"BLOCKED".to_string())
@@ -423,6 +449,31 @@ impl TTApp {
                 normal_style = normal_style
                     .fg(self.colors.blocked.fg)
                     .bg(self.colors.blocked.bg);
+            }
+            if self.tasks.lock().unwrap()[i]
+                .tags()
+                .unwrap_or(&vec![])
+                .contains(&"DUE".to_string())
+            {
+                normal_style = normal_style.fg(self.colors.due.fg).bg(self.colors.due.bg);
+            }
+            if self.tasks.lock().unwrap()[i]
+                .tags()
+                .unwrap_or(&vec![])
+                .contains(&"OVERDUE".to_string())
+            {
+                normal_style = normal_style
+                    .fg(self.colors.overdue.fg)
+                    .bg(self.colors.overdue.bg);
+            }
+            if self.tasks.lock().unwrap()[i]
+                .tags()
+                .unwrap_or(&vec![])
+                .contains(&"TODAY".to_string())
+            {
+                normal_style = normal_style
+                    .fg(self.colors.due_today.fg)
+                    .bg(self.colors.due_today.bg);
             }
             if i == selected {
                 highlight_style = normal_style.add_modifier(Modifier::BOLD);
@@ -952,6 +1003,37 @@ impl TTApp {
             if tasks[i].priority().is_some() {
                 add_tag(&mut tasks[i], "PROJECT".to_string());
             }
+            match tasks[i].due() {
+                Some(d) => {
+                    let status = tasks[i].status();
+                    // due today
+                    if status != &TaskStatus::Completed && status != &TaskStatus::Deleted {
+                        let today = Local::now().naive_utc().date();
+                        let d = d.date();
+                        if d == today {
+                            add_tag(&mut tasks[i], "TODAY".to_string());
+                        }
+                    }
+                }
+                None => (),
+            }
+            match tasks[i].due() {
+                Some(d) => {
+                    let status = tasks[i].status();
+                    // overdue
+                    if status != &TaskStatus::Completed
+                        && status != &TaskStatus::Deleted
+                        && status != &TaskStatus::Recurring
+                    {
+                        let now = Local::now().naive_utc();
+                        let d = NaiveDateTime::new(d.date(), d.time());
+                        if d < now {
+                            add_tag(&mut tasks[i], "OVERDUE".to_string());
+                        }
+                    }
+                }
+                None => (),
+            }
         }
     }
 }
@@ -977,7 +1059,7 @@ mod tests {
     fn test_app() {
         let app = TTApp::new();
         assert_eq!(app.context_name, "".to_string());
-        // println!("{:?}", app.tasks);
+        println!("{:?}", app.tasks.lock().unwrap()[0]);
 
         //println!("{:?}", app.task_report_columns);
         //println!("{:?}", app.task_report_labels);
