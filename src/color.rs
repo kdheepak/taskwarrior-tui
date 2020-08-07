@@ -1,9 +1,9 @@
+use std::collections::HashMap;
 use std::process::Command;
 use std::str;
-use std::collections::HashMap;
 use tui::style::Color;
 
-#[derive(Debug,Clone,Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct TColor {
     pub fg: Color,
     pub bg: Color,
@@ -182,7 +182,7 @@ impl TColorConfig {
                 if line.starts_with(&attr) {
                     color_collection.insert(
                         attribute.to_string(),
-                        get_tcolor(line.trim_start_matches(&attr).trim_start_matches(" "))
+                        get_tcolor(line.trim_start_matches(&attr).trim_start_matches(" ")),
                     );
                 }
             }
