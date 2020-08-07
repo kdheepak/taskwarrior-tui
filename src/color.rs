@@ -1,8 +1,9 @@
 use std::process::Command;
 use std::str;
+use std::collections::HashMap;
 use tui::style::Color;
 
-#[derive(Debug)]
+#[derive(Debug,Clone,Copy)]
 pub struct TColor {
     pub fg: Color,
     pub bg: Color,
@@ -123,388 +124,260 @@ impl TColorConfig {
         let data = String::from_utf8(output.stdout).expect("Unable to convert stdout to string");
 
         let enabled = true;
-        let mut active = TColor::default();
-        let mut alternate = TColor::default();
-        let mut blocked = TColor::default();
-        let mut blocking = TColor::default();
-        let mut burndown_done = TColor::default();
-        let mut burndown_pending = TColor::default();
-        let mut burndown_started = TColor::default();
-        let mut calendar_due = TColor::default();
-        let mut calendar_due_today = TColor::default();
-        let mut calendar_holiday = TColor::default();
-        let mut calendar_overdue = TColor::default();
-        let mut calendar_today = TColor::default();
-        let mut calendar_weekend = TColor::default();
-        let mut calendar_weeknumber = TColor::default();
-        let mut completed = TColor::default();
-        let mut debug = TColor::default();
-        let mut deleted = TColor::default();
-        let mut due = TColor::default();
-        let mut due_today = TColor::default();
-        let mut error = TColor::default();
-        let mut footnote = TColor::default();
-        let mut header = TColor::default();
-        let mut history_add = TColor::default();
-        let mut history_delete = TColor::default();
-        let mut history_done = TColor::default();
-        let mut label = TColor::default();
-        let mut label_sort = TColor::default();
-        let mut overdue = TColor::default();
-        let mut project = TColor::default();
-        let mut recurring = TColor::default();
-        let mut scheduled = TColor::default();
-        let mut summary_background = TColor::default();
-        let mut summary_bar = TColor::default();
-        let mut sync_added = TColor::default();
-        let mut sync_changed = TColor::default();
-        let mut sync_rejected = TColor::default();
-        let mut tag_next = TColor::default();
-        let mut tag = TColor::default();
-        let mut tagged = TColor::default();
-        let mut uda_priority = TColor::default();
-        let mut uda_priority_h = TColor::default();
-        let mut uda_priority_l = TColor::default();
-        let mut uda_priority_m = TColor::default();
-        let mut undo_after = TColor::default();
-        let mut undo_before = TColor::default();
-        let mut until = TColor::default();
-        let mut warning = TColor::default();
 
+        let attributes = vec![
+            "alternate",
+            "blocked",
+            "blocking",
+            "burndown.done",
+            "burndown.pending",
+            "burndown.started",
+            "calendar.due",
+            "calendar.due.today",
+            "calendar.holiday",
+            "calendar.overdue",
+            "calendar.today",
+            "calendar.weekend",
+            "calendar.weeknumber",
+            "completed",
+            "debug",
+            "deleted",
+            "due",
+            "due.today",
+            "error",
+            "footnote",
+            "header",
+            "header.add",
+            "history.delete",
+            "history.done",
+            "label",
+            "label.sort",
+            "overdue",
+            "project.none",
+            "recurring",
+            "scheduled",
+            "summary.background",
+            "summary.bar",
+            "sync.added",
+            "sync.changed",
+            "sync.rejected",
+            "tag.next",
+            "tag.none",
+            "tagged",
+            "uda.priority",
+            "uda.priority.H",
+            "uda.priority.L",
+            "uda.priority.M",
+            "undo.after",
+            "undo.before",
+            "undo.until",
+            "until",
+            "warning",
+        ];
+
+        let mut color_collection = HashMap::new();
         for line in data.split('\n') {
-            if line.starts_with("color.active ") {
-                active = get_tcolor(
-                    line.trim_start_matches("color.active ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.alternate ") {
-                alternate = get_tcolor(
-                    line.trim_start_matches("color.alternate ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.blocked ") {
-                blocked = get_tcolor(
-                    line.trim_start_matches("color.blocked ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.blocking ") {
-                blocking = get_tcolor(
-                    line.trim_start_matches("color.blocking ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.burndown.done ") {
-                burndown_done = get_tcolor(
-                    line.trim_start_matches("color.burndown.done ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.burndown.pending ") {
-                burndown_pending = get_tcolor(
-                    line.trim_start_matches("color.burndown.pending ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.burndown.started ") {
-                burndown_started = get_tcolor(
-                    line.trim_start_matches("color.burndown.started ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.calendar.due ") {
-                calendar_due = get_tcolor(
-                    line.trim_start_matches("color.calendar.due ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.calendar.due.today ") {
-                calendar_due_today = get_tcolor(
-                    line.trim_start_matches("color.calendar.due.today ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.calendar.holiday ") {
-                calendar_holiday = get_tcolor(
-                    line.trim_start_matches("color.calendar.holiday ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.calendar.overdue ") {
-                calendar_overdue = get_tcolor(
-                    line.trim_start_matches("color.calendar.overdue ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.calendar.today ") {
-                calendar_today = get_tcolor(
-                    line.trim_start_matches("color.calendar.today ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.calendar.weekend ") {
-                calendar_weekend = get_tcolor(
-                    line.trim_start_matches("color.calendar.weekend ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.calendar.weeknumber ") {
-                calendar_weeknumber = get_tcolor(
-                    line.trim_start_matches("color.calendar.weeknumber ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.completed ") {
-                completed = get_tcolor(
-                    line.trim_start_matches("color.completed ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.debug ") {
-                debug = get_tcolor(
-                    line.trim_start_matches("color.debug ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.deleted ") {
-                deleted = get_tcolor(
-                    line.trim_start_matches("color.deleted ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.due ") {
-                due = get_tcolor(
-                    line.trim_start_matches("color.due ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.due.today ") {
-                due_today = get_tcolor(
-                    line.trim_start_matches("color.due.today ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.error ") {
-                error = get_tcolor(
-                    line.trim_start_matches("color.error ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.footnote ") {
-                footnote = get_tcolor(
-                    line.trim_start_matches("color.footnote ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.header ") {
-                header = get_tcolor(
-                    line.trim_start_matches("color.header ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.history.add ") {
-                history_add = get_tcolor(
-                    line.trim_start_matches("color.history.add ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.history.delete ") {
-                history_delete = get_tcolor(
-                    line.trim_start_matches("color.history.delete ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.history.done ") {
-                history_done = get_tcolor(
-                    line.trim_start_matches("color.history.done ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.label ") {
-                label = get_tcolor(
-                    line.trim_start_matches("color.label ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.label.sort ") {
-                label_sort = get_tcolor(
-                    line.trim_start_matches("color.label.sort ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.overdue ") {
-                overdue = get_tcolor(
-                    line.trim_start_matches("color.overdue ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.project.none ") {
-                project = get_tcolor(
-                    line.trim_start_matches("color.project.none ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.recurring ") {
-                recurring = get_tcolor(
-                    line.trim_start_matches("color.recurring ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.scheduled ") {
-                scheduled = get_tcolor(
-                    line.trim_start_matches("color.scheduled ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.summary.background ") {
-                summary_background = get_tcolor(
-                    line.trim_start_matches("color.summary.background ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.summary.bar ") {
-                summary_bar = get_tcolor(
-                    line.trim_start_matches("color.summary.bar ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.sync.added ") {
-                sync_added = get_tcolor(
-                    line.trim_start_matches("color.sync.added ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.sync.changed ") {
-                sync_changed = get_tcolor(
-                    line.trim_start_matches("color.sync.changed ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.sync.rejected ") {
-                sync_rejected = get_tcolor(
-                    line.trim_start_matches("color.sync.rejected ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.tag.next ") {
-                tag_next = get_tcolor(
-                    line.trim_start_matches("color.tag.next ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.tag.none ") {
-                tag = get_tcolor(
-                    line.trim_start_matches("color.tag.none ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.tagged ") {
-                tagged = get_tcolor(
-                    line.trim_start_matches("color.tagged ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.uda.priority ") {
-                uda_priority = get_tcolor(
-                    line.trim_start_matches("color.uda.priority ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.uda.priority.H ") {
-                uda_priority_h = get_tcolor(
-                    line.trim_start_matches("color.uda.priority.H ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.uda.priority.L ") {
-                uda_priority_l = get_tcolor(
-                    line.trim_start_matches("color.uda.priority.L ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.uda.priority.M ") {
-                uda_priority_m = get_tcolor(
-                    line.trim_start_matches("color.uda.priority.M ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.undo.after ") {
-                undo_after = get_tcolor(
-                    line.trim_start_matches("color.undo.after ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.undo.before ") {
-                undo_before = get_tcolor(
-                    line.trim_start_matches("color.undo.before ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.until ") {
-                until = get_tcolor(
-                    line.trim_start_matches("color.until ")
-                        .trim_start_matches(" "),
-                );
-            }
-            if line.starts_with("color.warning") {
-                warning = get_tcolor(
-                    line.trim_start_matches("color.warning ")
-                        .trim_start_matches(" "),
-                );
+            for attribute in &attributes {
+                let attr = format!("color.{} ", attribute);
+                if line.starts_with(&attr) {
+                    color_collection.insert(
+                        attribute.to_string(),
+                        get_tcolor(line.trim_start_matches(&attr).trim_start_matches(" "))
+                    );
+                }
             }
         }
 
         Self {
-            enabled,
-            active,
-            alternate,
-            blocked,
-            blocking,
-            burndown_done,
-            burndown_pending,
-            burndown_started,
-            calendar_due,
-            calendar_due_today,
-            calendar_holiday,
-            calendar_overdue,
-            calendar_today,
-            calendar_weekend,
-            calendar_weeknumber,
-            completed,
-            debug,
-            deleted,
-            due,
-            due_today,
-            error,
-            footnote,
-            header,
-            history_add,
-            history_delete,
-            history_done,
-            label,
-            label_sort,
-            overdue,
-            project,
-            recurring,
-            scheduled,
-            summary_background,
-            summary_bar,
-            sync_added,
-            sync_changed,
-            sync_rejected,
-            tag_next,
-            tag,
-            tagged,
-            uda_priority,
-            uda_priority_h,
-            uda_priority_l,
-            uda_priority_m,
-            undo_after,
-            undo_before,
-            until,
-            warning,
+            enabled: true,
+            active: match color_collection.get("active") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            alternate: match color_collection.get("alternate") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            blocked: match color_collection.get("blocked") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            blocking: match color_collection.get("blocking") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            burndown_done: match color_collection.get("burndown.done") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            burndown_pending: match color_collection.get("burndown.pending") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            burndown_started: match color_collection.get("burndown.started") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            calendar_due: match color_collection.get("calendar.due") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            calendar_due_today: match color_collection.get("calendar.due.today") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            calendar_holiday: match color_collection.get("calendar.holiday") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            calendar_overdue: match color_collection.get("calendar.overdue") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            calendar_today: match color_collection.get("calendar.today") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            calendar_weekend: match color_collection.get("calendar.weekend") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            calendar_weeknumber: match color_collection.get("calendar.weeknumber") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            completed: match color_collection.get("completed") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            debug: match color_collection.get("debug") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            deleted: match color_collection.get("deleted") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            due: match color_collection.get("due") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            due_today: match color_collection.get("due.today") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            error: match color_collection.get("error") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            footnote: match color_collection.get("footnote") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            header: match color_collection.get("header") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            history_add: match color_collection.get("history.add") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            history_delete: match color_collection.get("history.delete") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            history_done: match color_collection.get("history.done") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            label: match color_collection.get("label") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            label_sort: match color_collection.get("label.sort") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            overdue: match color_collection.get("overdue") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            project: match color_collection.get("project") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            recurring: match color_collection.get("recurring") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            scheduled: match color_collection.get("scheduled") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            summary_background: match color_collection.get("summary.background") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            summary_bar: match color_collection.get("summary_bar") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            sync_added: match color_collection.get("sync.added") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            sync_changed: match color_collection.get("sync.changed") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            sync_rejected: match color_collection.get("sync.rejected") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            tag_next: match color_collection.get("tag.next") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            tag: match color_collection.get("tag") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            tagged: match color_collection.get("tagged") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            uda_priority: match color_collection.get("uda.priority") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            uda_priority_h: match color_collection.get("uda.priority.h") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            uda_priority_l: match color_collection.get("uda.priority.l") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            uda_priority_m: match color_collection.get("uda.priority.m") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            undo_after: match color_collection.get("undo.after") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            undo_before: match color_collection.get("undo.before") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            until: match color_collection.get("until") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
+            warning: match color_collection.get("warning") {
+                Some(c) => *c,
+                None => TColor::default(),
+            },
         }
     }
 }
