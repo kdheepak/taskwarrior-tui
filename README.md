@@ -55,3 +55,4 @@ cargo build --release
 
 - [taskwarrior](https://github.com/GothenburgBitFactory/taskwarrior)
 - [tui-rs](https://github.com/fdehau/tui-rs)
+- [task-hookrs](https://github.com/matthiasbeyer/task-hookrs)
