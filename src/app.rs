@@ -385,11 +385,6 @@ impl TTApp {
     }
 
     fn draw_task_report(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
-        let _active_style = Style::default()
-            .fg(Color::Blue)
-            .add_modifier(Modifier::BOLD);
-        let normal_style = Style::default();
-
         let (tasks, headers, widths) = self.task_report();
         if tasks.is_empty() {
             f.render_widget(
@@ -400,37 +395,40 @@ impl TTApp {
         }
         let selected = self.state.selected().unwrap_or_default();
         let header = headers.iter();
-        let ctasks = self.tasks.lock().unwrap().clone();
-        let blocking = &self.colors.blocking;
-        let active = &self.colors.active;
-        let blocked = &self.colors.blocked;
-        let rows = tasks.iter().enumerate().map(|(i, val)| {
-            if ctasks[i]
+        let mut rows = vec![];
+        let mut highlight_style = Style::default();
+        for (i, task) in tasks.into_iter().enumerate() {
+            let mut normal_style = Style::default();
+            if self.tasks.lock().unwrap()[i]
                 .tags()
                 .unwrap_or(&vec![])
-                .join(" ")
                 .contains(&"ACTIVE".to_string())
             {
-                return Row::StyledData(val.iter(), Style::default().fg(active.fg).bg(active.bg));
-            }
-            if ctasks[i]
-                .tags()
-                .unwrap_or(&vec![])
-                .contains(&"BLOCKED".to_string())
-            {
-                Row::StyledData(val.iter(), normal_style.fg(blocked.fg).bg(blocked.bg))
-            } else if ctasks[i]
+                normal_style = normal_style
+                    .fg(self.colors.active.fg)
+                    .bg(self.colors.active.bg);
+            } else if self.tasks.lock().unwrap()[i]
                 .tags()
                 .unwrap_or(&vec![])
                 .contains(&"BLOCKING".to_string())
             {
-                Row::StyledData(val.iter(), normal_style.fg(blocking.fg).bg(blocked.bg))
-            } else if ctasks[i].due().is_some() {
-                Row::StyledData(val.iter(), normal_style)
-            } else {
-                Row::StyledData(val.iter(), normal_style)
+                normal_style = normal_style
+                    .fg(self.colors.blocked.fg)
+                    .bg(self.colors.blocked.bg);
+            } else if self.tasks.lock().unwrap()[i]
+                .tags()
+                .unwrap_or(&vec![])
+                .contains(&"BLOCKED".to_string())
+            {
+                normal_style = normal_style
+                    .fg(self.colors.blocked.fg)
+                    .bg(self.colors.blocked.bg);
             }
-        });
+            if i == selected {
+                highlight_style = normal_style.add_modifier(Modifier::BOLD);
+            }
+            rows.push(Row::StyledData(task.into_iter(), normal_style));
+        }
         let constraints: Vec<Constraint> = widths
             .iter()
             .map(|i| {
@@ -438,9 +436,9 @@ impl TTApp {
             })
             .collect();
 
-        let t = Table::new(header, rows)
+        let t = Table::new(header, rows.into_iter())
             .block(Block::default().borders(Borders::ALL).title("Task next"))
-            .highlight_style(normal_style.add_modifier(Modifier::BOLD))
+            .highlight_style(highlight_style.add_modifier(Modifier::BOLD))
             .highlight_symbol("• ")
             .widths(&constraints);
         f.render_stateful_widget(t, rect, &mut self.state);
