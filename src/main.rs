@@ -168,7 +168,9 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                     Key::Backspace => {
                         if app.cursor_location > 0 {
                             app.cursor_location -= 1;
-                            app.modify.remove(app.cursor_location);
+                            let mut cs = app.modify.chars().collect::<Vec<char>>();
+                            cs.remove(app.cursor_location);
+                            app.modify = cs.into_iter().collect();
                         }
                     }
                     _ => {}
@@ -209,7 +211,9 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                     Key::Backspace => {
                         if app.cursor_location > 0 {
                             app.cursor_location -= 1;
-                            app.command.remove(app.cursor_location);
+                            let mut cs = app.command.chars().collect::<Vec<char>>();
+                            cs.remove(app.cursor_location);
+                            app.command = cs.into_iter().collect();
                         }
                     }
                     _ => {}
@@ -250,7 +254,9 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                     Key::Backspace => {
                         if app.cursor_location > 0 {
                             app.cursor_location -= 1;
-                            app.command.remove(app.cursor_location);
+                            let mut cs = app.command.chars().collect::<Vec<char>>();
+                            cs.remove(app.cursor_location);
+                            app.command = cs.into_iter().collect();
                         }
                     }
                     _ => {}
@@ -281,7 +287,9 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                     Key::Backspace => {
                         if app.cursor_location > 0 {
                             app.cursor_location -= 1;
-                            app.filter.remove(app.cursor_location);
+                            let mut cs = app.filter.chars().collect::<Vec<char>>();
+                            cs.remove(app.cursor_location);
+                            app.filter = cs.into_iter().collect();
                         }
                     }
                     _ => {}
