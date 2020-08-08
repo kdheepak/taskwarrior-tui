@@ -108,21 +108,21 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                             Some(t) => app.modify = t.description().to_string(),
                             None => app.modify = "".to_string(),
                         }
-                        app.cursor_location = app.modify.len();
+                        app.cursor_location = app.modify.chars().count();
                     }
                     Key::Char('l') => {
                         app.mode = AppMode::LogTask;
                     }
                     Key::Char('a') => {
                         app.mode = AppMode::AddTask;
-                        app.cursor_location = app.command.len();
+                        app.cursor_location = app.command.chars().count();
                     }
                     Key::Char('?') => {
                         app.mode = AppMode::HelpPopup;
                     }
                     Key::Char('/') => {
                         app.mode = AppMode::Filter;
-                        app.cursor_location = app.filter.len();
+                        app.cursor_location = app.filter.chars().count();
                     }
                     _ => {}
                 },
@@ -148,7 +148,7 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                         app.mode = AppMode::Report;
                     }
                     Key::Right => {
-                        if app.cursor_location < app.modify.len() {
+                        if app.cursor_location < app.modify.chars().count() {
                             app.cursor_location += 1;
                         }
                     }
@@ -158,8 +158,8 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                         }
                     }
                     Key::Char(c) => {
-                        if app.cursor_location < app.modify.len() {
-                            app.modify.insert(app.cursor_location, c);
+                        if app.cursor_location < app.modify.chars().count() {
+                            app.modify.insert_str(app.cursor_location, &c.to_string());
                         } else {
                             app.modify.push(c);
                         }
@@ -189,7 +189,7 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                         app.mode = AppMode::Report;
                     }
                     Key::Right => {
-                        if app.cursor_location < app.command.len() {
+                        if app.cursor_location < app.command.chars().count() {
                             app.cursor_location += 1;
                         }
                     }
@@ -199,8 +199,8 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                         }
                     }
                     Key::Char(c) => {
-                        if app.cursor_location < app.command.len() {
-                            app.command.insert(app.cursor_location, c);
+                        if app.cursor_location < app.command.chars().count() {
+                            app.command.insert_str(app.cursor_location, &c.to_string());
                         } else {
                             app.command.push(c);
                         }
@@ -230,7 +230,7 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                         app.mode = AppMode::Report;
                     }
                     Key::Right => {
-                        if app.cursor_location < app.command.len() {
+                        if app.cursor_location < app.command.chars().count() {
                             app.cursor_location += 1;
                         }
                     }
@@ -240,8 +240,8 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                         }
                     }
                     Key::Char(c) => {
-                        if app.cursor_location < app.command.len() {
-                            app.command.insert(app.cursor_location, c);
+                        if app.cursor_location < app.command.chars().count() {
+                            app.command.insert_str(app.cursor_location, &c.to_string());
                         } else {
                             app.command.push(c);
                         }
@@ -261,7 +261,7 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                         app.update();
                     }
                     Key::Right => {
-                        if app.cursor_location < app.filter.len() {
+                        if app.cursor_location < app.filter.chars().count() {
                             app.cursor_location += 1;
                         }
                     }
@@ -271,8 +271,8 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                         }
                     }
                     Key::Char(c) => {
-                        if app.cursor_location < app.filter.len() {
-                            app.filter.insert(app.cursor_location, c);
+                        if app.cursor_location < app.filter.chars().count() {
+                            app.filter.insert_str(app.cursor_location, &c.to_string());
                         } else {
                             app.filter.push(c);
                         }
