@@ -126,6 +126,7 @@ impl TColorConfig {
         let enabled = true;
 
         let attributes = vec![
+            "active",
             "alternate",
             "blocked",
             "blocking",
