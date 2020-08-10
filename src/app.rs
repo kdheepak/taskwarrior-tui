@@ -203,9 +203,13 @@ impl TTApp {
         self.draw_task_report(f, task_rects[0]);
         self.draw_task_details(f, task_rects[1]);
         let selected = self.state.selected().unwrap_or_default();
-        let task_id = self.tasks.lock().unwrap()[selected]
+        let task_id = if tasks_len == 0 {
+            0
+        } else {
+            self.tasks.lock().unwrap()[selected]
             .id()
-            .unwrap_or_default();
+            .unwrap_or_default()
+        };
         match self.mode {
             AppMode::Report => self.draw_command(f, rects[1], &self.filter[..], "Filter Tasks"),
             AppMode::Filter => {
