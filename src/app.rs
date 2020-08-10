@@ -207,8 +207,8 @@ impl TTApp {
             0
         } else {
             self.tasks.lock().unwrap()[selected]
-            .id()
-            .unwrap_or_default()
+                .id()
+                .unwrap_or_default()
         };
         match self.mode {
             AppMode::Report => self.draw_command(f, rects[1], &self.filter[..], "Filter Tasks"),
@@ -220,7 +220,12 @@ impl TTApp {
             AppMode::ModifyTask => {
                 f.set_cursor(rects[1].x + self.cursor_location as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
-                self.draw_command(f, rects[1], &self.modify[..], format!("Modify Task {}", task_id).as_str());
+                self.draw_command(
+                    f,
+                    rects[1],
+                    &self.modify[..],
+                    format!("Modify Task {}", task_id).as_str(),
+                );
             }
             AppMode::LogTask => {
                 f.set_cursor(rects[1].x + self.cursor_location as u16 + 1, rects[1].y + 1);
@@ -230,7 +235,12 @@ impl TTApp {
             AppMode::AnnotateTask => {
                 f.set_cursor(rects[1].x + self.cursor_location as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
-                self.draw_command(f, rects[1], &self.command[..], format!("Annotate Task {}", task_id).as_str());
+                self.draw_command(
+                    f,
+                    rects[1],
+                    &self.command[..],
+                    format!("Annotate Task {}", task_id).as_str(),
+                );
             }
             AppMode::AddTask => {
                 f.set_cursor(rects[1].x + self.cursor_location as u16 + 1, rects[1].y + 1);
