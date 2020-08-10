@@ -115,6 +115,7 @@ pub enum AppMode {
     Report,
     Filter,
     AddTask,
+    AnnotateTask,
     LogTask,
     ModifyTask,
     HelpPopup,
@@ -201,6 +202,10 @@ impl TTApp {
             .split(rects[0]);
         self.draw_task_report(f, task_rects[0]);
         self.draw_task_details(f, task_rects[1]);
+        let selected = self.state.selected().unwrap_or_default();
+        let task_id = self.tasks.lock().unwrap()[selected]
+            .id()
+            .unwrap_or_default();
         match self.mode {
             AppMode::Report => self.draw_command(f, rects[1], &self.filter[..], "Filter Tasks"),
             AppMode::Filter => {
@@ -211,12 +216,17 @@ impl TTApp {
             AppMode::ModifyTask => {
                 f.set_cursor(rects[1].x + self.cursor_location as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
-                self.draw_command(f, rects[1], &self.modify[..], "Modify Task");
+                self.draw_command(f, rects[1], &self.modify[..], format!("Modify Task {}", task_id).as_str());
             }
             AppMode::LogTask => {
                 f.set_cursor(rects[1].x + self.cursor_location as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
                 self.draw_command(f, rects[1], &self.command[..], "Log Task");
+            }
+            AppMode::AnnotateTask => {
+                f.set_cursor(rects[1].x + self.cursor_location as u16 + 1, rects[1].y + 1);
+                f.render_widget(Clear, rects[1]);
+                self.draw_command(f, rects[1], &self.command[..], format!("Annotate Task {}", task_id).as_str());
             }
             AppMode::AddTask => {
                 f.set_cursor(rects[1].x + self.cursor_location as u16 + 1, rects[1].y + 1);
@@ -750,6 +760,38 @@ impl TTApp {
                 "Unable to run `task modify` with `{}` on task {}",
                 &self.modify, &task_id
             )),
+        }
+    }
+
+    pub fn task_annotate(&mut self) -> Result<(), String> {
+        if self.tasks.lock().unwrap().is_empty() {
+            return Ok(());
+        }
+        let selected = self.state.selected().unwrap_or_default();
+        let task_id = self.tasks.lock().unwrap()[selected]
+            .id()
+            .unwrap_or_default();
+        let mut command = Command::new("task");
+        command.arg(format!("{}", task_id)).arg("annotate");
+
+        match shlex::split(&self.command) {
+            Some(cmd) => {
+                for s in cmd {
+                    command.arg(&s);
+                }
+                let output = command.output();
+                match output {
+                    Ok(_) => {
+                        self.command = "".to_string();
+                        Ok(())
+                    }
+                    Err(_) => Err(
+                        "Cannot run `task annotate`. Check documentation for more information"
+                            .to_string(),
+                    ),
+                }
+            }
+            None => Err(format!("Unable to run `task add` with `{}`", &self.command)),
         }
     }
 
