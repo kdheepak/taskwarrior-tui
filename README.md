@@ -36,18 +36,19 @@ cargo build --release
 
 ## Usage
 
-- `/`: `task {string}`                   - Filter task report
-- `a`: `task add {string}`               - Add new task
-- `d`: `task {selected} done`            - Mark task as done
-- `e`: `task {selected} edit`            - Open selected task in editor
-- `j`: `{selected+=1}`                   - Move down in task report
-- `k`: `{selected-=1}`                   - Move up in task report
-- `l`: `task log {string}`               - Log new task
-- `m`: `task {selected} modify {string}` - Modify selected task
-- `q`: `exit`                            - Quit
-- `s`: `task {selected} start/stop`      - Toggle start and stop
-- `u`: `task undo`                       - Undo
-- `?`: `help`                            - Help menu
+- `/`: `task {string}`                       - Filter task report
+- `a`: `task add {string}`                   - Add new task
+- `d`: `task {selected} done`                - Mark task as done
+- `e`: `task {selected} edit`                - Open selected task in editor
+- `j`: `{selected+=1}`                       - Move down in task report
+- `k`: `{selected-=1}`                       - Move up in task report
+- `l`: `task log {string}`                   - Log new task
+- `m`: `task {selected} modify {string}`     - Modify selected task
+- `q`: `exit`                                - Quit
+- `s`: `task {selected} start/stop`          - Toggle start and stop
+- `u`: `task undo`                           - Undo
+- `A`: `task {selected} annotate {string}`   - Add new task
+- `?`: `help`                                - Help menu
 
 ![taskwarrior-tui](https://user-images.githubusercontent.com/1813121/88654924-40896880-d08b-11ea-8709-b29cc970da4c.gif)
 
