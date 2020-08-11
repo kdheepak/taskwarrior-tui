@@ -11,6 +11,8 @@ A Terminal User Interface for Taskwarrior written in Rust.
 
 ## Installation
 
+You will need to install `taskwarrior` first. See <https://taskwarrior.org/download/> for more information.
+
 **Manual**
 
 1. Download the tar.gz file for your OS from [the latest release](https://github.com/kdheepak/taskwarrior-tui/releases/latest).
