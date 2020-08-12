@@ -64,9 +64,8 @@ pub fn get_date_state(reference: &Date) -> DateState {
     return DateState::AfterToday;
 }
 
-pub fn vague_format_date_time(dt: &Date) -> String {
-    let now = Local::now().naive_utc();
-    let seconds = (now - NaiveDateTime::new(dt.date(), dt.time())).num_seconds();
+pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime) -> String {
+    let seconds = (to_dt - from_dt).num_seconds();
 
     if seconds >= 60 * 60 * 24 * 365 {
         return format!("{}y", seconds / 86400 / 365);
@@ -524,10 +523,13 @@ impl TTApp {
     pub fn get_string_attribute(&self, attribute: &str, task: &Task) -> String {
         match attribute {
             "id" => task.id().unwrap_or_default().to_string(),
-            // "entry" => task.entry().unwrap().to_string(),
-            "entry" => vague_format_date_time(task.entry()),
+            "due" => match task.due() {
+                Some(v) => vague_format_date_time(Local::now().naive_utc(), NaiveDateTime::new(v.date(), v.time())),
+                None => "".to_string(),
+            },
+            "entry" => vague_format_date_time(NaiveDateTime::new(task.entry().date(), task.entry().time()), Local::now().naive_utc()),
             "start" => match task.start() {
-                Some(v) => vague_format_date_time(v),
+                Some(v) => vague_format_date_time(NaiveDateTime::new(v.date(), v.time()), Local::now().naive_utc()),
                 None => "".to_string(),
             },
             "description" => task.description().to_string(),
