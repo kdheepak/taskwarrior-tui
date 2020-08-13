@@ -5,7 +5,7 @@
 [![](https://img.shields.io/github/v/release/kdheepak/taskwarrior-tui)](https://github.com/kdheepak/taskwarrior-tui/releases/latest)
 [![](https://img.shields.io/static/v1?label=platform&message=linux-32%20%7C%20linux-64%20%7C%20osx-64%20%7C%20win-32%20%7C%20win-64&color=lightgrey)](https://github.com/kdheepak/taskwarrior-tui/releases/latest)
 
-A Terminal User Interface for Taskwarrior written in Rust.
+A Terminal User Interface for [Taskwarrior](https://taskwarrior.org/).
 
 ![taskwarrior-tui](https://user-images.githubusercontent.com/1813121/89620056-4ed64200-d84c-11ea-9153-9e08bc26d3b4.gif)
 
