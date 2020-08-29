@@ -393,6 +393,17 @@ impl TTApp {
             ]),
             Spans::from(""),
             Spans::from(vec![
+                Span::from("    x"),
+                Span::from("    "),
+                Span::styled(
+                    "task delete                ",
+                    Style::default().add_modifier(Modifier::BOLD),
+                ),
+                Span::from("    "),
+                Span::from("- Delete task"),
+            ]),
+            Spans::from(""),
+            Spans::from(vec![
                 Span::from("    ?"),
                 Span::from("    "),
                 Span::styled(
