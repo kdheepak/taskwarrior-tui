@@ -283,6 +283,17 @@ impl TTApp {
             ]),
             Spans::from(""),
             Spans::from(vec![
+                Span::from("    A"),
+                Span::from("    "),
+                Span::styled(
+                    "task annotate {string}     ",
+                    Style::default().add_modifier(Modifier::BOLD),
+                ),
+                Span::from("    "),
+                Span::from("- Annotate task"),
+            ]),
+            Spans::from(""),
+            Spans::from(vec![
                 Span::from("    d"),
                 Span::from("    "),
                 Span::styled(
