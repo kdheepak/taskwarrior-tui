@@ -283,6 +283,17 @@ impl TTApp {
             ]),
             Spans::from(""),
             Spans::from(vec![
+                Span::from("    A"),
+                Span::from("    "),
+                Span::styled(
+                    "task annotate {string}     ",
+                    Style::default().add_modifier(Modifier::BOLD),
+                ),
+                Span::from("    "),
+                Span::from("- Annotate task"),
+            ]),
+            Spans::from(""),
+            Spans::from(vec![
                 Span::from("    d"),
                 Span::from("    "),
                 Span::styled(
@@ -379,6 +390,17 @@ impl TTApp {
                 ),
                 Span::from("    "),
                 Span::from("- Undo"),
+            ]),
+            Spans::from(""),
+            Spans::from(vec![
+                Span::from("    x"),
+                Span::from("    "),
+                Span::styled(
+                    "task delete                ",
+                    Style::default().add_modifier(Modifier::BOLD),
+                ),
+                Span::from("    "),
+                Span::from("- Delete task"),
             ]),
             Spans::from(""),
             Spans::from(vec![
