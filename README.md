@@ -49,6 +49,7 @@ cargo build --release
 - `q`: `exit`                                - Quit
 - `s`: `task {selected} start/stop`          - Toggle start and stop
 - `u`: `task undo`                           - Undo
+- `x`: `task delete {selected}`              - Delete
 - `A`: `task {selected} annotate {string}`   - Add new task
 - `?`: `help`                                - Help menu
 
