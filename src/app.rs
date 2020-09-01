@@ -659,7 +659,7 @@ impl TTApp {
         for task in &tasks {
             for (i, attr) in task.iter().enumerate() {
                 widths[i] =
-                    attr.len() as i16 * 100 / task.iter().map(|s| s.len() as i16).sum::<i16>()
+                    std::cmp::min( attr.len() as i64 * 100 / task.iter().map(|s| s.len() as i64).sum::<i64>(), i16::max_value().into() ) as i16
             }
         }
 
