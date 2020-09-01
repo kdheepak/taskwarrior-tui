@@ -3,6 +3,7 @@
 #![allow(unused_variables)]
 
 mod app;
+mod calendar;
 mod color;
 mod util;
 
@@ -57,8 +58,11 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
         // Handle input
         match events.next()? {
             Event::Input(input) => match app.mode {
-                AppMode::Report => match input {
+                AppMode::TaskReport => match input {
                     Key::Ctrl('c') | Key::Char('q') => app.should_quit = true,
+                    Key::Char(']') => {
+                        app.mode = AppMode::Calendar;
+                    }
                     Key::Char('r') => app.update(),
                     Key::Down | Key::Char('j') => app.next(),
                     Key::Up | Key::Char('k') => app.previous(),
@@ -103,7 +107,7 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                         }
                     }
                     Key::Char('m') => {
-                        app.mode = AppMode::ModifyTask;
+                        app.mode = AppMode::TaskModify;
                         match app.task_current() {
                             Some(t) => app.modify = t.description().to_string(),
                             None => app.modify = "".to_string(),
@@ -111,35 +115,35 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                         app.cursor_location = app.modify.chars().count();
                     }
                     Key::Char('l') => {
-                        app.mode = AppMode::LogTask;
+                        app.mode = AppMode::TaskLog;
                     }
                     Key::Char('a') => {
-                        app.mode = AppMode::AddTask;
+                        app.mode = AppMode::TaskAdd;
                         app.cursor_location = app.command.chars().count();
                     }
                     Key::Char('A') => {
-                        app.mode = AppMode::AnnotateTask;
+                        app.mode = AppMode::TaskAnnotate;
                         app.cursor_location = app.command.chars().count();
                     }
                     Key::Char('?') => {
-                        app.mode = AppMode::HelpPopup;
+                        app.mode = AppMode::TaskHelpPopup;
                     }
                     Key::Char('/') => {
-                        app.mode = AppMode::Filter;
+                        app.mode = AppMode::TaskFilter;
                         app.cursor_location = app.filter.chars().count();
                     }
                     _ => {}
                 },
-                AppMode::HelpPopup => match input {
+                AppMode::TaskHelpPopup => match input {
                     Key::Esc => {
-                        app.mode = AppMode::Report;
+                        app.mode = AppMode::TaskReport;
                     }
                     _ => {}
                 },
-                AppMode::ModifyTask => match input {
+                AppMode::TaskModify => match input {
                     Key::Char('\n') => match app.task_modify() {
                         Ok(_) => {
-                            app.mode = AppMode::Report;
+                            app.mode = AppMode::TaskReport;
                             app.update();
                         }
                         Err(e) => {
@@ -149,7 +153,7 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                     },
                     Key::Esc => {
                         app.modify = "".to_string();
-                        app.mode = AppMode::Report;
+                        app.mode = AppMode::TaskReport;
                     }
                     Key::Right => {
                         if app.cursor_location < app.modify.chars().count() {
@@ -179,10 +183,10 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                     }
                     _ => {}
                 },
-                AppMode::LogTask => match input {
+                AppMode::TaskLog => match input {
                     Key::Char('\n') => match app.task_log() {
                         Ok(_) => {
-                            app.mode = AppMode::Report;
+                            app.mode = AppMode::TaskReport;
                             app.update();
                         }
                         Err(e) => {
@@ -192,7 +196,7 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                     },
                     Key::Esc => {
                         app.command = "".to_string();
-                        app.mode = AppMode::Report;
+                        app.mode = AppMode::TaskReport;
                     }
                     Key::Right => {
                         if app.cursor_location < app.command.chars().count() {
@@ -222,10 +226,10 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                     }
                     _ => {}
                 },
-                AppMode::AnnotateTask => match input {
+                AppMode::TaskAnnotate => match input {
                     Key::Char('\n') => match app.task_annotate() {
                         Ok(_) => {
-                            app.mode = AppMode::Report;
+                            app.mode = AppMode::TaskReport;
                             app.update();
                         }
                         Err(e) => {
@@ -235,7 +239,7 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                     },
                     Key::Esc => {
                         app.command = "".to_string();
-                        app.mode = AppMode::Report;
+                        app.mode = AppMode::TaskReport;
                     }
                     Key::Right => {
                         if app.cursor_location < app.command.chars().count() {
@@ -265,10 +269,10 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                     }
                     _ => {}
                 },
-                AppMode::AddTask => match input {
+                AppMode::TaskAdd => match input {
                     Key::Char('\n') => match app.task_add() {
                         Ok(_) => {
-                            app.mode = AppMode::Report;
+                            app.mode = AppMode::TaskReport;
                             app.update();
                         }
                         Err(e) => {
@@ -278,7 +282,7 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                     },
                     Key::Esc => {
                         app.command = "".to_string();
-                        app.mode = AppMode::Report;
+                        app.mode = AppMode::TaskReport;
                     }
                     Key::Right => {
                         if app.cursor_location < app.command.chars().count() {
@@ -308,9 +312,9 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                     }
                     _ => {}
                 },
-                AppMode::Filter => match input {
+                AppMode::TaskFilter => match input {
                     Key::Char('\n') | Key::Esc => {
-                        app.mode = AppMode::Report;
+                        app.mode = AppMode::TaskReport;
                         app.update();
                     }
                     Key::Right => {
@@ -343,8 +347,15 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                 },
                 AppMode::TaskError => match input {
                     _ => {
-                        app.mode = AppMode::Report;
+                        app.mode = AppMode::TaskReport;
                     }
+                },
+                AppMode::Calendar => match input {
+                    Key::Char('[') => {
+                        app.mode = AppMode::TaskReport;
+                    }
+                    Key::Ctrl('c') | Key::Char('q') => app.should_quit = true,
+                    _ => {}
                 },
             },
             Event::Tick => app.update(),
@@ -355,5 +366,6 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
             break;
         }
     }
+
     Ok(())
 }

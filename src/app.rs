@@ -13,6 +13,7 @@ use task_hookrs::uda::UDAValue;
 
 use chrono::{Local, NaiveDateTime, TimeZone};
 
+use crate::calendar::Calendar;
 use std::sync::{Arc, Mutex};
 use std::{sync::mpsc, thread, time::Duration};
 use tui::{
@@ -111,14 +112,15 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
 }
 
 pub enum AppMode {
-    Report,
-    Filter,
-    AddTask,
-    AnnotateTask,
-    LogTask,
-    ModifyTask,
-    HelpPopup,
+    TaskReport,
+    TaskFilter,
+    TaskAdd,
+    TaskAnnotate,
+    TaskLog,
+    TaskModify,
+    TaskHelpPopup,
     TaskError,
+    Calendar,
 }
 
 pub struct TTApp {
@@ -153,7 +155,7 @@ impl TTApp {
             command: "".to_string(),
             modify: "".to_string(),
             error: "".to_string(),
-            mode: AppMode::Report,
+            mode: AppMode::TaskReport,
             colors: TColorConfig::default(),
         };
         app.get_context();
@@ -186,6 +188,32 @@ impl TTApp {
     }
 
     pub fn draw(&mut self, f: &mut Frame<impl Backend>) {
+        match self.mode {
+            AppMode::TaskReport
+            | AppMode::TaskFilter
+            | AppMode::TaskAdd
+            | AppMode::TaskAnnotate
+            | AppMode::TaskError
+            | AppMode::TaskHelpPopup
+            | AppMode::TaskLog
+            | AppMode::TaskModify => self.draw_task(f),
+            AppMode::Calendar => self.draw_calendar(f),
+        }
+    }
+
+    pub fn draw_calendar(&mut self, f: &mut Frame<impl Backend>) {
+        let rects = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(0)].as_ref())
+            .split(f.size());
+        let c = &Calendar::new(2020).to_string()[..];
+        let p = Paragraph::new(Text::from(c))
+            .alignment(Alignment::Left)
+            .block(Block::default().borders(Borders::ALL).title("Calendar"));
+        f.render_widget(p, rects[0]);
+    }
+
+    pub fn draw_task(&mut self, f: &mut Frame<impl Backend>) {
         let tasks_is_empty = self.tasks.lock().unwrap().is_empty();
         let tasks_len = self.tasks.lock().unwrap().len();
         while !tasks_is_empty && self.state.selected().unwrap_or_default() >= tasks_len {
@@ -210,13 +238,13 @@ impl TTApp {
                 .unwrap_or_default()
         };
         match self.mode {
-            AppMode::Report => self.draw_command(f, rects[1], &self.filter[..], "Filter Tasks"),
-            AppMode::Filter => {
+            AppMode::TaskReport => self.draw_command(f, rects[1], &self.filter[..], "Filter Tasks"),
+            AppMode::TaskFilter => {
                 f.render_widget(Clear, rects[1]);
                 f.set_cursor(rects[1].x + self.cursor_location as u16 + 1, rects[1].y + 1);
                 self.draw_command(f, rects[1], &self.filter[..], "Filter Tasks");
             }
-            AppMode::ModifyTask => {
+            AppMode::TaskModify => {
                 f.set_cursor(rects[1].x + self.cursor_location as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
                 self.draw_command(
@@ -226,12 +254,12 @@ impl TTApp {
                     format!("Modify Task {}", task_id).as_str(),
                 );
             }
-            AppMode::LogTask => {
+            AppMode::TaskLog => {
                 f.set_cursor(rects[1].x + self.cursor_location as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
                 self.draw_command(f, rects[1], &self.command[..], "Log Task");
             }
-            AppMode::AnnotateTask => {
+            AppMode::TaskAnnotate => {
                 f.set_cursor(rects[1].x + self.cursor_location as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
                 self.draw_command(
@@ -241,7 +269,7 @@ impl TTApp {
                     format!("Annotate Task {}", task_id).as_str(),
                 );
             }
-            AppMode::AddTask => {
+            AppMode::TaskAdd => {
                 f.set_cursor(rects[1].x + self.cursor_location as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
                 self.draw_command(f, rects[1], &self.command[..], "Add Task");
@@ -250,9 +278,12 @@ impl TTApp {
                 f.render_widget(Clear, rects[1]);
                 self.draw_command(f, rects[1], &self.error[..], "Error");
             }
-            AppMode::HelpPopup => {
+            AppMode::TaskHelpPopup => {
                 self.draw_command(f, rects[1], &self.filter[..], "Filter Tasks");
                 self.draw_help_popup(f, f.size());
+            }
+            _ => {
+                panic!("Reached unreachable code. Something went wrong");
             }
         }
     }
@@ -546,12 +577,21 @@ impl TTApp {
         match attribute {
             "id" => task.id().unwrap_or_default().to_string(),
             "due" => match task.due() {
-                Some(v) => vague_format_date_time(Local::now().naive_utc(), NaiveDateTime::new(v.date(), v.time())),
+                Some(v) => vague_format_date_time(
+                    Local::now().naive_utc(),
+                    NaiveDateTime::new(v.date(), v.time()),
+                ),
                 None => "".to_string(),
             },
-            "entry" => vague_format_date_time(NaiveDateTime::new(task.entry().date(), task.entry().time()), Local::now().naive_utc()),
+            "entry" => vague_format_date_time(
+                NaiveDateTime::new(task.entry().date(), task.entry().time()),
+                Local::now().naive_utc(),
+            ),
             "start" => match task.start() {
-                Some(v) => vague_format_date_time(NaiveDateTime::new(v.date(), v.time()), Local::now().naive_utc()),
+                Some(v) => vague_format_date_time(
+                    NaiveDateTime::new(v.date(), v.time()),
+                    Local::now().naive_utc(),
+                ),
                 None => "".to_string(),
             },
             "description" => task.description().to_string(),
