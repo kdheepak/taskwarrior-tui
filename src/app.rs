@@ -596,9 +596,9 @@ impl TTApp {
             },
             "description" => task.description().to_string(),
             "urgency" => match &task.uda()["urgency"] {
-                UDAValue::Str(_) => "0.0".to_string(),
-                UDAValue::U64(u) => (*u as f64).to_string(),
-                UDAValue::F64(f) => (*f).to_string(),
+                UDAValue::Str(_) => "0.00".to_string(),
+                UDAValue::U64(u) => format!("{:.2}", *u as f64).to_string(),
+                UDAValue::F64(f) => format!("{:.2}", *f).to_string(),
             },
             _ => "".to_string(),
         }
