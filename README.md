@@ -50,7 +50,7 @@ cargo build --release
 - `s`: `task {selected} start/stop`          - Toggle start and stop
 - `u`: `task undo`                           - Undo
 - `x`: `task delete {selected}`              - Delete
-- `A`: `task {selected} annotate {string}`   - Add new task
+- `A`: `task {selected} annotate {string}`   - Annotate current task
 - `?`: `help`                                - Help menu
 
 ![taskwarrior-tui](https://user-images.githubusercontent.com/1813121/88654924-40896880-d08b-11ea-8709-b29cc970da4c.gif)
