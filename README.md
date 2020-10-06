@@ -36,6 +36,10 @@ cd taskwarrior-tui
 cargo build --release
 ```
 
+**Using `AUR`**
+
+[AUR package](https://aur.archlinux.org/packages/taskwarrior-tui-git/) thanks to @loki7990.
+
 ## Usage
 
 - `/`: `task {string}`                       - Filter task report
