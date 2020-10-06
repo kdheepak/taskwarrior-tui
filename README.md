@@ -38,7 +38,7 @@ cargo build --release
 
 **Using `AUR`**
 
-Use your favorite installation method to download the [AUR package](https://aur.archlinux.org/packages/taskwarrior-tui-git/) (Credit: [**@loki7990**](https://github.com/loki7990)).
+Use your favorite installation method to download the [AUR package](https://aur.archlinux.org/packages/taskwarrior-tui-git/) maintained by [**@loki7990**](https://github.com/loki7990).
 
 ## Usage
 
