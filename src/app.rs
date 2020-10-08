@@ -476,7 +476,10 @@ impl TTApp {
             .unwrap_or_default();
         let output = Command::new("task").arg(format!("{}", task_id)).output();
         if let Ok(output) = output {
-            let data = String::from_utf8(output.stdout).unwrap();
+            let data = String::from_utf8(output.stdout).unwrap_or(format!(
+                "Unable to get description of task with id: {}. Please report as an issue on github.",
+                task_id
+            ));
             let p = Paragraph::new(Text::from(&data[..])).block(
                 Block::default()
                     .borders(Borders::ALL)
@@ -658,8 +661,10 @@ impl TTApp {
         let mut widths: Vec<i16> = vec![0; tasks[0].len()];
         for task in &tasks {
             for (i, attr) in task.iter().enumerate() {
-                widths[i] =
-                    std::cmp::min( attr.len() as i64 * 100 / task.iter().map(|s| s.len() as i64).sum::<i64>(), i16::max_value().into() ) as i16
+                widths[i] = std::cmp::min(
+                    attr.len() as i64 * 100 / task.iter().map(|s| s.len() as i64).sum::<i64>(),
+                    i16::max_value().into(),
+                ) as i16
             }
         }
 
