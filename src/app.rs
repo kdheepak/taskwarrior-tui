@@ -624,12 +624,19 @@ impl TTApp {
                 ),
                 None => "".to_string(),
             },
+            "project" => match task.project() {
+                Some(p) => {
+                    format!("{}", p).to_string()
+                },
+                None => "".to_string(),
+            },
             "tags.count" => match task.tags() {
                 Some(v) => {
                     let t = v.iter()
                         .filter(|t| t.as_str() != "PENDING")
                         .filter(|t| t.as_str() != "ANNOTATED")
                         .filter(|t| t.as_str() != "TAGGED")
+                        .filter(|t| t.as_str() != "PROJECT")
                         .cloned()
                         .collect::<Vec<String>>().len();
                     if t == 0 {
@@ -646,6 +653,7 @@ impl TTApp {
                         .filter(|t| t.as_str() != "PENDING")
                         .filter(|t| t.as_str() != "ANNOTATED")
                         .filter(|t| t.as_str() != "TAGGED")
+                        .filter(|t| t.as_str() != "PROJECT")
                         .cloned()
                         .collect::<Vec<String>>()
                         .join(",");
