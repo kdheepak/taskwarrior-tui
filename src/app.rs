@@ -606,22 +606,38 @@ impl TTApp {
     pub fn get_string_attribute(&self, attribute: &str, task: &Task) -> String {
         match attribute {
             "id" => task.id().unwrap_or_default().to_string(),
-            "due" => match task.due() {
+            "due.relative" => match task.due() {
                 Some(v) => vague_format_date_time(
                     Local::now().naive_utc(),
                     NaiveDateTime::new(v.date(), v.time()),
                 ),
                 None => "".to_string(),
             },
-            "entry" => vague_format_date_time(
+            "entry.age" => vague_format_date_time(
                 NaiveDateTime::new(task.entry().date(), task.entry().time()),
                 Local::now().naive_utc(),
             ),
-            "start" => match task.start() {
+            "start.age" => match task.start() {
                 Some(v) => vague_format_date_time(
                     NaiveDateTime::new(v.date(), v.time()),
                     Local::now().naive_utc(),
                 ),
+                None => "".to_string(),
+            },
+            "tags.count" => match task.tags() {
+                Some(v) => {
+                    let t = v.iter()
+                        .filter(|t| t.as_str() != "PENDING")
+                        .filter(|t| t.as_str() != "ANNOTATED")
+                        .filter(|t| t.as_str() != "TAGGED")
+                        .cloned()
+                        .collect::<Vec<String>>().len();
+                    if t == 0 {
+                        "".to_string()
+                    } else {
+                        format!("{}", t).to_string()
+                    }
+                },
                 None => "".to_string(),
             },
             "tags" => match task.tags() {
@@ -637,6 +653,7 @@ impl TTApp {
                 },
                 None => "".to_string(),
             },
+            "description.count" => task.description().to_string(),
             "description" => task.description().to_string(),
             "urgency" => match &task.uda()["urgency"] {
                 UDAValue::Str(_) => "0.00".to_string(),
@@ -653,8 +670,7 @@ impl TTApp {
         for task in &*(self.tasks.lock().unwrap()) {
             let mut item = vec![];
             for name in &self.task_report_columns {
-                let attributes: Vec<_> = name.split('.').collect();
-                let s = self.get_string_attribute(attributes[0], &task);
+                let s = self.get_string_attribute(name, &task);
                 item.push(s);
             }
             alltasks.push(item)
