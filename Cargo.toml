@@ -29,3 +29,4 @@ chrono = "0.4"
 unicode-width = "0.1"
 tui = { version = "0.10", optional = true, default-features = false }
 crossterm = { version = "0.17", optional = true, default-features = false }
+rustyline = "6.3.0"
