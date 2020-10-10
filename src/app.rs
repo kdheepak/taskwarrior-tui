@@ -116,6 +116,7 @@ pub enum AppMode {
     TaskFilter,
     TaskAdd,
     TaskAnnotate,
+    TaskSubprocess,
     TaskLog,
     TaskModify,
     TaskHelpPopup,
@@ -195,6 +196,7 @@ impl TTApp {
             | AppMode::TaskAnnotate
             | AppMode::TaskError
             | AppMode::TaskHelpPopup
+            | AppMode::TaskSubprocess
             | AppMode::TaskLog
             | AppMode::TaskModify => self.draw_task(f),
             AppMode::Calendar => self.draw_calendar(f),
@@ -259,6 +261,11 @@ impl TTApp {
                 f.render_widget(Clear, rects[1]);
                 self.draw_command(f, rects[1], &self.command[..], "Log Task");
             }
+            AppMode::TaskSubprocess => {
+                f.set_cursor(rects[1].x + self.cursor_location as u16 + 1, rects[1].y + 1);
+                f.render_widget(Clear, rects[1]);
+                self.draw_command(f, rects[1], &self.command[..], "Shell Command");
+            }
             AppMode::TaskAnnotate => {
                 f.set_cursor(rects[1].x + self.cursor_location as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
@@ -282,7 +289,7 @@ impl TTApp {
                 self.draw_command(f, rects[1], &self.filter[..], "Filter Tasks");
                 self.draw_help_popup(f, f.size());
             }
-            _ => {
+            AppMode::Calendar => {
                 panic!("Reached unreachable code. Something went wrong");
             }
         }
@@ -443,6 +450,17 @@ impl TTApp {
                 ),
                 Span::from("    "),
                 Span::from("- Show this help menu"),
+            ]),
+            Spans::from(""),
+            Spans::from(vec![
+                Span::from("    !"),
+                Span::from("    "),
+                Span::styled(
+                    "shell                      ",
+                    Style::default().add_modifier(Modifier::BOLD),
+                ),
+                Span::from("    "),
+                Span::from("- Custom shell command"),
             ]),
             Spans::from(""),
         ];
@@ -780,6 +798,35 @@ impl TTApp {
                 *(self.tasks.lock().unwrap()) = i;
                 self.tasks.lock().unwrap().sort_by(cmp);
             }
+        }
+    }
+
+    pub fn task_subprocess(&mut self) -> Result<(), String> {
+        if self.tasks.lock().unwrap().is_empty() {
+            return Ok(());
+        }
+
+        match shlex::split(&self.command) {
+            Some(cmd) => {
+                let mut command = Command::new(&cmd[0]);
+                for (i, s) in cmd.iter().enumerate() {
+                    if i == 0 {
+                        continue;
+                    }
+                    command.arg(&s);
+                }
+                let output = command.output();
+                match output {
+                    Ok(_) => {
+                        self.command = "".to_string();
+                        Ok(())
+                    },
+                    Err(_) => Err(
+                        format!("Shell command `{}` exited with non-zero output", self.command),
+                    )
+                }
+            }
+            None => Err(format!("Unable to split `{}`", &self.command)),
         }
     }
 

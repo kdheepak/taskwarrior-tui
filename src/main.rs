@@ -114,8 +114,13 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                         }
                         app.cursor_location = app.modify.chars().count();
                     }
+                    Key::Char('!') => {
+                        app.mode = AppMode::TaskSubprocess;
+                        app.cursor_location = app.command.chars().count();
+                    }
                     Key::Char('l') => {
                         app.mode = AppMode::TaskLog;
+                        app.cursor_location = app.command.chars().count();
                     }
                     Key::Char('a') => {
                         app.mode = AppMode::TaskAdd;
@@ -179,6 +184,49 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                             let mut cs = app.modify.chars().collect::<Vec<char>>();
                             cs.remove(app.cursor_location);
                             app.modify = cs.into_iter().collect();
+                        }
+                    }
+                    _ => {}
+                },
+                AppMode::TaskSubprocess => match input {
+                    Key::Char('\n') => match app.task_subprocess() {
+                        Ok(_) => {
+                            app.mode = AppMode::TaskReport;
+                            app.update();
+                        }
+                        Err(e) => {
+                            app.mode = AppMode::TaskError;
+                            app.error = e;
+                        }
+                    },
+                    Key::Esc => {
+                        app.command = "".to_string();
+                        app.mode = AppMode::TaskReport;
+                    }
+                    Key::Right => {
+                        if app.cursor_location < app.command.chars().count() {
+                            app.cursor_location += 1;
+                        }
+                    }
+                    Key::Left => {
+                        if app.cursor_location > 0 {
+                            app.cursor_location -= 1;
+                        }
+                    }
+                    Key::Char(c) => {
+                        if app.cursor_location < app.command.chars().count() {
+                            app.command.insert_str(app.cursor_location, &c.to_string());
+                        } else {
+                            app.command.push(c);
+                        }
+                        app.cursor_location += 1;
+                    }
+                    Key::Backspace => {
+                        if app.cursor_location > 0 {
+                            app.cursor_location -= 1;
+                            let mut cs = app.command.chars().collect::<Vec<char>>();
+                            cs.remove(app.cursor_location);
+                            app.command = cs.into_iter().collect();
                         }
                     }
                     _ => {}
