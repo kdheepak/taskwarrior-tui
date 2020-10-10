@@ -56,6 +56,7 @@ Use your favorite installation method to download the [AUR package](https://aur.
 - `x`: `task delete {selected}`              - Delete
 - `A`: `task {selected} annotate {string}`   - Annotate current task
 - `?`: `help`                                - Help menu
+- `!`: `{string}`                            - Custom shell command
 
 ![taskwarrior-tui](https://user-images.githubusercontent.com/1813121/88654924-40896880-d08b-11ea-8709-b29cc970da4c.gif)
 
