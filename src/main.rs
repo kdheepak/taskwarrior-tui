@@ -112,7 +112,7 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                     Key::Char('m') => {
                         app.mode = AppMode::TaskModify;
                         match app.task_current() {
-                            Some(t) => app.modify.update(t.description(), 0),
+                            Some(t) => app.modify.update(t.description(), t.description().len()),
                             None => app.modify.update("", 0),
                         }
                     }
