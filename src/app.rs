@@ -624,6 +624,19 @@ impl TTApp {
                 ),
                 None => "".to_string(),
             },
+            "tags" => match task.tags() {
+                Some(v) => {
+                    let t = v.iter()
+                        .filter(|t| t.as_str() != "PENDING")
+                        .filter(|t| t.as_str() != "ANNOTATED")
+                        .filter(|t| t.as_str() != "TAGGED")
+                        .cloned()
+                        .collect::<Vec<String>>()
+                        .join(",");
+                    format!("{}", t).to_string()
+                },
+                None => "".to_string(),
+            },
             "description" => task.description().to_string(),
             "urgency" => match &task.uda()["urgency"] {
                 UDAValue::Str(_) => "0.00".to_string(),
