@@ -29,7 +29,6 @@ use rustyline::error::ReadlineError;
 use rustyline::line_buffer::LineBuffer;
 use rustyline::Editor;
 
-
 const MAX_LINE: usize = 4096;
 
 pub fn cmp(t1: &Task, t2: &Task) -> Ordering {
@@ -605,6 +604,40 @@ impl TTApp {
     }
 
     pub fn get_string_attribute(&self, attribute: &str, task: &Task) -> String {
+        let tags = vec![
+            "PROJECT",
+            "BLOCKED",
+            "UNBLOCKED",
+            "BLOCKING",
+            "DUE",
+            "DUETODAY",
+            "TODAY",
+            "OVERDUE",
+            "WEEK",
+            "MONTH",
+            "QUARTER",
+            "YEAR",
+            "ACTIVE",
+            "SCHEDULED",
+            "PARENT",
+            "CHILD",
+            "UNTIL",
+            "WAITING",
+            "ANNOTATED",
+            "READY",
+            "YESTERDAY",
+            "TOMORROW",
+            "TAGGED",
+            "PENDING",
+            "COMPLETED",
+            "DELETED",
+            "UDA",
+            "ORPHAN",
+            "PRIORITY",
+            "PROJECT",
+            "LATEST",
+        ];
+
         match attribute {
             "id" => task.id().unwrap_or_default().to_string(),
             "due.relative" => match task.due() {
@@ -626,9 +659,7 @@ impl TTApp {
                 None => "".to_string(),
             },
             "project" => match task.project() {
-                Some(p) => {
-                    format!("{}", p).to_string()
-                },
+                Some(p) => format!("{}", p).to_string(),
                 None => "".to_string(),
             },
             "depends.count" => match task.depends() {
@@ -638,38 +669,35 @@ impl TTApp {
                     } else {
                         format!("{}", v.len()).to_string()
                     }
-                },
+                }
                 None => "".to_string(),
             },
             "tags.count" => match task.tags() {
                 Some(v) => {
-                    let t = v.iter()
-                        .filter(|t| t.as_str() != "PENDING")
-                        .filter(|t| t.as_str() != "ANNOTATED")
-                        .filter(|t| t.as_str() != "TAGGED")
-                        .filter(|t| t.as_str() != "PROJECT")
+                    let t = v
+                        .into_iter()
+                        .filter(|t| !tags.contains(&t.as_str()))
                         .cloned()
-                        .collect::<Vec<String>>().len();
+                        .collect::<Vec<String>>()
+                        .len();
                     if t == 0 {
                         "".to_string()
                     } else {
                         format!("{}", t).to_string()
                     }
-                },
+                }
                 None => "".to_string(),
             },
             "tags" => match task.tags() {
                 Some(v) => {
-                    let t = v.iter()
-                        .filter(|t| t.as_str() != "PENDING")
-                        .filter(|t| t.as_str() != "ANNOTATED")
-                        .filter(|t| t.as_str() != "TAGGED")
-                        .filter(|t| t.as_str() != "PROJECT")
+                    let t = v
+                        .iter()
+                        .filter(|t| !tags.contains(&t.as_str()))
                         .cloned()
                         .collect::<Vec<String>>()
                         .join(",");
                     format!("{}", t).to_string()
-                },
+                }
                 None => "".to_string(),
             },
             "description.count" => task.description().to_string(),
