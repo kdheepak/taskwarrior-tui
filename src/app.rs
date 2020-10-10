@@ -26,8 +26,8 @@ use tui::{
 };
 
 use rustyline::error::ReadlineError;
-use rustyline::Editor;
 use rustyline::line_buffer::LineBuffer;
+use rustyline::Editor;
 
 const MAX_LINE: usize = 4096;
 
@@ -247,7 +247,9 @@ impl TTApp {
                 .unwrap_or_default()
         };
         match self.mode {
-            AppMode::TaskReport => self.draw_command(f, rects[1], self.filter.as_str(), "Filter Tasks"),
+            AppMode::TaskReport => {
+                self.draw_command(f, rects[1], self.filter.as_str(), "Filter Tasks")
+            }
             AppMode::TaskFilter => {
                 f.render_widget(Clear, rects[1]);
                 f.set_cursor(rects[1].x + self.filter.pos() as u16 + 1, rects[1].y + 1);
@@ -827,10 +829,11 @@ impl TTApp {
                     Ok(_) => {
                         self.command.update("", 0);
                         Ok(())
-                    },
-                    Err(_) => Err(
-                        format!("Shell command `{}` exited with non-zero output", self.command.as_str()),
-                    )
+                    }
+                    Err(_) => Err(format!(
+                        "Shell command `{}` exited with non-zero output",
+                        self.command.as_str()
+                    )),
                 }
             }
             None => Err(format!("Unable to split `{}`", self.command.as_str())),
@@ -862,7 +865,10 @@ impl TTApp {
                     )
                 }
             }
-            None => Err(format!("Unable to run `task log` with `{}`", self.command.as_str())),
+            None => Err(format!(
+                "Unable to run `task log` with `{}`",
+                self.command.as_str()
+            )),
         }
     }
 
@@ -895,7 +901,8 @@ impl TTApp {
             }
             None => Err(format!(
                 "Unable to run `task modify` with `{}` on task {}",
-                self.modify.as_str(), &task_id
+                self.modify.as_str(),
+                &task_id
             )),
         }
     }
@@ -928,7 +935,10 @@ impl TTApp {
                     ),
                 }
             }
-            None => Err(format!("Unable to run `task add` with `{}`", self.command.as_str())),
+            None => Err(format!(
+                "Unable to run `task add` with `{}`",
+                self.command.as_str()
+            )),
         }
     }
 
@@ -953,7 +963,10 @@ impl TTApp {
                     ),
                 }
             }
-            None => Err(format!("Unable to run `task add` with `{}`", self.command.as_str())),
+            None => Err(format!(
+                "Unable to run `task add` with `{}`",
+                self.command.as_str()
+            )),
         }
     }
 
