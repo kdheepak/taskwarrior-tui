@@ -60,8 +60,6 @@ Use your favorite installation method to download the [AUR package](https://aur.
 
 ![taskwarrior-tui](https://user-images.githubusercontent.com/1813121/88654924-40896880-d08b-11ea-8709-b29cc970da4c.gif)
 
-## Thanks
+`taskwarrior-tui` supports readline-like navigation:
 
-- [taskwarrior](https://github.com/GothenburgBitFactory/taskwarrior)
-- [tui-rs](https://github.com/fdehau/tui-rs)
-- [task-hookrs](https://github.com/matthiasbeyer/task-hookrs)
+![taskwarrior-tui](https://user-images.githubusercontent.com/1813121/95651612-ce7cc900-0aa8-11eb-8686-42442ed9ee43.gif)
