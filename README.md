@@ -62,4 +62,10 @@ Use your favorite installation method to download the [AUR package](https://aur.
 
 `taskwarrior-tui` supports readline-like navigation:
 
+- `<Ctrl-a>` : Go to beginning of the line
+- `<Ctrl-e>` : Go to end of the line
+- `<Ctrl-u>` : Delete from beginning of the line
+- `<Ctrl-k>` : Delete to end of the line
+- `<Ctrl-w>` : Delete previous word
+
 ![taskwarrior-tui](https://user-images.githubusercontent.com/1813121/95651612-ce7cc900-0aa8-11eb-8686-42442ed9ee43.gif)
