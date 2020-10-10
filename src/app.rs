@@ -29,6 +29,7 @@ use rustyline::error::ReadlineError;
 use rustyline::line_buffer::LineBuffer;
 use rustyline::Editor;
 
+
 const MAX_LINE: usize = 4096;
 
 pub fn cmp(t1: &Task, t2: &Task) -> Ordering {
@@ -630,6 +631,16 @@ impl TTApp {
                 },
                 None => "".to_string(),
             },
+            "depends.count" => match task.depends() {
+                Some(v) => {
+                    if v.len() == 0 {
+                        "".to_string()
+                    } else {
+                        format!("{}", v.len()).to_string()
+                    }
+                },
+                None => "".to_string(),
+            },
             "tags.count" => match task.tags() {
                 Some(v) => {
                     let t = v.iter()
@@ -674,6 +685,7 @@ impl TTApp {
 
     pub fn task_report(&mut self) -> (Vec<Vec<String>>, Vec<String>, Vec<i16>) {
         let mut alltasks = vec![];
+
         // get all tasks as their string representation
         for task in &*(self.tasks.lock().unwrap()) {
             let mut item = vec![];
