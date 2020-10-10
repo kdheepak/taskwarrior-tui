@@ -19,6 +19,9 @@ use app::{AppMode, TTApp};
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
 
+use rustyline::At;
+use rustyline::Word;
+
 fn main() -> Result<(), Box<dyn Error>> {
     let matches = App::new(APP_NAME)
         .version(APP_VERSION)
@@ -109,33 +112,27 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                     Key::Char('m') => {
                         app.mode = AppMode::TaskModify;
                         match app.task_current() {
-                            Some(t) => app.modify = t.description().to_string(),
-                            None => app.modify = "".to_string(),
+                            Some(t) => app.modify.update(t.description(), 0),
+                            None => app.modify.update("", 0),
                         }
-                        app.cursor_location = app.modify.chars().count();
                     }
                     Key::Char('!') => {
                         app.mode = AppMode::TaskSubprocess;
-                        app.cursor_location = app.command.chars().count();
                     }
                     Key::Char('l') => {
                         app.mode = AppMode::TaskLog;
-                        app.cursor_location = app.command.chars().count();
                     }
                     Key::Char('a') => {
                         app.mode = AppMode::TaskAdd;
-                        app.cursor_location = app.command.chars().count();
                     }
                     Key::Char('A') => {
                         app.mode = AppMode::TaskAnnotate;
-                        app.cursor_location = app.command.chars().count();
                     }
                     Key::Char('?') => {
                         app.mode = AppMode::TaskHelpPopup;
                     }
                     Key::Char('/') => {
                         app.mode = AppMode::TaskFilter;
-                        app.cursor_location = app.filter.chars().count();
                     }
                     _ => {}
                 },
@@ -157,34 +154,50 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                         }
                     },
                     Key::Esc => {
-                        app.modify = "".to_string();
+                        app.modify.update("", 0);
                         app.mode = AppMode::TaskReport;
                     }
-                    Key::Right => {
-                        if app.cursor_location < app.modify.chars().count() {
-                            app.cursor_location += 1;
-                        }
+                    Key::Ctrl('f') | Key::Right => {
+                        app.modify.move_forward(1);
                     }
-                    Key::Left => {
-                        if app.cursor_location > 0 {
-                            app.cursor_location -= 1;
-                        }
+                    Key::Ctrl('b') | Key::Left => {
+                        app.modify.move_backward(1);
                     }
                     Key::Char(c) => {
-                        if app.cursor_location < app.modify.chars().count() {
-                            app.modify.insert_str(app.cursor_location, &c.to_string());
-                        } else {
-                            app.modify.push(c);
-                        }
-                        app.cursor_location += 1;
+                        app.modify.insert(c, 1);
                     }
                     Key::Backspace => {
-                        if app.cursor_location > 0 {
-                            app.cursor_location -= 1;
-                            let mut cs = app.modify.chars().collect::<Vec<char>>();
-                            cs.remove(app.cursor_location);
-                            app.modify = cs.into_iter().collect();
-                        }
+                        app.modify.backspace(1);
+                    }
+                    Key::Ctrl('d') | Key::Delete => {
+                        app.modify.delete(1);
+                    }
+                    Key::Ctrl('a') | Key::Home => {
+                        app.modify.move_home();
+                    }
+                    Key::Ctrl('e') | Key::End => {
+                        app.modify.move_end();
+                    }
+                    Key::Ctrl('k') => {
+                        app.modify.kill_line();
+                    }
+                    Key::Ctrl('u') => {
+                        app.modify.discard_line();
+                    }
+                    Key::Ctrl('w') => {
+                        app.modify.delete_prev_word(Word::Emacs, 1);
+                    }
+                    Key::Alt('d') => {
+                        app.modify.delete_word(At::AfterEnd, Word::Emacs, 1);
+                    }
+                    Key::Alt('f') => {
+                        app.modify.move_to_next_word(At::AfterEnd, Word::Emacs, 1);
+                    }
+                    Key::Alt('b') => {
+                        app.modify.move_to_prev_word(Word::Emacs, 1);
+                    }
+                    Key::Alt('t') => {
+                        app.modify.transpose_words(1);
                     }
                     _ => {}
                 },
@@ -200,34 +213,50 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                         }
                     },
                     Key::Esc => {
-                        app.command = "".to_string();
+                        app.command.update("", 0);
                         app.mode = AppMode::TaskReport;
                     }
-                    Key::Right => {
-                        if app.cursor_location < app.command.chars().count() {
-                            app.cursor_location += 1;
-                        }
+                    Key::Ctrl('f') | Key::Right => {
+                        app.command.move_forward(1);
                     }
-                    Key::Left => {
-                        if app.cursor_location > 0 {
-                            app.cursor_location -= 1;
-                        }
+                    Key::Ctrl('b') | Key::Left => {
+                        app.command.move_backward(1);
                     }
                     Key::Char(c) => {
-                        if app.cursor_location < app.command.chars().count() {
-                            app.command.insert_str(app.cursor_location, &c.to_string());
-                        } else {
-                            app.command.push(c);
-                        }
-                        app.cursor_location += 1;
+                        app.command.insert(c, 1);
                     }
                     Key::Backspace => {
-                        if app.cursor_location > 0 {
-                            app.cursor_location -= 1;
-                            let mut cs = app.command.chars().collect::<Vec<char>>();
-                            cs.remove(app.cursor_location);
-                            app.command = cs.into_iter().collect();
-                        }
+                        app.command.backspace(1);
+                    }
+                    Key::Ctrl('d') | Key::Delete => {
+                        app.command.delete(1);
+                    }
+                    Key::Ctrl('a') | Key::Home => {
+                        app.command.move_home();
+                    }
+                    Key::Ctrl('e') | Key::End => {
+                        app.command.move_end();
+                    }
+                    Key::Ctrl('k') => {
+                        app.command.kill_line();
+                    }
+                    Key::Ctrl('u') => {
+                        app.command.discard_line();
+                    }
+                    Key::Ctrl('w') => {
+                        app.command.delete_prev_word(Word::Emacs, 1);
+                    }
+                    Key::Alt('d') => {
+                        app.command.delete_word(At::AfterEnd, Word::Emacs, 1);
+                    }
+                    Key::Alt('f') => {
+                        app.command.move_to_next_word(At::AfterEnd, Word::Emacs, 1);
+                    }
+                    Key::Alt('b') => {
+                        app.command.move_to_prev_word(Word::Emacs, 1);
+                    }
+                    Key::Alt('t') => {
+                        app.command.transpose_words(1);
                     }
                     _ => {}
                 },
@@ -243,34 +272,50 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                         }
                     },
                     Key::Esc => {
-                        app.command = "".to_string();
+                        app.command.update("", 0);
                         app.mode = AppMode::TaskReport;
                     }
-                    Key::Right => {
-                        if app.cursor_location < app.command.chars().count() {
-                            app.cursor_location += 1;
-                        }
+                    Key::Ctrl('f') | Key::Right => {
+                        app.command.move_forward(1);
                     }
-                    Key::Left => {
-                        if app.cursor_location > 0 {
-                            app.cursor_location -= 1;
-                        }
+                    Key::Ctrl('b') | Key::Left => {
+                        app.command.move_backward(1);
                     }
                     Key::Char(c) => {
-                        if app.cursor_location < app.command.chars().count() {
-                            app.command.insert_str(app.cursor_location, &c.to_string());
-                        } else {
-                            app.command.push(c);
-                        }
-                        app.cursor_location += 1;
+                        app.command.insert(c, 1);
                     }
                     Key::Backspace => {
-                        if app.cursor_location > 0 {
-                            app.cursor_location -= 1;
-                            let mut cs = app.command.chars().collect::<Vec<char>>();
-                            cs.remove(app.cursor_location);
-                            app.command = cs.into_iter().collect();
-                        }
+                        app.command.backspace(1);
+                    }
+                    Key::Ctrl('d') | Key::Delete => {
+                        app.command.delete(1);
+                    }
+                    Key::Ctrl('a') | Key::Home => {
+                        app.command.move_home();
+                    }
+                    Key::Ctrl('e') | Key::End => {
+                        app.command.move_end();
+                    }
+                    Key::Ctrl('k') => {
+                        app.command.kill_line();
+                    }
+                    Key::Ctrl('u') => {
+                        app.command.discard_line();
+                    }
+                    Key::Ctrl('w') => {
+                        app.command.delete_prev_word(Word::Emacs, 1);
+                    }
+                    Key::Alt('d') => {
+                        app.command.delete_word(At::AfterEnd, Word::Emacs, 1);
+                    }
+                    Key::Alt('f') => {
+                        app.command.move_to_next_word(At::AfterEnd, Word::Emacs, 1);
+                    }
+                    Key::Alt('b') => {
+                        app.command.move_to_prev_word(Word::Emacs, 1);
+                    }
+                    Key::Alt('t') => {
+                        app.command.transpose_words(1);
                     }
                     _ => {}
                 },
@@ -286,34 +331,50 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                         }
                     },
                     Key::Esc => {
-                        app.command = "".to_string();
+                        app.command.update("", 0);
                         app.mode = AppMode::TaskReport;
                     }
-                    Key::Right => {
-                        if app.cursor_location < app.command.chars().count() {
-                            app.cursor_location += 1;
-                        }
+                    Key::Ctrl('f') | Key::Right => {
+                        app.command.move_forward(1);
                     }
-                    Key::Left => {
-                        if app.cursor_location > 0 {
-                            app.cursor_location -= 1;
-                        }
+                    Key::Ctrl('b') | Key::Left => {
+                        app.command.move_backward(1);
                     }
                     Key::Char(c) => {
-                        if app.cursor_location < app.command.chars().count() {
-                            app.command.insert_str(app.cursor_location, &c.to_string());
-                        } else {
-                            app.command.push(c);
-                        }
-                        app.cursor_location += 1;
+                        app.command.insert(c, 1);
                     }
                     Key::Backspace => {
-                        if app.cursor_location > 0 {
-                            app.cursor_location -= 1;
-                            let mut cs = app.command.chars().collect::<Vec<char>>();
-                            cs.remove(app.cursor_location);
-                            app.command = cs.into_iter().collect();
-                        }
+                        app.command.backspace(1);
+                    }
+                    Key::Ctrl('d') | Key::Delete => {
+                        app.command.delete(1);
+                    }
+                    Key::Ctrl('a') | Key::Home => {
+                        app.command.move_home();
+                    }
+                    Key::Ctrl('e') | Key::End => {
+                        app.command.move_end();
+                    }
+                    Key::Ctrl('k') => {
+                        app.command.kill_line();
+                    }
+                    Key::Ctrl('u') => {
+                        app.command.discard_line();
+                    }
+                    Key::Ctrl('w') => {
+                        app.command.delete_prev_word(Word::Emacs, 1);
+                    }
+                    Key::Alt('d') => {
+                        app.command.delete_word(At::AfterEnd, Word::Emacs, 1);
+                    }
+                    Key::Alt('f') => {
+                        app.command.move_to_next_word(At::AfterEnd, Word::Emacs, 1);
+                    }
+                    Key::Alt('b') => {
+                        app.command.move_to_prev_word(Word::Emacs, 1);
+                    }
+                    Key::Alt('t') => {
+                        app.command.transpose_words(1);
                     }
                     _ => {}
                 },
@@ -329,34 +390,50 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                         }
                     },
                     Key::Esc => {
-                        app.command = "".to_string();
+                        app.command.update("", 0);
                         app.mode = AppMode::TaskReport;
                     }
-                    Key::Right => {
-                        if app.cursor_location < app.command.chars().count() {
-                            app.cursor_location += 1;
-                        }
+                    Key::Ctrl('f') | Key::Right => {
+                        app.command.move_forward(1);
                     }
-                    Key::Left => {
-                        if app.cursor_location > 0 {
-                            app.cursor_location -= 1;
-                        }
+                    Key::Ctrl('b') | Key::Left => {
+                        app.command.move_backward(1);
                     }
                     Key::Char(c) => {
-                        if app.cursor_location < app.command.chars().count() {
-                            app.command.insert_str(app.cursor_location, &c.to_string());
-                        } else {
-                            app.command.push(c);
-                        }
-                        app.cursor_location += 1;
+                        app.command.insert(c, 1);
                     }
                     Key::Backspace => {
-                        if app.cursor_location > 0 {
-                            app.cursor_location -= 1;
-                            let mut cs = app.command.chars().collect::<Vec<char>>();
-                            cs.remove(app.cursor_location);
-                            app.command = cs.into_iter().collect();
-                        }
+                        app.command.backspace(1);
+                    }
+                    Key::Ctrl('d') | Key::Delete => {
+                        app.command.delete(1);
+                    }
+                    Key::Ctrl('a') | Key::Home => {
+                        app.command.move_home();
+                    }
+                    Key::Ctrl('e') | Key::End => {
+                        app.command.move_end();
+                    }
+                    Key::Ctrl('k') => {
+                        app.command.kill_line();
+                    }
+                    Key::Ctrl('u') => {
+                        app.command.discard_line();
+                    }
+                    Key::Ctrl('w') => {
+                        app.command.delete_prev_word(Word::Emacs, 1);
+                    }
+                    Key::Alt('d') => {
+                        app.command.delete_word(At::AfterEnd, Word::Emacs, 1);
+                    }
+                    Key::Alt('f') => {
+                        app.command.move_to_next_word(At::AfterEnd, Word::Emacs, 1);
+                    }
+                    Key::Alt('b') => {
+                        app.command.move_to_prev_word(Word::Emacs, 1);
+                    }
+                    Key::Alt('t') => {
+                        app.command.transpose_words(1);
                     }
                     _ => {}
                 },
@@ -365,31 +442,47 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                         app.mode = AppMode::TaskReport;
                         app.update();
                     }
-                    Key::Right => {
-                        if app.cursor_location < app.filter.chars().count() {
-                            app.cursor_location += 1;
-                        }
+                    Key::Ctrl('f') | Key::Right => {
+                        app.filter.move_forward(1);
                     }
-                    Key::Left => {
-                        if app.cursor_location > 0 {
-                            app.cursor_location -= 1;
-                        }
+                    Key::Ctrl('b') | Key::Left => {
+                        app.filter.move_backward(1);
                     }
                     Key::Char(c) => {
-                        if app.cursor_location < app.filter.chars().count() {
-                            app.filter.insert_str(app.cursor_location, &c.to_string());
-                        } else {
-                            app.filter.push(c);
-                        }
-                        app.cursor_location += 1;
+                        app.filter.insert(c, 1);
                     }
                     Key::Backspace => {
-                        if app.cursor_location > 0 {
-                            app.cursor_location -= 1;
-                            let mut cs = app.filter.chars().collect::<Vec<char>>();
-                            cs.remove(app.cursor_location);
-                            app.filter = cs.into_iter().collect();
-                        }
+                        app.filter.backspace(1);
+                    }
+                    Key::Ctrl('d') | Key::Delete => {
+                        app.filter.delete(1);
+                    }
+                    Key::Ctrl('a') | Key::Home => {
+                        app.filter.move_home();
+                    }
+                    Key::Ctrl('e') | Key::End => {
+                        app.filter.move_end();
+                    }
+                    Key::Ctrl('k') => {
+                        app.filter.kill_line();
+                    }
+                    Key::Ctrl('u') => {
+                        app.filter.discard_line();
+                    }
+                    Key::Ctrl('w') => {
+                        app.filter.delete_prev_word(Word::Emacs, 1);
+                    }
+                    Key::Alt('d') => {
+                        app.filter.delete_word(At::AfterEnd, Word::Emacs, 1);
+                    }
+                    Key::Alt('f') => {
+                        app.filter.move_to_next_word(At::AfterEnd, Word::Emacs, 1);
+                    }
+                    Key::Alt('b') => {
+                        app.filter.move_to_prev_word(Word::Emacs, 1);
+                    }
+                    Key::Alt('t') => {
+                        app.filter.transpose_words(1);
                     }
                     _ => {}
                 },

@@ -25,6 +25,12 @@ use tui::{
     widgets::{Block, Borders, Clear, Paragraph, Row, Table, TableState},
 };
 
+use rustyline::error::ReadlineError;
+use rustyline::line_buffer::LineBuffer;
+use rustyline::Editor;
+
+const MAX_LINE: usize = 4096;
+
 pub fn cmp(t1: &Task, t2: &Task) -> Ordering {
     let urgency1 = match &t1.uda()["urgency"] {
         UDAValue::Str(_) => 0.0,
@@ -127,13 +133,12 @@ pub enum AppMode {
 pub struct TTApp {
     pub should_quit: bool,
     pub state: TableState,
-    pub cursor_location: usize,
-    pub filter: String,
     pub context_filter: String,
     pub context_name: String,
-    pub command: String,
+    pub command: LineBuffer,
+    pub filter: LineBuffer,
+    pub modify: LineBuffer,
     pub error: String,
-    pub modify: String,
     pub tasks: Arc<Mutex<Vec<Task>>>,
     pub task_report_labels: Vec<String>,
     pub task_report_columns: Vec<String>,
@@ -149,16 +154,18 @@ impl TTApp {
             tasks: Arc::new(Mutex::new(vec![])),
             task_report_labels: vec![],
             task_report_columns: vec![],
-            filter: "status:pending ".to_string(),
             context_filter: "".to_string(),
             context_name: "".to_string(),
-            cursor_location: 0,
-            command: "".to_string(),
-            modify: "".to_string(),
+            command: LineBuffer::with_capacity(MAX_LINE),
+            filter: LineBuffer::with_capacity(MAX_LINE),
+            modify: LineBuffer::with_capacity(MAX_LINE),
             error: "".to_string(),
             mode: AppMode::TaskReport,
             colors: TColorConfig::default(),
         };
+        for c in "status:pending ".chars() {
+            app.filter.insert(c, 1);
+        }
         app.get_context();
         app.update();
         app
@@ -240,53 +247,55 @@ impl TTApp {
                 .unwrap_or_default()
         };
         match self.mode {
-            AppMode::TaskReport => self.draw_command(f, rects[1], &self.filter[..], "Filter Tasks"),
+            AppMode::TaskReport => {
+                self.draw_command(f, rects[1], self.filter.as_str(), "Filter Tasks")
+            }
             AppMode::TaskFilter => {
                 f.render_widget(Clear, rects[1]);
-                f.set_cursor(rects[1].x + self.cursor_location as u16 + 1, rects[1].y + 1);
-                self.draw_command(f, rects[1], &self.filter[..], "Filter Tasks");
+                f.set_cursor(rects[1].x + self.filter.pos() as u16 + 1, rects[1].y + 1);
+                self.draw_command(f, rects[1], self.filter.as_str(), "Filter Tasks");
             }
             AppMode::TaskModify => {
-                f.set_cursor(rects[1].x + self.cursor_location as u16 + 1, rects[1].y + 1);
+                f.set_cursor(rects[1].x + self.modify.pos() as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
                 self.draw_command(
                     f,
                     rects[1],
-                    &self.modify[..],
+                    self.modify.as_str(),
                     format!("Modify Task {}", task_id).as_str(),
                 );
             }
             AppMode::TaskLog => {
-                f.set_cursor(rects[1].x + self.cursor_location as u16 + 1, rects[1].y + 1);
+                f.set_cursor(rects[1].x + self.command.pos() as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
-                self.draw_command(f, rects[1], &self.command[..], "Log Task");
+                self.draw_command(f, rects[1], self.command.as_str(), "Log Task");
             }
             AppMode::TaskSubprocess => {
-                f.set_cursor(rects[1].x + self.cursor_location as u16 + 1, rects[1].y + 1);
+                f.set_cursor(rects[1].x + self.command.pos() as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
-                self.draw_command(f, rects[1], &self.command[..], "Shell Command");
+                self.draw_command(f, rects[1], self.command.as_str(), "Shell Command");
             }
             AppMode::TaskAnnotate => {
-                f.set_cursor(rects[1].x + self.cursor_location as u16 + 1, rects[1].y + 1);
+                f.set_cursor(rects[1].x + self.command.pos() as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
                 self.draw_command(
                     f,
                     rects[1],
-                    &self.command[..],
+                    self.command.as_str(),
                     format!("Annotate Task {}", task_id).as_str(),
                 );
             }
             AppMode::TaskAdd => {
-                f.set_cursor(rects[1].x + self.cursor_location as u16 + 1, rects[1].y + 1);
+                f.set_cursor(rects[1].x + self.command.pos() as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
-                self.draw_command(f, rects[1], &self.command[..], "Add Task");
+                self.draw_command(f, rects[1], self.command.as_str(), "Add Task");
             }
             AppMode::TaskError => {
                 f.render_widget(Clear, rects[1]);
-                self.draw_command(f, rects[1], &self.error[..], "Error");
+                self.draw_command(f, rects[1], self.error.as_str(), "Error");
             }
             AppMode::TaskHelpPopup => {
-                self.draw_command(f, rects[1], &self.filter[..], "Filter Tasks");
+                self.draw_command(f, rects[1], self.filter.as_str(), "Filter Tasks");
                 self.draw_help_popup(f, f.size());
             }
             AppMode::Calendar => {
@@ -772,10 +781,10 @@ impl TTApp {
         task.arg("export");
 
         let filter = if self.context_filter != "".to_string() {
-            let t = format!("{} {}", self.filter, self.context_filter);
+            let t = format!("{} {}", self.filter.as_str(), self.context_filter);
             t
         } else {
-            self.filter.clone()
+            self.filter.as_str().into()
         };
         match shlex::split(&filter) {
             Some(cmd) => {
@@ -818,15 +827,16 @@ impl TTApp {
                 let output = command.output();
                 match output {
                     Ok(_) => {
-                        self.command = "".to_string();
+                        self.command.update("", 0);
                         Ok(())
-                    },
-                    Err(_) => Err(
-                        format!("Shell command `{}` exited with non-zero output", self.command),
-                    )
+                    }
+                    Err(_) => Err(format!(
+                        "Shell command `{}` exited with non-zero output",
+                        self.command.as_str()
+                    )),
                 }
             }
-            None => Err(format!("Unable to split `{}`", &self.command)),
+            None => Err(format!("Unable to split `{}`", self.command.as_str())),
         }
     }
 
@@ -847,7 +857,7 @@ impl TTApp {
                 let output = command.output();
                 match output {
                     Ok(_) => {
-                        self.command = "".to_string();
+                        self.command.update("", 0);
                         Ok(())
                     },
                     Err(_) => Err(
@@ -855,7 +865,10 @@ impl TTApp {
                     )
                 }
             }
-            None => Err(format!("Unable to run `task log` with `{}`", &self.command)),
+            None => Err(format!(
+                "Unable to run `task log` with `{}`",
+                self.command.as_str()
+            )),
         }
     }
 
@@ -878,7 +891,7 @@ impl TTApp {
                 let output = command.output();
                 match output {
                     Ok(_) => {
-                        self.modify = "".to_string();
+                        self.modify.update("", 0);
                         Ok(())
                     },
                     Err(_) => Err(
@@ -888,7 +901,8 @@ impl TTApp {
             }
             None => Err(format!(
                 "Unable to run `task modify` with `{}` on task {}",
-                &self.modify, &task_id
+                self.modify.as_str(),
+                &task_id
             )),
         }
     }
@@ -912,7 +926,7 @@ impl TTApp {
                 let output = command.output();
                 match output {
                     Ok(_) => {
-                        self.command = "".to_string();
+                        self.command.update("", 0);
                         Ok(())
                     }
                     Err(_) => Err(
@@ -921,7 +935,10 @@ impl TTApp {
                     ),
                 }
             }
-            None => Err(format!("Unable to run `task add` with `{}`", &self.command)),
+            None => Err(format!(
+                "Unable to run `task add` with `{}`",
+                self.command.as_str()
+            )),
         }
     }
 
@@ -937,7 +954,7 @@ impl TTApp {
                 let output = command.output();
                 match output {
                     Ok(_) => {
-                        self.command = "".to_string();
+                        self.command.update("", 0);
                         Ok(())
                     }
                     Err(_) => Err(
@@ -946,7 +963,10 @@ impl TTApp {
                     ),
                 }
             }
-            None => Err(format!("Unable to run `task add` with `{}`", &self.command)),
+            None => Err(format!(
+                "Unable to run `task add` with `{}`",
+                self.command.as_str()
+            )),
         }
     }
 
