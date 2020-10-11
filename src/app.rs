@@ -815,9 +815,7 @@ impl TTApp {
         }
         let constraints: Vec<Constraint> = widths
             .iter()
-            .map(|i| {
-                Constraint::Percentage(std::cmp::min(70, std::cmp::max(*i, 5)).try_into().unwrap())
-            })
+            .map(|i| Constraint::Length((*i).try_into().unwrap_or(10)))
             .collect();
 
         let t = Table::new(header, rows.into_iter())
