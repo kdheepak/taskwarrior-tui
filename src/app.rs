@@ -762,7 +762,6 @@ impl TTApp {
         if task.tags().unwrap_or(&vec![]).contains(&"TODAY".to_string()) {
             style = style.fg(self.colors.due_today.fg).bg(self.colors.due_today.bg);
         }
-
         return style;
     }
 
