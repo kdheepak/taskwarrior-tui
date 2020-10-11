@@ -790,8 +790,8 @@ impl TTApp {
                 .contains(&"BLOCKING".to_string())
             {
                 normal_style = normal_style
-                    .fg(self.colors.blocked.fg)
-                    .bg(self.colors.blocked.bg);
+                    .fg(self.colors.blocking.fg)
+                    .bg(self.colors.blocking.bg);
             }
             if self.tasks.lock().unwrap()[i]
                 .tags()
