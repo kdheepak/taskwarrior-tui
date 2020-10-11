@@ -839,7 +839,7 @@ impl TTApp {
 
         let t = Table::new(header, rows.into_iter())
             .block(Block::default().borders(Borders::ALL).title("Task next"))
-            .highlight_style(highlight_style.add_modifier(Modifier::BOLD))
+            .highlight_style(highlight_style)
             .highlight_symbol("• ")
             .widths(&constraints);
         f.render_stateful_widget(t, rect, &mut self.state);
