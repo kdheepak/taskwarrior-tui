@@ -760,15 +760,15 @@ impl TTApp {
         }
     }
 
-    fn normal_style_for_task(&self, task: &Task) -> Style {
+    fn style_for_task(&self, task: &Task) -> Style {
 
-        let mut normal_style = Style::default();
+        let mut style = Style::default();
         if task
             .tags()
             .unwrap_or(&vec![])
             .contains(&"ACTIVE".to_string())
         {
-            normal_style = normal_style
+            style = style
                 .fg(self.colors.active.fg)
                 .bg(self.colors.active.bg);
         }
@@ -777,7 +777,7 @@ impl TTApp {
             .unwrap_or(&vec![])
             .contains(&"BLOCKING".to_string())
         {
-            normal_style = normal_style
+            style = style
                 .fg(self.colors.blocking.fg)
                 .bg(self.colors.blocking.bg);
         }
@@ -786,7 +786,7 @@ impl TTApp {
             .unwrap_or(&vec![])
             .contains(&"BLOCKED".to_string())
         {
-            normal_style = normal_style
+            style = style
                 .fg(self.colors.blocked.fg)
                 .bg(self.colors.blocked.bg);
         }
@@ -795,7 +795,7 @@ impl TTApp {
             .unwrap_or(&vec![])
             .contains(&"DUE".to_string())
         {
-            normal_style = normal_style
+            style = style
                 .fg(self.colors.due.fg)
                 .bg(self.colors.due.bg);
         }
@@ -804,7 +804,7 @@ impl TTApp {
             .unwrap_or(&vec![])
             .contains(&"OVERDUE".to_string())
         {
-            normal_style = normal_style
+            style = style
                 .fg(self.colors.overdue.fg)
                 .bg(self.colors.overdue.bg);
         }
@@ -813,12 +813,12 @@ impl TTApp {
             .unwrap_or(&vec![])
             .contains(&"TODAY".to_string())
         {
-            normal_style = normal_style
+            style = style
                 .fg(self.colors.due_today.fg)
                 .bg(self.colors.due_today.bg);
         }
 
-        return normal_style;
+        return style;
 
     }
 
@@ -836,11 +836,11 @@ impl TTApp {
         let mut rows = vec![];
         let mut highlight_style = Style::default();
         for (i, task) in tasks.into_iter().enumerate() {
-            let normal_style = self.normal_style_for_task(&self.tasks.lock().unwrap()[i]);
+            let style = self.style_for_task(&self.tasks.lock().unwrap()[i]);
             if i == selected {
-                highlight_style = normal_style.add_modifier(Modifier::BOLD);
+                highlight_style = style.add_modifier(Modifier::BOLD);
             }
-            rows.push(Row::StyledData(task.into_iter(), normal_style));
+            rows.push(Row::StyledData(task.into_iter(), style));
         }
         let constraints: Vec<Constraint> = widths
             .iter()
