@@ -27,7 +27,7 @@ rand = "0.7"
 shlex = "0.1"
 chrono = "0.4"
 unicode-width = "0.1"
-tui = { version = "0.10", optional = true, default-features = false }
+tui = { version = "0.12", optional = true, default-features = false }
 crossterm = { version = "0.17", optional = true, default-features = false }
 rustyline = "6.3.0"
 uuid = { version = "0.8.1", features = ["serde", "v4"] }

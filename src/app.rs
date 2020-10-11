@@ -198,13 +198,13 @@ impl TaskReportTable {
         }
     }
 
-    pub fn simplify_table(&mut self) -> (Vec<Vec<String>>, Vec<String>, Vec<i16>) {
+    pub fn simplify_table(&mut self) -> (Vec<Vec<String>>, Vec<String>) {
         // find which columns are empty
         let null_columns_len;
         if !self.tasks.is_empty() {
             null_columns_len = self.tasks[0].len();
         } else {
-            return (vec![], vec![], vec![]);
+            return (vec![], vec![]);
         }
 
         let mut null_columns = vec![0; null_columns_len];
@@ -236,17 +236,7 @@ impl TaskReportTable {
             .map(|(_, e)| e.to_owned())
             .collect();
 
-        // set widths proportional to the content
-        let mut widths: Vec<i16> = vec![0; tasks[0].len()];
-        for task in &tasks {
-            for (i, attr) in task.iter().enumerate() {
-                widths[i] = std::cmp::min(
-                    attr.len() as i64 * 100 / task.iter().map(|s| s.len() as i64).sum::<i64>(),
-                    i16::max_value().into(),
-                ) as i16
-            }
-        }
-        (tasks, headers, widths)
+        (tasks, headers)
     }
 
     pub fn get_string_attribute(&self, attribute: &str, task: &Task) -> String {
@@ -770,11 +760,23 @@ impl TTApp {
     }
 
     fn draw_task_report(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
-        let (tasks, headers, widths) = self.task_report();
+        let (tasks, headers) = self.task_report();
         if tasks.is_empty() {
             f.render_widget(Block::default().borders(Borders::ALL).title("Task next"), rect);
             return;
         }
+
+        // set widths proportional to the content
+        let mut widths: Vec<i16> = vec![0; tasks[0].len()];
+        for task in &tasks {
+            for (i, attr) in task.iter().enumerate() {
+                widths[i] = std::cmp::min(
+                    attr.len() as i64 * 100 / task.iter().map(|s| s.len() as i64).sum::<i64>(),
+                    i16::max_value().into(),
+                ) as i16
+            }
+        }
+
         let selected = self.state.selected().unwrap_or_default();
         let header = headers.iter();
         let mut rows = vec![];
@@ -786,6 +788,7 @@ impl TTApp {
             }
             rows.push(Row::StyledData(task.into_iter(), style));
         }
+
         let constraints: Vec<Constraint> = widths
             .iter()
             .map(|i| Constraint::Length((*i).try_into().unwrap_or(10)))
@@ -800,14 +803,14 @@ impl TTApp {
         f.render_stateful_widget(t, rect, &mut self.state);
     }
 
-    pub fn task_report(&mut self) -> (Vec<Vec<String>>, Vec<String>, Vec<i16>) {
+    pub fn task_report(&mut self) -> (Vec<Vec<String>>, Vec<String>) {
         let alltasks = &*(self.tasks.lock().unwrap());
 
         self.task_report_table.generate_table(alltasks);
 
-        let (tasks, headers, widths) = self.task_report_table.simplify_table();
+        let (tasks, headers) = self.task_report_table.simplify_table();
 
-        (tasks, headers, widths)
+        (tasks, headers)
     }
 
     pub fn update(&mut self) {
