@@ -766,14 +766,40 @@ impl TTApp {
             return;
         }
 
+        let maximum_column_width = rect.width as i16 / tasks[0].len() as i16;
+        let mut description_column_width = rect.width as i16 / tasks[0].len() as i16;
+        let mut description_column_index = 0;
+
         // set widths proportional to the content
         let mut widths: Vec<i16> = vec![0; tasks[0].len()];
+
+        for (i, header) in headers.iter().enumerate() {
+            widths[i] = header.len() as i16 + 4;
+            if header != "Description" {
+                description_column_width += std::cmp::max(0, maximum_column_width - widths[i]);
+            } else {
+                description_column_index = i;
+            }
+        }
+
+        let sum_of_remaining_widths: i16 = widths
+            .iter()
+            .enumerate()
+            .filter(|(i, w)| i != &description_column_index)
+            .map(|(i, w)| w)
+            .sum();
+
+        if description_column_width + sum_of_remaining_widths >= rect.width as i16 - 4 {
+            description_column_width = rect.width as i16 - sum_of_remaining_widths - 10;
+        }
+
         for task in &tasks {
             for (i, attr) in task.iter().enumerate() {
-                widths[i] = std::cmp::min(
-                    attr.len() as i64 * 100 / task.iter().map(|s| s.len() as i64).sum::<i64>(),
-                    i16::max_value().into(),
-                ) as i16
+                if i == description_column_index {
+                    widths[i] = std::cmp::max(widths[i], std::cmp::min(attr.len() as i16, description_column_width));
+                } else {
+                    widths[i] = std::cmp::max(widths[i], std::cmp::min(attr.len() as i16, maximum_column_width));
+                }
             }
         }
 
@@ -791,7 +817,7 @@ impl TTApp {
 
         let constraints: Vec<Constraint> = widths
             .iter()
-            .map(|i| Constraint::Length((*i).try_into().unwrap_or(10)))
+            .map(|i| Constraint::Min((*i).try_into().unwrap_or(10)))
             .collect();
 
         let t = Table::new(header, rows.into_iter())
