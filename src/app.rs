@@ -774,13 +774,14 @@ impl TTApp {
         let mut widths: Vec<i16> = vec![0; tasks[0].len()];
 
         for (i, header) in headers.iter().enumerate() {
-            widths[i] = header.len() as i16 + 4;
+            widths[i] = header.len() as i16 + 2;
             if header != "Description" {
                 description_column_width += std::cmp::max(0, maximum_column_width - widths[i]);
             } else {
                 description_column_index = i;
             }
         }
+        widths[0] += 1;
 
         let sum_of_remaining_widths: i16 = widths
             .iter()
@@ -796,7 +797,7 @@ impl TTApp {
         for task in &tasks {
             for (i, attr) in task.iter().enumerate() {
                 if i == description_column_index {
-                    widths[i] = std::cmp::max(widths[i], std::cmp::min(attr.len() as i16, description_column_width));
+                    widths[i] = std::cmp::max(widths[i], std::cmp::min(attr.len() as i16 + 2, description_column_width));
                 } else {
                     widths[i] = std::cmp::max(widths[i], std::cmp::min(attr.len() as i16, maximum_column_width));
                 }
