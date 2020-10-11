@@ -199,6 +199,58 @@ impl TaskReportTable {
 
     }
 
+    pub fn simplify_table(&mut self) -> (Vec<Vec<String>>, Vec<String>, Vec<i16>) {
+        // find which columns are empty
+        let null_columns_len;
+        if !self.tasks.is_empty() {
+            null_columns_len = self.tasks[0].len();
+        } else {
+            return (vec![], vec![], vec![]);
+        }
+
+        let mut null_columns = vec![0; null_columns_len];
+        for task in &self.tasks {
+            for (i, s) in task.iter().enumerate() {
+                null_columns[i] += s.len();
+            }
+        }
+
+        // filter out columns where everything is empty
+        let mut tasks = vec![];
+        for task in &self.tasks {
+            let t = task.clone();
+            let t: Vec<String> = t
+                .iter()
+                .enumerate()
+                .filter(|&(i, _)| null_columns[i] != 0)
+                .map(|(_, e)| e.to_owned())
+                .collect();
+            tasks.push(t);
+        }
+
+        // filter out header where all columns are empty
+        let headers: Vec<String> = self
+            .labels
+            .iter()
+            .enumerate()
+            .filter(|&(i, _)| null_columns[i] != 0)
+            .map(|(_, e)| e.to_owned())
+            .collect();
+
+        // set widths proportional to the content
+        let mut widths: Vec<i16> = vec![0; tasks[0].len()];
+        for task in &tasks {
+            for (i, attr) in task.iter().enumerate() {
+                widths[i] = std::cmp::min(
+                    attr.len() as i64 * 100 / task.iter().map(|s| s.len() as i64).sum::<i64>(),
+                    i16::max_value().into(),
+                ) as i16
+            }
+        }
+        (tasks, headers, widths)
+    }
+
+
     pub fn get_string_attribute(&self, attribute: &str, task: &Task) -> String {
         let tags = vec![
             "PROJECT",
@@ -786,55 +838,7 @@ impl TTApp {
 
         self.task_report_table.generate_table(alltasks);
 
-        // find which columns are empty
-        let null_columns_len;
-        if !self.task_report_table.tasks.is_empty() {
-            null_columns_len = self.task_report_table.tasks[0].len();
-        } else {
-            return (vec![], vec![], vec![]);
-        }
-
-        let mut null_columns = vec![0; null_columns_len];
-        for task in &self.task_report_table.tasks {
-            for (i, s) in task.iter().enumerate() {
-                null_columns[i] += s.len();
-            }
-        }
-
-        // filter out columns where everything is empty
-        let mut tasks = vec![];
-        for task in &self.task_report_table.tasks {
-            let t = task.clone();
-            let t: Vec<String> = t
-                .iter()
-                .enumerate()
-                .filter(|&(i, _)| null_columns[i] != 0)
-                .map(|(_, e)| e.to_owned())
-                .collect();
-            tasks.push(t);
-        }
-
-        // filter out header where all columns are empty
-        let headers: Vec<String> = self
-            .task_report_table.labels
-            .iter()
-            .enumerate()
-            .filter(|&(i, _)| null_columns[i] != 0)
-            .map(|(_, e)| e.to_owned())
-            .collect();
-
-        // set widths proportional to the content
-        let mut widths: Vec<i16> = vec![0; tasks[0].len()];
-        for task in &tasks {
-            for (i, attr) in task.iter().enumerate() {
-                widths[i] = std::cmp::min(
-                    attr.len() as i64 * 100 / task.iter().map(|s| s.len() as i64).sum::<i64>(),
-                    i16::max_value().into(),
-                ) as i16
-            }
-        }
-
-        (tasks, headers, widths)
+        return self.task_report_table.simplify_table();
     }
 
     pub fn update(&mut self) {
