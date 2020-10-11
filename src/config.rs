@@ -192,10 +192,23 @@ impl TConfig {
             }
         }
 
+        let mut bool_collection = HashMap::new();
+        for line in data.split('\n') {
+            for attribute in &attributes {
+                if line.starts_with(attribute) {
+                    bool_collection.insert(
+                        attribute.to_string(),
+                        line.trim_start_matches(attribute).trim_start_matches(" ") == "yes",
+                    );
+                }
+            }
+        }
+
+
         Self {
             enabled: true,
-            obfuscate: true,
-            print_empty_columns: true,
+            obfuscate: bool_collection.get("obfuscate").cloned().unwrap_or(false),
+            print_empty_columns: bool_collection.get("print_empty_columns").cloned().unwrap_or(false),
             color_active: color_collection.get("active").cloned().unwrap_or(TColor::default()),
             color_alternate: color_collection.get("alternate").cloned().unwrap_or(TColor::default()),
             color_blocked: color_collection.get("blocked").cloned().unwrap_or(TColor::default()),
