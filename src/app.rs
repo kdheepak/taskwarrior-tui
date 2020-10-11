@@ -130,6 +130,21 @@ pub enum AppMode {
     Calendar,
 }
 
+pub struct TaskReportTable {
+    pub labels: Vec<String>,
+    pub columns: Vec<String>,
+}
+
+impl TaskReportTable {
+    pub fn new() -> Self {
+        let task_report_table = Self {
+            labels: vec![],
+            columns: vec![],
+        };
+        task_report_table
+    }
+}
+
 pub struct TTApp {
     pub should_quit: bool,
     pub state: TableState,
@@ -140,8 +155,7 @@ pub struct TTApp {
     pub modify: LineBuffer,
     pub error: String,
     pub tasks: Arc<Mutex<Vec<Task>>>,
-    pub task_report_labels: Vec<String>,
-    pub task_report_columns: Vec<String>,
+    pub task_report_table: TaskReportTable,
     pub mode: AppMode,
     pub colors: TColorConfig,
 }
@@ -152,8 +166,6 @@ impl TTApp {
             should_quit: false,
             state: TableState::default(),
             tasks: Arc::new(Mutex::new(vec![])),
-            task_report_labels: vec![],
-            task_report_columns: vec![],
             context_filter: "".to_string(),
             context_name: "".to_string(),
             command: LineBuffer::with_capacity(MAX_LINE),
@@ -162,6 +174,7 @@ impl TTApp {
             error: "".to_string(),
             mode: AppMode::TaskReport,
             colors: TColorConfig::default(),
+            task_report_table: TaskReportTable::new(),
         };
         for c in "status:pending ".chars() {
             app.filter.insert(c, 1);
@@ -717,7 +730,7 @@ impl TTApp {
         // get all tasks as their string representation
         for task in &*(self.tasks.lock().unwrap()) {
             let mut item = vec![];
-            for name in &self.task_report_columns {
+            for name in &self.task_report_table.columns {
                 let s = self.get_string_attribute(name, &task);
                 item.push(s);
             }
@@ -754,7 +767,7 @@ impl TTApp {
 
         // filter out header where all columns are empty
         let headers: Vec<String> = self
-            .task_report_labels
+            .task_report_table.labels
             .iter()
             .enumerate()
             .filter(|&(i, _)| null_columns[i] != 0)
@@ -815,8 +828,8 @@ impl TTApp {
     }
 
     pub fn export_headers(&mut self) {
-        self.task_report_columns = vec![];
-        self.task_report_labels = vec![];
+        self.task_report_table.columns = vec![];
+        self.task_report_table.labels = vec![];
 
         let output = Command::new("task")
             .arg("show")
@@ -829,7 +842,7 @@ impl TTApp {
             if line.starts_with("report.next.columns") {
                 let column_names: &str = line.split(' ').collect::<Vec<&str>>()[1];
                 for column in column_names.split(',') {
-                    self.task_report_columns.push(column.to_string());
+                    self.task_report_table.columns.push(column.to_string());
                 }
             }
         }
@@ -845,7 +858,7 @@ impl TTApp {
             if line.starts_with("report.next.labels") {
                 let label_names: &str = line.split(' ').collect::<Vec<&str>>()[1];
                 for label in label_names.split(',') {
-                    self.task_report_labels.push(label.to_string());
+                    self.task_report_table.labels.push(label.to_string());
                 }
             }
         }
