@@ -287,10 +287,7 @@ impl TaskReportTable {
         match attribute {
             "id" => task.id().unwrap_or_default().to_string(),
             "due.relative" => match task.due() {
-                Some(v) => vague_format_date_time(
-                    Local::now().naive_utc(),
-                    NaiveDateTime::new(v.date(), v.time()),
-                ),
+                Some(v) => vague_format_date_time(Local::now().naive_utc(), NaiveDateTime::new(v.date(), v.time())),
                 None => "".to_string(),
             },
             "entry.age" => vague_format_date_time(
@@ -298,10 +295,7 @@ impl TaskReportTable {
                 Local::now().naive_utc(),
             ),
             "start.age" => match task.start() {
-                Some(v) => vague_format_date_time(
-                    NaiveDateTime::new(v.date(), v.time()),
-                    Local::now().naive_utc(),
-                ),
+                Some(v) => vague_format_date_time(NaiveDateTime::new(v.date(), v.time()), Local::now().naive_utc()),
                 None => "".to_string(),
             },
             "project" => match task.project() {
@@ -468,14 +462,10 @@ impl TTApp {
         let task_id = if tasks_len == 0 {
             0
         } else {
-            self.tasks.lock().unwrap()[selected]
-                .id()
-                .unwrap_or_default()
+            self.tasks.lock().unwrap()[selected].id().unwrap_or_default()
         };
         match self.mode {
-            AppMode::TaskReport => {
-                self.draw_command(f, rects[1], self.filter.as_str(), "Filter Tasks")
-            }
+            AppMode::TaskReport => self.draw_command(f, rects[1], self.filter.as_str(), "Filter Tasks"),
             AppMode::TaskFilter => {
                 f.render_widget(Clear, rects[1]);
                 f.set_cursor(rects[1].x + self.filter.pos() as u16 + 1, rects[1].y + 1);
@@ -708,25 +698,17 @@ impl TTApp {
     }
 
     fn draw_command(&self, f: &mut Frame<impl Backend>, rect: Rect, text: &str, title: &str) {
-        let p = Paragraph::new(Text::from(text))
-            .block(Block::default().borders(Borders::ALL).title(title));
+        let p = Paragraph::new(Text::from(text)).block(Block::default().borders(Borders::ALL).title(title));
         f.render_widget(p, rect);
     }
 
     fn draw_task_details(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
         if self.tasks.lock().unwrap().is_empty() {
-            f.render_widget(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title("Task not found"),
-                rect,
-            );
+            f.render_widget(Block::default().borders(Borders::ALL).title("Task not found"), rect);
             return;
         }
         let selected = self.state.selected().unwrap_or_default();
-        let task_id = self.tasks.lock().unwrap()[selected]
-            .id()
-            .unwrap_or_default();
+        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let output = Command::new("task").arg(format!("{}", task_id)).output();
         if let Ok(output) = output {
             let data = String::from_utf8(output.stdout).unwrap_or(format!(
@@ -762,47 +744,23 @@ impl TTApp {
 
     fn style_for_task(&self, task: &Task) -> Style {
         let mut style = Style::default();
-        if task
-            .tags()
-            .unwrap_or(&vec![])
-            .contains(&"ACTIVE".to_string())
-        {
+        if task.tags().unwrap_or(&vec![]).contains(&"ACTIVE".to_string()) {
             style = style.fg(self.colors.active.fg).bg(self.colors.active.bg);
         }
-        if task
-            .tags()
-            .unwrap_or(&vec![])
-            .contains(&"BLOCKING".to_string())
-        {
-            style = style
-                .fg(self.colors.blocking.fg)
-                .bg(self.colors.blocking.bg);
+        if task.tags().unwrap_or(&vec![]).contains(&"BLOCKING".to_string()) {
+            style = style.fg(self.colors.blocking.fg).bg(self.colors.blocking.bg);
         }
-        if task
-            .tags()
-            .unwrap_or(&vec![])
-            .contains(&"BLOCKED".to_string())
-        {
+        if task.tags().unwrap_or(&vec![]).contains(&"BLOCKED".to_string()) {
             style = style.fg(self.colors.blocked.fg).bg(self.colors.blocked.bg);
         }
         if task.tags().unwrap_or(&vec![]).contains(&"DUE".to_string()) {
             style = style.fg(self.colors.due.fg).bg(self.colors.due.bg);
         }
-        if task
-            .tags()
-            .unwrap_or(&vec![])
-            .contains(&"OVERDUE".to_string())
-        {
+        if task.tags().unwrap_or(&vec![]).contains(&"OVERDUE".to_string()) {
             style = style.fg(self.colors.overdue.fg).bg(self.colors.overdue.bg);
         }
-        if task
-            .tags()
-            .unwrap_or(&vec![])
-            .contains(&"TODAY".to_string())
-        {
-            style = style
-                .fg(self.colors.due_today.fg)
-                .bg(self.colors.due_today.bg);
+        if task.tags().unwrap_or(&vec![]).contains(&"TODAY".to_string()) {
+            style = style.fg(self.colors.due_today.fg).bg(self.colors.due_today.bg);
         }
 
         return style;
@@ -811,10 +769,7 @@ impl TTApp {
     fn draw_task_report(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
         let (tasks, headers, widths) = self.task_report();
         if tasks.is_empty() {
-            f.render_widget(
-                Block::default().borders(Borders::ALL).title("Task next"),
-                rect,
-            );
+            f.render_widget(Block::default().borders(Borders::ALL).title("Task next"), rect);
             return;
         }
         let selected = self.state.selected().unwrap_or_default();
@@ -973,16 +928,13 @@ impl TTApp {
                     Ok(_) => {
                         self.command.update("", 0);
                         Ok(())
-                    },
-                    Err(_) => Err(
-                        "Cannot run `task log` for task `{}`. Check documentation for more information".to_string(),
-                    )
+                    }
+                    Err(_) => {
+                        Err("Cannot run `task log` for task `{}`. Check documentation for more information".to_string())
+                    }
                 }
             }
-            None => Err(format!(
-                "Unable to run `task log` with `{}`",
-                self.command.as_str()
-            )),
+            None => Err(format!("Unable to run `task log` with `{}`", self.command.as_str())),
         }
     }
 
@@ -991,9 +943,7 @@ impl TTApp {
             return Ok(());
         }
         let selected = self.state.selected().unwrap_or_default();
-        let task_id = self.tasks.lock().unwrap()[selected]
-            .id()
-            .unwrap_or_default();
+        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let mut command = Command::new("task");
         command.arg(format!("{}", task_id)).arg("modify");
 
@@ -1007,10 +957,11 @@ impl TTApp {
                     Ok(_) => {
                         self.modify.update("", 0);
                         Ok(())
-                    },
-                    Err(_) => Err(
-                        format!("Cannot run `task modify` for task `{}`. Check documentation for more information", task_id),
-                    )
+                    }
+                    Err(_) => Err(format!(
+                        "Cannot run `task modify` for task `{}`. Check documentation for more information",
+                        task_id
+                    )),
                 }
             }
             None => Err(format!(
@@ -1026,9 +977,7 @@ impl TTApp {
             return Ok(());
         }
         let selected = self.state.selected().unwrap_or_default();
-        let task_id = self.tasks.lock().unwrap()[selected]
-            .id()
-            .unwrap_or_default();
+        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let mut command = Command::new("task");
         command.arg(format!("{}", task_id)).arg("annotate");
 
@@ -1043,16 +992,10 @@ impl TTApp {
                         self.command.update("", 0);
                         Ok(())
                     }
-                    Err(_) => Err(
-                        "Cannot run `task annotate`. Check documentation for more information"
-                            .to_string(),
-                    ),
+                    Err(_) => Err("Cannot run `task annotate`. Check documentation for more information".to_string()),
                 }
             }
-            None => Err(format!(
-                "Unable to run `task add` with `{}`",
-                self.command.as_str()
-            )),
+            None => Err(format!("Unable to run `task add` with `{}`", self.command.as_str())),
         }
     }
 
@@ -1071,16 +1014,10 @@ impl TTApp {
                         self.command.update("", 0);
                         Ok(())
                     }
-                    Err(_) => Err(
-                        "Cannot run `task add`. Check documentation for more information"
-                            .to_string(),
-                    ),
+                    Err(_) => Err("Cannot run `task add`. Check documentation for more information".to_string()),
                 }
             }
-            None => Err(format!(
-                "Unable to run `task add` with `{}`",
-                self.command.as_str()
-            )),
+            None => Err(format!("Unable to run `task add` with `{}`", self.command.as_str())),
         }
     }
 
@@ -1114,9 +1051,7 @@ impl TTApp {
             return Ok(());
         }
         let selected = self.state.selected().unwrap_or_default();
-        let task_id = self.tasks.lock().unwrap()[selected]
-            .id()
-            .unwrap_or_default();
+        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let mut command = "start";
         for tag in TTApp::task_virtual_tags(task_id)?.split(' ') {
             if tag == "ACTIVE" {
@@ -1124,10 +1059,7 @@ impl TTApp {
             }
         }
 
-        let output = Command::new("task")
-            .arg(format!("{}", task_id))
-            .arg(command)
-            .output();
+        let output = Command::new("task").arg(format!("{}", task_id)).arg(command).output();
         match output {
             Ok(_) => Ok(()),
             Err(_) => Err(format!(
@@ -1142,9 +1074,7 @@ impl TTApp {
             return Ok(());
         }
         let selected = self.state.selected().unwrap_or_default();
-        let task_id = self.tasks.lock().unwrap()[selected]
-            .id()
-            .unwrap_or_default();
+        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
 
         let output = Command::new("task")
             .arg("rc.confirmation=off")
@@ -1165,13 +1095,8 @@ impl TTApp {
             return Ok(());
         }
         let selected = self.state.selected().unwrap_or_default();
-        let task_id = self.tasks.lock().unwrap()[selected]
-            .id()
-            .unwrap_or_default();
-        let output = Command::new("task")
-            .arg(format!("{}", task_id))
-            .arg("done")
-            .output();
+        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
+        let output = Command::new("task").arg(format!("{}", task_id)).arg("done").output();
         match output {
             Ok(_) => Ok(()),
             Err(_) => Err(format!(
@@ -1185,16 +1110,11 @@ impl TTApp {
         if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
-        let output = Command::new("task")
-            .arg("rc.confirmation=off")
-            .arg("undo")
-            .output();
+        let output = Command::new("task").arg("rc.confirmation=off").arg("undo").output();
 
         match output {
             Ok(_) => Ok(()),
-            Err(_) => {
-                Err("Cannot run `task undo`. Check documentation for more information".to_string())
-            }
+            Err(_) => Err("Cannot run `task undo`. Check documentation for more information".to_string()),
         }
     }
 
@@ -1203,13 +1123,8 @@ impl TTApp {
             return Ok(());
         }
         let selected = self.state.selected().unwrap_or_default();
-        let task_id = self.tasks.lock().unwrap()[selected]
-            .id()
-            .unwrap_or_default();
-        let r = Command::new("task")
-            .arg(format!("{}", task_id))
-            .arg("edit")
-            .spawn();
+        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
+        let r = Command::new("task").arg(format!("{}", task_id)).arg("edit").spawn();
 
         match r {
             Ok(child) => {
@@ -1227,10 +1142,7 @@ impl TTApp {
                             Ok(())
                         }
                     }
-                    Err(err) => Err(format!(
-                        "Cannot run `task edit` for task `{}`. {}",
-                        task_id, err
-                    )),
+                    Err(err) => Err(format!("Cannot run `task edit` for task `{}`. {}", task_id, err)),
                 }
             }
             _ => Err(format!(

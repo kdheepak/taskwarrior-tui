@@ -123,11 +123,7 @@ impl Events {
             })
         };
 
-        Events {
-            rx,
-            tx,
-            pause_stdin,
-        }
+        Events { rx, tx, pause_stdin }
     }
 
     /// Attempts to read an event.
