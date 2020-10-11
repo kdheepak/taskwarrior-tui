@@ -756,21 +756,18 @@ impl TTApp {
         let m = tasks.iter().find(|t| *t.uuid() == uuid);
         match m {
             Some(v) => Some(v.clone()),
-            None => None
+            None => None,
         }
     }
 
     fn style_for_task(&self, task: &Task) -> Style {
-
         let mut style = Style::default();
         if task
             .tags()
             .unwrap_or(&vec![])
             .contains(&"ACTIVE".to_string())
         {
-            style = style
-                .fg(self.colors.active.fg)
-                .bg(self.colors.active.bg);
+            style = style.fg(self.colors.active.fg).bg(self.colors.active.bg);
         }
         if task
             .tags()
@@ -786,27 +783,17 @@ impl TTApp {
             .unwrap_or(&vec![])
             .contains(&"BLOCKED".to_string())
         {
-            style = style
-                .fg(self.colors.blocked.fg)
-                .bg(self.colors.blocked.bg);
+            style = style.fg(self.colors.blocked.fg).bg(self.colors.blocked.bg);
         }
-        if task
-            .tags()
-            .unwrap_or(&vec![])
-            .contains(&"DUE".to_string())
-        {
-            style = style
-                .fg(self.colors.due.fg)
-                .bg(self.colors.due.bg);
+        if task.tags().unwrap_or(&vec![]).contains(&"DUE".to_string()) {
+            style = style.fg(self.colors.due.fg).bg(self.colors.due.bg);
         }
         if task
             .tags()
             .unwrap_or(&vec![])
             .contains(&"OVERDUE".to_string())
         {
-            style = style
-                .fg(self.colors.overdue.fg)
-                .bg(self.colors.overdue.bg);
+            style = style.fg(self.colors.overdue.fg).bg(self.colors.overdue.bg);
         }
         if task
             .tags()
@@ -819,7 +806,6 @@ impl TTApp {
         }
 
         return style;
-
     }
 
     fn draw_task_report(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
