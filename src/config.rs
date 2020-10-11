@@ -204,7 +204,6 @@ impl TConfig {
             }
         }
 
-
         Self {
             enabled: true,
             obfuscate: bool_collection.get("obfuscate").cloned().unwrap_or(false),
