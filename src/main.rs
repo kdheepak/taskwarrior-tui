@@ -166,7 +166,7 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                     Key::Char(c) => {
                         app.modify.insert(c, 1);
                     }
-                    Key::Backspace => {
+                    Key::Ctrl('h') | Key::Backspace => {
                         app.modify.backspace(1);
                     }
                     Key::Ctrl('d') | Key::Delete => {
@@ -225,7 +225,7 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                     Key::Char(c) => {
                         app.command.insert(c, 1);
                     }
-                    Key::Backspace => {
+                    Key::Ctrl('h') | Key::Backspace => {
                         app.command.backspace(1);
                     }
                     Key::Ctrl('d') | Key::Delete => {
@@ -284,7 +284,7 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                     Key::Char(c) => {
                         app.command.insert(c, 1);
                     }
-                    Key::Backspace => {
+                    Key::Ctrl('h') | Key::Backspace => {
                         app.command.backspace(1);
                     }
                     Key::Ctrl('d') | Key::Delete => {
@@ -343,7 +343,7 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                     Key::Char(c) => {
                         app.command.insert(c, 1);
                     }
-                    Key::Backspace => {
+                    Key::Ctrl('h') | Key::Backspace => {
                         app.command.backspace(1);
                     }
                     Key::Ctrl('d') | Key::Delete => {
@@ -402,7 +402,7 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                     Key::Char(c) => {
                         app.command.insert(c, 1);
                     }
-                    Key::Backspace => {
+                    Key::Ctrl('h') | Key::Backspace => {
                         app.command.backspace(1);
                     }
                     Key::Ctrl('d') | Key::Delete => {
@@ -451,7 +451,7 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                     Key::Char(c) => {
                         app.filter.insert(c, 1);
                     }
-                    Key::Backspace => {
+                    Key::Ctrl('h') | Key::Backspace => {
                         app.filter.backspace(1);
                     }
                     Key::Ctrl('d') | Key::Delete => {
