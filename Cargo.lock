@@ -753,7 +753,7 @@ dependencies = [
 
 [[package]]
 name = "taskwarrior-tui"
-version = "0.6.12"
+version = "0.6.13"
 dependencies = [
  "chrono",
  "clap",
