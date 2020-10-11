@@ -760,6 +760,68 @@ impl TTApp {
         }
     }
 
+    fn normal_style_for_task(&self, task: &Task) -> Style {
+
+        let mut normal_style = Style::default();
+        if task
+            .tags()
+            .unwrap_or(&vec![])
+            .contains(&"ACTIVE".to_string())
+        {
+            normal_style = normal_style
+                .fg(self.colors.active.fg)
+                .bg(self.colors.active.bg);
+        }
+        if task
+            .tags()
+            .unwrap_or(&vec![])
+            .contains(&"BLOCKING".to_string())
+        {
+            normal_style = normal_style
+                .fg(self.colors.blocking.fg)
+                .bg(self.colors.blocking.bg);
+        }
+        if task
+            .tags()
+            .unwrap_or(&vec![])
+            .contains(&"BLOCKED".to_string())
+        {
+            normal_style = normal_style
+                .fg(self.colors.blocked.fg)
+                .bg(self.colors.blocked.bg);
+        }
+        if task
+            .tags()
+            .unwrap_or(&vec![])
+            .contains(&"DUE".to_string())
+        {
+            normal_style = normal_style
+                .fg(self.colors.due.fg)
+                .bg(self.colors.due.bg);
+        }
+        if task
+            .tags()
+            .unwrap_or(&vec![])
+            .contains(&"OVERDUE".to_string())
+        {
+            normal_style = normal_style
+                .fg(self.colors.overdue.fg)
+                .bg(self.colors.overdue.bg);
+        }
+        if task
+            .tags()
+            .unwrap_or(&vec![])
+            .contains(&"TODAY".to_string())
+        {
+            normal_style = normal_style
+                .fg(self.colors.due_today.fg)
+                .bg(self.colors.due_today.bg);
+        }
+
+        return normal_style;
+
+    }
+
     fn draw_task_report(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
         let (tasks, headers, widths) = self.task_report();
         if tasks.is_empty() {
@@ -774,59 +836,7 @@ impl TTApp {
         let mut rows = vec![];
         let mut highlight_style = Style::default();
         for (i, task) in tasks.into_iter().enumerate() {
-            let mut normal_style = Style::default();
-            if self.tasks.lock().unwrap()[i]
-                .tags()
-                .unwrap_or(&vec![])
-                .contains(&"ACTIVE".to_string())
-            {
-                normal_style = normal_style
-                    .fg(self.colors.active.fg)
-                    .bg(self.colors.active.bg);
-            }
-            if self.tasks.lock().unwrap()[i]
-                .tags()
-                .unwrap_or(&vec![])
-                .contains(&"BLOCKING".to_string())
-            {
-                normal_style = normal_style
-                    .fg(self.colors.blocking.fg)
-                    .bg(self.colors.blocking.bg);
-            }
-            if self.tasks.lock().unwrap()[i]
-                .tags()
-                .unwrap_or(&vec![])
-                .contains(&"BLOCKED".to_string())
-            {
-                normal_style = normal_style
-                    .fg(self.colors.blocked.fg)
-                    .bg(self.colors.blocked.bg);
-            }
-            if self.tasks.lock().unwrap()[i]
-                .tags()
-                .unwrap_or(&vec![])
-                .contains(&"DUE".to_string())
-            {
-                normal_style = normal_style.fg(self.colors.due.fg).bg(self.colors.due.bg);
-            }
-            if self.tasks.lock().unwrap()[i]
-                .tags()
-                .unwrap_or(&vec![])
-                .contains(&"OVERDUE".to_string())
-            {
-                normal_style = normal_style
-                    .fg(self.colors.overdue.fg)
-                    .bg(self.colors.overdue.bg);
-            }
-            if self.tasks.lock().unwrap()[i]
-                .tags()
-                .unwrap_or(&vec![])
-                .contains(&"TODAY".to_string())
-            {
-                normal_style = normal_style
-                    .fg(self.colors.due_today.fg)
-                    .bg(self.colors.due_today.bg);
-            }
+            let normal_style = self.normal_style_for_task(&self.tasks.lock().unwrap()[i]);
             if i == selected {
                 highlight_style = normal_style.add_modifier(Modifier::BOLD);
             }
