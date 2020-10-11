@@ -781,7 +781,7 @@ impl TTApp {
         let header = headers.iter();
         let mut rows = vec![];
         let mut highlight_style = Style::default();
-        for (i, task) in tasks.into_iter().enumerate() {
+        for (i, task) in tasks.iter().enumerate() {
             let style = self.style_for_task(&self.tasks.lock().unwrap()[i]);
             if i == selected {
                 highlight_style = style.add_modifier(Modifier::BOLD);
