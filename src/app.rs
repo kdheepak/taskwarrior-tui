@@ -184,7 +184,6 @@ impl TaskReportTable {
     }
 
     pub fn generate_table(&mut self, tasks: &Vec<Task>) {
-
         self.tasks = vec![];
 
         // get all tasks as their string representation
@@ -196,7 +195,6 @@ impl TaskReportTable {
             }
             self.tasks.push(item)
         }
-
     }
 
     pub fn simplify_table(&mut self) -> (Vec<Vec<String>>, Vec<String>, Vec<i16>) {
@@ -249,7 +247,6 @@ impl TaskReportTable {
         }
         (tasks, headers, widths)
     }
-
 
     pub fn get_string_attribute(&self, attribute: &str, task: &Task) -> String {
         let tags = vec![
@@ -358,8 +355,6 @@ impl TaskReportTable {
             _ => "".to_string(),
         }
     }
-
-
 }
 
 pub struct TTApp {
