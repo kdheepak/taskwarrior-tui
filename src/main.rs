@@ -4,7 +4,7 @@
 
 mod app;
 mod calendar;
-mod color;
+mod config;
 mod util;
 
 use crate::util::{destruct_terminal, setup_terminal, Event, EventConfig, Events};

@@ -1,4 +1,4 @@
-use crate::color::TColorConfig;
+use crate::config::TConfig;
 
 use std::cmp::Ordering;
 use std::convert::TryInto;
@@ -364,7 +364,7 @@ pub struct TTApp {
     pub tasks: Arc<Mutex<Vec<Task>>>,
     pub task_report_table: TaskReportTable,
     pub mode: AppMode,
-    pub colors: TColorConfig,
+    pub config: TConfig,
 }
 
 impl TTApp {
@@ -380,7 +380,7 @@ impl TTApp {
             modify: LineBuffer::with_capacity(MAX_LINE),
             error: "".to_string(),
             mode: AppMode::TaskReport,
-            colors: TColorConfig::default(),
+            config: TConfig::default(),
             task_report_table: TaskReportTable::new(),
         };
         for c in "status:pending ".chars() {
@@ -745,22 +745,26 @@ impl TTApp {
     fn style_for_task(&self, task: &Task) -> Style {
         let mut style = Style::default();
         if task.tags().unwrap_or(&vec![]).contains(&"ACTIVE".to_string()) {
-            style = style.fg(self.colors.active.fg).bg(self.colors.active.bg);
+            style = style.fg(self.config.color_active.fg).bg(self.config.color_active.bg);
         }
         if task.tags().unwrap_or(&vec![]).contains(&"BLOCKING".to_string()) {
-            style = style.fg(self.colors.blocking.fg).bg(self.colors.blocking.bg);
+            style = style
+                .fg(self.config.color_blocking.fg)
+                .bg(self.config.color_blocking.bg);
         }
         if task.tags().unwrap_or(&vec![]).contains(&"BLOCKED".to_string()) {
-            style = style.fg(self.colors.blocked.fg).bg(self.colors.blocked.bg);
+            style = style.fg(self.config.color_blocked.fg).bg(self.config.color_blocked.bg);
         }
         if task.tags().unwrap_or(&vec![]).contains(&"DUE".to_string()) {
-            style = style.fg(self.colors.due.fg).bg(self.colors.due.bg);
+            style = style.fg(self.config.color_due.fg).bg(self.config.color_due.bg);
         }
         if task.tags().unwrap_or(&vec![]).contains(&"OVERDUE".to_string()) {
-            style = style.fg(self.colors.overdue.fg).bg(self.colors.overdue.bg);
+            style = style.fg(self.config.color_overdue.fg).bg(self.config.color_overdue.bg);
         }
         if task.tags().unwrap_or(&vec![]).contains(&"TODAY".to_string()) {
-            style = style.fg(self.colors.due_today.fg).bg(self.colors.due_today.bg);
+            style = style
+                .fg(self.config.color_due_today.fg)
+                .bg(self.config.color_due_today.bg);
         }
         return style;
     }
