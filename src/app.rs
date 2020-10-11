@@ -792,6 +792,7 @@ impl TTApp {
             .highlight_style(highlight_style)
             .highlight_symbol("• ")
             .widths(&constraints);
+
         f.render_stateful_widget(t, rect, &mut self.state);
     }
 
