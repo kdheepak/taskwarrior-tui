@@ -767,6 +767,7 @@ dependencies = [
  "task-hookrs",
  "tui",
  "unicode-width",
+ "uuid",
 ]
 
 [[package]]

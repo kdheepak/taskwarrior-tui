@@ -10,6 +10,7 @@ use task_hookrs::import::import;
 use task_hookrs::status::TaskStatus;
 use task_hookrs::task::Task;
 use task_hookrs::uda::UDAValue;
+use uuid::Uuid;
 
 use chrono::{Local, NaiveDateTime, TimeZone};
 
@@ -738,6 +739,24 @@ impl TTApp {
                     .title(format!("Task {}", task_id)),
             );
             f.render_widget(p, rect);
+        }
+    }
+
+    fn task_by_index(&self, i: usize) -> Option<Task> {
+        let tasks = &self.tasks.lock().unwrap();
+        if i > tasks.len() {
+            None
+        } else {
+            Some(tasks[i].clone())
+        }
+    }
+
+    fn task_by_uuid(&self, uuid: Uuid) -> Option<Task> {
+        let tasks = &self.tasks.lock().unwrap();
+        let m = tasks.iter().find(|t| *t.uuid() == uuid);
+        match m {
+            Some(v) => Some(v.clone()),
+            None => None
         }
     }
 
