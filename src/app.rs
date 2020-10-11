@@ -801,7 +801,9 @@ impl TTApp {
 
         self.task_report_table.generate_table(alltasks);
 
-        return self.task_report_table.simplify_table();
+        let (tasks, headers, widths) = self.task_report_table.simplify_table();
+
+        (tasks, headers, widths)
     }
 
     pub fn update(&mut self) {
