@@ -28,15 +28,15 @@ use tui::{
 
 use rustyline::error::ReadlineError;
 use rustyline::line_buffer::LineBuffer;
-use rustyline::Editor;
 use rustyline::At;
+use rustyline::Editor;
 use rustyline::Word;
 
-use crate::util::Key;
 use crate::util::Events;
+use crate::util::Key;
 
-use tui::{backend::CrosstermBackend, Terminal};
 use std::io::{self};
+use tui::{backend::CrosstermBackend, Terminal};
 
 const MAX_LINE: usize = 4096;
 
@@ -806,7 +806,10 @@ impl TTApp {
         for task in &tasks {
             for (i, attr) in task.iter().enumerate() {
                 if i == description_column_index {
-                    widths[i] = std::cmp::max(widths[i], std::cmp::min(attr.len() as i16 + 2, description_column_width));
+                    widths[i] = std::cmp::max(
+                        widths[i],
+                        std::cmp::min(attr.len() as i16 + 2, description_column_width),
+                    );
                 } else {
                     widths[i] = std::cmp::max(widths[i], std::cmp::min(attr.len() as i16, maximum_column_width));
                 }
