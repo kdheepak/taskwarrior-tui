@@ -1,10 +1,8 @@
-#[cfg(feature = "crossterm")]
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-#[cfg(feature = "crossterm")]
 use tui::{backend::CrosstermBackend, Terminal};
 
 use std::io::{self, Write};
@@ -44,7 +42,6 @@ pub enum Event<I> {
     Tick,
 }
 
-#[cfg(feature = "crossterm")]
 pub fn setup_terminal() -> Terminal<CrosstermBackend<io::Stdout>> {
     enable_raw_mode().unwrap();
     let mut stdout = io::stdout();
@@ -53,7 +50,6 @@ pub fn setup_terminal() -> Terminal<CrosstermBackend<io::Stdout>> {
     Terminal::new(backend).unwrap()
 }
 
-#[cfg(feature = "crossterm")]
 pub fn destruct_terminal(mut terminal: Terminal<CrosstermBackend<io::Stdout>>) {
     disable_raw_mode().unwrap();
     execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture).unwrap();
@@ -132,7 +128,6 @@ impl Events {
         self.rx.recv()
     }
 
-    #[cfg(feature = "crossterm")]
     pub fn pause_event_loop(&self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
         *self.pause_stdin.lock().unwrap() = true;
         std::thread::sleep(std::time::Duration::from_millis(50));
@@ -141,7 +136,6 @@ impl Events {
         terminal.show_cursor().unwrap();
     }
 
-    #[cfg(feature = "crossterm")]
     pub fn resume_event_loop(&self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
         enable_raw_mode().unwrap();
         execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture).unwrap();

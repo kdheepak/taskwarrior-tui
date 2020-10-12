@@ -29,6 +29,14 @@ use tui::{
 use rustyline::error::ReadlineError;
 use rustyline::line_buffer::LineBuffer;
 use rustyline::Editor;
+use rustyline::At;
+use rustyline::Word;
+
+use crate::util::Key;
+use crate::util::Events;
+
+use tui::{backend::CrosstermBackend, Terminal};
+use std::io::{self};
 
 const MAX_LINE: usize = 4096;
 
@@ -1296,6 +1304,244 @@ impl TTApp {
                 None => (),
             }
         }
+    }
+
+    pub fn handle_input(&mut self, input: Key, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, events: &Events) {
+        match self.mode {
+            AppMode::TaskReport => match input {
+                Key::Ctrl('c') | Key::Char('q') => self.should_quit = true,
+                Key::Char(']') => {
+                    self.mode = AppMode::Calendar;
+                }
+                Key::Char('r') => self.update(),
+                Key::Down | Key::Char('j') => self.next(),
+                Key::Up | Key::Char('k') => self.previous(),
+                Key::Char('d') => match self.task_done() {
+                    Ok(_) => self.update(),
+                    Err(e) => {
+                        self.mode = AppMode::TaskError;
+                        self.error = e;
+                    }
+                },
+                Key::Char('x') => match self.task_delete() {
+                    Ok(_) => self.update(),
+                    Err(e) => {
+                        self.mode = AppMode::TaskError;
+                        self.error = e;
+                    }
+                },
+                Key::Char('s') => match self.task_start_or_stop() {
+                    Ok(_) => self.update(),
+                    Err(e) => {
+                        self.mode = AppMode::TaskError;
+                        self.error = e;
+                    }
+                },
+                Key::Char('u') => match self.task_undo() {
+                    Ok(_) => self.update(),
+                    Err(e) => {
+                        self.mode = AppMode::TaskError;
+                        self.error = e;
+                    }
+                },
+                Key::Char('e') => {
+                    events.pause_event_loop(terminal);
+                    let r = self.task_edit();
+                    events.resume_event_loop(terminal);
+                    match r {
+                        Ok(_) => self.update(),
+                        Err(e) => {
+                            self.mode = AppMode::TaskError;
+                            self.error = e;
+                        }
+                    }
+                }
+                Key::Char('m') => {
+                    self.mode = AppMode::TaskModify;
+                    match self.task_current() {
+                        Some(t) => self.modify.update(t.description(), t.description().len()),
+                        None => self.modify.update("", 0),
+                    }
+                }
+                Key::Char('!') => {
+                    self.mode = AppMode::TaskSubprocess;
+                }
+                Key::Char('l') => {
+                    self.mode = AppMode::TaskLog;
+                }
+                Key::Char('a') => {
+                    self.mode = AppMode::TaskAdd;
+                }
+                Key::Char('A') => {
+                    self.mode = AppMode::TaskAnnotate;
+                }
+                Key::Char('?') => {
+                    self.mode = AppMode::TaskHelpPopup;
+                }
+                Key::Char('/') => {
+                    self.mode = AppMode::TaskFilter;
+                }
+                _ => {}
+            },
+            AppMode::TaskHelpPopup => match input {
+                Key::Esc => {
+                    self.mode = AppMode::TaskReport;
+                }
+                _ => {}
+            },
+            AppMode::TaskModify => match input {
+                Key::Char('\n') => match self.task_modify() {
+                    Ok(_) => {
+                        self.mode = AppMode::TaskReport;
+                        self.update();
+                    }
+                    Err(e) => {
+                        self.mode = AppMode::TaskError;
+                        self.error = e;
+                    }
+                },
+                Key::Esc => {
+                    self.modify.update("", 0);
+                    self.mode = AppMode::TaskReport;
+                }
+                _ => handle_movement(&mut self.modify, input),
+            },
+            AppMode::TaskSubprocess => match input {
+                Key::Char('\n') => match self.task_subprocess() {
+                    Ok(_) => {
+                        self.mode = AppMode::TaskReport;
+                        self.update();
+                    }
+                    Err(e) => {
+                        self.mode = AppMode::TaskError;
+                        self.error = e;
+                    }
+                },
+                Key::Esc => {
+                    self.command.update("", 0);
+                    self.mode = AppMode::TaskReport;
+                }
+                _ => handle_movement(&mut self.command, input),
+            },
+            AppMode::TaskLog => match input {
+                Key::Char('\n') => match self.task_log() {
+                    Ok(_) => {
+                        self.mode = AppMode::TaskReport;
+                        self.update();
+                    }
+                    Err(e) => {
+                        self.mode = AppMode::TaskError;
+                        self.error = e;
+                    }
+                },
+                Key::Esc => {
+                    self.command.update("", 0);
+                    self.mode = AppMode::TaskReport;
+                }
+                _ => handle_movement(&mut self.command, input),
+            },
+            AppMode::TaskAnnotate => match input {
+                Key::Char('\n') => match self.task_annotate() {
+                    Ok(_) => {
+                        self.mode = AppMode::TaskReport;
+                        self.update();
+                    }
+                    Err(e) => {
+                        self.mode = AppMode::TaskError;
+                        self.error = e;
+                    }
+                },
+                Key::Esc => {
+                    self.command.update("", 0);
+                    self.mode = AppMode::TaskReport;
+                }
+                _ => handle_movement(&mut self.command, input),
+            },
+            AppMode::TaskAdd => match input {
+                Key::Char('\n') => match self.task_add() {
+                    Ok(_) => {
+                        self.mode = AppMode::TaskReport;
+                        self.update();
+                    }
+                    Err(e) => {
+                        self.mode = AppMode::TaskError;
+                        self.error = e;
+                    }
+                },
+                Key::Esc => {
+                    self.command.update("", 0);
+                    self.mode = AppMode::TaskReport;
+                }
+                _ => handle_movement(&mut self.command, input),
+            },
+            AppMode::TaskFilter => match input {
+                Key::Char('\n') | Key::Esc => {
+                    self.mode = AppMode::TaskReport;
+                    self.update();
+                }
+                _ => handle_movement(&mut self.command, input),
+            },
+            AppMode::TaskError => match input {
+                _ => {
+                    self.mode = AppMode::TaskReport;
+                }
+            },
+            AppMode::Calendar => match input {
+                Key::Char('[') => {
+                    self.mode = AppMode::TaskReport;
+                }
+                Key::Ctrl('c') | Key::Char('q') => self.should_quit = true,
+                _ => {}
+            },
+        }
+    }
+}
+
+pub fn handle_movement(linebuffer: &mut LineBuffer, input: Key) {
+    match input {
+        Key::Ctrl('f') | Key::Right => {
+            linebuffer.move_forward(1);
+        }
+        Key::Ctrl('b') | Key::Left => {
+            linebuffer.move_backward(1);
+        }
+        Key::Char(c) => {
+            linebuffer.insert(c, 1);
+        }
+        Key::Ctrl('h') | Key::Backspace => {
+            linebuffer.backspace(1);
+        }
+        Key::Ctrl('d') | Key::Delete => {
+            linebuffer.delete(1);
+        }
+        Key::Ctrl('a') | Key::Home => {
+            linebuffer.move_home();
+        }
+        Key::Ctrl('e') | Key::End => {
+            linebuffer.move_end();
+        }
+        Key::Ctrl('k') => {
+            linebuffer.kill_line();
+        }
+        Key::Ctrl('u') => {
+            linebuffer.discard_line();
+        }
+        Key::Ctrl('w') => {
+            linebuffer.delete_prev_word(Word::Emacs, 1);
+        }
+        Key::Alt('d') => {
+            linebuffer.delete_word(At::AfterEnd, Word::Emacs, 1);
+        }
+        Key::Alt('f') => {
+            linebuffer.move_to_next_word(At::AfterEnd, Word::Emacs, 1);
+        }
+        Key::Alt('b') => {
+            linebuffer.move_to_prev_word(Word::Emacs, 1);
+        }
+        Key::Alt('t') => {
+            linebuffer.transpose_words(1);
+        }
+        _ => {}
     }
 }
 
