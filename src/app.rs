@@ -139,11 +139,12 @@ pub struct TaskReportTable {
 
 impl TaskReportTable {
     pub fn new() -> Self {
-        let task_report_table = Self {
+        let mut task_report_table = Self {
             labels: vec![],
             columns: vec![],
             tasks: vec![vec![]],
         };
+        task_report_table.export_headers();
         task_report_table
     }
 
@@ -843,7 +844,6 @@ impl TTApp {
     pub fn update(&mut self) {
         self.export_tasks();
         self.update_tags();
-        self.task_report_table.export_headers();
     }
 
     pub fn next(&mut self) {
