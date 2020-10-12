@@ -165,7 +165,7 @@ impl TaskReportTable {
             .arg("report.next.columns")
             .output()
             .expect("Unable to run `task show report.next.columns`. Check documentation for more information");
-        let data = String::from_utf8(output.stdout).unwrap();
+        let data = String::from_utf8(output.stdout).expect("Unable to decode utf8 from stdout of `task show report.next.columns`");
 
         for line in data.split('\n') {
             if line.starts_with("report.next.columns") {
@@ -181,7 +181,7 @@ impl TaskReportTable {
             .arg("report.next.labels")
             .output()
             .expect("Unable to run `task show report.next.labels`. Check documentation for more information");
-        let data = String::from_utf8(output.stdout).unwrap();
+        let data = String::from_utf8(output.stdout).expect("Unable to decode utf8 from stdout of `task show report.next.labels`");
 
         for line in data.split('\n') {
             if line.starts_with("report.next.labels") {
@@ -388,22 +388,22 @@ impl TTApp {
                 .arg("_get")
                 .arg("rc.context")
                 .output()
-                .unwrap()
+                .expect("Unable to run `task _get rc.context`")
                 .stdout,
         )
-        .unwrap();
-        self.context_name = self.context_name.strip_suffix('\n').unwrap().to_string();
+        .expect("Unable to decode utf8 from stdout of `task _get rc.context`");
+        self.context_name = self.context_name.strip_suffix('\n').unwrap_or("").to_string();
 
         self.context_filter = String::from_utf8(
             Command::new("task")
                 .arg("_get")
                 .arg(format!("rc.context.{}", self.context_name))
                 .output()
-                .unwrap()
+                .expect(format!("Unable to run `task _get rc.context.{}`", self.context_name).as_str())
                 .stdout,
         )
-        .unwrap();
-        self.context_filter = self.context_filter.strip_suffix('\n').unwrap().to_string();
+        .expect(format!("Unable to decode utf8 from stdout of `task _get rc.context.{}`", self.context_name).as_str());
+        self.context_filter = self.context_filter.strip_suffix('\n').unwrap_or("").to_string();
     }
 
     pub fn draw(&mut self, f: &mut Frame<impl Backend>) {
