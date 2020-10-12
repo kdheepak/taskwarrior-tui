@@ -73,7 +73,7 @@ impl Events {
             let pause_stdin = pause_stdin.clone();
             thread::spawn(move || {
                 loop {
-                    if *pause_stdin.lock().unwrap() == true {
+                    if *pause_stdin.lock().unwrap() {
                         thread::sleep(Duration::from_millis(250));
                         continue;
                     }

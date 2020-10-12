@@ -77,7 +77,7 @@ pub fn get_date_state(reference: &Date) -> DateState {
             return DateState::LaterToday;
         }
     }
-    return DateState::AfterToday;
+    DateState::AfterToday
 }
 
 pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime) -> String {
@@ -193,7 +193,7 @@ impl TaskReportTable {
         }
     }
 
-    pub fn generate_table(&mut self, tasks: &Vec<Task>) {
+    pub fn generate_table(&mut self, tasks: &[Task]) {
         self.tasks = vec![];
 
         // get all tasks as their string representation
@@ -298,15 +298,15 @@ impl TaskReportTable {
                 None => "".to_string(),
             },
             "project" => match task.project() {
-                Some(p) => format!("{}", p).to_string(),
+                Some(p) => p.to_string(),
                 None => "".to_string(),
             },
             "depends.count" => match task.depends() {
                 Some(v) => {
-                    if v.len() == 0 {
+                    if v.is_empty() {
                         "".to_string()
                     } else {
-                        format!("{}", v.len()).to_string()
+                        format!("{}", v.len())
                     }
                 }
                 None => "".to_string(),
@@ -314,28 +314,26 @@ impl TaskReportTable {
             "tags.count" => match task.tags() {
                 Some(v) => {
                     let t = v
-                        .into_iter()
+                        .iter()
                         .filter(|t| !tags.contains(&t.as_str()))
                         .cloned()
-                        .collect::<Vec<String>>()
-                        .len();
+                        .count();
                     if t == 0 {
                         "".to_string()
                     } else {
-                        format!("{}", t).to_string()
+                        t.to_string()
                     }
                 }
                 None => "".to_string(),
             },
             "tags" => match task.tags() {
                 Some(v) => {
-                    let t = v
-                        .iter()
-                        .filter(|t| !tags.contains(&t.as_str()))
-                        .cloned()
-                        .collect::<Vec<String>>()
-                        .join(",");
-                    format!("{}", t).to_string()
+                    v
+                    .iter()
+                    .filter(|t| !tags.contains(&t.as_str()))
+                    .cloned()
+                    .collect::<Vec<String>>()
+                    .join(",")
                 }
                 None => "".to_string(),
             },
@@ -343,8 +341,8 @@ impl TaskReportTable {
             "description" => task.description().to_string(),
             "urgency" => match &task.uda()["urgency"] {
                 UDAValue::Str(_) => "0.00".to_string(),
-                UDAValue::U64(u) => format!("{:.2}", *u as f64).to_string(),
-                UDAValue::F64(f) => format!("{:.2}", *f).to_string(),
+                UDAValue::U64(u) => format!("{:.2}", *u as f64),
+                UDAValue::F64(f) => format!("{:.2}", *f),
             },
             _ => "".to_string(),
         }
@@ -765,7 +763,7 @@ impl TTApp {
                 .fg(self.config.color_due_today.fg)
                 .bg(self.config.color_due_today.bg);
         }
-        return style;
+        style
     }
 
     fn draw_task_report(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
@@ -825,7 +823,7 @@ impl TTApp {
             if i == selected {
                 highlight_style = style.add_modifier(Modifier::BOLD);
             }
-            rows.push(Row::StyledData(task.into_iter(), style));
+            rows.push(Row::StyledData(task.iter(), style));
         }
 
         let constraints: Vec<Constraint> = widths
@@ -896,7 +894,7 @@ impl TTApp {
         task.arg("rc.json.array=on");
         task.arg("export");
 
-        let filter = if self.context_filter != "".to_string() {
+        let filter = if self.context_filter != *"" {
             let t = format!("{} {}", self.filter.as_str(), self.context_filter);
             t
         } else {
@@ -1484,11 +1482,7 @@ impl TTApp {
                 }
                 _ => handle_movement(&mut self.command, input),
             },
-            AppMode::TaskError => match input {
-                _ => {
-                    self.mode = AppMode::TaskReport;
-                }
-            },
+            AppMode::TaskError => self.mode = AppMode::TaskReport,
             AppMode::Calendar => match input {
                 Key::Char('[') => {
                     self.mode = AppMode::TaskReport;
@@ -1550,7 +1544,7 @@ pub fn handle_movement(linebuffer: &mut LineBuffer, input: Key) {
 
 pub fn add_tag(task: &mut Task, tag: String) {
     match task.tags_mut() {
-        Some(t) => t.push(tag.to_string()),
+        Some(t) => t.push(tag),
         None => task.set_tags(Some(vec![tag])),
     }
 }
