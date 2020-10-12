@@ -169,7 +169,7 @@ impl TaskReportTable {
 
         for line in data.split('\n') {
             if line.starts_with("report.next.columns") {
-                let column_names: &str = line.split(' ').collect::<Vec<&str>>()[1];
+                let column_names = line.split(' ').collect::<Vec<_>>()[1];
                 for column in column_names.split(',') {
                     self.columns.push(column.to_string());
                 }
@@ -185,7 +185,7 @@ impl TaskReportTable {
 
         for line in data.split('\n') {
             if line.starts_with("report.next.labels") {
-                let label_names: &str = line.split(' ').collect::<Vec<&str>>()[1];
+                let label_names = line.split(' ').collect::<Vec<_>>()[1];
                 for label in label_names.split(',') {
                     self.labels.push(label.to_string());
                 }
@@ -327,7 +327,7 @@ impl TaskReportTable {
                     .iter()
                     .filter(|t| !tags.contains(&t.as_str()))
                     .cloned()
-                    .collect::<Vec<String>>()
+                    .collect::<Vec<_>>()
                     .join(","),
                 None => "".to_string(),
             },
