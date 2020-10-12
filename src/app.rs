@@ -1233,76 +1233,70 @@ impl TTApp {
 
         // other virtual tags
         // TODO: support all virtual tags that taskwarrior supports
-        for i in 0..tasks.len() {
-            match tasks[i].status() {
-                TaskStatus::Waiting => add_tag(&mut tasks[i], "WAITING".to_string()),
-                TaskStatus::Completed => add_tag(&mut tasks[i], "COMPLETED".to_string()),
-                TaskStatus::Pending => add_tag(&mut tasks[i], "PENDING".to_string()),
-                TaskStatus::Deleted => add_tag(&mut tasks[i], "DELETED".to_string()),
+        for mut task in tasks.iter_mut() {
+            match task.status() {
+                TaskStatus::Waiting => add_tag(&mut task, "WAITING".to_string()),
+                TaskStatus::Completed => add_tag(&mut task, "COMPLETED".to_string()),
+                TaskStatus::Pending => add_tag(&mut task, "PENDING".to_string()),
+                TaskStatus::Deleted => add_tag(&mut task, "DELETED".to_string()),
                 TaskStatus::Recurring => (),
             }
-            if tasks[i].start().is_some() {
-                add_tag(&mut tasks[i], "ACTIVE".to_string());
+            if task.start().is_some() {
+                add_tag(&mut task, "ACTIVE".to_string());
             }
-            if tasks[i].scheduled().is_some() {
-                add_tag(&mut tasks[i], "SCHEDULED".to_string());
+            if task.scheduled().is_some() {
+                add_tag(&mut task, "SCHEDULED".to_string());
             }
-            if tasks[i].parent().is_some() {
-                add_tag(&mut tasks[i], "INSTANCE".to_string());
+            if task.parent().is_some() {
+                add_tag(&mut task, "INSTANCE".to_string());
             }
-            if tasks[i].until().is_some() {
-                add_tag(&mut tasks[i], "UNTIL".to_string());
+            if task.until().is_some() {
+                add_tag(&mut task, "UNTIL".to_string());
             }
-            if tasks[i].annotations().is_some() {
-                add_tag(&mut tasks[i], "ANNOTATED".to_string());
+            if task.annotations().is_some() {
+                add_tag(&mut task, "ANNOTATED".to_string());
             }
-            if tasks[i].tags().is_some() {
-                add_tag(&mut tasks[i], "TAGGED".to_string());
+            if task.tags().is_some() {
+                add_tag(&mut task, "TAGGED".to_string());
             }
-            if tasks[i].mask().is_some() {
-                add_tag(&mut tasks[i], "TEMPLATE".to_string());
+            if task.mask().is_some() {
+                add_tag(&mut task, "TEMPLATE".to_string());
             }
-            if tasks[i].project().is_some() {
-                add_tag(&mut tasks[i], "PROJECT".to_string());
+            if task.project().is_some() {
+                add_tag(&mut task, "PROJECT".to_string());
             }
-            if tasks[i].priority().is_some() {
-                add_tag(&mut tasks[i], "PROJECT".to_string());
+            if task.priority().is_some() {
+                add_tag(&mut task, "PROJECT".to_string());
             }
-            if tasks[i].due().is_some() {
-                add_tag(&mut tasks[i], "DUE".to_string());
+            if task.due().is_some() {
+                add_tag(&mut task, "DUE".to_string());
             }
-            match tasks[i].due() {
-                Some(d) => {
-                    let status = tasks[i].status();
-                    // due today
-                    if status != &TaskStatus::Completed && status != &TaskStatus::Deleted {
-                        let today = Local::now().naive_utc().date();
-                        match get_date_state(d) {
-                            DateState::EarlierToday | DateState::LaterToday => {
-                                add_tag(&mut tasks[i], "TODAY".to_string())
-                            }
-                            _ => (),
+            if let Some(d) = task.due() {
+                let status = task.status();
+                // due today
+                if status != &TaskStatus::Completed && status != &TaskStatus::Deleted {
+                    let today = Local::now().naive_utc().date();
+                    match get_date_state(d) {
+                        DateState::EarlierToday | DateState::LaterToday => {
+                            add_tag(&mut task, "TODAY".to_string())
                         }
+                        _ => (),
                     }
                 }
-                None => (),
             }
-            match tasks[i].due() {
-                Some(d) => {
-                    let status = tasks[i].status();
-                    // overdue
-                    if status != &TaskStatus::Completed
-                        && status != &TaskStatus::Deleted
-                        && status != &TaskStatus::Recurring
-                    {
-                        let now = Local::now().naive_utc();
-                        let d = NaiveDateTime::new(d.date(), d.time());
-                        if d < now {
-                            add_tag(&mut tasks[i], "OVERDUE".to_string());
-                        }
+            if let Some(d) = task.due() {
+                let status = task.status();
+                // overdue
+                if status != &TaskStatus::Completed
+                    && status != &TaskStatus::Deleted
+                    && status != &TaskStatus::Recurring
+                {
+                    let now = Local::now().naive_utc();
+                    let d = NaiveDateTime::new(d.date(), d.time());
+                    if d < now {
+                        add_tag(&mut task, "OVERDUE".to_string());
                     }
                 }
-                None => (),
             }
         }
     }
