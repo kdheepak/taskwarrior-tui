@@ -207,9 +207,15 @@ impl TConfig {
             obfuscate: bool_collection.get("obfuscate").cloned().unwrap_or(false),
             print_empty_columns: bool_collection.get("print_empty_columns").cloned().unwrap_or(false),
             color_active: color_collection.get("active").cloned().unwrap_or_else(TColor::default),
-            color_alternate: color_collection.get("alternate").cloned().unwrap_or_else(TColor::default),
+            color_alternate: color_collection
+                .get("alternate")
+                .cloned()
+                .unwrap_or_else(TColor::default),
             color_blocked: color_collection.get("blocked").cloned().unwrap_or_else(TColor::default),
-            color_blocking: color_collection.get("blocking").cloned().unwrap_or_else(TColor::default),
+            color_blocking: color_collection
+                .get("blocking")
+                .cloned()
+                .unwrap_or_else(TColor::default),
             color_burndown_done: color_collection
                 .get("burndown.done")
                 .cloned()
@@ -250,13 +256,22 @@ impl TConfig {
                 .get("calendar.weeknumber")
                 .cloned()
                 .unwrap_or_else(TColor::default),
-            color_completed: color_collection.get("completed").cloned().unwrap_or_else(TColor::default),
+            color_completed: color_collection
+                .get("completed")
+                .cloned()
+                .unwrap_or_else(TColor::default),
             color_debug: color_collection.get("debug").cloned().unwrap_or_else(TColor::default),
             color_deleted: color_collection.get("deleted").cloned().unwrap_or_else(TColor::default),
             color_due: color_collection.get("due").cloned().unwrap_or_else(TColor::default),
-            color_due_today: color_collection.get("due.today").cloned().unwrap_or_else(TColor::default),
+            color_due_today: color_collection
+                .get("due.today")
+                .cloned()
+                .unwrap_or_else(TColor::default),
             color_error: color_collection.get("error").cloned().unwrap_or_else(TColor::default),
-            color_footnote: color_collection.get("footnote").cloned().unwrap_or_else(TColor::default),
+            color_footnote: color_collection
+                .get("footnote")
+                .cloned()
+                .unwrap_or_else(TColor::default),
             color_header: color_collection.get("header").cloned().unwrap_or_else(TColor::default),
             color_history_add: color_collection
                 .get("history.add")
@@ -271,11 +286,20 @@ impl TConfig {
                 .cloned()
                 .unwrap_or_else(TColor::default),
             color_label: color_collection.get("label").cloned().unwrap_or_else(TColor::default),
-            color_label_sort: color_collection.get("label.sort").cloned().unwrap_or_else(TColor::default),
+            color_label_sort: color_collection
+                .get("label.sort")
+                .cloned()
+                .unwrap_or_else(TColor::default),
             color_overdue: color_collection.get("overdue").cloned().unwrap_or_else(TColor::default),
             color_project: color_collection.get("project").cloned().unwrap_or_else(TColor::default),
-            color_recurring: color_collection.get("recurring").cloned().unwrap_or_else(TColor::default),
-            color_scheduled: color_collection.get("scheduled").cloned().unwrap_or_else(TColor::default),
+            color_recurring: color_collection
+                .get("recurring")
+                .cloned()
+                .unwrap_or_else(TColor::default),
+            color_scheduled: color_collection
+                .get("scheduled")
+                .cloned()
+                .unwrap_or_else(TColor::default),
             color_summary_background: color_collection
                 .get("summary.background")
                 .cloned()
@@ -284,7 +308,10 @@ impl TConfig {
                 .get("summary_bar")
                 .cloned()
                 .unwrap_or_else(TColor::default),
-            color_sync_added: color_collection.get("sync.added").cloned().unwrap_or_else(TColor::default),
+            color_sync_added: color_collection
+                .get("sync.added")
+                .cloned()
+                .unwrap_or_else(TColor::default),
             color_sync_changed: color_collection
                 .get("sync.changed")
                 .cloned()
@@ -293,7 +320,10 @@ impl TConfig {
                 .get("sync.rejected")
                 .cloned()
                 .unwrap_or_else(TColor::default),
-            color_tag_next: color_collection.get("tag.next").cloned().unwrap_or_else(TColor::default),
+            color_tag_next: color_collection
+                .get("tag.next")
+                .cloned()
+                .unwrap_or_else(TColor::default),
             color_tag: color_collection.get("tag").cloned().unwrap_or_else(TColor::default),
             color_tagged: color_collection.get("tagged").cloned().unwrap_or_else(TColor::default),
             color_uda_priority: color_collection
@@ -312,7 +342,10 @@ impl TConfig {
                 .get("uda.priority.m")
                 .cloned()
                 .unwrap_or_else(TColor::default),
-            color_undo_after: color_collection.get("undo.after").cloned().unwrap_or_else(TColor::default),
+            color_undo_after: color_collection
+                .get("undo.after")
+                .cloned()
+                .unwrap_or_else(TColor::default),
             color_undo_before: color_collection
                 .get("undo.before")
                 .cloned()

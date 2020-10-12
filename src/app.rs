@@ -313,11 +313,7 @@ impl TaskReportTable {
             },
             "tags.count" => match task.tags() {
                 Some(v) => {
-                    let t = v
-                        .iter()
-                        .filter(|t| !tags.contains(&t.as_str()))
-                        .cloned()
-                        .count();
+                    let t = v.iter().filter(|t| !tags.contains(&t.as_str())).cloned().count();
                     if t == 0 {
                         "".to_string()
                     } else {
@@ -327,14 +323,12 @@ impl TaskReportTable {
                 None => "".to_string(),
             },
             "tags" => match task.tags() {
-                Some(v) => {
-                    v
+                Some(v) => v
                     .iter()
                     .filter(|t| !tags.contains(&t.as_str()))
                     .cloned()
                     .collect::<Vec<String>>()
-                    .join(",")
-                }
+                    .join(","),
                 None => "".to_string(),
             },
             "description.count" => task.description().to_string(),
@@ -1277,9 +1271,7 @@ impl TTApp {
                 if status != &TaskStatus::Completed && status != &TaskStatus::Deleted {
                     let today = Local::now().naive_utc().date();
                     match get_date_state(d) {
-                        DateState::EarlierToday | DateState::LaterToday => {
-                            add_tag(&mut task, "TODAY".to_string())
-                        }
+                        DateState::EarlierToday | DateState::LaterToday => add_tag(&mut task, "TODAY".to_string()),
                         _ => (),
                     }
                 }
