@@ -743,14 +743,15 @@ impl TTApp {
         let mut style = Style::default();
 
         for tag_name in tag_names_in_precedence {
-
             if task.tags().unwrap_or(&vec![]).contains(&tag_name.to_string().replace(".", "").to_uppercase()) {
                 let color_tag_name = format!("color.{}", tag_name);
                 let c = self.config.color.get(&color_tag_name).cloned().unwrap_or_default();
                 style = style.fg(c.fg).bg(c.bg);
+                for modifier in c.modifiers {
+                    style = style.add_modifier(modifier);
+                }
                 break
             }
-
         }
 
         style
@@ -824,7 +825,7 @@ impl TTApp {
         let t = Table::new(header, rows.into_iter())
             .block(Block::default().borders(Borders::ALL).title("Task next"))
             .highlight_style(highlight_style)
-            .highlight_symbol("• ")
+            .highlight_symbol(&self.config.active_indicator)
             .widths(&constraints);
 
         f.render_stateful_widget(t, rect, &mut self.state);
@@ -1547,6 +1548,7 @@ mod tests {
         assert_eq!(app.context_name, "".to_string());
         println!("{:?}", app.tasks.lock().unwrap()[0]);
 
+        println!("{:?}", app.style_for_task(&app.task_current().unwrap()));
         //println!("{:?}", app.task_report_columns);
         //println!("{:?}", app.task_report_labels);
 

@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 use std::process::Command;
 use std::str;
-use tui::style::Color;
+use tui::style::{Color, Modifier};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct TColor {
     pub fg: Color,
     pub bg: Color,
+    pub modifiers: Vec<Modifier>,
 }
 
 impl Default for TColor {
@@ -20,6 +21,7 @@ impl TColor {
         TColor {
             fg: Color::Black,
             bg: Color::White,
+            modifiers: vec![],
         }
     }
 }
@@ -31,6 +33,7 @@ pub struct TConfig {
     pub obfuscate: bool,
     pub print_empty_columns: bool,
     pub rule_precedence_color: Vec<String>,
+    pub active_indicator: String,
 }
 
 impl TConfig {
@@ -42,6 +45,7 @@ impl TConfig {
             print_empty_columns: bool_collection.get("print_empty_columns").cloned().unwrap_or(false),
             color: Self::get_color_collection(),
             rule_precedence_color: Self::get_rule_precedence_color(),
+            active_indicator: Self::get_active_indicator(),
         }
     }
 
@@ -75,68 +79,94 @@ impl TConfig {
     }
 
     fn get_tcolor(line: &str) -> TColor {
-        if line.contains(" on ") {
-            let foreground = line.split(' ').collect::<Vec<&str>>()[0];
-            let background = line.split(' ').collect::<Vec<&str>>()[2];
-            TColor {
-                fg: Self::get_color(foreground, Color::Black),
-                bg: Self::get_color(background, Color::White),
-            }
-        } else if line.contains("on ") {
-            let background = line.split(' ').collect::<Vec<&str>>()[1];
-            TColor {
-                fg: Color::Black,
-                bg: Self::get_color(background, Color::White),
-            }
-        } else {
-            let foreground = line;
-            TColor {
-                fg: Self::get_color(foreground, Color::Black),
-                bg: Color::White,
-            }
+        let (foreground, background) = line.split_at(line.find("on ").unwrap_or(line.len()));
+        let background = background.trim_start_matches("on ");
+        let mut modifiers = vec![];
+        if foreground.contains("underline") {
+            modifiers.push(Modifier::BOLD);
+        }
+        let foreground = foreground.replace("underline ", "");
+        if foreground.contains("bold") {
+            modifiers.push(Modifier::BOLD);
+        }
+        let foreground = foreground.replace("bold ", "");
+        TColor {
+            fg: Self::get_color(foreground.as_str(), Color::Black),
+            bg: Self::get_color(background, Color::White),
+            modifiers,
         }
     }
 
     fn get_color(s: &str, default: Color) -> Color {
-        if s.starts_with("color") {
-            let fg = (s.as_bytes()[5] as char).to_digit(10).unwrap() as u8;
+        let s = s.trim_start();
+        let s = s.trim_end();
+        if s.contains("color") {
+            let s = s.trim_start_matches("bright ");
+            let fg = (s.as_bytes()[5] as char).to_digit(10).unwrap_or_default() as u8;
             Color::Indexed(fg)
-        } else if s.starts_with("rgb") {
-            let red = (s.as_bytes()[3] as char).to_digit(10).unwrap() as u8;
-            let green = (s.as_bytes()[4] as char).to_digit(10).unwrap() as u8;
-            let blue = (s.as_bytes()[5] as char).to_digit(10).unwrap() as u8;
+        } else if s.contains("gray") {
+            let s = s.trim_start_matches("bright ");
+            let fg = 232 + s.trim_start_matches("gray").parse::<u8>().unwrap_or_default();
+            Color::Indexed(fg)
+        } else if s.contains("rgb") {
+            let s = s.trim_start_matches("bright ");
+            let red = (s.as_bytes()[3] as char).to_digit(10).unwrap_or_default() as u8;
+            let green = (s.as_bytes()[4] as char).to_digit(10).unwrap_or_default() as u8;
+            let blue = (s.as_bytes()[5] as char).to_digit(10).unwrap_or_default() as u8;
             Color::Indexed(16 + red * 36 + green * 6 + blue)
-        } else if s == "black" {
-            Color::Black
-        } else if s == "red" {
-            Color::Red
-        } else if s == "green" {
-            Color::Green
-        } else if s == "yellow" {
-            Color::Yellow
-        } else if s == "blue" {
-            Color::Blue
-        } else if s == "magenta" {
-            Color::Magenta
-        } else if s == "cyan" {
-            Color::Cyan
-        } else if s == "white" {
+        } else if s == "bright red" {
+            Color::LightRed
+        } else if s == "bright green" {
+            Color::LightGreen
+        } else if s == "bright yellow" {
+            Color::LightYellow
+        } else if s == "bright blue" {
+            Color::LightBlue
+        } else if s == "bright magenta" {
+            Color::LightMagenta
+        } else if s == "bright cyan" {
+            Color::LightCyan
+        } else if s == "bright white" {
             Color::White
+        } else if s.contains("black") {
+            Color::Black
+        } else if s.contains("red") {
+            Color::Red
+        } else if s.contains("green") {
+            Color::Green
+        } else if s.contains("yellow") {
+            Color::Yellow
+        } else if s.contains("blue") {
+            Color::Blue
+        } else if s.contains("magenta") {
+            Color::Magenta
+        } else if s.contains("cyan") {
+            Color::Cyan
+        } else if s.contains("white") {
+            Color::White
+        } else if s.contains("black") {
+            Color::Black
         } else {
             default
         }
     }
 
-    fn get_rule_precedence_color() -> Vec<String> {
-
+    fn get_config(config: &str) -> String {
         let output = Command::new("task")
             .arg("rc.color=off")
             .arg("show")
-            .arg("rule.precedence.color")
+            .arg(config)
             .output()
             .expect("Unable to run `task show`");
 
         let data = String::from_utf8(output.stdout).expect("Unable to convert stdout to string");
+        data
+    }
+
+    fn get_rule_precedence_color() -> Vec<String> {
+
+        let data = Self::get_config("rule.precedence.color");
+
         let mut rule_precedence_color = vec![];
         for line in data.split('\n') {
             if line.starts_with("rule.precedence.color ") {
@@ -152,6 +182,21 @@ impl TConfig {
         return rule_precedence_color;
     }
 
+    fn get_active_indicator() -> String {
+
+        let data = Self::get_config("active.indicator");
+
+        for line in data.split('\n') {
+            if line.starts_with("active.indicator") {
+                let active_indicator = line
+                    .trim_start_matches("active.indicator ");
+                return format!("{} ", active_indicator.trim_end());
+            }
+        }
+
+        return "• ".to_string();
+    }
+
 }
 
 #[cfg(test)]
@@ -160,6 +205,7 @@ mod tests {
     #[test]
     fn test_colors() {
         let tc = TConfig::default();
-        dbg!(tc);
+        dbg!(&tc.color["color.active"]);
+        dbg!(&tc.active_indicator);
     }
 }
