@@ -12,7 +12,7 @@ use task_hookrs::task::Task;
 use task_hookrs::uda::UDAValue;
 use uuid::Uuid;
 
-use chrono::{Local, NaiveDateTime, TimeZone};
+use chrono::{Local, NaiveDateTime, TimeZone, Datelike};
 
 use crate::calendar::Calendar;
 use std::sync::{Arc, Mutex};
@@ -428,7 +428,8 @@ impl TTApp {
             .direction(Direction::Vertical)
             .constraints([Constraint::Min(0)].as_ref())
             .split(f.size());
-        let c = &Calendar::new(2020).to_string()[..];
+        let today = Local::today();
+        let c = &Calendar::new(today.year().into()).to_string()[..];
         let p = Paragraph::new(Text::from(c))
             .alignment(Alignment::Left)
             .block(Block::default().borders(Borders::ALL).title("Calendar"));
