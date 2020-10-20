@@ -23,8 +23,10 @@ use tui::{
     style::{Color, Modifier, Style},
     terminal::Frame,
     text::{Span, Spans, Text},
-    widgets::{Block, Borders, Clear, Paragraph, Row, Table, TableState},
+    widgets::{Block, Borders, Clear, Paragraph},
 };
+
+use crate::table::{Row, Table, TableState};
 
 use rustyline::error::ReadlineError;
 use rustyline::line_buffer::LineBuffer;

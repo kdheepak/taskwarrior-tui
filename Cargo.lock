@@ -755,6 +755,7 @@ dependencies = [
 name = "taskwarrior-tui"
 version = "0.7.1"
 dependencies = [
+ "cassowary",
  "chrono",
  "clap",
  "crossterm",
