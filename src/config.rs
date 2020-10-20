@@ -12,8 +12,8 @@ pub struct TColor {
 impl TColor {
     pub fn default() -> Self {
         TColor {
-            fg: Color::Indexed(0),
-            bg: Color::Indexed(15),
+            fg: Color::Black,
+            bg: Color::White,
         }
     }
 }
@@ -72,7 +72,7 @@ pub struct TConfig {
     pub print_empty_columns: bool,
 }
 
-pub fn get_color(s: &str) -> Color {
+pub fn get_color(s: &str, default: Color) -> Color {
     if s.starts_with("color") {
         let fg = (s.as_bytes()[5] as char).to_digit(10).unwrap() as u8;
         Color::Indexed(fg)
@@ -81,12 +81,24 @@ pub fn get_color(s: &str) -> Color {
         let green = (s.as_bytes()[4] as char).to_digit(10).unwrap() as u8;
         let blue = (s.as_bytes()[5] as char).to_digit(10).unwrap() as u8;
         Color::Indexed(16 + red * 36 + green * 6 + blue)
-    } else if s == "white" {
-        Color::White
     } else if s == "black" {
         Color::Black
+    } else if s == "red" {
+        Color::Red
+    } else if s == "green" {
+        Color::Green
+    } else if s == "yellow" {
+        Color::Yellow
+    } else if s == "blue" {
+        Color::Blue
+    } else if s == "magenta" {
+        Color::Magenta
+    } else if s == "cyan" {
+        Color::Cyan
+    } else if s == "white" {
+        Color::White
     } else {
-        Color::Indexed(15)
+        default
     }
 }
 
@@ -95,20 +107,20 @@ pub fn get_tcolor(line: &str) -> TColor {
         let foreground = line.split(' ').collect::<Vec<&str>>()[0];
         let background = line.split(' ').collect::<Vec<&str>>()[2];
         TColor {
-            fg: get_color(foreground),
-            bg: get_color(background),
+            fg: get_color(foreground, Color::Black),
+            bg: get_color(background, Color::White),
         }
     } else if line.contains("on ") {
         let background = line.split(' ').collect::<Vec<&str>>()[1];
         TColor {
-            fg: Color::Indexed(0),
-            bg: get_color(background),
+            fg: Color::Black,
+            bg: get_color(background, Color::White),
         }
     } else {
         let foreground = line;
         TColor {
-            fg: get_color(foreground),
-            bg: Color::Indexed(15),
+            fg: get_color(foreground, Color::Black),
+            bg: Color::White,
         }
     }
 }
@@ -126,7 +138,7 @@ impl TConfig {
         let enabled = true;
 
         let attributes = vec![
-            "active",
+            "color.active",
             "color.alternate",
             "color.blocked",
             "color.blocking",
@@ -181,10 +193,11 @@ impl TConfig {
         let mut color_collection = HashMap::new();
         for line in data.split('\n') {
             for attribute in &attributes {
-                if line.starts_with(attribute) {
+                if line.starts_with(format!("{} ", attribute).as_str()) {
+                    let tcolor = get_tcolor(line.trim_start_matches(attribute).trim_start_matches(' '));
                     color_collection.insert(
-                        attribute.to_string(),
-                        get_tcolor(line.trim_start_matches(attribute).trim_start_matches(' ')),
+                        attribute.strip_prefix("color.").unwrap_or_default().to_string(),
+                        tcolor,
                     );
                 }
             }
@@ -193,7 +206,7 @@ impl TConfig {
         let mut bool_collection = HashMap::new();
         for line in data.split('\n') {
             for attribute in &attributes {
-                if line.starts_with(attribute) {
+                if line.starts_with(format!("{} ", attribute).as_str()) {
                     bool_collection.insert(
                         attribute.to_string(),
                         line.trim_start_matches(attribute).trim_start_matches(' ') == "yes",
@@ -358,10 +371,11 @@ impl TConfig {
 
 #[cfg(test)]
 mod tests {
-    use crate::color::TColorConfig;
+    use crate::config::TConfig;
     #[test]
     fn test_colors() {
-        let tc = TColorConfig::default();
-        println!("{:?}", tc.due_today);
+        let tc = TConfig::default();
+        dbg!(tc.color_active);
+        dbg!(tc.color_due_today);
     }
 }
