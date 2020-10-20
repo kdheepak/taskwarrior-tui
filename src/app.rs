@@ -743,7 +743,7 @@ impl TTApp {
 
         for tag_name in tag_names_in_precedence {
 
-            if task.tags().unwrap_or(&vec![]).contains(&tag_name.to_string().to_uppercase()) {
+            if task.tags().unwrap_or(&vec![]).contains(&tag_name.to_string().replace(".", "").to_uppercase()) {
                 let color_tag_name = format!("color.{}", tag_name);
                 let c = self.config.color.get(&color_tag_name).cloned().unwrap_or_default();
                 style = style.fg(c.fg).bg(c.bg);
