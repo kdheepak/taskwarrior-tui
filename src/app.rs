@@ -736,29 +736,22 @@ impl TTApp {
     }
 
     fn style_for_task(&self, task: &Task) -> Style {
+
+        let tag_names_in_precedence = &self.config.rule_precedence_color;
+
         let mut style = Style::default();
-        if task.tags().unwrap_or(&vec![]).contains(&"ACTIVE".to_string()) {
-            style = style.fg(self.config.color_active.fg).bg(self.config.color_active.bg);
+
+        for tag_name in tag_names_in_precedence {
+
+            if task.tags().unwrap_or(&vec![]).contains(&tag_name.to_string().to_uppercase()) {
+                let color_tag_name = format!("color.{}", tag_name);
+                let c = self.config.color.get(&color_tag_name).cloned().unwrap_or_default();
+                style = style.fg(c.fg).bg(c.bg);
+                break
+            }
+
         }
-        if task.tags().unwrap_or(&vec![]).contains(&"BLOCKING".to_string()) {
-            style = style
-                .fg(self.config.color_blocking.fg)
-                .bg(self.config.color_blocking.bg);
-        }
-        if task.tags().unwrap_or(&vec![]).contains(&"BLOCKED".to_string()) {
-            style = style.fg(self.config.color_blocked.fg).bg(self.config.color_blocked.bg);
-        }
-        if task.tags().unwrap_or(&vec![]).contains(&"DUE".to_string()) {
-            style = style.fg(self.config.color_due.fg).bg(self.config.color_due.bg);
-        }
-        if task.tags().unwrap_or(&vec![]).contains(&"OVERDUE".to_string()) {
-            style = style.fg(self.config.color_overdue.fg).bg(self.config.color_overdue.bg);
-        }
-        if task.tags().unwrap_or(&vec![]).contains(&"TODAY".to_string()) {
-            style = style
-                .fg(self.config.color_due_today.fg)
-                .bg(self.config.color_due_today.bg);
-        }
+
         style
     }
 

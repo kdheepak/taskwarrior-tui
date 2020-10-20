@@ -9,6 +9,12 @@ pub struct TColor {
     pub bg: Color,
 }
 
+impl Default for TColor {
+    fn default() -> Self {
+        TColor::default()
+    }
+}
+
 impl TColor {
     pub fn default() -> Self {
         TColor {
@@ -21,112 +27,29 @@ impl TColor {
 #[derive(Debug)]
 pub struct TConfig {
     pub enabled: bool,
-    pub color_active: TColor,
-    pub color_alternate: TColor,
-    pub color_blocked: TColor,
-    pub color_blocking: TColor,
-    pub color_burndown_done: TColor,
-    pub color_burndown_pending: TColor,
-    pub color_burndown_started: TColor,
-    pub color_calendar_due: TColor,
-    pub color_calendar_due_today: TColor,
-    pub color_calendar_holiday: TColor,
-    pub color_calendar_overdue: TColor,
-    pub color_calendar_today: TColor,
-    pub color_calendar_weekend: TColor,
-    pub color_calendar_weeknumber: TColor,
-    pub color_completed: TColor,
-    pub color_debug: TColor,
-    pub color_deleted: TColor,
-    pub color_due: TColor,
-    pub color_due_today: TColor,
-    pub color_error: TColor,
-    pub color_footnote: TColor,
-    pub color_header: TColor,
-    pub color_history_add: TColor,
-    pub color_history_delete: TColor,
-    pub color_history_done: TColor,
-    pub color_label: TColor,
-    pub color_label_sort: TColor,
-    pub color_overdue: TColor,
-    pub color_project: TColor,
-    pub color_recurring: TColor,
-    pub color_scheduled: TColor,
-    pub color_summary_background: TColor,
-    pub color_summary_bar: TColor,
-    pub color_sync_added: TColor,
-    pub color_sync_changed: TColor,
-    pub color_sync_rejected: TColor,
-    pub color_tag_next: TColor,
-    pub color_tag: TColor,
-    pub color_tagged: TColor,
-    pub color_uda_priority: TColor,
-    pub color_uda_priority_h: TColor,
-    pub color_uda_priority_l: TColor,
-    pub color_uda_priority_m: TColor,
-    pub color_undo_after: TColor,
-    pub color_undo_before: TColor,
-    pub color_until: TColor,
-    pub color_warning: TColor,
+    pub color: HashMap<String, TColor>,
     pub obfuscate: bool,
     pub print_empty_columns: bool,
-}
-
-pub fn get_color(s: &str, default: Color) -> Color {
-    if s.starts_with("color") {
-        let fg = (s.as_bytes()[5] as char).to_digit(10).unwrap() as u8;
-        Color::Indexed(fg)
-    } else if s.starts_with("rgb") {
-        let red = (s.as_bytes()[3] as char).to_digit(10).unwrap() as u8;
-        let green = (s.as_bytes()[4] as char).to_digit(10).unwrap() as u8;
-        let blue = (s.as_bytes()[5] as char).to_digit(10).unwrap() as u8;
-        Color::Indexed(16 + red * 36 + green * 6 + blue)
-    } else if s == "black" {
-        Color::Black
-    } else if s == "red" {
-        Color::Red
-    } else if s == "green" {
-        Color::Green
-    } else if s == "yellow" {
-        Color::Yellow
-    } else if s == "blue" {
-        Color::Blue
-    } else if s == "magenta" {
-        Color::Magenta
-    } else if s == "cyan" {
-        Color::Cyan
-    } else if s == "white" {
-        Color::White
-    } else {
-        default
-    }
-}
-
-pub fn get_tcolor(line: &str) -> TColor {
-    if line.contains(" on ") {
-        let foreground = line.split(' ').collect::<Vec<&str>>()[0];
-        let background = line.split(' ').collect::<Vec<&str>>()[2];
-        TColor {
-            fg: get_color(foreground, Color::Black),
-            bg: get_color(background, Color::White),
-        }
-    } else if line.contains("on ") {
-        let background = line.split(' ').collect::<Vec<&str>>()[1];
-        TColor {
-            fg: Color::Black,
-            bg: get_color(background, Color::White),
-        }
-    } else {
-        let foreground = line;
-        TColor {
-            fg: get_color(foreground, Color::Black),
-            bg: Color::White,
-        }
-    }
+    pub rule_precedence_color: Vec<String>,
 }
 
 impl TConfig {
     pub fn default() -> Self {
+        let bool_collection = Self::get_bool_collection();
+        Self {
+            enabled: true,
+            obfuscate: bool_collection.get("obfuscate").cloned().unwrap_or(false),
+            print_empty_columns: bool_collection.get("print_empty_columns").cloned().unwrap_or(false),
+            color: Self::get_color_collection(),
+            rule_precedence_color: Self::get_rule_precedence_color(),
+        }
+    }
+
+    fn get_bool_collection() -> HashMap<String, bool> {
+        HashMap::new()
+    }
+
+    fn get_color_collection() -> HashMap<String, TColor> {
         let output = Command::new("task")
             .arg("rc.color=off")
             .arg("show")
@@ -134,239 +57,101 @@ impl TConfig {
             .expect("Unable to run `task show`");
 
         let data = String::from_utf8(output.stdout).expect("Unable to convert stdout to string");
-
-        let enabled = true;
-
-        let attributes = vec![
-            "color.active",
-            "color.alternate",
-            "color.blocked",
-            "color.blocking",
-            "color.burndown.done",
-            "color.burndown.pending",
-            "color.burndown.started",
-            "color.calendar.due",
-            "color.calendar.due.today",
-            "color.calendar.holiday",
-            "color.calendar.overdue",
-            "color.calendar.today",
-            "color.calendar.weekend",
-            "color.calendar.weeknumber",
-            "color.completed",
-            "color.debug",
-            "color.deleted",
-            "color.due",
-            "color.due.today",
-            "color.error",
-            "color.footnote",
-            "color.header",
-            "color.header.add",
-            "color.history.delete",
-            "color.history.done",
-            "color.label",
-            "color.label.sort",
-            "color.overdue",
-            "color.project.none",
-            "color.recurring",
-            "color.scheduled",
-            "color.summary.background",
-            "color.summary.bar",
-            "color.sync.added",
-            "color.sync.changed",
-            "color.sync.rejected",
-            "color.tag.next",
-            "color.tag.none",
-            "color.tagged",
-            "color.uda.priority",
-            "color.uda.priority.H",
-            "color.uda.priority.L",
-            "color.uda.priority.M",
-            "color.undo.after",
-            "color.undo.before",
-            "color.undo.until",
-            "color.until",
-            "color.warning",
-            // "obfuscate",
-            // "print.empty.columns",
-        ];
-
         let mut color_collection = HashMap::new();
         for line in data.split('\n') {
-            for attribute in &attributes {
-                if line.starts_with(format!("{} ", attribute).as_str()) {
-                    let tcolor = get_tcolor(line.trim_start_matches(attribute).trim_start_matches(' '));
-                    color_collection.insert(
-                        attribute.strip_prefix("color.").unwrap_or_default().to_string(),
-                        tcolor,
-                    );
-                }
+            if line.starts_with("color.") {
+                let mut i = line.split(" ");
+                let attribute = i.next();
+                let line = i.collect::<Vec<_>>().join(" ");
+                let line = line.trim_start_matches(' ');
+                let tcolor = Self::get_tcolor(&line);
+                match attribute {
+                    Some(attr) => color_collection.insert(attr.to_string(), tcolor),
+                    None => None,
+                };
             }
         }
+        color_collection
+    }
 
-        let mut bool_collection = HashMap::new();
-        for line in data.split('\n') {
-            for attribute in &attributes {
-                if line.starts_with(format!("{} ", attribute).as_str()) {
-                    bool_collection.insert(
-                        attribute.to_string(),
-                        line.trim_start_matches(attribute).trim_start_matches(' ') == "yes",
-                    );
-                }
+    fn get_tcolor(line: &str) -> TColor {
+        if line.contains(" on ") {
+            let foreground = line.split(' ').collect::<Vec<&str>>()[0];
+            let background = line.split(' ').collect::<Vec<&str>>()[2];
+            TColor {
+                fg: Self::get_color(foreground, Color::Black),
+                bg: Self::get_color(background, Color::White),
             }
-        }
-
-        Self {
-            enabled: true,
-            obfuscate: bool_collection.get("obfuscate").cloned().unwrap_or(false),
-            print_empty_columns: bool_collection.get("print_empty_columns").cloned().unwrap_or(false),
-            color_active: color_collection.get("active").cloned().unwrap_or_else(TColor::default),
-            color_alternate: color_collection
-                .get("alternate")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_blocked: color_collection.get("blocked").cloned().unwrap_or_else(TColor::default),
-            color_blocking: color_collection
-                .get("blocking")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_burndown_done: color_collection
-                .get("burndown.done")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_burndown_pending: color_collection
-                .get("burndown.pending")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_burndown_started: color_collection
-                .get("burndown.started")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_calendar_due: color_collection
-                .get("calendar.due")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_calendar_due_today: color_collection
-                .get("calendar.due.today")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_calendar_holiday: color_collection
-                .get("calendar.holiday")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_calendar_overdue: color_collection
-                .get("calendar.overdue")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_calendar_today: color_collection
-                .get("calendar.today")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_calendar_weekend: color_collection
-                .get("calendar.weekend")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_calendar_weeknumber: color_collection
-                .get("calendar.weeknumber")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_completed: color_collection
-                .get("completed")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_debug: color_collection.get("debug").cloned().unwrap_or_else(TColor::default),
-            color_deleted: color_collection.get("deleted").cloned().unwrap_or_else(TColor::default),
-            color_due: color_collection.get("due").cloned().unwrap_or_else(TColor::default),
-            color_due_today: color_collection
-                .get("due.today")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_error: color_collection.get("error").cloned().unwrap_or_else(TColor::default),
-            color_footnote: color_collection
-                .get("footnote")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_header: color_collection.get("header").cloned().unwrap_or_else(TColor::default),
-            color_history_add: color_collection
-                .get("history.add")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_history_delete: color_collection
-                .get("history.delete")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_history_done: color_collection
-                .get("history.done")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_label: color_collection.get("label").cloned().unwrap_or_else(TColor::default),
-            color_label_sort: color_collection
-                .get("label.sort")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_overdue: color_collection.get("overdue").cloned().unwrap_or_else(TColor::default),
-            color_project: color_collection.get("project").cloned().unwrap_or_else(TColor::default),
-            color_recurring: color_collection
-                .get("recurring")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_scheduled: color_collection
-                .get("scheduled")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_summary_background: color_collection
-                .get("summary.background")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_summary_bar: color_collection
-                .get("summary_bar")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_sync_added: color_collection
-                .get("sync.added")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_sync_changed: color_collection
-                .get("sync.changed")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_sync_rejected: color_collection
-                .get("sync.rejected")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_tag_next: color_collection
-                .get("tag.next")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_tag: color_collection.get("tag").cloned().unwrap_or_else(TColor::default),
-            color_tagged: color_collection.get("tagged").cloned().unwrap_or_else(TColor::default),
-            color_uda_priority: color_collection
-                .get("uda.priority")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_uda_priority_h: color_collection
-                .get("uda.priority.h")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_uda_priority_l: color_collection
-                .get("uda.priority.l")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_uda_priority_m: color_collection
-                .get("uda.priority.m")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_undo_after: color_collection
-                .get("undo.after")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_undo_before: color_collection
-                .get("undo.before")
-                .cloned()
-                .unwrap_or_else(TColor::default),
-            color_until: color_collection.get("until").cloned().unwrap_or_else(TColor::default),
-            color_warning: color_collection.get("warning").cloned().unwrap_or_else(TColor::default),
+        } else if line.contains("on ") {
+            let background = line.split(' ').collect::<Vec<&str>>()[1];
+            TColor {
+                fg: Color::Black,
+                bg: Self::get_color(background, Color::White),
+            }
+        } else {
+            let foreground = line;
+            TColor {
+                fg: Self::get_color(foreground, Color::Black),
+                bg: Color::White,
+            }
         }
     }
+
+    fn get_color(s: &str, default: Color) -> Color {
+        if s.starts_with("color") {
+            let fg = (s.as_bytes()[5] as char).to_digit(10).unwrap() as u8;
+            Color::Indexed(fg)
+        } else if s.starts_with("rgb") {
+            let red = (s.as_bytes()[3] as char).to_digit(10).unwrap() as u8;
+            let green = (s.as_bytes()[4] as char).to_digit(10).unwrap() as u8;
+            let blue = (s.as_bytes()[5] as char).to_digit(10).unwrap() as u8;
+            Color::Indexed(16 + red * 36 + green * 6 + blue)
+        } else if s == "black" {
+            Color::Black
+        } else if s == "red" {
+            Color::Red
+        } else if s == "green" {
+            Color::Green
+        } else if s == "yellow" {
+            Color::Yellow
+        } else if s == "blue" {
+            Color::Blue
+        } else if s == "magenta" {
+            Color::Magenta
+        } else if s == "cyan" {
+            Color::Cyan
+        } else if s == "white" {
+            Color::White
+        } else {
+            default
+        }
+    }
+
+    fn get_rule_precedence_color() -> Vec<String> {
+
+        let output = Command::new("task")
+            .arg("rc.color=off")
+            .arg("show")
+            .arg("rule.precedence.color")
+            .output()
+            .expect("Unable to run `task show`");
+
+        let data = String::from_utf8(output.stdout).expect("Unable to convert stdout to string");
+        let mut rule_precedence_color = vec![];
+        for line in data.split('\n') {
+            if line.starts_with("rule.precedence.color ") {
+                rule_precedence_color = line
+                    .trim_start_matches("rule.precedence.color ")
+                    .split(',')
+                    .map(|s| s.trim_end_matches('.'))
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>()
+            }
+        }
+
+        return rule_precedence_color;
+    }
+
 }
 
 #[cfg(test)]
@@ -375,7 +160,6 @@ mod tests {
     #[test]
     fn test_colors() {
         let tc = TConfig::default();
-        dbg!(tc.color_active);
-        dbg!(tc.color_due_today);
+        dbg!(tc);
     }
 }
