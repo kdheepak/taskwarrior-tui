@@ -812,7 +812,19 @@ impl TTApp {
         for (i, task) in tasks.iter().enumerate() {
             let style = self.style_for_task(&self.tasks.lock().unwrap()[i]);
             if i == selected {
-                highlight_style = style.add_modifier(Modifier::BOLD);
+                highlight_style = style;
+                if self.config.uda_selection_bold {
+                    highlight_style = highlight_style.add_modifier(Modifier::BOLD);
+                }
+                if self.config.uda_selection_italic {
+                    highlight_style = highlight_style.add_modifier(Modifier::ITALIC);
+                }
+                if self.config.uda_selection_dim {
+                    highlight_style = highlight_style.add_modifier(Modifier::DIM);
+                }
+                if self.config.uda_selection_blink {
+                    highlight_style = highlight_style.add_modifier(Modifier::SLOW_BLINK);
+                }
             }
             rows.push(Row::StyledData(task.iter(), style));
         }
@@ -825,7 +837,7 @@ impl TTApp {
         let t = Table::new(header, rows.into_iter())
             .block(Block::default().borders(Borders::ALL).title("Task next"))
             .highlight_style(highlight_style)
-            .highlight_symbol(&self.config.uda_current_task_indicator)
+            .highlight_symbol(&self.config.uda_selection_indicator)
             .widths(&constraints);
 
         f.render_stateful_widget(t, rect, &mut self.state);

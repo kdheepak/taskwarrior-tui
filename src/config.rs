@@ -33,7 +33,11 @@ pub struct TConfig {
     pub obfuscate: bool,
     pub print_empty_columns: bool,
     pub rule_precedence_color: Vec<String>,
-    pub uda_current_task_indicator: String,
+    pub uda_selection_indicator: String,
+    pub uda_selection_bold: bool,
+    pub uda_selection_italic: bool,
+    pub uda_selection_dim: bool,
+    pub uda_selection_blink: bool,
 }
 
 impl TConfig {
@@ -45,7 +49,11 @@ impl TConfig {
             print_empty_columns: bool_collection.get("print_empty_columns").cloned().unwrap_or(false),
             color: Self::get_color_collection(),
             rule_precedence_color: Self::get_rule_precedence_color(),
-            uda_current_task_indicator: Self::get_uda_current_task_indicator(),
+            uda_selection_indicator: Self::get_uda_selection_indicator(),
+            uda_selection_bold: Self::get_uda_selection_bold(),
+            uda_selection_italic: Self::get_uda_selection_italic(),
+            uda_selection_dim: Self::get_uda_selection_dim(),
+            uda_selection_blink: Self::get_uda_selection_blink(),
         }
     }
 
@@ -245,8 +253,8 @@ impl TConfig {
             .collect::<Vec<_>>()
     }
 
-    fn get_uda_current_task_indicator() -> String {
-        let indicator = Self::get_config("uda.taskwarrior-tui.indicator");
+    fn get_uda_selection_indicator() -> String {
+        let indicator = Self::get_config("uda.taskwarrior-tui.selection.indicator");
         if indicator.is_empty() {
             "• ".to_string()
         } else {
@@ -254,6 +262,47 @@ impl TConfig {
         }
     }
 
+    fn get_uda_selection_bold() -> bool {
+        let s = Self::get_config("uda.taskwarrior-tui.selection.bold");
+        if s == "yes" {
+            true
+        } else if s == "no" {
+            false
+        } else {
+            true
+        }
+    }
+
+    fn get_uda_selection_italic() -> bool {
+        let s = Self::get_config("uda.taskwarrior-tui.selection.italic");
+        if s == "yes" {
+            true
+        } else if s == "no" {
+            false
+        } else {
+            false
+        }
+    }
+    fn get_uda_selection_dim() -> bool {
+        let s = Self::get_config("uda.taskwarrior-tui.selection.dim");
+        if s == "yes" {
+            true
+        } else if s == "no" {
+            false
+        } else {
+            false
+        }
+    }
+    fn get_uda_selection_blink() -> bool {
+        let s = Self::get_config("uda.taskwarrior-tui.selection.blink");
+        if s == "yes" {
+            true
+        } else if s == "no" {
+            false
+        } else {
+            false
+        }
+    }
 }
 
 #[cfg(test)]
