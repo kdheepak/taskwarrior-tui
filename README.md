@@ -83,3 +83,28 @@ Use your favorite installation method to download the [AUR package](https://aur.
 ![taskwarrior-tui](https://user-images.githubusercontent.com/1813121/95651612-ce7cc900-0aa8-11eb-8686-42442ed9ee43.gif)
 
 </details>
+
+### Configure `taskwarrior-tui` using `~/.taskrc`:
+
+<details>
+
+<summary> Click to expand! </summary>
+
+`taskwarrior-tui` reads values from your `taskwarrior`'s `taskrc` file (default: `~/.taskrc`).
+
+For example, `color.active` is used to style the active task.
+If you would like to try it, open your `taskrc` file and change `color.active=white on blue`.
+
+So `color.active` will take precedence over `color.overdue`.
+
+You can see what `color.active` is by running `task show color.active` in your favorite shell prompt.
+
+Other `taskwarrior-tui` configuration options are possible using the user defined attribute feature of `taskwarrior`.
+All `taskwarrior-tui` specific configuration options will begin with `uda.taskwarrior-tui.`.
+The following is a full list of all the options available.
+
+```plaintext
+uda.taskwarrior-tui.indicator=•
+```
+
+</details>
