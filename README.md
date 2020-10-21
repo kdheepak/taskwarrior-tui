@@ -101,10 +101,14 @@ You can see what `color.active` is by running `task show color.active` in your f
 
 Other `taskwarrior-tui` configuration options are possible using the user defined attribute feature of `taskwarrior`.
 All `taskwarrior-tui` specific configuration options will begin with `uda.taskwarrior-tui.`.
-The following is a full list of all the options available.
+The following is a full list of all the options available and their default values implemented by `taskwarrior-tui` if not defined in your `taskrc` file.
 
 ```plaintext
-uda.taskwarrior-tui.indicator=•
+uda.taskwarrior-tui.selection.indicator=•
+uda.taskwarrior-tui.selection.bold=yes
+uda.taskwarrior-tui.selection.italic=no
+uda.taskwarrior-tui.selection.dim=no
+uda.taskwarrior-tui.selection.blink=no
 ```
 
 </details>
