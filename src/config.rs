@@ -282,6 +282,7 @@ impl TConfig {
             false
         }
     }
+
     fn get_uda_selection_dim() -> bool {
         let s = Self::get_config("uda.taskwarrior-tui.selection.dim");
         if s == "yes" {
@@ -292,6 +293,7 @@ impl TConfig {
             false
         }
     }
+
     fn get_uda_selection_blink() -> bool {
         let s = Self::get_config("uda.taskwarrior-tui.selection.blink");
         if s == "yes" {
