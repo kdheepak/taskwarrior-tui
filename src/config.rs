@@ -33,7 +33,7 @@ pub struct TConfig {
     pub obfuscate: bool,
     pub print_empty_columns: bool,
     pub rule_precedence_color: Vec<String>,
-    pub active_indicator: String,
+    pub uda_current_task_indicator: String,
 }
 
 impl TConfig {
@@ -45,7 +45,7 @@ impl TConfig {
             print_empty_columns: bool_collection.get("print_empty_columns").cloned().unwrap_or(false),
             color: Self::get_color_collection(),
             rule_precedence_color: Self::get_rule_precedence_color(),
-            active_indicator: Self::get_active_indicator(),
+            uda_current_task_indicator: Self::get_uda_current_task_indicator(),
         }
     }
 
@@ -227,41 +227,31 @@ impl TConfig {
             .expect("Unable to run `task show`");
 
         let data = String::from_utf8(output.stdout).expect("Unable to convert stdout to string");
-        data
+
+        for line in data.split('\n') {
+            if line.starts_with(config) {
+                return line.trim_start_matches(config).trim_start().trim_end().to_string()
+            }
+        }
+        "• ".to_string()
     }
 
     fn get_rule_precedence_color() -> Vec<String> {
-
         let data = Self::get_config("rule.precedence.color");
-
-        let mut rule_precedence_color = vec![];
-        for line in data.split('\n') {
-            if line.starts_with("rule.precedence.color ") {
-                rule_precedence_color = line
-                    .trim_start_matches("rule.precedence.color ")
-                    .split(',')
-                    .map(|s| s.trim_end_matches('.'))
-                    .map(|s| s.to_string())
-                    .collect::<Vec<_>>()
-            }
-        }
-
-        return rule_precedence_color;
+        data
+            .split(',')
+            .map(|s| s.trim_end_matches('.'))
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>()
     }
 
-    fn get_active_indicator() -> String {
-
-        let data = Self::get_config("active.indicator");
-
-        for line in data.split('\n') {
-            if line.starts_with("active.indicator") {
-                let active_indicator = line
-                    .trim_start_matches("active.indicator ");
-                return format!("{} ", active_indicator.trim_end());
-            }
+    fn get_uda_current_task_indicator() -> String {
+        let indicator = Self::get_config("uda.taskwarrior-tui.indicator");
+        if indicator.is_empty() {
+            "• ".to_string()
+        } else {
+            format!("{} ", indicator)
         }
-
-        return "• ".to_string();
     }
 
 }

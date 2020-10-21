@@ -825,7 +825,7 @@ impl TTApp {
         let t = Table::new(header, rows.into_iter())
             .block(Block::default().borders(Borders::ALL).title("Task next"))
             .highlight_style(highlight_style)
-            .highlight_symbol(&self.config.active_indicator)
+            .highlight_symbol(&self.config.uda_current_task_indicator)
             .widths(&constraints);
 
         f.render_stateful_widget(t, rect, &mut self.state);
