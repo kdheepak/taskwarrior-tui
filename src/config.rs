@@ -79,41 +79,108 @@ impl TConfig {
     }
 
     fn get_tcolor(line: &str) -> TColor {
-        let (foreground, background) = line.split_at(line.find("on ").unwrap_or(line.len()));
-        let background = background.trim_start_matches("on ");
+        let (foreground, background) = line.split_at(line.to_lowercase().find("on ").unwrap_or(line.len()));
+        let (mut foreground, mut background) = (String::from(foreground), String::from(background));
+        background = background.replace("on ", "");
         let mut modifiers = vec![];
+        if foreground.contains("bright") {
+            foreground = foreground.replace("bright ", "");
+            background = background.replace("bright ", "");
+            background.insert_str(0, "bright ");
+        }
+        foreground = foreground.replace("grey", "gray");
+        background = background.replace("grey", "gray");
         if foreground.contains("underline") {
-            modifiers.push(Modifier::BOLD);
+            modifiers.push(Modifier::UNDERLINED);
         }
         let foreground = foreground.replace("underline ", "");
         if foreground.contains("bold") {
             modifiers.push(Modifier::BOLD);
         }
         let foreground = foreground.replace("bold ", "");
+        if foreground.contains("inverse") {
+            modifiers.push(Modifier::REVERSED);
+        }
+        let foreground = foreground.replace("inverse ", "");
         TColor {
-            fg: Self::get_color(foreground.as_str(), Color::Black),
-            bg: Self::get_color(background, Color::White),
+            fg: Self::get_color_foreground(foreground.as_str(), Color::Black),
+            bg: Self::get_color_background(background.as_str(), Color::White),
             modifiers,
         }
     }
-
-    fn get_color(s: &str, default: Color) -> Color {
+    fn get_color_foreground(s: &str, default: Color) -> Color {
         let s = s.trim_start();
         let s = s.trim_end();
         if s.contains("color") {
             let s = s.trim_start_matches("bright ");
-            let fg = (s.as_bytes()[5] as char).to_digit(10).unwrap_or_default() as u8;
-            Color::Indexed(fg)
+            let c = (s.as_bytes()[5] as char).to_digit(10).unwrap_or_default() as u8;
+            Color::Indexed(c)
         } else if s.contains("gray") {
             let s = s.trim_start_matches("bright ");
-            let fg = 232 + s.trim_start_matches("gray").parse::<u8>().unwrap_or_default();
-            Color::Indexed(fg)
+            let c = 232 + s.trim_start_matches("gray").parse::<u8>().unwrap_or_default();
+            Color::Indexed(c)
         } else if s.contains("rgb") {
             let s = s.trim_start_matches("bright ");
             let red = (s.as_bytes()[3] as char).to_digit(10).unwrap_or_default() as u8;
             let green = (s.as_bytes()[4] as char).to_digit(10).unwrap_or_default() as u8;
             let blue = (s.as_bytes()[5] as char).to_digit(10).unwrap_or_default() as u8;
-            Color::Indexed(16 + red * 36 + green * 6 + blue)
+            let c = 16 + red * 36 + green * 6 + blue;
+            Color::Indexed(c)
+        } else if s == "bright red" {
+            Color::Red
+        } else if s == "bright green" {
+            Color::Green
+        } else if s == "bright yellow" {
+            Color::Yellow
+        } else if s == "bright blue" {
+            Color::Blue
+        } else if s == "bright magenta" {
+            Color::Magenta
+        } else if s == "bright cyan" {
+            Color::Cyan
+        } else if s == "bright white" {
+            Color::White
+        } else if s == "bright black" {
+            Color::Black
+        } else if s.contains("red") {
+            Color::LightRed
+        } else if s.contains("green") {
+            Color::LightGreen
+        } else if s.contains("yellow") {
+            Color::LightYellow
+        } else if s.contains("blue") {
+            Color::LightBlue
+        } else if s.contains("magenta") {
+            Color::LightMagenta
+        } else if s.contains("cyan") {
+            Color::LightCyan
+        } else if s.contains("white") {
+            Color::Indexed(7)
+        } else if s.contains("black") {
+            Color::Indexed(0)
+        } else {
+            default
+        }
+    }
+
+    fn get_color_background(s: &str, default: Color) -> Color {
+        let s = s.trim_start();
+        let s = s.trim_end();
+        if s.contains("color") {
+            let s = s.trim_start_matches("bright ");
+            let c = (s.as_bytes()[5] as char).to_digit(10).unwrap_or_default() as u8;
+            Color::Indexed(c.wrapping_shl(8))
+        } else if s.contains("gray") {
+            let s = s.trim_start_matches("bright ");
+            let c = 232 + s.trim_start_matches("gray").parse::<u8>().unwrap_or_default();
+            Color::Indexed(c.wrapping_shl(8))
+        } else if s.contains("rgb") {
+            let s = s.trim_start_matches("bright ");
+            let red = (s.as_bytes()[3] as char).to_digit(10).unwrap_or_default() as u8;
+            let green = (s.as_bytes()[4] as char).to_digit(10).unwrap_or_default() as u8;
+            let blue = (s.as_bytes()[5] as char).to_digit(10).unwrap_or_default() as u8;
+            let c = 16 + red * 36 + green * 6 + blue;
+            Color::Indexed(c.wrapping_shl(8))
         } else if s == "bright red" {
             Color::LightRed
         } else if s == "bright green" {
@@ -128,7 +195,7 @@ impl TConfig {
             Color::LightCyan
         } else if s == "bright white" {
             Color::White
-        } else if s.contains("black") {
+        } else if s == "bright black" {
             Color::Black
         } else if s.contains("red") {
             Color::Red
@@ -143,9 +210,9 @@ impl TConfig {
         } else if s.contains("cyan") {
             Color::Cyan
         } else if s.contains("white") {
-            Color::White
+            Color::Indexed(7)
         } else if s.contains("black") {
-            Color::Black
+            Color::Indexed(0)
         } else {
             default
         }
@@ -206,6 +273,5 @@ mod tests {
     fn test_colors() {
         let tc = TConfig::default();
         dbg!(&tc.color["color.active"]);
-        dbg!(&tc.active_indicator);
     }
 }
