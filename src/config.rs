@@ -247,7 +247,7 @@ impl TConfig {
     fn get_rule_precedence_color() -> Vec<String> {
         let data = Self::get_config("rule.precedence.color");
         data.split(',')
-            .map(|s| s.trim_end_matches('.'))
+            .filter(|s| !s.ends_with('.'))
             .map(|s| s.to_string())
             .collect::<Vec<_>>()
     }
@@ -313,5 +313,6 @@ mod tests {
     fn test_colors() {
         let tc = TConfig::default();
         dbg!(&tc.color["color.active"]);
+        dbg!(&tc.rule_precedence_color);
     }
 }

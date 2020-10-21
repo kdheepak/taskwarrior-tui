@@ -145,14 +145,49 @@ pub struct TaskReportTable {
     pub labels: Vec<String>,
     pub columns: Vec<String>,
     pub tasks: Vec<Vec<String>>,
+    virtual_tags: Vec<String>,
 }
 
 impl TaskReportTable {
     pub fn new() -> Self {
+        let virtual_tags = vec![
+            "PROJECT",
+            "BLOCKED",
+            "UNBLOCKED",
+            "BLOCKING",
+            "DUE",
+            "DUETODAY",
+            "TODAY",
+            "OVERDUE",
+            "WEEK",
+            "MONTH",
+            "QUARTER",
+            "YEAR",
+            "ACTIVE",
+            "SCHEDULED",
+            "PARENT",
+            "CHILD",
+            "UNTIL",
+            "WAITING",
+            "ANNOTATED",
+            "READY",
+            "YESTERDAY",
+            "TOMORROW",
+            "TAGGED",
+            "PENDING",
+            "COMPLETED",
+            "DELETED",
+            "UDA",
+            "ORPHAN",
+            "PRIORITY",
+            "PROJECT",
+            "LATEST",
+        ];
         let mut task_report_table = Self {
             labels: vec![],
             columns: vec![],
             tasks: vec![vec![]],
+            virtual_tags: virtual_tags.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
         };
         task_report_table.export_headers();
         task_report_table
@@ -253,40 +288,6 @@ impl TaskReportTable {
     }
 
     pub fn get_string_attribute(&self, attribute: &str, task: &Task) -> String {
-        let tags = vec![
-            "PROJECT",
-            "BLOCKED",
-            "UNBLOCKED",
-            "BLOCKING",
-            "DUE",
-            "DUETODAY",
-            "TODAY",
-            "OVERDUE",
-            "WEEK",
-            "MONTH",
-            "QUARTER",
-            "YEAR",
-            "ACTIVE",
-            "SCHEDULED",
-            "PARENT",
-            "CHILD",
-            "UNTIL",
-            "WAITING",
-            "ANNOTATED",
-            "READY",
-            "YESTERDAY",
-            "TOMORROW",
-            "TAGGED",
-            "PENDING",
-            "COMPLETED",
-            "DELETED",
-            "UDA",
-            "ORPHAN",
-            "PRIORITY",
-            "PROJECT",
-            "LATEST",
-        ];
-
         match attribute {
             "id" => task.id().unwrap_or_default().to_string(),
             "due.relative" => match task.due() {
@@ -317,7 +318,7 @@ impl TaskReportTable {
             },
             "tags.count" => match task.tags() {
                 Some(v) => {
-                    let t = v.iter().filter(|t| !tags.contains(&t.as_str())).cloned().count();
+                    let t = v.iter().filter(|t| !self.virtual_tags.contains(t)).cloned().count();
                     if t == 0 {
                         "".to_string()
                     } else {
@@ -329,7 +330,7 @@ impl TaskReportTable {
             "tags" => match task.tags() {
                 Some(v) => v
                     .iter()
-                    .filter(|t| !tags.contains(&t.as_str()))
+                    .filter(|t| !self.virtual_tags.contains(t))
                     .cloned()
                     .collect::<Vec<_>>()
                     .join(","),
@@ -745,11 +746,11 @@ impl TTApp {
     }
 
     fn style_for_task(&self, task: &Task) -> Style {
-        let tag_names_in_precedence = &self.config.rule_precedence_color;
+        let virtual_tag_names_in_precedence = &self.config.rule_precedence_color;
 
         let mut style = Style::default();
 
-        for tag_name in tag_names_in_precedence {
+        for tag_name in virtual_tag_names_in_precedence {
             if task
                 .tags()
                 .unwrap_or(&vec![])
@@ -1271,7 +1272,10 @@ impl TTApp {
                 add_tag(&mut task, "ANNOTATED".to_string());
             }
             if task.tags().is_some() {
-                add_tag(&mut task, "TAGGED".to_string());
+                let tags = task.tags().unwrap().iter().filter(|s| !self.task_report_table.virtual_tags.contains(s)).collect::<Vec<_>>();
+                if !tags.is_empty() {
+                    add_tag(&mut task, "TAGGED".to_string());
+                }
             }
             if task.mask().is_some() {
                 add_tag(&mut task, "TEMPLATE".to_string());
@@ -1571,7 +1575,8 @@ mod tests {
         assert_eq!(app.context_name, "".to_string());
         println!("{:?}", app.tasks.lock().unwrap()[0]);
 
-        println!("{:?}", app.style_for_task(&app.task_current().unwrap()));
+        dbg!(&app.task_current().unwrap().tags());
+        dbg!(app.style_for_task(&app.task_current().unwrap()));
         //println!("{:?}", app.task_report_columns);
         //println!("{:?}", app.task_report_labels);
 
