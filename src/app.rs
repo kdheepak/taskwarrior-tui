@@ -12,7 +12,7 @@ use task_hookrs::task::Task;
 use task_hookrs::uda::UDAValue;
 use uuid::Uuid;
 
-use chrono::{Local, NaiveDateTime, TimeZone, Datelike};
+use chrono::{Datelike, Local, NaiveDateTime, TimeZone};
 
 use crate::calendar::Calendar;
 use std::sync::{Arc, Mutex};
@@ -167,7 +167,8 @@ impl TaskReportTable {
             .arg("report.next.columns")
             .output()
             .expect("Unable to run `task show report.next.columns`. Check documentation for more information");
-        let data = String::from_utf8(output.stdout).expect("Unable to decode utf8 from stdout of `task show report.next.columns`");
+        let data = String::from_utf8(output.stdout)
+            .expect("Unable to decode utf8 from stdout of `task show report.next.columns`");
 
         for line in data.split('\n') {
             if line.starts_with("report.next.columns") {
@@ -183,7 +184,8 @@ impl TaskReportTable {
             .arg("report.next.labels")
             .output()
             .expect("Unable to run `task show report.next.labels`. Check documentation for more information");
-        let data = String::from_utf8(output.stdout).expect("Unable to decode utf8 from stdout of `task show report.next.labels`");
+        let data = String::from_utf8(output.stdout)
+            .expect("Unable to decode utf8 from stdout of `task show report.next.labels`");
 
         for line in data.split('\n') {
             if line.starts_with("report.next.labels") {
@@ -404,7 +406,13 @@ impl TTApp {
                 .expect(format!("Unable to run `task _get rc.context.{}`", self.context_name).as_str())
                 .stdout,
         )
-        .expect(format!("Unable to decode utf8 from stdout of `task _get rc.context.{}`", self.context_name).as_str());
+        .expect(
+            format!(
+                "Unable to decode utf8 from stdout of `task _get rc.context.{}`",
+                self.context_name
+            )
+            .as_str(),
+        );
         self.context_filter = self.context_filter.strip_suffix('\n').unwrap_or("").to_string();
     }
 
@@ -737,20 +745,23 @@ impl TTApp {
     }
 
     fn style_for_task(&self, task: &Task) -> Style {
-
         let tag_names_in_precedence = &self.config.rule_precedence_color;
 
         let mut style = Style::default();
 
         for tag_name in tag_names_in_precedence {
-            if task.tags().unwrap_or(&vec![]).contains(&tag_name.to_string().replace(".", "").to_uppercase()) {
+            if task
+                .tags()
+                .unwrap_or(&vec![])
+                .contains(&tag_name.to_string().replace(".", "").to_uppercase())
+            {
                 let color_tag_name = format!("color.{}", tag_name);
                 let c = self.config.color.get(&color_tag_name).cloned().unwrap_or_default();
                 style = style.fg(c.fg).bg(c.bg);
                 for modifier in c.modifiers {
                     style = style.add_modifier(modifier);
                 }
-                break
+                break;
             }
         }
 

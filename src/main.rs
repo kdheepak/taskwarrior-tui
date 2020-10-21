@@ -5,8 +5,8 @@
 mod app;
 mod calendar;
 mod config;
-mod util;
 mod table;
+mod util;
 
 use crate::util::{destruct_terminal, setup_terminal, Event, EventConfig, Events};
 use clap::{App, Arg};

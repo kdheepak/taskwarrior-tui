@@ -1,9 +1,3 @@
-use tui::{
-    buffer::Buffer,
-    layout::{Constraint, Rect},
-    style::Style,
-    widgets::{Block, StatefulWidget, Widget},
-};
 use cassowary::{
     strength::{MEDIUM, REQUIRED, WEAK},
     WeightedRelation::*,
@@ -13,6 +7,12 @@ use std::{
     collections::HashMap,
     fmt::Display,
     iter::{self, Iterator},
+};
+use tui::{
+    buffer::Buffer,
+    layout::{Constraint, Rect},
+    style::Style,
+    widgets::{Block, StatefulWidget, Widget},
 };
 use unicode_width::UnicodeWidthStr;
 
@@ -245,9 +245,7 @@ where
             ccs.push(variables[i] | GE(WEAK) | 0.);
             ccs.push(match *constraint {
                 Constraint::Length(v) => variables[i] | EQ(MEDIUM) | f64::from(v),
-                Constraint::Percentage(v) => {
-                    variables[i] | EQ(WEAK) | (f64::from(v * area.width) / 100.0)
-                }
+                Constraint::Percentage(v) => variables[i] | EQ(WEAK) | (f64::from(v * area.width) / 100.0),
                 Constraint::Ratio(n, d) => {
                     variables[i] | EQ(WEAK) | (f64::from(area.width) * f64::from(n) / f64::from(d))
                 }
@@ -257,24 +255,16 @@ where
         }
         solver
             .add_constraint(
-                variables
-                    .iter()
-                    .fold(Expression::from_constant(0.), |acc, v| acc + *v)
+                variables.iter().fold(Expression::from_constant(0.), |acc, v| acc + *v)
                     | LE(REQUIRED)
-                    | f64::from(
-                        area.width - 2 - (self.column_spacing * (variables.len() as u16 - 1)),
-                    ),
+                    | f64::from(area.width - 2 - (self.column_spacing * (variables.len() as u16 - 1))),
             )
             .unwrap();
         solver.add_constraints(&ccs).unwrap();
         let mut solved_widths = vec![0; variables.len()];
         for &(var, value) in solver.fetch_changes() {
             let index = var_indices[&var];
-            let value = if value.is_sign_negative() {
-                0
-            } else {
-                value as u16
-            };
+            let value = if value.is_sign_negative() { 0 } else { value as u16 };
             solved_widths[index] = value
         }
 
@@ -296,9 +286,7 @@ where
             None => (None, self.style),
         };
         let highlight_symbol = self.highlight_symbol.unwrap_or("");
-        let blank_symbol = iter::repeat(" ")
-            .take(highlight_symbol.width())
-            .collect::<String>();
+        let blank_symbol = iter::repeat(" ").take(highlight_symbol.width()).collect::<String>();
 
         // Draw rows
         let default_style = Style::default();
@@ -319,9 +307,7 @@ where
             };
             for (i, row) in self.rows.skip(state.offset).take(remaining).enumerate() {
                 let (data, style, symbol) = match row {
-                    Row::Data(d) | Row::StyledData(d, _)
-                        if Some(i) == state.selected.map(|s| s - state.offset) =>
-                    {
+                    Row::Data(d) | Row::StyledData(d, _) if Some(i) == state.selected.map(|s| s - state.offset) => {
                         (d, highlight_style, highlight_symbol)
                     }
                     Row::Data(d) => (d, default_style, blank_symbol.as_ref()),
@@ -363,7 +349,6 @@ mod tests {
     #[test]
     #[should_panic]
     fn table_invalid_percentages() {
-        Table::new([""].iter(), vec![Row::Data([""].iter())].into_iter())
-            .widths(&[Constraint::Percentage(110)]);
+        Table::new([""].iter(), vec![Row::Data([""].iter())].into_iter()).widths(&[Constraint::Percentage(110)]);
     }
 }

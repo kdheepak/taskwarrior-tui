@@ -238,7 +238,7 @@ impl TConfig {
 
         for line in data.split('\n') {
             if line.starts_with(config) {
-                return line.trim_start_matches(config).trim_start().trim_end().to_string()
+                return line.trim_start_matches(config).trim_start().trim_end().to_string();
             }
         }
         "• ".to_string()
@@ -246,8 +246,7 @@ impl TConfig {
 
     fn get_rule_precedence_color() -> Vec<String> {
         let data = Self::get_config("rule.precedence.color");
-        data
-            .split(',')
+        data.split(',')
             .map(|s| s.trim_end_matches('.'))
             .map(|s| s.to_string())
             .collect::<Vec<_>>()
