@@ -42,6 +42,12 @@ Use your favorite installation method to download the [AUR package](https://aur.
 
 ## Usage
 
+### Easy to use interface:
+
+<details>
+
+<summary> Click to expand! </summary>
+
 - `/`: `task {string}`                       - Filter task report
 - `a`: `task add {string}`                   - Add new task
 - `d`: `task {selected} done`                - Mark task as done
@@ -60,7 +66,13 @@ Use your favorite installation method to download the [AUR package](https://aur.
 
 ![taskwarrior-tui](https://user-images.githubusercontent.com/1813121/88654924-40896880-d08b-11ea-8709-b29cc970da4c.gif)
 
-`taskwarrior-tui` supports readline-like navigation:
+</details>
+
+### `readline`-like functionality:
+
+<details>
+
+<summary> Click to expand! </summary>
 
 - `<Ctrl-a>` : Go to beginning of the line
 - `<Ctrl-e>` : Go to end of the line
@@ -69,3 +81,5 @@ Use your favorite installation method to download the [AUR package](https://aur.
 - `<Ctrl-w>` : Delete previous word
 
 ![taskwarrior-tui](https://user-images.githubusercontent.com/1813121/95651612-ce7cc900-0aa8-11eb-8686-42442ed9ee43.gif)
+
+</details>
