@@ -313,6 +313,7 @@ mod tests {
     fn test_colors() {
         let tc = TConfig::default();
         dbg!(&tc.color["color.active"]);
+        dbg!(&tc.color["color.due.today"]);
         dbg!(&tc.rule_precedence_color);
     }
 }

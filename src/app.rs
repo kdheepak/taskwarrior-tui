@@ -1295,7 +1295,10 @@ impl TTApp {
                 if status != &TaskStatus::Completed && status != &TaskStatus::Deleted {
                     let today = Local::now().naive_utc().date();
                     match get_date_state(d) {
-                        DateState::EarlierToday | DateState::LaterToday => add_tag(&mut task, "TODAY".to_string()),
+                        DateState::EarlierToday | DateState::LaterToday => {
+                            add_tag(&mut task, "TODAY".to_string());
+                            add_tag(&mut task, "DUETODAY".to_string());
+                        }
                         _ => (),
                     }
                 }
