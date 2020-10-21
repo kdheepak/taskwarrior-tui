@@ -438,7 +438,7 @@ impl TTApp {
             .constraints([Constraint::Min(0)].as_ref())
             .split(f.size());
         let today = Local::today();
-        let c = &Calendar::new(today.year().into()).to_string()[..];
+        let c = &Calendar::default().to_string()[..];
         let p = Paragraph::new(Text::from(c))
             .alignment(Alignment::Left)
             .block(Block::default().borders(Borders::ALL).title("Calendar"));
