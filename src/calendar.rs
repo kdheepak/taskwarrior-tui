@@ -142,14 +142,24 @@ impl <'a> Widget for Calendar<'a> {
                 }
                 let d = &mut days[c];
                 let m = d.0.month() as usize;
-                let s = format!("{:^21}", month_names[m - 1]);
-                buf.set_string(x, y, &s, Style::default());
-                x += s.len() as u16;
+                let s = format!("{:^20}", month_names[m - 1]);
+                if m == today.month() as usize && self.year + year as i32 == today.year() {
+                    buf.set_string(x, y, &s, Style::default().add_modifier(Modifier::REVERSED));
+                } else {
+                    buf.set_string(x, y, &s, Style::default().add_modifier(Modifier::DIM));
+                }
+                x += s.len() as u16 + 1;
             }
             y += 1;
             let mut x = area.x + startx;
             for c in startm..endm {
-                buf.set_string(x as u16, y, "Su Mo Tu We Th Fr Sa", Style::default());
+                let d = &mut days[c];
+                let m = d.0.month() as usize;
+                if m == today.month() as usize && self.year + year as i32 == today.year() {
+                    buf.set_string(x as u16, y, "Su Mo Tu We Th Fr Sa", Style::default().add_modifier(Modifier::REVERSED));
+                } else {
+                    buf.set_string(x as u16, y, "Su Mo Tu We Th Fr Sa", Style::default().add_modifier(Modifier::DIM));
+                }
                 x += 21 + 1;
             }
             y += 1;
