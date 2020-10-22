@@ -25,6 +25,7 @@ pub struct Calendar<'a> {
     pub month: u32,
     pub style: Style,
     pub months_per_row: usize,
+    pub date_style: Vec<(NaiveDate, Style)>
 }
 
 impl<'a> Default for Calendar<'a> {
@@ -37,6 +38,7 @@ impl<'a> Default for Calendar<'a> {
             months_per_row: 0,
             year,
             month,
+            date_style: vec![],
         }
     }
 }
@@ -62,6 +64,11 @@ impl<'a> Calendar<'a> {
 
     pub fn month(mut self, month: u32) -> Self {
         self.month = month;
+        self
+    }
+
+    pub fn date_style(mut self, date_style: Vec<(NaiveDate, Style)>) -> Self {
+        self.date_style = date_style;
         self
     }
 }
@@ -131,11 +138,16 @@ impl <'a> Widget for Calendar<'a> {
 
         let x = area.x;
         let s = format!("{year:^width$}", year = year, width = area.width as usize - 4);
-        buf.set_string(x, y, &s, Style::default().add_modifier(Modifier::BOLD).add_modifier(Modifier::UNDERLINED));
+
+        let mut year = 0;
+        let mut style = Style::default().add_modifier(Modifier::UNDERLINED);
+        if self.year + year as i32 == today.year() {
+            style = style.add_modifier(Modifier::BOLD)
+        }
+        buf.set_string(x, y, &s, style);
 
         let startx = (area.width - 3 * 7 * self.months_per_row as u16 - self.months_per_row as u16) / 2;
         y += 2;
-        let mut year = 0;
         loop {
             let endm = std::cmp::min(startm + self.months_per_row, 12);
             let mut x = area.x + startx;
@@ -146,10 +158,11 @@ impl <'a> Widget for Calendar<'a> {
                 let d = &mut days[c];
                 let m = d.0.month() as usize;
                 let s = format!("{:^20}", month_names[m - 1]);
+                let style = Style::default().bg(Color::Rgb(220, 220, 220));
                 if m == today.month() as usize && self.year + year as i32 == today.year() {
-                    buf.set_string(x, y, &s, Style::default().add_modifier(Modifier::REVERSED));
+                    buf.set_string(x, y, &s, style.add_modifier(Modifier::BOLD));
                 } else {
-                    buf.set_string(x, y, &s, Style::default().add_modifier(Modifier::DIM));
+                    buf.set_string(x, y, &s, style);
                 }
                 x += s.len() as u16 + 1;
             }
@@ -158,10 +171,11 @@ impl <'a> Widget for Calendar<'a> {
             for c in startm..endm {
                 let d = &mut days[c];
                 let m = d.0.month() as usize;
+                let style = Style::default().bg(Color::Rgb(220, 220, 220));
                 if m == today.month() as usize && self.year + year as i32 == today.year() {
-                    buf.set_string(x as u16, y, "Su Mo Tu We Th Fr Sa", Style::default().add_modifier(Modifier::REVERSED));
+                    buf.set_string(x as u16, y, "Su Mo Tu We Th Fr Sa", style.add_modifier(Modifier::UNDERLINED));
                 } else {
-                    buf.set_string(x as u16, y, "Su Mo Tu We Th Fr Sa", Style::default().add_modifier(Modifier::DIM));
+                    buf.set_string(x as u16, y, "Su Mo Tu We Th Fr Sa", style.add_modifier(Modifier::UNDERLINED));
                 }
                 x += 21 + 1;
             }
@@ -180,10 +194,16 @@ impl <'a> Widget for Calendar<'a> {
                         } else {
                             "   ".to_string()
                         };
+                        let mut style = Style::default();
+                        let index = self.date_style.iter().position(|(date, style)| d.1 == *date);
+                        match index {
+                            Some(i) => style = self.date_style[i].1,
+                            None => (),
+                        }
                         if d.1 == Local::today().naive_local() {
-                            buf.set_string(x, y, s, Style::default().add_modifier(Modifier::REVERSED));
+                            buf.set_string(x, y, s, style.add_modifier(Modifier::BOLD));
                         } else {
-                            buf.set_string(x, y, s, Style::default());
+                            buf.set_string(x, y, s, style);
                         }
                         x += 3;
                         d.1 = d.1 + Duration::days(1);
@@ -204,7 +224,11 @@ impl <'a> Widget for Calendar<'a> {
                 year += 1;
                 let x = area.x;
                 let s = format!("{year:^width$}", year = self.year as usize + year, width = area.width as usize - 4);
-                buf.set_string(x, y, &s, Style::default().add_modifier(Modifier::BOLD).add_modifier(Modifier::UNDERLINED));
+                let mut style = Style::default().add_modifier(Modifier::UNDERLINED);
+                if self.year + year as i32 == today.year() {
+                    style = style.add_modifier(Modifier::BOLD)
+                }
+                buf.set_string(x, y, &s, style);
                 y += 1;
             }
             y += 1;

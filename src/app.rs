@@ -14,7 +14,7 @@ use task_hookrs::task::Task;
 use task_hookrs::uda::UDAValue;
 use uuid::Uuid;
 
-use chrono::{Datelike, Local, NaiveDateTime, TimeZone};
+use chrono::{Datelike, Local, NaiveDateTime, NaiveDate, TimeZone};
 
 use std::sync::{Arc, Mutex};
 use std::{sync::mpsc, thread, time::Duration};
@@ -434,6 +434,8 @@ impl TTApp {
     }
 
     pub fn draw_calendar(&mut self, f: &mut Frame<impl Backend>) {
+
+        let dates_with_styles = self.get_dates_with_styles();
         let rects = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Min(0)].as_ref())
@@ -441,8 +443,30 @@ impl TTApp {
         let today = Local::today();
         let c = Calendar::default()
             .block(Block::default().title("Calendar").borders(Borders::ALL))
-            .year(self.calendar_year);
+            .year(self.calendar_year)
+            .date_style(dates_with_styles);
         f.render_widget(c, rects[0]);
+    }
+
+    pub fn get_dates_with_styles(&self) -> Vec<(NaiveDate, Style)> {
+
+        let mut tasks_with_styles = vec![];
+
+        let tasks_is_empty = self.tasks.lock().unwrap().is_empty();
+        let tasks_len = self.tasks.lock().unwrap().len();
+
+        if !tasks_is_empty {
+            let tasks = &self.tasks.lock().unwrap();
+            let tasks_with_due_dates = tasks.iter().filter(|t| t.due().is_some());
+
+            tasks_with_styles.extend(
+                tasks_with_due_dates.map(
+                    |t| (t.due().unwrap().clone().date(), self.style_for_task(t))
+                )
+            )
+
+        }
+        return tasks_with_styles;
     }
 
     pub fn draw_task(&mut self, f: &mut Frame<impl Backend>) {
