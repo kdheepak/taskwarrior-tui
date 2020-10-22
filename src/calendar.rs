@@ -54,6 +54,9 @@ impl<'a> Calendar<'a> {
 
     pub fn year(mut self, year: i32) -> Self {
         self.year = year;
+        if self.year < 0 {
+            self.year = 0;
+        }
         self
     }
 
@@ -128,7 +131,7 @@ impl <'a> Widget for Calendar<'a> {
 
         let x = area.x;
         let s = format!("{year:^width$}", year = year, width = area.width as usize - 4);
-        buf.set_string(x, y, &s, Style::default().add_modifier(Modifier::BOLD));
+        buf.set_string(x, y, &s, Style::default().add_modifier(Modifier::BOLD).add_modifier(Modifier::UNDERLINED));
 
         let startx = (area.width - 3 * 7 * self.months_per_row as u16 - self.months_per_row as u16) / 2;
         y += 2;
@@ -201,7 +204,7 @@ impl <'a> Widget for Calendar<'a> {
                 year += 1;
                 let x = area.x;
                 let s = format!("{year:^width$}", year = self.year as usize + year, width = area.width as usize - 4);
-                buf.set_string(x, y, &s, Style::default().add_modifier(Modifier::BOLD));
+                buf.set_string(x, y, &s, Style::default().add_modifier(Modifier::BOLD).add_modifier(Modifier::UNDERLINED));
                 y += 1;
             }
             y += 1;
