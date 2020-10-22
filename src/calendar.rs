@@ -71,6 +71,11 @@ impl<'a> Calendar<'a> {
         self.date_style = date_style;
         self
     }
+
+    pub fn months_per_row(mut self, months_per_row: usize) -> Self {
+        self.months_per_row = months_per_row;
+        self
+    }
 }
 
 impl <'a> Widget for Calendar<'a> {
@@ -137,14 +142,15 @@ impl <'a> Widget for Calendar<'a> {
         y += 1;
 
         let x = area.x;
-        let s = format!("{year:^width$}", year = year, width = area.width as usize - 4);
+        let s = format!("{year:^width$}", year = year, width = area.width as usize);
 
         let mut year = 0;
-        let mut style = Style::default().add_modifier(Modifier::UNDERLINED);
+        let style = Style::default().add_modifier(Modifier::UNDERLINED);
         if self.year + year as i32 == today.year() {
-            style = style.add_modifier(Modifier::BOLD)
+            buf.set_string(x, y, &s, style.add_modifier(Modifier::BOLD));
+        } else {
+            buf.set_string(x, y, &s, style);
         }
-        buf.set_string(x, y, &s, style);
 
         let startx = (area.width - 3 * 7 * self.months_per_row as u16 - self.months_per_row as u16) / 2;
         y += 2;
@@ -216,14 +222,14 @@ impl <'a> Widget for Calendar<'a> {
                 }
             }
             startm += self.months_per_row;
-            y += 1;
+            y += 2;
             if y + 8 > area.height {
                 break
             } else if startm >= 12 {
                 startm = 0;
                 year += 1;
                 let x = area.x;
-                let s = format!("{year:^width$}", year = self.year as usize + year, width = area.width as usize - 4);
+                let s = format!("{year:^width$}", year = self.year as usize + year, width = area.width as usize);
                 let mut style = Style::default().add_modifier(Modifier::UNDERLINED);
                 if self.year + year as i32 == today.year() {
                     style = style.add_modifier(Modifier::BOLD)

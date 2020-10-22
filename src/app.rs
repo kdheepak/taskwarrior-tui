@@ -444,7 +444,8 @@ impl TTApp {
         let c = Calendar::default()
             .block(Block::default().title("Calendar").borders(Borders::ALL))
             .year(self.calendar_year)
-            .date_style(dates_with_styles);
+            .date_style(dates_with_styles)
+            .months_per_row(self.config.uda_calendar_months_per_row);
         f.render_widget(c, rects[0]);
     }
 

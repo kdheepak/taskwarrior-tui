@@ -38,6 +38,7 @@ pub struct TConfig {
     pub uda_selection_italic: bool,
     pub uda_selection_dim: bool,
     pub uda_selection_blink: bool,
+    pub uda_calendar_months_per_row: usize,
 }
 
 impl TConfig {
@@ -54,6 +55,7 @@ impl TConfig {
             uda_selection_italic: Self::get_uda_selection_italic(),
             uda_selection_dim: Self::get_uda_selection_dim(),
             uda_selection_blink: Self::get_uda_selection_blink(),
+            uda_calendar_months_per_row: Self::get_uda_months_per_row(),
         }
     }
 
@@ -241,7 +243,7 @@ impl TConfig {
                 return line.trim_start_matches(config).trim_start().trim_end().to_string();
             }
         }
-        "• ".to_string()
+        "".to_string()
     }
 
     fn get_rule_precedence_color() -> Vec<String> {
@@ -291,6 +293,14 @@ impl TConfig {
             false
         } else {
             false
+        }
+    }
+
+    fn get_uda_months_per_row() -> usize {
+        let s = Self::get_config("uda.taskwarrior-tui.calendar.months_per_row");
+        match s.parse::<usize>() {
+            Ok(i) => i,
+            Err(e) => 4,
         }
     }
 
