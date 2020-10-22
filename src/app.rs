@@ -1,4 +1,6 @@
 use crate::config::TConfig;
+use crate::calendar::Calendar;
+use crate::table::{Row, Table, TableState};
 
 use std::cmp::Ordering;
 use std::convert::TryInto;
@@ -14,7 +16,6 @@ use uuid::Uuid;
 
 use chrono::{Datelike, Local, NaiveDateTime, TimeZone};
 
-use crate::calendar::Calendar;
 use std::sync::{Arc, Mutex};
 use std::{sync::mpsc, thread, time::Duration};
 use tui::{
@@ -25,8 +26,6 @@ use tui::{
     text::{Span, Spans, Text},
     widgets::{Block, Borders, Clear, Paragraph},
 };
-
-use crate::table::{Row, Table, TableState};
 
 use rustyline::error::ReadlineError;
 use rustyline::line_buffer::LineBuffer;
@@ -359,6 +358,7 @@ pub struct TTApp {
     pub error: String,
     pub tasks: Arc<Mutex<Vec<Task>>>,
     pub task_report_table: TaskReportTable,
+    pub calendar_year: i32,
     pub mode: AppMode,
     pub config: TConfig,
 }
@@ -378,6 +378,7 @@ impl TTApp {
             mode: AppMode::TaskReport,
             config: TConfig::default(),
             task_report_table: TaskReportTable::new(),
+            calendar_year: Local::today().year(),
         };
         for c in "status:pending ".chars() {
             app.filter.insert(c, 1);
@@ -439,10 +440,8 @@ impl TTApp {
             .split(f.size());
         let today = Local::today();
         let c = Calendar::default()
-            .block(Block::default().title("Calendar").borders(Borders::ALL));
-        // let p = Paragraph::new(Text::from())
-        //     .alignment(Alignment::Left)
-        //     .block(Block::default().borders(Borders::ALL).title("Calendar"));
+            .block(Block::default().title("Calendar").borders(Borders::ALL))
+            .year(self.calendar_year);
         f.render_widget(c, rects[0]);
     }
 
@@ -1501,6 +1500,8 @@ impl TTApp {
                 Key::Char('[') => {
                     self.mode = AppMode::TaskReport;
                 }
+                Key::Up | Key::Char('k') => self.calendar_year -= 1,
+                Key::Down | Key::Char('j') => self.calendar_year += 1,
                 Key::Ctrl('c') | Key::Char('q') => self.should_quit = true,
                 _ => {}
             },
