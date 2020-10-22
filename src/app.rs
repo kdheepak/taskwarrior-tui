@@ -438,11 +438,12 @@ impl TTApp {
             .constraints([Constraint::Min(0)].as_ref())
             .split(f.size());
         let today = Local::today();
-        let c = &Calendar::default().to_string()[..];
-        let p = Paragraph::new(Text::from(c))
-            .alignment(Alignment::Left)
-            .block(Block::default().borders(Borders::ALL).title("Calendar"));
-        f.render_widget(p, rects[0]);
+        let c = Calendar::default()
+            .block(Block::default().title("Calendar").borders(Borders::ALL));
+        // let p = Paragraph::new(Text::from())
+        //     .alignment(Alignment::Left)
+        //     .block(Block::default().borders(Borders::ALL).title("Calendar"));
+        f.render_widget(c, rects[0]);
     }
 
     pub fn draw_task(&mut self, f: &mut Frame<impl Backend>) {
