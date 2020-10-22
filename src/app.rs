@@ -1048,7 +1048,7 @@ impl TTApp {
                         task_id
                     )),
                 }
-            }
+            },
             None => Err(format!(
                 "Unable to run `task modify` with `{}` on task {}",
                 self.modify.as_str(),
@@ -1398,7 +1398,10 @@ impl TTApp {
                 Key::Char('m') => {
                     self.mode = AppMode::TaskModify;
                     match self.task_current() {
-                        Some(t) => self.modify.update(t.description(), t.description().len()),
+                        Some(t) => {
+                            let s = format!("{} ", t.description());
+                            self.modify.update(&s, s.len())
+                        },
                         None => self.modify.update("", 0),
                     }
                 }
