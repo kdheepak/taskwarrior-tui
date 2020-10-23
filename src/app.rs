@@ -408,9 +408,12 @@ impl TTApp {
                 .expect(format!("Unable to run `task _get rc.context.{}`", self.context_name).as_str())
                 .stdout,
         )
-        .unwrap_or_else(
-            |_| panic!("Unable to decode utf8 from stdout of `task _get rc.context.{}`", self.context_name)
-        );
+        .unwrap_or_else(|_| {
+            panic!(
+                "Unable to decode utf8 from stdout of `task _get rc.context.{}`",
+                self.context_name
+            )
+        });
         self.context_filter = self.context_filter.strip_suffix('\n').unwrap_or("").to_string();
     }
 
@@ -1292,7 +1295,9 @@ impl TTApp {
                     .unwrap()
                     .iter()
                     .filter(|s| !self.task_report_table.virtual_tags.contains(s))
-                    .next().is_none() {
+                    .next()
+                    .is_none()
+                {
                     add_tag(&mut task, "TAGGED".to_string());
                 }
             }
