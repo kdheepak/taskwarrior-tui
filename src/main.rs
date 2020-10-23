@@ -35,7 +35,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         )
         .get_matches();
 
-    let config = matches.value_of("config").unwrap_or("default.conf");
+    let config = matches.value_of("config").unwrap_or("~/.taskrc");
     tui_main(config)?;
     Ok(())
 }
