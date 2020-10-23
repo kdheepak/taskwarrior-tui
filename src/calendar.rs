@@ -155,7 +155,7 @@ impl<'a> Widget for Calendar<'a> {
         );
 
         let mut startm = 0 as usize;
-        if self.months_per_row > area.width as usize / 8 / 3 || self.months_per_row <= 0 {
+        if self.months_per_row > area.width as usize / 8 / 3 || self.months_per_row == 0 {
             self.months_per_row = area.width as usize / 8 / 3;
         }
         let mut y = area.y;
@@ -177,11 +177,10 @@ impl<'a> Widget for Calendar<'a> {
         loop {
             let endm = std::cmp::min(startm + self.months_per_row, 12);
             let mut x = area.x + startx;
-            for c in startm..endm {
+            for (c, d) in days.iter_mut().enumerate().skip(startm).take(endm) {
                 if c > startm {
                     x += 1;
                 }
-                let d = &mut days[c];
                 let m = d.0.month() as usize;
                 let s = format!("{:^20}", month_names[m - 1]);
                 let style = Style::default().bg(Color::Rgb(220, 220, 220));
@@ -194,7 +193,7 @@ impl<'a> Widget for Calendar<'a> {
             }
             y += 1;
             let mut x = area.x + startx;
-            for d in days.iter_mut().skip(startm).take(endm) {
+            for (_, d) in days.iter_mut().enumerate().skip(startm).take(endm) {
                 let m = d.0.month() as usize;
                 let style = Style::default().bg(Color::Rgb(220, 220, 220));
                 if m == today.month() as usize && self.year + year as i32 == today.year() {

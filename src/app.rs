@@ -408,12 +408,8 @@ impl TTApp {
                 .expect(format!("Unable to run `task _get rc.context.{}`", self.context_name).as_str())
                 .stdout,
         )
-        .expect(
-            format!(
-                "Unable to decode utf8 from stdout of `task _get rc.context.{}`",
-                self.context_name
-            )
-            .as_str(),
+        .unwrap_or_else(
+            |_| panic!("Unable to decode utf8 from stdout of `task _get rc.context.{}`", self.context_name)
         );
         self.context_filter = self.context_filter.strip_suffix('\n').unwrap_or("").to_string();
     }
@@ -461,7 +457,7 @@ impl TTApp {
             tasks_with_styles
                 .extend(tasks_with_due_dates.map(|t| (t.due().unwrap().clone().date(), self.style_for_task(t))))
         }
-        return tasks_with_styles;
+        tasks_with_styles
     }
 
     pub fn draw_task(&mut self, f: &mut Frame<impl Backend>) {
@@ -1291,13 +1287,12 @@ impl TTApp {
                 add_tag(&mut task, "ANNOTATED".to_string());
             }
             if task.tags().is_some() {
-                let tags = task
+                if !task
                     .tags()
                     .unwrap()
                     .iter()
                     .filter(|s| !self.task_report_table.virtual_tags.contains(s))
-                    .collect::<Vec<_>>();
-                if !tags.is_empty() {
+                    .next().is_none() {
                     add_tag(&mut task, "TAGGED".to_string());
                 }
             }
