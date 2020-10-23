@@ -232,9 +232,8 @@ impl<'a> Widget for Calendar<'a> {
                         };
                         let mut style = Style::default();
                         let index = self.date_style.iter().position(|(date, style)| d.1 == *date);
-                        match index {
-                            Some(i) => style = self.date_style[i].1,
-                            None => (),
+                        if let Some(i) = index {
+                            style = self.date_style[i].1
                         }
                         if d.1 == Local::today().naive_local() {
                             buf.set_string(x, y, s, style.add_modifier(Modifier::BOLD));
@@ -242,7 +241,7 @@ impl<'a> Widget for Calendar<'a> {
                             buf.set_string(x, y, s, style);
                         }
                         x += 3;
-                        d.1 = d.1 + Duration::days(1);
+                        d.1 += Duration::days(1);
                     }
                     moredays |= d.0.month() == d.1.month() || d.1 < d.0;
                 }
