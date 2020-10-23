@@ -41,6 +41,34 @@ pub struct TConfig {
     pub uda_calendar_months_per_row: usize,
 }
 
+trait TaskWarriorBool {
+    fn get_bool(&self) -> Option<bool>;
+}
+
+impl TaskWarriorBool for String {
+    fn get_bool(&self) -> Option<bool> {
+        if self == "true" || self == "1" || self == "y" || self == "yes" || self == "on" {
+            Some(true)
+        } else if self == "false" || self == "0" || self == "n" || self == "no" || self == "off" {
+            Some(false)
+        } else {
+            None
+        }
+    }
+}
+
+impl TaskWarriorBool for str {
+    fn get_bool(&self) -> Option<bool> {
+        if self == "true" || self == "1" || self == "y" || self == "yes" || self == "on" {
+            Some(true)
+        } else if self == "false" || self == "0" || self == "n" || self == "no" || self == "off" {
+            Some(false)
+        } else {
+            None
+        }
+    }
+}
+
 impl TConfig {
     pub fn default() -> Self {
         let bool_collection = Self::get_bool_collection();
@@ -265,34 +293,33 @@ impl TConfig {
 
     fn get_uda_selection_bold() -> bool {
         let s = Self::get_config("uda.taskwarrior-tui.selection.bold");
-        if s == "yes" {
-            true
-        } else if s == "no" {
-            false
-        } else {
-            true
+        match s.get_bool() {
+            Some(b) => b,
+            None => true,
         }
     }
 
     fn get_uda_selection_italic() -> bool {
         let s = Self::get_config("uda.taskwarrior-tui.selection.italic");
-        if s == "yes" {
-            true
-        } else if s == "no" {
-            false
-        } else {
-            false
+        match s.get_bool() {
+            Some(b) => b,
+            None => false,
         }
     }
 
     fn get_uda_selection_dim() -> bool {
         let s = Self::get_config("uda.taskwarrior-tui.selection.dim");
-        if s == "yes" {
-            true
-        } else if s == "no" {
-            false
-        } else {
-            false
+        match s.get_bool() {
+            Some(b) => b,
+            None => false,
+        }
+    }
+
+    fn get_uda_selection_blink() -> bool {
+        let s = Self::get_config("uda.taskwarrior-tui.selection.blink");
+        match s.get_bool() {
+            Some(b) => b,
+            None => false,
         }
     }
 
@@ -301,17 +328,6 @@ impl TConfig {
         match s.parse::<usize>() {
             Ok(i) => i,
             Err(e) => 4,
-        }
-    }
-
-    fn get_uda_selection_blink() -> bool {
-        let s = Self::get_config("uda.taskwarrior-tui.selection.blink");
-        if s == "yes" {
-            true
-        } else if s == "no" {
-            false
-        } else {
-            false
         }
     }
 }

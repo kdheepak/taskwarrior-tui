@@ -5,7 +5,7 @@ use std::fmt;
 
 const COL_WIDTH: usize = 21;
 
-use chrono::{Datelike, Local, Duration, NaiveDate, NaiveDateTime, TimeZone, Month};
+use chrono::{Datelike, Duration, Local, Month, NaiveDate, NaiveDateTime, TimeZone};
 
 use tui::{
     buffer::Buffer,
@@ -25,7 +25,7 @@ pub struct Calendar<'a> {
     pub month: u32,
     pub style: Style,
     pub months_per_row: usize,
-    pub date_style: Vec<(NaiveDate, Style)>
+    pub date_style: Vec<(NaiveDate, Style)>,
 }
 
 impl<'a> Default for Calendar<'a> {
@@ -78,7 +78,7 @@ impl<'a> Calendar<'a> {
     }
 }
 
-impl <'a> Widget for Calendar<'a> {
+impl<'a> Widget for Calendar<'a> {
     fn render(mut self, area: Rect, buf: &mut Buffer) {
         let month_names = [
             Month::January.name(),
@@ -106,7 +106,7 @@ impl <'a> Widget for Calendar<'a> {
         };
 
         if area.height < 7 {
-            return
+            return;
         }
 
         let style = self.style;
@@ -117,21 +117,41 @@ impl <'a> Widget for Calendar<'a> {
 
         let months: Vec<_> = (0..12).collect();
 
-        let mut days: Vec<_> = months.iter().map(|i| {
-            let first = NaiveDate::from_ymd(year, i+1, 1);
-            (first, first - Duration::days(first.weekday().num_days_from_sunday() as i64))
-        }).collect();
+        let mut days: Vec<_> = months
+            .iter()
+            .map(|i| {
+                let first = NaiveDate::from_ymd(year, i + 1, 1);
+                (
+                    first,
+                    first - Duration::days(first.weekday().num_days_from_sunday() as i64),
+                )
+            })
+            .collect();
 
-        days.append(&mut months.iter().map(|i| {
-                let first = NaiveDate::from_ymd(year + 1, i+1, 1);
-                (first, first - Duration::days(first.weekday().num_days_from_sunday() as i64))
-            }).collect::<Vec<_>>()
+        days.append(
+            &mut months
+                .iter()
+                .map(|i| {
+                    let first = NaiveDate::from_ymd(year + 1, i + 1, 1);
+                    (
+                        first,
+                        first - Duration::days(first.weekday().num_days_from_sunday() as i64),
+                    )
+                })
+                .collect::<Vec<_>>(),
         );
 
-        days.append(&mut months.iter().map(|i| {
-                let first = NaiveDate::from_ymd(year + 2, i+1, 1);
-                (first, first - Duration::days(first.weekday().num_days_from_sunday() as i64))
-            }).collect::<Vec<_>>()
+        days.append(
+            &mut months
+                .iter()
+                .map(|i| {
+                    let first = NaiveDate::from_ymd(year + 2, i + 1, 1);
+                    (
+                        first,
+                        first - Duration::days(first.weekday().num_days_from_sunday() as i64),
+                    )
+                })
+                .collect::<Vec<_>>(),
         );
 
         let mut startm = 0 as usize;
@@ -179,9 +199,19 @@ impl <'a> Widget for Calendar<'a> {
                 let m = d.0.month() as usize;
                 let style = Style::default().bg(Color::Rgb(220, 220, 220));
                 if m == today.month() as usize && self.year + year as i32 == today.year() {
-                    buf.set_string(x as u16, y, "Su Mo Tu We Th Fr Sa", style.add_modifier(Modifier::UNDERLINED));
+                    buf.set_string(
+                        x as u16,
+                        y,
+                        "Su Mo Tu We Th Fr Sa",
+                        style.add_modifier(Modifier::UNDERLINED),
+                    );
                 } else {
-                    buf.set_string(x as u16, y, "Su Mo Tu We Th Fr Sa", style.add_modifier(Modifier::UNDERLINED));
+                    buf.set_string(
+                        x as u16,
+                        y,
+                        "Su Mo Tu We Th Fr Sa",
+                        style.add_modifier(Modifier::UNDERLINED),
+                    );
                 }
                 x += 21 + 1;
             }
@@ -224,12 +254,16 @@ impl <'a> Widget for Calendar<'a> {
             startm += self.months_per_row;
             y += 2;
             if y + 8 > area.height {
-                break
+                break;
             } else if startm >= 12 {
                 startm = 0;
                 year += 1;
                 let x = area.x;
-                let s = format!("{year:^width$}", year = self.year as usize + year, width = area.width as usize);
+                let s = format!(
+                    "{year:^width$}",
+                    year = self.year as usize + year,
+                    width = area.width as usize
+                );
                 let mut style = Style::default().add_modifier(Modifier::UNDERLINED);
                 if self.year + year as i32 == today.year() {
                     style = style.add_modifier(Modifier::BOLD)

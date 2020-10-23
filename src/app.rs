@@ -1,5 +1,5 @@
-use crate::config::TConfig;
 use crate::calendar::Calendar;
+use crate::config::TConfig;
 use crate::table::{Row, Table, TableState};
 
 use std::cmp::Ordering;
@@ -14,7 +14,7 @@ use task_hookrs::task::Task;
 use task_hookrs::uda::UDAValue;
 use uuid::Uuid;
 
-use chrono::{Datelike, Local, NaiveDateTime, NaiveDate, TimeZone};
+use chrono::{Datelike, Local, NaiveDate, NaiveDateTime, TimeZone};
 
 use std::sync::{Arc, Mutex};
 use std::{sync::mpsc, thread, time::Duration};
@@ -434,7 +434,6 @@ impl TTApp {
     }
 
     pub fn draw_calendar(&mut self, f: &mut Frame<impl Backend>) {
-
         let dates_with_styles = self.get_dates_with_styles();
         let rects = Layout::default()
             .direction(Direction::Vertical)
@@ -450,7 +449,6 @@ impl TTApp {
     }
 
     pub fn get_dates_with_styles(&self) -> Vec<(NaiveDate, Style)> {
-
         let mut tasks_with_styles = vec![];
 
         let tasks_is_empty = self.tasks.lock().unwrap().is_empty();
@@ -460,12 +458,8 @@ impl TTApp {
             let tasks = &self.tasks.lock().unwrap();
             let tasks_with_due_dates = tasks.iter().filter(|t| t.due().is_some());
 
-            tasks_with_styles.extend(
-                tasks_with_due_dates.map(
-                    |t| (t.due().unwrap().clone().date(), self.style_for_task(t))
-                )
-            )
-
+            tasks_with_styles
+                .extend(tasks_with_due_dates.map(|t| (t.due().unwrap().clone().date(), self.style_for_task(t))))
         }
         return tasks_with_styles;
     }
@@ -1048,7 +1042,7 @@ impl TTApp {
                         task_id
                     )),
                 }
-            },
+            }
             None => Err(format!(
                 "Unable to run `task modify` with `{}` on task {}",
                 self.modify.as_str(),
@@ -1297,7 +1291,12 @@ impl TTApp {
                 add_tag(&mut task, "ANNOTATED".to_string());
             }
             if task.tags().is_some() {
-                let tags = task.tags().unwrap().iter().filter(|s| !self.task_report_table.virtual_tags.contains(s)).collect::<Vec<_>>();
+                let tags = task
+                    .tags()
+                    .unwrap()
+                    .iter()
+                    .filter(|s| !self.task_report_table.virtual_tags.contains(s))
+                    .collect::<Vec<_>>();
                 if !tags.is_empty() {
                     add_tag(&mut task, "TAGGED".to_string());
                 }
@@ -1401,7 +1400,7 @@ impl TTApp {
                         Some(t) => {
                             let s = format!("{} ", t.description());
                             self.modify.update(&s, s.len())
-                        },
+                        }
                         None => self.modify.update("", 0),
                     }
                 }
