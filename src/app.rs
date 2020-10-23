@@ -440,7 +440,21 @@ impl TTApp {
             .split(f.size());
         let today = Local::today();
         let c = Calendar::default()
-            .block(Block::default().title("Calendar").borders(Borders::ALL))
+            .block(Block::default()
+                .title(Spans::from(vec![
+                            Span::styled(
+                                "Task",
+                                Style::default().add_modifier(Modifier::DIM),
+                            ),
+                            Span::from("|"),
+                            Span::styled(
+                                "Calendar",
+                                Style::default().add_modifier(Modifier::BOLD),
+                            ),
+                        ]),
+                    )
+                .borders(Borders::ALL)
+                )
             .year(self.calendar_year)
             .date_style(dates_with_styles)
             .months_per_row(self.config.uda_calendar_months_per_row);
@@ -790,7 +804,20 @@ impl TTApp {
     fn draw_task_report(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
         let (tasks, headers) = self.task_report();
         if tasks.is_empty() {
-            f.render_widget(Block::default().borders(Borders::ALL).title("Task next"), rect);
+            f.render_widget(Block::default()
+                .borders(Borders::ALL)
+                .title(Spans::from(vec![
+                            Span::styled(
+                                "task next",
+                                Style::default().add_modifier(Modifier::BOLD),
+                            ),
+                            Span::from("|"),
+                            Span::styled(
+                                "Calendar",
+                                Style::default().add_modifier(Modifier::DIM),
+                            ),
+                        ]),
+                ), rect);
             return;
         }
 
@@ -865,7 +892,22 @@ impl TTApp {
             .collect();
 
         let t = Table::new(header, rows.into_iter())
-            .block(Block::default().borders(Borders::ALL).title("Task next"))
+            .block(
+                Block::default()
+                .borders(Borders::ALL)
+                .title(Spans::from(vec![
+                            Span::styled(
+                                "Task",
+                                Style::default().add_modifier(Modifier::BOLD),
+                            ),
+                            Span::from("|"),
+                            Span::styled(
+                                "Calendar",
+                                Style::default().add_modifier(Modifier::DIM),
+                            ),
+                        ]),
+                    )
+                )
             .highlight_style(highlight_style)
             .highlight_symbol(&self.config.uda_selection_indicator)
             .widths(&constraints);
