@@ -7,7 +7,7 @@
 
 A Terminal User Interface for [Taskwarrior](https://taskwarrior.org/).
 
-![taskwarrior-tui](https://user-images.githubusercontent.com/1813121/89620056-4ed64200-d84c-11ea-9153-9e08bc26d3b4.gif)
+![](https://user-images.githubusercontent.com/1813121/89620056-4ed64200-d84c-11ea-9153-9e08bc26d3b4.gif)
 
 ## Installation
 
@@ -64,7 +64,7 @@ Use your favorite installation method to download the [AUR package](https://aur.
 - `?`: `help`                                - Help menu
 - `!`: `{string}`                            - Custom shell command
 
-![taskwarrior-tui](https://user-images.githubusercontent.com/1813121/88654924-40896880-d08b-11ea-8709-b29cc970da4c.gif)
+![](https://user-images.githubusercontent.com/1813121/88654924-40896880-d08b-11ea-8709-b29cc970da4c.gif)
 
 </details>
 
@@ -80,9 +80,21 @@ Use your favorite installation method to download the [AUR package](https://aur.
 - `<Ctrl-k>` : Delete to end of the line
 - `<Ctrl-w>` : Delete previous word
 
-![taskwarrior-tui](https://user-images.githubusercontent.com/1813121/95651612-ce7cc900-0aa8-11eb-8686-42442ed9ee43.gif)
+![](https://user-images.githubusercontent.com/1813121/95651612-ce7cc900-0aa8-11eb-8686-42442ed9ee43.gif)
 
 </details>
+
+### Calendar view
+
+`taskwarrior-tui` supports a Calendar view, which you can get to by hitting the `]` key:
+
+![](https://user-images.githubusercontent.com/1813121/96957124-0c211f00-14b7-11eb-9d29-b3b68420af44.gif)
+
+This highlights the days for your due tasks in a calendar view.
+You can configure the number of months in a row by changing the `uda.taskwarrior-tui.calendar.months_per_row` attribute in your `taskrc` file.
+See the next section for more information.
+
+You can switch back to the task view by hitting the `[` key.
 
 ### Configure `taskwarrior-tui` using `~/.taskrc`:
 
@@ -125,6 +137,7 @@ uda.taskwarrior-tui.selection.bold=yes
 uda.taskwarrior-tui.selection.italic=no
 uda.taskwarrior-tui.selection.dim=no
 uda.taskwarrior-tui.selection.blink=no
+uda.taskwarrior-tui.calendar.months_per_row=4
 ```
 
 </details>
