@@ -502,8 +502,8 @@ impl TTApp {
         match self.mode {
             AppMode::TaskReport => self.draw_command(f, rects[1], self.filter.as_str(), "Filter Tasks"),
             AppMode::TaskFilter => {
-                f.render_widget(Clear, rects[1]);
                 f.set_cursor(rects[1].x + self.filter.pos() as u16 + 1, rects[1].y + 1);
+                f.render_widget(Clear, rects[1]);
                 self.draw_command(f, rects[1], self.filter.as_str(), "Filter Tasks");
             }
             AppMode::TaskModify => {
@@ -1562,7 +1562,7 @@ impl TTApp {
                     self.mode = AppMode::TaskReport;
                     self.update();
                 }
-                _ => handle_movement(&mut self.command, input),
+                _ => handle_movement(&mut self.filter, input),
             },
             AppMode::TaskError => self.mode = AppMode::TaskReport,
             AppMode::Calendar => match input {
