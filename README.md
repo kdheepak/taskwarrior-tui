@@ -7,7 +7,7 @@
 
 A Terminal User Interface for [Taskwarrior](https://taskwarrior.org/).
 
-![](https://user-images.githubusercontent.com/1813121/89620056-4ed64200-d84c-11ea-9153-9e08bc26d3b4.gif)
+![](https://user-images.githubusercontent.com/1813121/96972163-5f08cf80-14d3-11eb-9dc0-b0ba9ebd9822.png)
 
 ## Installation
 
@@ -41,6 +41,10 @@ cargo build --release
 Use your favorite installation method to download the [AUR package](https://aur.archlinux.org/packages/taskwarrior-tui-git/) maintained by [**@loki7990**](https://github.com/loki7990).
 
 ## Usage
+
+See it in action here:
+
+![](https://user-images.githubusercontent.com/1813121/89620056-4ed64200-d84c-11ea-9153-9e08bc26d3b4.gif)
 
 ### Easy to use interface:
 
