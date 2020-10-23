@@ -89,6 +89,7 @@ Use your favorite installation method to download the [AUR package](https://aur.
 <details>
 
 <summary> Click to expand! </summary>
+
 `taskwarrior-tui` supports a Calendar view, which you can get to by hitting the `]` key:
 
 ![](https://user-images.githubusercontent.com/1813121/96957124-0c211f00-14b7-11eb-9d29-b3b68420af44.gif)
