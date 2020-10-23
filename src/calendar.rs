@@ -194,8 +194,7 @@ impl<'a> Widget for Calendar<'a> {
             }
             y += 1;
             let mut x = area.x + startx;
-            for c in startm..endm {
-                let d = &mut days[c];
+            for d in days.iter_mut().skip(startm).take(endm) {
                 let m = d.0.month() as usize;
                 let style = Style::default().bg(Color::Rgb(220, 220, 220));
                 if m == today.month() as usize && self.year + year as i32 == today.year() {
