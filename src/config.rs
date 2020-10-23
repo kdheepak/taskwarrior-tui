@@ -117,7 +117,7 @@ impl TConfig {
     }
 
     fn get_tcolor(line: &str) -> TColor {
-        let (foreground, background) = line.split_at(line.to_lowercase().find("on ").unwrap_or_else( || line.len()));
+        let (foreground, background) = line.split_at(line.to_lowercase().find("on ").unwrap_or_else(|| line.len()));
         let (mut foreground, mut background) = (String::from(foreground), String::from(background));
         background = background.replace("on ", "");
         let mut modifiers = vec![];
