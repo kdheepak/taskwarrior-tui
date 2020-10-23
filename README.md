@@ -86,6 +86,9 @@ Use your favorite installation method to download the [AUR package](https://aur.
 
 ### Calendar view
 
+<details>
+
+<summary> Click to expand! </summary>
 `taskwarrior-tui` supports a Calendar view, which you can get to by hitting the `]` key:
 
 ![](https://user-images.githubusercontent.com/1813121/96957124-0c211f00-14b7-11eb-9d29-b3b68420af44.gif)
@@ -95,6 +98,8 @@ You can configure the number of months in a row by changing the `uda.taskwarrior
 See the next section for more information.
 
 You can switch back to the task view by hitting the `[` key.
+
+</details>
 
 ### Configure `taskwarrior-tui` using `~/.taskrc`:
 
