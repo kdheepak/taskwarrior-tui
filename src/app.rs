@@ -1569,7 +1569,9 @@ impl TTApp {
                 Key::Char('[') => {
                     self.mode = AppMode::TaskReport;
                 }
-                Key::Up | Key::Char('k') => self.calendar_year -= 1,
+                Key::Up | Key::Char('k') => if self.calendar_year > 0 {
+                    self.calendar_year -= 1
+                },
                 Key::Down | Key::Char('j') => self.calendar_year += 1,
                 Key::Ctrl('c') | Key::Char('q') => self.should_quit = true,
                 _ => {}
