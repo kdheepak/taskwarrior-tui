@@ -82,22 +82,30 @@ pub fn get_date_state(reference: &Date) -> DateState {
 }
 
 pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime) -> String {
-    let seconds = (to_dt - from_dt).num_seconds();
+    let mut seconds = (to_dt - from_dt).num_seconds();
+    let minus: String;
+
+    if seconds < 0 {
+        seconds *= -1;
+        minus = "-".to_string();
+    } else {
+        minus = "".to_string();
+    }
 
     if seconds >= 60 * 60 * 24 * 365 {
-        return format!("{}y", seconds / 86400 / 365);
+        return format!("{}{}y", minus, seconds / 86400 / 365);
     } else if seconds >= 60 * 60 * 24 * 90 {
-        return format!("{}mo", seconds / 60 / 60 / 24 / 30);
+        return format!("{}{}mo", minus, seconds / 60 / 60 / 24 / 30);
     } else if seconds >= 60 * 60 * 24 * 14 {
-        return format!("{}w", seconds / 60 / 60 / 24 / 7);
+        return format!("{}{}w", minus, seconds / 60 / 60 / 24 / 7);
     } else if seconds >= 60 * 60 * 24 {
-        return format!("{}d", seconds / 60 / 60 / 24);
+        return format!("{}{}d", minus, seconds / 60 / 60 / 24);
     } else if seconds >= 60 * 60 {
-        return format!("{}h", seconds / 60 / 60);
+        return format!("{}{}h", minus, seconds / 60 / 60);
     } else if seconds >= 60 {
-        return format!("{}min", seconds / 60);
+        return format!("{}{}min", minus, seconds / 60);
     } else {
-        return format!("{}s", seconds);
+        return format!("{}{}s", minus, seconds);
     }
 }
 
