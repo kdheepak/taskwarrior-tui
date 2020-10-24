@@ -52,7 +52,7 @@ pub fn cmp(t1: &Task, t2: &Task) -> Ordering {
         UDAValue::U64(u) => *u as f64,
         UDAValue::F64(f) => *f,
     };
-    urgency2.partial_cmp(&urgency1).unwrap()
+    urgency2.partial_cmp(&urgency1).unwrap_or(Ordering::Less)
 }
 
 pub enum DateState {
@@ -975,6 +975,7 @@ impl TTApp {
         } else {
             self.filter.as_str().into()
         };
+
         match shlex::split(&filter) {
             Some(cmd) => {
                 for s in cmd {
@@ -989,7 +990,7 @@ impl TTApp {
         let output = task
             .output()
             .expect("Unable to run `task export`. Check documentation for more information.");
-        let data = String::from_utf8(output.stdout).unwrap();
+        let data = String::from_utf8(output.stdout).unwrap_or_default();
         let imported = import(data.as_bytes());
         {
             if let Ok(i) = imported {
@@ -1004,9 +1005,13 @@ impl TTApp {
             return Ok(());
         }
 
-        match shlex::split(&self.command) {
+        let shell = self.command.as_str().replace("'", "\\'");
+
+        match shlex::split(&shell) {
             Some(cmd) => {
+                // first argument must be a binary
                 let mut command = Command::new(&cmd[0]);
+                // remaining arguments are args
                 for (i, s) in cmd.iter().enumerate() {
                     if i == 0 {
                         continue;
@@ -1021,11 +1026,11 @@ impl TTApp {
                     }
                     Err(_) => Err(format!(
                         "Shell command `{}` exited with non-zero output",
-                        self.command.as_str()
+                        shell,
                     )),
                 }
             }
-            None => Err(format!("Unable to split `{}`", self.command.as_str())),
+            None => Err(format!("Cannot run subprocess. Unable to shlex split `{}`", shell)),
         }
     }
 
@@ -1038,7 +1043,9 @@ impl TTApp {
 
         command.arg("log");
 
-        match shlex::split(&self.command) {
+        let shell = self.command.as_str().replace("'", "\\'");
+
+        match shlex::split(&shell) {
             Some(cmd) => {
                 for s in cmd {
                     command.arg(&s);
@@ -1049,12 +1056,10 @@ impl TTApp {
                         self.command.update("", 0);
                         Ok(())
                     }
-                    Err(_) => {
-                        Err("Cannot run `task log` for task `{}`. Check documentation for more information".to_string())
-                    }
+                    Err(_) => Err(format!("Cannot run `task log {}`. Check documentation for more information", shell))
                 }
             }
-            None => Err(format!("Unable to run `task log` with `{}`", self.command.as_str())),
+            None => Err(format!("Unable to run `task log`. Cannot shlex split `{}`", shell.as_str())),
         }
     }
 
@@ -1067,7 +1072,9 @@ impl TTApp {
         let mut command = Command::new("task");
         command.arg(format!("{}", task_id)).arg("modify");
 
-        match shlex::split(&self.modify) {
+        let shell = self.modify.as_str().replace("'", "\\'");
+
+        match shlex::split(&shell) {
             Some(cmd) => {
                 for s in cmd {
                     command.arg(&s);
@@ -1079,15 +1086,15 @@ impl TTApp {
                         Ok(())
                     }
                     Err(_) => Err(format!(
-                        "Cannot run `task modify` for task `{}`. Check documentation for more information",
-                        task_id
+                        "Cannot run `task {} modify {}`. Check documentation for more information",
+                        task_id, shell,
                     )),
                 }
             }
             None => Err(format!(
-                "Unable to run `task modify` with `{}` on task {}",
-                self.modify.as_str(),
-                &task_id
+                "Unable to run `task {} modify`. Cannot shlex split `{}`",
+                task_id,
+                shell,
             )),
         }
     }
@@ -1101,7 +1108,9 @@ impl TTApp {
         let mut command = Command::new("task");
         command.arg(format!("{}", task_id)).arg("annotate");
 
-        match shlex::split(&self.command) {
+        let shell = self.command.as_str().replace("'", "\\'");
+
+        match shlex::split(&shell) {
             Some(cmd) => {
                 for s in cmd {
                     command.arg(&s);
@@ -1112,10 +1121,10 @@ impl TTApp {
                         self.command.update("", 0);
                         Ok(())
                     }
-                    Err(_) => Err("Cannot run `task annotate`. Check documentation for more information".to_string()),
+                    Err(_) => Err(format!("Cannot run `task {} annotate {}`. Check documentation for more information", task_id, shell)),
                 }
             }
-            None => Err(format!("Unable to run `task add` with `{}`", self.command.as_str())),
+            None => Err(format!("Unable to run `task {} annotate`. Cannot shlex split `{}`", task_id, shell)),
         }
     }
 
@@ -1123,7 +1132,9 @@ impl TTApp {
         let mut command = Command::new("task");
         command.arg("add");
 
-        match shlex::split(&self.command) {
+        let shell = self.command.as_str().replace("'", "\\'");
+
+        match shlex::split(&shell) {
             Some(cmd) => {
                 for s in cmd {
                     command.arg(&s);
@@ -1134,10 +1145,10 @@ impl TTApp {
                         self.command.update("", 0);
                         Ok(())
                     }
-                    Err(_) => Err("Cannot run `task add`. Check documentation for more information".to_string()),
+                    Err(_) => Err(format!("Cannot run `task add {}`. Check documentation for more information", shell)),
                 }
             }
-            None => Err(format!("Unable to run `task add` with `{}`", self.command.as_str())),
+            None => Err(format!("Unable to run `task add`. Cannot shlex split `{}`", shell)),
         }
     }
 
@@ -1146,7 +1157,7 @@ impl TTApp {
 
         match output {
             Ok(output) => {
-                let data = String::from_utf8(output.stdout).unwrap();
+                let data = String::from_utf8(output.stdout).unwrap_or_default();
                 for line in data.split('\n') {
                     if line.starts_with("Virtual tags") {
                         let line = line.to_string();
@@ -1255,8 +1266,8 @@ impl TTApp {
                             Err(format!(
                                 "`task edit` for task `{}` failed. {}{}",
                                 task_id,
-                                String::from_utf8(output.stdout).unwrap(),
-                                String::from_utf8(output.stderr).unwrap()
+                                String::from_utf8(output.stdout).unwrap_or_default(),
+                                String::from_utf8(output.stderr).unwrap_or_default()
                             ))
                         } else {
                             Ok(())
