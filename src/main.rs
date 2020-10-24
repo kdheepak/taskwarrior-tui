@@ -13,6 +13,7 @@ use clap::{App, Arg};
 use std::env;
 use std::error::Error;
 use std::time::Duration;
+use std::io::Write;
 
 use crate::util::Key;
 use app::{AppMode, TTApp};
@@ -36,8 +37,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         .get_matches();
 
     let config = matches.value_of("config").unwrap_or("~/.taskrc");
-    tui_main(config)?;
-    Ok(())
+    let r = tui_main(config);
+    match r {
+        Ok(_) => std::process::exit(0),
+        Err(error) => {
+            eprintln!("{}: {}", "[taskwarrior-tui error]", error);
+            std::process::exit(1);
+        }
+    }
 }
 
 fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
