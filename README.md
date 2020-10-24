@@ -7,7 +7,7 @@
 
 A Terminal User Interface for [Taskwarrior](https://taskwarrior.org/).
 
-![](https://user-images.githubusercontent.com/1813121/96972780-2c130b80-14d4-11eb-9773-2b7f33607bcb.png)
+![](https://user-images.githubusercontent.com/1813121/97066323-acd41500-1571-11eb-90c2-d74faa21e1ad.png)
 
 ## Installation
 
