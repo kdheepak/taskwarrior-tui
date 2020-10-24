@@ -1,4 +1,4 @@
-# Taskwarrior TUI
+# `taskwarrior-tui`
 
 [![CI](https://github.com/kdheepak/taskwarrior-tui/workflows/CI/badge.svg)](https://github.com/kdheepak/taskwarrior-tui/actions?query=workflow%3ACI)
 [![](https://img.shields.io/github/license/kdheepak/taskwarrior-tui)](./LICENSE)
