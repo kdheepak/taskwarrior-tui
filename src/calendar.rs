@@ -16,7 +16,6 @@ use tui::{
 };
 
 use std::cmp::min;
-use unicode_width::UnicodeWidthStr;
 
 #[derive(Debug, Clone)]
 pub struct Calendar<'a> {

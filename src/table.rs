@@ -316,8 +316,10 @@ where
                 x = table_area.left();
                 for (c, (w, elt)) in solved_widths.iter().zip(data).enumerate() {
                     let s = if c == 0 {
+                        buf.set_stringn(x, y + i as u16, format!("{symbol:^width$}", symbol="", width=area.width as usize), *w as usize, style);
                         format!("{}{}", symbol, elt)
                     } else {
+                        buf.set_stringn(x - 1, y + i as u16, format!("{symbol:^width$}", symbol="", width=area.width as usize), *w as usize + 1, style);
                         format!("{}", elt)
                     };
                     buf.set_stringn(x, y + i as u16, s, *w as usize, style);
