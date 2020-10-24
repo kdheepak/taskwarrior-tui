@@ -83,13 +83,13 @@ pub fn get_date_state(reference: &Date) -> DateState {
 
 pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime) -> String {
     let mut seconds = (to_dt - from_dt).num_seconds();
-    let minus: String;
+    let minus: &str;
 
     if seconds < 0 {
         seconds *= -1;
-        minus = "-".to_string();
+        minus = "-";
     } else {
-        minus = "".to_string();
+        minus = "";
     }
 
     if seconds >= 60 * 60 * 24 * 365 {
