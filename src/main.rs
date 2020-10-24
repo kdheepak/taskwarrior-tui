@@ -50,23 +50,43 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
         tick_rate: Duration::from_millis(1000),
     });
 
-    let mut app = TTApp::new();
-    app.next();
+    let maybeapp = TTApp::new();
+    match maybeapp {
+        Ok(mut app) => {
+            app.next();
 
-    loop {
-        terminal.draw(|mut frame| app.draw(&mut frame)).unwrap();
+            loop {
+                terminal.draw(|mut frame| app.draw(&mut frame)).unwrap();
 
-        // Handle input
-        match events.next()? {
-            Event::Input(input) => app.handle_input(input, &mut terminal, &events),
-            Event::Tick => app.update(),
-        }
+                // Handle input
+                match events.next()? {
+                    Event::Input(input) => {
+                        let r = app.handle_input(input, &mut terminal, &events);
+                        if r.is_err() {
+                            destruct_terminal(terminal);
+                            return r
+                        }
+                    },
+                    Event::Tick => {
+                        let r = app.update();
+                        if r.is_err() {
+                            destruct_terminal(terminal);
+                            return r
+                        }
+                    },
+                }
 
-        if app.should_quit {
+                if app.should_quit {
+                    destruct_terminal(terminal);
+                    break;
+                }
+            }
+
+            Ok(())
+        },
+        Err(e) => {
             destruct_terminal(terminal);
-            break;
-        }
+            Err(e)
+        },
     }
-
-    Ok(())
 }

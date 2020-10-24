@@ -6,6 +6,7 @@ use std::cmp::Ordering;
 use std::convert::TryInto;
 use std::process::Command;
 use std::result::Result;
+use std::error::Error;
 
 use task_hookrs::date::Date;
 use task_hookrs::import::import;
@@ -156,7 +157,7 @@ pub struct TaskReportTable {
 }
 
 impl TaskReportTable {
-    pub fn new() -> Self {
+    pub fn new() -> Result<Self, Box<dyn Error>> {
         let virtual_tags = vec![
             "PROJECT",
             "BLOCKED",
@@ -196,21 +197,19 @@ impl TaskReportTable {
             tasks: vec![vec![]],
             virtual_tags: virtual_tags.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
         };
-        task_report_table.export_headers();
-        task_report_table
+        task_report_table.export_headers()?;
+        Ok(task_report_table)
     }
 
-    pub fn export_headers(&mut self) {
+    pub fn export_headers(&mut self) -> Result<(), Box<dyn Error>> {
         self.columns = vec![];
         self.labels = vec![];
 
         let output = Command::new("task")
             .arg("show")
             .arg("report.next.columns")
-            .output()
-            .expect("Unable to run `task show report.next.columns`. Check documentation for more information");
-        let data = String::from_utf8(output.stdout)
-            .expect("Unable to decode utf8 from stdout of `task show report.next.columns`");
+            .output()?;
+        let data = String::from_utf8(output.stdout)?;
 
         for line in data.split('\n') {
             if line.starts_with("report.next.columns") {
@@ -224,10 +223,8 @@ impl TaskReportTable {
         let output = Command::new("task")
             .arg("show")
             .arg("report.next.labels")
-            .output()
-            .expect("Unable to run `task show report.next.labels`. Check documentation for more information");
-        let data = String::from_utf8(output.stdout)
-            .expect("Unable to decode utf8 from stdout of `task show report.next.labels`");
+            .output()?;
+        let data = String::from_utf8(output.stdout)?;
 
         for line in data.split('\n') {
             if line.starts_with("report.next.labels") {
@@ -237,6 +234,7 @@ impl TaskReportTable {
                 }
             }
         }
+        Ok(())
     }
 
     pub fn generate_table(&mut self, tasks: &[Task]) {
@@ -372,7 +370,7 @@ pub struct TTApp {
 }
 
 impl TTApp {
-    pub fn new() -> Self {
+    pub fn new() -> Result<Self, Box<dyn Error>> {
         let mut app = Self {
             should_quit: false,
             state: TableState::default(),
@@ -384,45 +382,33 @@ impl TTApp {
             modify: LineBuffer::with_capacity(MAX_LINE),
             error: "".to_string(),
             mode: AppMode::TaskReport,
-            config: TConfig::default(),
-            task_report_table: TaskReportTable::new(),
+            config: TConfig::default()?,
+            task_report_table: TaskReportTable::new()?,
             calendar_year: Local::today().year(),
         };
         for c in "status:pending ".chars() {
             app.filter.insert(c, 1);
         }
-        app.get_context();
-        app.update();
-        app
+        app.get_context()?;
+        app.update()?;
+        Ok(app)
     }
 
-    pub fn get_context(&mut self) {
-        self.context_name = String::from_utf8(
-            Command::new("task")
-                .arg("_get")
-                .arg("rc.context")
-                .output()
-                .expect("Unable to run `task _get rc.context`")
-                .stdout,
-        )
-        .expect("Unable to decode utf8 from stdout of `task _get rc.context`");
+    pub fn get_context(&mut self) -> Result<(), Box<dyn Error>> {
+        let output = Command::new("task")
+            .arg("_get")
+            .arg("rc.context")
+            .output()?;
+        self.context_name = String::from_utf8(output.stdout)?;
         self.context_name = self.context_name.strip_suffix('\n').unwrap_or("").to_string();
 
-        self.context_filter = String::from_utf8(
-            Command::new("task")
-                .arg("_get")
-                .arg(format!("rc.context.{}", self.context_name))
-                .output()
-                .expect(format!("Unable to run `task _get rc.context.{}`", self.context_name).as_str())
-                .stdout,
-        )
-        .unwrap_or_else(|_| {
-            panic!(
-                "Unable to decode utf8 from stdout of `task _get rc.context.{}`",
-                self.context_name
-            )
-        });
+        let output = Command::new("task")
+            .arg("_get")
+            .arg(format!("rc.context.{}", self.context_name))
+            .output()?;
+        self.context_filter = String::from_utf8(output.stdout)?;
         self.context_filter = self.context_filter.strip_suffix('\n').unwrap_or("").to_string();
+        Ok(())
     }
 
     pub fn draw(&mut self, f: &mut Frame<impl Backend>) {
@@ -933,9 +919,10 @@ impl TTApp {
         (tasks, headers)
     }
 
-    pub fn update(&mut self) {
-        self.export_tasks();
+    pub fn update(&mut self) -> Result<(), Box<dyn Error>> {
+        self.export_tasks()?;
         self.update_tags();
+        Ok(())
     }
 
     pub fn next(&mut self) {
@@ -971,7 +958,7 @@ impl TTApp {
         self.state.select(Some(i));
     }
 
-    pub fn export_tasks(&self) {
+    pub fn export_tasks(&mut self) -> Result<(), Box<dyn Error>> {
         let mut task = Command::new("task");
 
         task.arg("rc.json.array=on");
@@ -995,17 +982,12 @@ impl TTApp {
             }
         }
 
-        let output = task
-            .output()
-            .expect("Unable to run `task export`. Check documentation for more information.");
-        let data = String::from_utf8(output.stdout).unwrap_or_default();
-        let imported = import(data.as_bytes());
-        {
-            if let Ok(i) = imported {
-                *(self.tasks.lock().unwrap()) = i;
-                self.tasks.lock().unwrap().sort_by(cmp);
-            }
-        }
+        let output = task.output()?;
+        let data = String::from_utf8(output.stdout)?;
+        let imported = import(data.as_bytes())?;
+        *(self.tasks.lock().unwrap()) = imported;
+        self.tasks.lock().unwrap().sort_by(cmp);
+        Ok(())
     }
 
     pub fn task_subprocess(&mut self) -> Result<(), String> {
@@ -1405,39 +1387,39 @@ impl TTApp {
         }
     }
 
-    pub fn handle_input(&mut self, input: Key, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, events: &Events) {
+    pub fn handle_input(&mut self, input: Key, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, events: &Events) -> Result<(), Box<dyn Error>> {
         match self.mode {
             AppMode::TaskReport => match input {
                 Key::Ctrl('c') | Key::Char('q') => self.should_quit = true,
                 Key::Char(']') => {
                     self.mode = AppMode::Calendar;
                 }
-                Key::Char('r') => self.update(),
+                Key::Char('r') => self.update()?,
                 Key::Down | Key::Char('j') => self.next(),
                 Key::Up | Key::Char('k') => self.previous(),
                 Key::Char('d') => match self.task_done() {
-                    Ok(_) => self.update(),
+                    Ok(_) => self.update()?,
                     Err(e) => {
                         self.mode = AppMode::TaskError;
                         self.error = e;
                     }
                 },
                 Key::Char('x') => match self.task_delete() {
-                    Ok(_) => self.update(),
+                    Ok(_) => self.update()?,
                     Err(e) => {
                         self.mode = AppMode::TaskError;
                         self.error = e;
                     }
                 },
                 Key::Char('s') => match self.task_start_or_stop() {
-                    Ok(_) => self.update(),
+                    Ok(_) => self.update()?,
                     Err(e) => {
                         self.mode = AppMode::TaskError;
                         self.error = e;
                     }
                 },
                 Key::Char('u') => match self.task_undo() {
-                    Ok(_) => self.update(),
+                    Ok(_) => self.update()?,
                     Err(e) => {
                         self.mode = AppMode::TaskError;
                         self.error = e;
@@ -1448,7 +1430,7 @@ impl TTApp {
                     let r = self.task_edit();
                     events.resume_event_loop(terminal);
                     match r {
-                        Ok(_) => self.update(),
+                        Ok(_) => self.update()?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
                             self.error = e;
@@ -1495,7 +1477,7 @@ impl TTApp {
                 Key::Char('\n') => match self.task_modify() {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
-                        self.update();
+                        self.update()?;
                     }
                     Err(e) => {
                         self.mode = AppMode::TaskError;
@@ -1512,7 +1494,7 @@ impl TTApp {
                 Key::Char('\n') => match self.task_subprocess() {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
-                        self.update();
+                        self.update()?;
                     }
                     Err(e) => {
                         self.mode = AppMode::TaskError;
@@ -1529,7 +1511,7 @@ impl TTApp {
                 Key::Char('\n') => match self.task_log() {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
-                        self.update();
+                        self.update()?;
                     }
                     Err(e) => {
                         self.mode = AppMode::TaskError;
@@ -1546,7 +1528,7 @@ impl TTApp {
                 Key::Char('\n') => match self.task_annotate() {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
-                        self.update();
+                        self.update()?;
                     }
                     Err(e) => {
                         self.mode = AppMode::TaskError;
@@ -1563,7 +1545,7 @@ impl TTApp {
                 Key::Char('\n') => match self.task_add() {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
-                        self.update();
+                        self.update()?;
                     }
                     Err(e) => {
                         self.mode = AppMode::TaskError;
@@ -1579,7 +1561,7 @@ impl TTApp {
             AppMode::TaskFilter => match input {
                 Key::Char('\n') | Key::Esc => {
                     self.mode = AppMode::TaskReport;
-                    self.update();
+                    self.update()?;
                 }
                 _ => handle_movement(&mut self.filter, input),
             },
@@ -1596,6 +1578,7 @@ impl TTApp {
                 _ => {}
             },
         }
+        Ok(())
     }
 }
 

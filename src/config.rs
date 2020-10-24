@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::process::Command;
 use std::str;
 use tui::style::{Color, Modifier};
+use std::error::Error;
 
 #[derive(Debug, Clone)]
 pub struct TColor {
@@ -70,13 +71,13 @@ impl TaskWarriorBool for str {
 }
 
 impl TConfig {
-    pub fn default() -> Self {
+    pub fn default() -> Result<Self, Box<dyn Error>> {
         let bool_collection = Self::get_bool_collection();
-        Self {
+        Ok(Self {
             enabled: true,
             obfuscate: bool_collection.get("obfuscate").cloned().unwrap_or(false),
             print_empty_columns: bool_collection.get("print_empty_columns").cloned().unwrap_or(false),
-            color: Self::get_color_collection(),
+            color: Self::get_color_collection()?,
             rule_precedence_color: Self::get_rule_precedence_color(),
             uda_selection_indicator: Self::get_uda_selection_indicator(),
             uda_selection_bold: Self::get_uda_selection_bold(),
@@ -84,22 +85,21 @@ impl TConfig {
             uda_selection_dim: Self::get_uda_selection_dim(),
             uda_selection_blink: Self::get_uda_selection_blink(),
             uda_calendar_months_per_row: Self::get_uda_months_per_row(),
-        }
+        })
     }
 
     fn get_bool_collection() -> HashMap<String, bool> {
         HashMap::new()
     }
 
-    fn get_color_collection() -> HashMap<String, TColor> {
+    fn get_color_collection() -> Result<HashMap<String, TColor>, Box<dyn Error>> {
+        let mut color_collection = HashMap::new();
         let output = Command::new("task")
             .arg("rc.color=off")
             .arg("show")
-            .output()
-            .expect("Unable to run `task show`");
+            .output()?;
 
         let data = String::from_utf8(output.stdout).expect("Unable to convert stdout to string");
-        let mut color_collection = HashMap::new();
         for line in data.split('\n') {
             if line.starts_with("color.") {
                 let mut i = line.split(' ');
@@ -113,7 +113,8 @@ impl TConfig {
                 };
             }
         }
-        color_collection
+
+        Ok(color_collection)
     }
 
     fn get_tcolor(line: &str) -> TColor {
