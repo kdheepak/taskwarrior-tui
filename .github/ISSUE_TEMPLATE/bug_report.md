@@ -28,8 +28,16 @@ If possible, please provide contents of `.taskrc`, and `.task` folder.
 
 - Operating System: <!-- Windows | Mac | Linux -->
 - Installation: <!-- github releases | homebrew | arch | zinit -->
-- taskwarrior-tui version: <!-- `taskwarrior-tui --version` -->
-- task version: <!-- `task --version` -->
+- taskwarrior-tui version:
+
+```bash
+taskwarrior-tui --version
+```
+- task version:
+
+```bash
+task --version
+```
 
 **Additional context and information**
 
