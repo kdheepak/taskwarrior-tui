@@ -41,7 +41,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     match r {
         Ok(_) => std::process::exit(0),
         Err(error) => {
-            eprintln!("{}: {}", "[taskwarrior-tui error]", error);
+            eprintln!("{}: {}. Please report as a github issue on https://github.com/kdheepak/taskwarrior-tui", "[taskwarrior-tui error]", error);
             std::process::exit(1);
         }
     }
