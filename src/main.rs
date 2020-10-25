@@ -12,8 +12,8 @@ use crate::util::{destruct_terminal, setup_terminal, Event, EventConfig, Events}
 use clap::{App, Arg};
 use std::env;
 use std::error::Error;
-use std::time::Duration;
 use std::io::Write;
+use std::time::Duration;
 
 use crate::util::Key;
 use app::{AppMode, TTApp};
@@ -41,7 +41,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     match r {
         Ok(_) => std::process::exit(0),
         Err(error) => {
-            eprintln!("{}: {}. Please report as a github issue on https://github.com/kdheepak/taskwarrior-tui", "[taskwarrior-tui error]", error);
+            eprintln!(
+                "{}: {}. Please report as a github issue on https://github.com/kdheepak/taskwarrior-tui",
+                "[taskwarrior-tui error]", error
+            );
             std::process::exit(1);
         }
     }
@@ -71,16 +74,16 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                         let r = app.handle_input(input, &mut terminal, &events);
                         if r.is_err() {
                             destruct_terminal(terminal);
-                            return r
+                            return r;
                         }
-                    },
+                    }
                     Event::Tick => {
                         let r = app.update();
                         if r.is_err() {
                             destruct_terminal(terminal);
-                            return r
+                            return r;
                         }
-                    },
+                    }
                 }
 
                 if app.should_quit {
@@ -90,10 +93,10 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
             }
 
             Ok(())
-        },
+        }
         Err(e) => {
             destruct_terminal(terminal);
             Err(e)
-        },
+        }
     }
 }

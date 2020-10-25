@@ -1,8 +1,8 @@
 use std::collections::HashMap;
+use std::error::Error;
 use std::process::Command;
 use std::str;
 use tui::style::{Color, Modifier};
-use std::error::Error;
 
 #[derive(Debug, Clone)]
 pub struct TColor {
@@ -94,10 +94,7 @@ impl TConfig {
 
     fn get_color_collection() -> Result<HashMap<String, TColor>, Box<dyn Error>> {
         let mut color_collection = HashMap::new();
-        let output = Command::new("task")
-            .arg("rc.color=off")
-            .arg("show")
-            .output()?;
+        let output = Command::new("task").arg("rc.color=off").arg("show").output()?;
 
         let data = String::from_utf8(output.stdout).expect("Unable to convert stdout to string");
         for line in data.split('\n') {

@@ -4,9 +4,9 @@ use crate::table::{Row, Table, TableState};
 
 use std::cmp::Ordering;
 use std::convert::TryInto;
+use std::error::Error;
 use std::process::Command;
 use std::result::Result;
-use std::error::Error;
 
 use task_hookrs::date::Date;
 use task_hookrs::import::import;
@@ -25,7 +25,7 @@ use tui::{
     style::{Color, Modifier, Style},
     terminal::Frame,
     text::{Span, Spans, Text},
-    widgets::{Block, Borders, Clear, Paragraph},
+    widgets::{Block, BorderType, Borders, Clear, Paragraph},
 };
 
 use rustyline::error::ReadlineError;
@@ -205,10 +205,7 @@ impl TaskReportTable {
         self.columns = vec![];
         self.labels = vec![];
 
-        let output = Command::new("task")
-            .arg("show")
-            .arg("report.next.columns")
-            .output()?;
+        let output = Command::new("task").arg("show").arg("report.next.columns").output()?;
         let data = String::from_utf8(output.stdout)?;
 
         for line in data.split('\n') {
@@ -220,10 +217,7 @@ impl TaskReportTable {
             }
         }
 
-        let output = Command::new("task")
-            .arg("show")
-            .arg("report.next.labels")
-            .output()?;
+        let output = Command::new("task").arg("show").arg("report.next.labels").output()?;
         let data = String::from_utf8(output.stdout)?;
 
         for line in data.split('\n') {
@@ -395,10 +389,7 @@ impl TTApp {
     }
 
     pub fn get_context(&mut self) -> Result<(), Box<dyn Error>> {
-        let output = Command::new("task")
-            .arg("_get")
-            .arg("rc.context")
-            .output()?;
+        let output = Command::new("task").arg("_get").arg("rc.context").output()?;
         self.context_name = String::from_utf8(output.stdout)?;
         self.context_name = self.context_name.strip_suffix('\n').unwrap_or("").to_string();
 
@@ -434,21 +425,16 @@ impl TTApp {
             .split(f.size());
         let today = Local::today();
         let c = Calendar::default()
-            .block(Block::default()
-                .title(Spans::from(vec![
-                            Span::styled(
-                                "Task",
-                                Style::default().add_modifier(Modifier::DIM),
-                            ),
-                            Span::from("|"),
-                            Span::styled(
-                                "Calendar",
-                                Style::default().add_modifier(Modifier::BOLD),
-                            ),
-                        ]),
-                    )
-                .borders(Borders::ALL)
-                )
+            .block(
+                Block::default()
+                    .title(Spans::from(vec![
+                        Span::styled("Task", Style::default().add_modifier(Modifier::DIM)),
+                        Span::from("|"),
+                        Span::styled("Calendar", Style::default().add_modifier(Modifier::BOLD)),
+                    ]))
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded),
+            )
             .year(self.calendar_year)
             .date_style(dates_with_styles)
             .months_per_row(self.config.uda_calendar_months_per_row);
@@ -498,7 +484,12 @@ impl TTApp {
             AppMode::TaskFilter => {
                 f.set_cursor(rects[1].x + self.filter.pos() as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
-                self.draw_command(f, rects[1], self.filter.as_str(), "Filter Tasks");
+                self.draw_command(
+                    f,
+                    rects[1],
+                    self.filter.as_str(),
+                    Span::styled("Filter Tasks", Style::default().add_modifier(Modifier::BOLD)),
+                );
             }
             AppMode::TaskModify => {
                 f.set_cursor(rects[1].x + self.modify.pos() as u16 + 1, rects[1].y + 1);
@@ -507,18 +498,31 @@ impl TTApp {
                     f,
                     rects[1],
                     self.modify.as_str(),
-                    format!("Modify Task {}", task_id).as_str(),
+                    Span::styled(
+                        format!("Modify Task {}", task_id).as_str(),
+                        Style::default().add_modifier(Modifier::BOLD),
+                    ),
                 );
             }
             AppMode::TaskLog => {
                 f.set_cursor(rects[1].x + self.command.pos() as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
-                self.draw_command(f, rects[1], self.command.as_str(), "Log Task");
+                self.draw_command(
+                    f,
+                    rects[1],
+                    self.command.as_str(),
+                    Span::styled("Log Tasks", Style::default().add_modifier(Modifier::BOLD)),
+                );
             }
             AppMode::TaskSubprocess => {
                 f.set_cursor(rects[1].x + self.command.pos() as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
-                self.draw_command(f, rects[1], self.command.as_str(), "Shell Command");
+                self.draw_command(
+                    f,
+                    rects[1],
+                    self.command.as_str(),
+                    Span::styled("Shell Command", Style::default().add_modifier(Modifier::BOLD)),
+                );
             }
             AppMode::TaskAnnotate => {
                 f.set_cursor(rects[1].x + self.command.pos() as u16 + 1, rects[1].y + 1);
@@ -527,17 +531,30 @@ impl TTApp {
                     f,
                     rects[1],
                     self.command.as_str(),
-                    format!("Annotate Task {}", task_id).as_str(),
+                    Span::styled(
+                        format!("Annotate Task {}", task_id).as_str(),
+                        Style::default().add_modifier(Modifier::BOLD),
+                    ),
                 );
             }
             AppMode::TaskAdd => {
                 f.set_cursor(rects[1].x + self.command.pos() as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
-                self.draw_command(f, rects[1], self.command.as_str(), "Add Task");
+                self.draw_command(
+                    f,
+                    rects[1],
+                    self.command.as_str(),
+                    Span::styled("Add Task", Style::default().add_modifier(Modifier::BOLD)),
+                );
             }
             AppMode::TaskError => {
                 f.render_widget(Clear, rects[1]);
-                self.draw_command(f, rects[1], self.error.as_str(), "Error");
+                self.draw_command(
+                    f,
+                    rects[1],
+                    self.error.as_str(),
+                    Span::styled("Error", Style::default().add_modifier(Modifier::BOLD)),
+                );
             }
             AppMode::TaskHelpPopup => {
                 self.draw_command(f, rects[1], self.filter.as_str(), "Filter Tasks");
@@ -719,21 +736,40 @@ impl TTApp {
             Spans::from(""),
         ];
         let paragraph = Paragraph::new(text)
-            .block(Block::default().title("Help").borders(Borders::ALL))
+            .block(
+                Block::default()
+                    .title(Span::styled("Help", Style::default().add_modifier(Modifier::BOLD)))
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded),
+            )
             .alignment(Alignment::Left);
         let area = centered_rect(80, 90, rect);
         f.render_widget(Clear, area);
         f.render_widget(paragraph, area);
     }
 
-    fn draw_command(&self, f: &mut Frame<impl Backend>, rect: Rect, text: &str, title: &str) {
-        let p = Paragraph::new(Text::from(text)).block(Block::default().borders(Borders::ALL).title(title));
+    fn draw_command<'a, T>(&self, f: &mut Frame<impl Backend>, rect: Rect, text: &str, title: T)
+    where
+        T: Into<Spans<'a>>,
+    {
+        let p = Paragraph::new(Text::from(text)).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .title(title.into()),
+        );
         f.render_widget(p, rect);
     }
 
     fn draw_task_details(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
         if self.tasks.lock().unwrap().is_empty() {
-            f.render_widget(Block::default().borders(Borders::ALL).title("Task not found"), rect);
+            f.render_widget(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .title("Task not found"),
+                rect,
+            );
             return;
         }
         let selected = self.state.selected().unwrap_or_default();
@@ -747,6 +783,7 @@ impl TTApp {
             let p = Paragraph::new(Text::from(&data[..])).block(
                 Block::default()
                     .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
                     .title(format!("Task {}", task_id)),
             );
             f.render_widget(p, rect);
@@ -798,20 +835,22 @@ impl TTApp {
     fn draw_task_report(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
         let (tasks, headers) = self.task_report();
         if tasks.is_empty() {
-            f.render_widget(Block::default()
-                .borders(Borders::ALL)
-                .title(Spans::from(vec![
-                            Span::styled(
-                                "task next",
-                                Style::default().add_modifier(Modifier::BOLD),
-                            ),
-                            Span::from("|"),
-                            Span::styled(
-                                "Calendar",
-                                Style::default().add_modifier(Modifier::DIM),
-                            ),
-                        ]),
-                ), rect);
+            let mut style = Style::default();
+            match self.mode {
+                AppMode::TaskReport => style = style.add_modifier(Modifier::BOLD),
+                _ => style = style.add_modifier(Modifier::DIM),
+            }
+            f.render_widget(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .title(Spans::from(vec![
+                        Span::styled("Task", style),
+                        Span::from("|"),
+                        Span::styled("Calendar", Style::default().add_modifier(Modifier::DIM)),
+                    ])),
+                rect,
+            );
             return;
         }
 
@@ -885,23 +924,22 @@ impl TTApp {
             .map(|i| Constraint::Min((*i).try_into().unwrap_or(10)))
             .collect();
 
+        let mut style = Style::default();
+        match self.mode {
+            AppMode::TaskReport => style = style.add_modifier(Modifier::BOLD),
+            _ => style = style.add_modifier(Modifier::DIM),
+        }
         let t = Table::new(header, rows.into_iter())
             .block(
                 Block::default()
-                .borders(Borders::ALL)
-                .title(Spans::from(vec![
-                            Span::styled(
-                                "Task",
-                                Style::default().add_modifier(Modifier::BOLD),
-                            ),
-                            Span::from("|"),
-                            Span::styled(
-                                "Calendar",
-                                Style::default().add_modifier(Modifier::DIM),
-                            ),
-                        ]),
-                    )
-                )
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .title(Spans::from(vec![
+                        Span::styled("Task", style),
+                        Span::from("|"),
+                        Span::styled("Calendar", Style::default().add_modifier(Modifier::DIM)),
+                    ])),
+            )
             .highlight_style(highlight_style)
             .highlight_symbol(&self.config.uda_selection_indicator)
             .widths(&constraints);
@@ -1014,10 +1052,7 @@ impl TTApp {
                         self.command.update("", 0);
                         Ok(())
                     }
-                    Err(_) => Err(format!(
-                        "Shell command `{}` exited with non-zero output",
-                        shell,
-                    )),
+                    Err(_) => Err(format!("Shell command `{}` exited with non-zero output", shell,)),
                 }
             }
             None => Err(format!("Cannot run subprocess. Unable to shlex split `{}`", shell)),
@@ -1046,10 +1081,16 @@ impl TTApp {
                         self.command.update("", 0);
                         Ok(())
                     }
-                    Err(_) => Err(format!("Cannot run `task log {}`. Check documentation for more information", shell))
+                    Err(_) => Err(format!(
+                        "Cannot run `task log {}`. Check documentation for more information",
+                        shell
+                    )),
                 }
             }
-            None => Err(format!("Unable to run `task log`. Cannot shlex split `{}`", shell.as_str())),
+            None => Err(format!(
+                "Unable to run `task log`. Cannot shlex split `{}`",
+                shell.as_str()
+            )),
         }
     }
 
@@ -1083,8 +1124,7 @@ impl TTApp {
             }
             None => Err(format!(
                 "Unable to run `task {} modify`. Cannot shlex split `{}`",
-                task_id,
-                shell,
+                task_id, shell,
             )),
         }
     }
@@ -1111,10 +1151,16 @@ impl TTApp {
                         self.command.update("", 0);
                         Ok(())
                     }
-                    Err(_) => Err(format!("Cannot run `task {} annotate {}`. Check documentation for more information", task_id, shell)),
+                    Err(_) => Err(format!(
+                        "Cannot run `task {} annotate {}`. Check documentation for more information",
+                        task_id, shell
+                    )),
                 }
             }
-            None => Err(format!("Unable to run `task {} annotate`. Cannot shlex split `{}`", task_id, shell)),
+            None => Err(format!(
+                "Unable to run `task {} annotate`. Cannot shlex split `{}`",
+                task_id, shell
+            )),
         }
     }
 
@@ -1135,7 +1181,10 @@ impl TTApp {
                         self.command.update("", 0);
                         Ok(())
                     }
-                    Err(_) => Err(format!("Cannot run `task add {}`. Check documentation for more information", shell)),
+                    Err(_) => Err(format!(
+                        "Cannot run `task add {}`. Check documentation for more information",
+                        shell
+                    )),
                 }
             }
             None => Err(format!("Unable to run `task add`. Cannot shlex split `{}`", shell)),
@@ -1387,7 +1436,12 @@ impl TTApp {
         }
     }
 
-    pub fn handle_input(&mut self, input: Key, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, events: &Events) -> Result<(), Box<dyn Error>> {
+    pub fn handle_input(
+        &mut self,
+        input: Key,
+        terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+        events: &Events,
+    ) -> Result<(), Box<dyn Error>> {
         match self.mode {
             AppMode::TaskReport => match input {
                 Key::Ctrl('c') | Key::Char('q') => self.should_quit = true,
@@ -1570,9 +1624,11 @@ impl TTApp {
                 Key::Char('[') => {
                     self.mode = AppMode::TaskReport;
                 }
-                Key::Up | Key::Char('k') => if self.calendar_year > 0 {
-                    self.calendar_year -= 1
-                },
+                Key::Up | Key::Char('k') => {
+                    if self.calendar_year > 0 {
+                        self.calendar_year -= 1
+                    }
+                }
                 Key::Down | Key::Char('j') => self.calendar_year += 1,
                 Key::Ctrl('c') | Key::Char('q') => self.should_quit = true,
                 _ => {}
