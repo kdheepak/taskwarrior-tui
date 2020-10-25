@@ -43,15 +43,13 @@ use tui::{backend::CrosstermBackend, Terminal};
 const MAX_LINE: usize = 4096;
 
 pub fn cmp(t1: &Task, t2: &Task) -> Ordering {
-    let urgency1 = match &t1.uda()["urgency"] {
-        UDAValue::Str(_) => 0.0,
-        UDAValue::U64(u) => *u as f64,
-        UDAValue::F64(f) => *f,
+    let urgency1 = match t1.urgency() {
+        Some(f) => *f,
+        None => 0.0,
     };
-    let urgency2 = match &t2.uda()["urgency"] {
-        UDAValue::Str(_) => 0.0,
-        UDAValue::U64(u) => *u as f64,
-        UDAValue::F64(f) => *f,
+    let urgency2 = match t2.urgency() {
+        Some(f) => *f,
+        None => 0.0,
     };
     urgency2.partial_cmp(&urgency1).unwrap_or(Ordering::Less)
 }
@@ -337,10 +335,9 @@ impl TaskReportTable {
             },
             "description.count" => task.description().to_string(),
             "description" => task.description().to_string(),
-            "urgency" => match &task.uda()["urgency"] {
-                UDAValue::Str(_) => "0.00".to_string(),
-                UDAValue::U64(u) => format!("{:.2}", *u as f64),
-                UDAValue::F64(f) => format!("{:.2}", *f),
+            "urgency" => match &task.urgency() {
+                Some(f) => format!("{:.2}", *f),
+                None => "0.00".to_string(),
             },
             _ => "".to_string(),
         }

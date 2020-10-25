@@ -146,9 +146,9 @@ dependencies = [
 
 [[package]]
 name = "crossterm_winapi"
-version = "0.6.1"
+version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "057b7146d02fb50175fd7dbe5158f6097f33d02831f43b4ee8ae4ddf67b68f5c"
+checksum = "c2265c3f8e080075d9b6417aa72293fc71662f34b4af2612d8d1b074d29510db"
 dependencies = [
  "winapi",
 ]
@@ -662,9 +662,9 @@ checksum = "6446ced80d6c486436db5c078dde11a9f73d42b57fb273121e160b84f63d894c"
 
 [[package]]
 name = "syn"
-version = "1.0.46"
+version = "1.0.48"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ad5de3220ea04da322618ded2c42233d02baca219d6f160a3e9c87cda16c942"
+checksum = "cc371affeffc477f42a221a1e4297aedcea33d47d19b61455588bd9d8f6b19ac"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -686,7 +686,7 @@ dependencies = [
 [[package]]
 name = "task-hookrs"
 version = "0.7.0"
-source = "git+https://github.com/matthiasbeyer/task-hookrs#2953cf02b3c56b164a44e95fac5aae6f38954620"
+source = "git+https://github.com/matthiasbeyer/task-hookrs#bc70cae87ee3b48c720cf446c7f70374b78692e7"
 dependencies = [
  "chrono",
  "derive_builder",
