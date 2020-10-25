@@ -19,18 +19,15 @@ You will need to install `taskwarrior` first. See <https://taskwarrior.org/downl
 2. Unzip the tar.gz file
 3. Run with `./taskwarrior-tui`.
 
-**Using [`zdharma/zinit`](https://github.com/zdharma/zinit)**
+**Using `brew`**
 
-Add the following to your `~/.zshrc`:
-
-```zsh
-zinit ice wait:2 lucid extract"" from"gh-r" as"command" mv"taskwarrior-tui* -> tt"
-zinit load kdheepak/taskwarrior-tui
+```bash
+brew install taskwarrior-tui
 ```
 
 **Using `cargo`**
 
-```
+```bash
 git clone https://github.com/kdheepak/taskwarrior-tui.git
 cd taskwarrior-tui
 cargo build --release
@@ -39,6 +36,15 @@ cargo build --release
 **Using `AUR`**
 
 Use your favorite installation method to download the [AUR package](https://aur.archlinux.org/packages/taskwarrior-tui-git/) maintained by [**@loki7990**](https://github.com/loki7990).
+
+**Using [`zdharma/zinit`](https://github.com/zdharma/zinit)**
+
+Add the following to your `~/.zshrc`:
+
+```zsh
+zinit ice wait:2 lucid extract"" from"gh-r" as"command" mv"taskwarrior-tui* -> tt"
+zinit load kdheepak/taskwarrior-tui
+```
 
 ## Usage
 
