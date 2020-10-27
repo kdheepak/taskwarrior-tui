@@ -4,10 +4,10 @@
 
 mod app;
 mod calendar;
-mod task_report;
-mod help;
 mod config;
+mod help;
 mod table;
+mod task_report;
 mod util;
 
 use crate::util::{destruct_terminal, setup_terminal, Event, EventConfig, Events};

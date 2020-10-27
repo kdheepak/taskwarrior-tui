@@ -1,13 +1,12 @@
 use std::cmp;
 
 use tui::{
-    layout::{Alignment, Rect},
     buffer::Buffer,
+    layout::{Alignment, Rect},
     style::{Modifier, Style},
-    text::{Text, Span, Spans},
-    widgets::{Block, Widget, BorderType, Borders, Clear, Paragraph},
+    text::{Span, Spans, Text},
+    widgets::{Block, BorderType, Borders, Clear, Paragraph, Widget},
 };
-
 
 const TEXT: &str = include_str!("../KEYBINDINGS.md");
 
@@ -25,16 +24,14 @@ impl Help {
 
 impl Widget for &Help {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let text: Vec<Spans> = TEXT.lines()
-            .map(|line| Spans::from(format!("{}\n", line)))
-            .collect();
+        let text: Vec<Spans> = TEXT.lines().map(|line| Spans::from(format!("{}\n", line))).collect();
 
         Paragraph::new(text)
             .block(
                 Block::default()
                     .title(Span::styled(&self.title, Style::default().add_modifier(Modifier::BOLD)))
                     .borders(Borders::ALL)
-                    .border_type(BorderType::Rounded)
+                    .border_type(BorderType::Rounded),
             )
             .alignment(Alignment::Left)
             .render(area, buf);

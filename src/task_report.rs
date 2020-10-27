@@ -1,7 +1,7 @@
 use chrono::{Datelike, Local, NaiveDate, NaiveDateTime, TimeZone};
-use task_hookrs::task::Task;
-use std::process::Command;
 use std::error::Error;
+use std::process::Command;
+use task_hookrs::task::Task;
 
 pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime) -> String {
     let mut seconds = (to_dt - from_dt).num_seconds();
@@ -30,7 +30,6 @@ pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime) -> S
         return format!("{}{}s", minus, seconds);
     }
 }
-
 
 pub struct TaskReportTable {
     pub labels: Vec<String>,

@@ -270,7 +270,11 @@ impl TConfig {
             if line.starts_with(config) {
                 return line.trim_start_matches(config).trim_start().trim_end().to_string();
             } else if line.starts_with(&config.replace('-', "_")) {
-                return line.trim_start_matches(&config.replace('-', "_")).trim_start().trim_end().to_string();
+                return line
+                    .trim_start_matches(&config.replace('-', "_"))
+                    .trim_start()
+                    .trim_end()
+                    .to_string();
             }
         }
         "".to_string()

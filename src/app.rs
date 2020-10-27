@@ -1,8 +1,8 @@
 use crate::calendar::Calendar;
-use crate::task_report::TaskReportTable;
-use crate::help::Help;
 use crate::config::TConfig;
+use crate::help::Help;
 use crate::table::{Row, Table, TableState};
+use crate::task_report::TaskReportTable;
 use crate::util::Events;
 use crate::util::Key;
 
@@ -120,7 +120,6 @@ pub enum AppMode {
     Calendar,
 }
 
-
 pub struct TTApp {
     pub should_quit: bool,
     pub state: TableState,
@@ -135,7 +134,7 @@ pub struct TTApp {
     pub calendar_year: i32,
     pub mode: AppMode,
     pub config: TConfig,
-    pub task_report_show_info: bool
+    pub task_report_show_info: bool,
 }
 
 impl TTApp {
@@ -252,8 +251,7 @@ impl TTApp {
                 .split(rects[0]);
 
             self.draw_task_report(f, full_table_layout[0]);
-        }
-        else {
+        } else {
             let split_task_layout = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
@@ -262,7 +260,7 @@ impl TTApp {
             self.draw_task_report(f, split_task_layout[0]);
             self.draw_task_details(f, split_task_layout[1]);
         }
-                let selected = self.state.selected().unwrap_or_default();
+        let selected = self.state.selected().unwrap_or_default();
         let task_id = if tasks_len == 0 {
             0
         } else {
