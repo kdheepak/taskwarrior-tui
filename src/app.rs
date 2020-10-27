@@ -358,11 +358,12 @@ pub struct TTApp {
     pub calendar_year: i32,
     pub mode: AppMode,
     pub config: TConfig,
-    pub hide_task_detail: bool
+    pub task_report_show_info: bool
 }
 
 impl TTApp {
     pub fn new() -> Result<Self, Box<dyn Error>> {
+        let c = TConfig::default()?;
         let mut app = Self {
             should_quit: false,
             state: TableState::default(),
@@ -374,10 +375,10 @@ impl TTApp {
             modify: LineBuffer::with_capacity(MAX_LINE),
             error: "".to_string(),
             mode: AppMode::TaskReport,
-            config: TConfig::default()?,
+            task_report_show_info: c.uda_task_report_show_info,
+            config: c,
             task_report_table: TaskReportTable::new()?,
             calendar_year: Local::today().year(),
-            hide_task_detail: false,
         };
         for c in "status:pending ".chars() {
             app.filter.insert(c, 1);
@@ -467,7 +468,7 @@ impl TTApp {
             .constraints([Constraint::Min(0), Constraint::Length(3)].as_ref())
             .split(f.size());
 
-        if self.hide_task_detail {
+        if !self.task_report_show_info {
             let full_table_layout = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([Constraint::Percentage(100)].as_ref())
@@ -1543,7 +1544,7 @@ impl TTApp {
                     self.mode = AppMode::TaskFilter;
                 }
                 Key::Char('z') => {
-                    self.hide_task_detail = !self.hide_task_detail;
+                    self.task_report_show_info = !self.task_report_show_info;
                 }
                 _ => {}
             },

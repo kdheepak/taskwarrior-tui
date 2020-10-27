@@ -34,6 +34,7 @@ pub struct TConfig {
     pub obfuscate: bool,
     pub print_empty_columns: bool,
     pub rule_precedence_color: Vec<String>,
+    pub uda_task_report_show_info: bool,
     pub uda_selection_indicator: String,
     pub uda_selection_bold: bool,
     pub uda_selection_italic: bool,
@@ -79,6 +80,7 @@ impl TConfig {
             print_empty_columns: bool_collection.get("print_empty_columns").cloned().unwrap_or(false),
             color: Self::get_color_collection()?,
             rule_precedence_color: Self::get_rule_precedence_color(),
+            uda_task_report_show_info: Self::get_uda_task_report_show_info(),
             uda_selection_indicator: Self::get_uda_selection_indicator(),
             uda_selection_bold: Self::get_uda_selection_bold(),
             uda_selection_italic: Self::get_uda_selection_italic(),
@@ -280,6 +282,14 @@ impl TConfig {
             .collect::<Vec<_>>()
     }
 
+    fn get_uda_task_report_show_info() -> bool {
+        let s = Self::get_config("uda.taskwarrior-tui.task-report.show-info");
+        match s.get_bool() {
+            Some(b) => b,
+            None => true,
+        }
+    }
+
     fn get_uda_selection_indicator() -> String {
         let indicator = Self::get_config("uda.taskwarrior-tui.selection.indicator");
         if indicator.is_empty() {
@@ -322,7 +332,7 @@ impl TConfig {
     }
 
     fn get_uda_months_per_row() -> usize {
-        let s = Self::get_config("uda.taskwarrior-tui.calendar.months_per_row");
+        let s = Self::get_config("uda.taskwarrior-tui.calendar.months-per-row");
         match s.parse::<usize>() {
             Ok(i) => i,
             Err(e) => 4,
@@ -336,8 +346,5 @@ mod tests {
     #[test]
     fn test_colors() {
         let tc = TConfig::default();
-        dbg!(&tc.color["color.active"]);
-        dbg!(&tc.color["color.due.today"]);
-        dbg!(&tc.rule_precedence_color);
     }
 }
