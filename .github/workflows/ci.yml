@@ -116,3 +116,32 @@ jobs:
         with:
           token: ${{secrets.HOMEBREW_TOKEN}}
           formula: taskwarrior-tui
+
+  snap:
+    name: Push to snap
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v2
+
+      - name: Build cargo release
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+
+      - name: Install Snapcraft
+        uses: samuelmeuli/action-snapcraft@v1
+        with:
+          use_lxd: true
+          snapcraft_token: ${{ secrets.SNAPCRAFT_TOKEN }}
+
+      - name: Install review tools
+        run: sudo snap install review-tools
+
+      - name: Build snap
+        run: sg lxd -c 'snapcraft --use-lxd'
+
+      - name: Publish snap
+        if: startsWith(github.ref, 'refs/tags/')
+        run: snapcraft upload ./taskwarrior-tui*.snap --release edge
