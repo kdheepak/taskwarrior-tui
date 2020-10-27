@@ -63,7 +63,13 @@ zinit load kdheepak/taskwarrior-tui
 
 See it in action here:
 
+<details>
+
+<summary> Click to expand! </summary>
+
 ![](https://user-images.githubusercontent.com/1813121/89620056-4ed64200-d84c-11ea-9153-9e08bc26d3b4.gif)
+
+</details>
 
 ### Easy to use interface:
 
