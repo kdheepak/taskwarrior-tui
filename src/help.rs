@@ -11,13 +11,17 @@ use tui::{
 const TEXT: &str = include_str!("../KEYBINDINGS.md");
 
 pub struct Help {
-    title: String,
+    pub title: String,
+    pub scroll: u16,
+    pub text_height: usize,
 }
 
 impl Help {
     pub fn new() -> Self {
         Self {
             title: "Help".to_string(),
+            scroll: 0,
+            text_height: TEXT.lines().map(|line| Spans::from(format!("{}\n", line))).count(),
         }
     }
 }
@@ -34,6 +38,7 @@ impl Widget for &Help {
                     .border_type(BorderType::Rounded),
             )
             .alignment(Alignment::Left)
+            .scroll((self.scroll, 0))
             .render(area, buf);
     }
 }

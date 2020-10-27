@@ -12,6 +12,18 @@ Keybindings:
 
     k: {selected-=1}                     - Move up in task report
 
+    j: {selected+=1}                     - Move forward a year in calendar
+
+    k: {selected-=1}                     - Move back a year in calendar
+
+    J: {selected+=pageheight}            - Move page down in task report
+
+    K: {selected-=pageheight}            - Move page up in task report
+
+    J: {selected+=1}                     - Move forward a year in calendar
+
+    K: {selected-=1}                     - Move back a year in calendar
+
     l: task log {string}                 - Log new task
 
     m: task {selected} modify {string}   - Modify selected task

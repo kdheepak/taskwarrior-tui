@@ -136,6 +136,7 @@ pub struct TTApp {
     pub config: Config,
     pub task_report_show_info: bool,
     pub task_report_height: u16,
+    pub help_popup: Help,
 }
 
 impl TTApp {
@@ -157,6 +158,7 @@ impl TTApp {
             config: c,
             task_report_table: TaskReportTable::new()?,
             calendar_year: Local::today().year(),
+            help_popup: Help::new(),
         };
         for c in "status:pending ".chars() {
             app.filter.insert(c, 1);
@@ -359,9 +361,8 @@ impl TTApp {
 
     fn draw_help_popup(&self, f: &mut Frame<impl Backend>, rect: Rect) {
         let area = centered_rect(80, 90, rect);
-        let h = Help::new();
         f.render_widget(Clear, area);
-        f.render_widget(&h, area);
+        f.render_widget(&self.help_popup, area);
     }
 
     fn draw_command<'a, T>(&self, f: &mut Frame<impl Backend>, rect: Rect, text: &str, title: T)
@@ -1178,8 +1179,17 @@ impl TTApp {
                 _ => {}
             },
             AppMode::TaskHelpPopup => match input {
-                Key::Esc => {
+                Key::Esc | Key::Char('q') => {
                     self.mode = AppMode::TaskReport;
+                },
+                Key::Char('j') => {
+                    self.help_popup.scroll += 1;
+                    if self.help_popup.scroll > self.help_popup.text_height as u16 - 1 {
+                        self.help_popup.scroll = self.help_popup.text_height as u16 - 1;
+                    }
+                },
+                Key::Char('k') => {
+                    self.help_popup.scroll = self.help_popup.scroll.checked_sub(1).unwrap_or(0);
                 }
                 _ => {}
             },
