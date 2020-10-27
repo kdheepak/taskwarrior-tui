@@ -13,19 +13,13 @@ A Terminal User Interface for [Taskwarrior](https://taskwarrior.org/).
 
 You will need to install `taskwarrior` first. See <https://taskwarrior.org/download/> for more information.
 
-**Manual**
+**Manual** ![](https://img.shields.io/github/v/tag/kdheepak/taskwarrior-tui)
 
 1. Download the tar.gz file for your OS from [the latest release](https://github.com/kdheepak/taskwarrior-tui/releases/latest).
 2. Unzip the tar.gz file
 3. Run with `./taskwarrior-tui`.
 
-**Using `brew`**
-
-```bash
-brew install taskwarrior-tui
-```
-
-**Using `cargo`**
+**Install from source** ![](https://img.shields.io/badge/branch-master-red)
 
 ```bash
 git clone https://github.com/kdheepak/taskwarrior-tui.git
@@ -33,11 +27,23 @@ cd taskwarrior-tui
 cargo build --release
 ```
 
-**Using `AUR`**
+**Using `brew`** ![](https://img.shields.io/homebrew/v/taskwarrior-tui)
+
+```bash
+brew install taskwarrior-tui
+```
+
+**Using `cargo`** ![](https://img.shields.io/crates/v/taskwarrior-tui)
+
+```bash
+cargo install taskwarrior-tui
+```
+
+**Using `AUR`** ![](https://img.shields.io/aur/version/taskwarrior-tui)
 
 Use your favorite installation method to download the [AUR package](https://aur.archlinux.org/packages/taskwarrior-tui-git/) maintained by [**@loki7990**](https://github.com/loki7990).
 
-**Using [`zdharma/zinit`](https://github.com/zdharma/zinit)**
+**Using [`zdharma/zinit`](https://github.com/zdharma/zinit)** ![](https://img.shields.io/github/v/tag/kdheepak/taskwarrior-tui)
 
 Add the following to your `~/.zshrc`:
 
