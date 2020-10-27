@@ -1,0 +1,18 @@
+name: taskwarrior-tui
+base: core18
+version: git
+summary: A terminal user interface for taskwarrior
+description: |
+  A terminal user interface for taskwarrior to manage your tasks efficiently.
+
+grade: stable
+confinement: devmode # use 'strict' once you have the right plugs and slots
+
+parts:
+  taskwarrior-tui:
+    plugin: rust
+    source: .
+
+apps:
+  taskwarrior-tui:
+    command: bin/taskwarrior-tui
