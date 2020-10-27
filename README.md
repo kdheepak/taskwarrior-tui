@@ -61,7 +61,7 @@ zinit load kdheepak/taskwarrior-tui
 
 ## Usage
 
-See it in action here:
+### See it in action:
 
 <details>
 
