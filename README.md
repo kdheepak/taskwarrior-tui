@@ -43,6 +43,13 @@ Use your favorite installation method to download the [AUR package](https://aur.
 yay -S taskwarrior-tui-git
 ```
 
+OR
+
+```bash
+pacman -S taskwarrior-tui-git
+```
+
+
 **Using [`cargo`](https://crates.io/)** [![](https://img.shields.io/crates/v/taskwarrior-tui)](https://libraries.io/cargo/taskwarrior-tui)
 
 ```bash
