@@ -108,7 +108,7 @@ See it in action here:
 ![](https://user-images.githubusercontent.com/1813121/96957124-0c211f00-14b7-11eb-9d29-b3b68420af44.gif)
 
 This highlights the days for your due tasks in a calendar view.
-You can configure the number of months in a row by changing the `uda.taskwarrior-tui.calendar.months_per_row` attribute in your `taskrc` file.
+You can configure the number of months in a row by changing the `uda.taskwarrior-tui.calendar.months-per-row` attribute in your `taskrc` file.
 See the next section for more information.
 
 You can switch back to the task view by hitting the `[` key.
@@ -156,7 +156,8 @@ uda.taskwarrior-tui.selection.bold=yes
 uda.taskwarrior-tui.selection.italic=no
 uda.taskwarrior-tui.selection.dim=no
 uda.taskwarrior-tui.selection.blink=no
-uda.taskwarrior-tui.calendar.months_per_row=4
+uda.taskwarrior-tui.calendar.months-per-row=4
+uda.taskwarrior-tui.task-report.show-detail=true
 ```
 
 </details>
