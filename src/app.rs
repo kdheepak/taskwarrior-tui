@@ -358,6 +358,7 @@ pub struct TTApp {
     pub calendar_year: i32,
     pub mode: AppMode,
     pub config: TConfig,
+    pub hide_task_detail: bool
 }
 
 impl TTApp {
@@ -376,6 +377,7 @@ impl TTApp {
             config: TConfig::default()?,
             task_report_table: TaskReportTable::new()?,
             calendar_year: Local::today().year(),
+            hide_task_detail: false,
         };
         for c in "status:pending ".chars() {
             app.filter.insert(c, 1);
@@ -464,13 +466,25 @@ impl TTApp {
             .direction(Direction::Vertical)
             .constraints([Constraint::Min(0), Constraint::Length(3)].as_ref())
             .split(f.size());
-        let task_rects = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
-            .split(rects[0]);
-        self.draw_task_report(f, task_rects[0]);
-        self.draw_task_details(f, task_rects[1]);
-        let selected = self.state.selected().unwrap_or_default();
+
+        if self.hide_task_detail {
+            let full_table_layout = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Percentage(100)].as_ref())
+                .split(rects[0]);
+
+            self.draw_task_report(f, full_table_layout[0]);
+        }
+        else {
+            let split_task_layout = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
+                .split(rects[0]);
+
+            self.draw_task_report(f, split_task_layout[0]);
+            self.draw_task_details(f, split_task_layout[1]);
+        }
+                let selected = self.state.selected().unwrap_or_default();
         let task_id = if tasks_len == 0 {
             0
         } else {
@@ -731,6 +745,18 @@ impl TTApp {
                 Span::from("- Custom shell command"),
             ]),
             Spans::from(""),
+            Spans::from(vec![
+                Span::from("    v"),
+                Span::from("    "),
+                Span::styled(
+                    "toggle details             ",
+                    Style::default().add_modifier(Modifier::BOLD),
+                ),
+                Span::from("    "),
+                Span::from("- Toggle task detail panel"),
+            ]),
+            Spans::from(""),
+
         ];
         let paragraph = Paragraph::new(text)
             .block(
@@ -1515,6 +1541,9 @@ impl TTApp {
                 }
                 Key::Char('/') => {
                     self.mode = AppMode::TaskFilter;
+                }
+                Key::Char('v') => {
+                    self.hide_task_detail = !self.hide_task_detail;
                 }
                 _ => {}
             },
