@@ -41,11 +41,7 @@ Use your favorite installation method to download the [AUR package](https://aur.
 
 ```bash
 yay -S taskwarrior-tui-git
-```
-
-OR
-
-```bash
+# OR
 pacman -S taskwarrior-tui-git
 ```
 
