@@ -144,4 +144,4 @@ jobs:
 
       - name: Publish snap
         if: startsWith(github.ref, 'refs/tags/')
-        run: snapcraft upload ./taskwarrior-tui*.snap --release edge
+        run: snapcraft upload ./taskwarrior-tui_*.snap --release edge
