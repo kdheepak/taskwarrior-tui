@@ -1184,8 +1184,9 @@ impl TTApp {
                 },
                 Key::Char('j') => {
                     self.help_popup.scroll += 1;
-                    if self.help_popup.scroll > self.help_popup.text_height as u16 - 1 {
-                        self.help_popup.scroll = self.help_popup.text_height as u16 - 1;
+                    let th = (self.help_popup.text_height as u16).checked_sub(1).unwrap_or(0);
+                    if self.help_popup.scroll > th {
+                        self.help_popup.scroll = th
                     }
                 },
                 Key::Char('k') => {
