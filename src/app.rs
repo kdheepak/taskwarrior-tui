@@ -724,6 +724,18 @@ impl TTApp {
             ]),
             Spans::from(""),
             Spans::from(vec![
+                Span::from("    z"),
+                Span::from("    "),
+                Span::styled(
+                    "toggle details             ",
+                    Style::default().add_modifier(Modifier::BOLD),
+                ),
+                Span::from("    "),
+                Span::from("- Toggle task detail panel"),
+            ]),
+            Spans::from(""),
+            Spans::from(""),
+            Spans::from(vec![
                 Span::from("    ?"),
                 Span::from("    "),
                 Span::styled(
@@ -744,18 +756,6 @@ impl TTApp {
                 Span::from("    "),
                 Span::from("- Custom shell command"),
             ]),
-            Spans::from(""),
-            Spans::from(vec![
-                Span::from("    v"),
-                Span::from("    "),
-                Span::styled(
-                    "toggle details             ",
-                    Style::default().add_modifier(Modifier::BOLD),
-                ),
-                Span::from("    "),
-                Span::from("- Toggle task detail panel"),
-            ]),
-            Spans::from(""),
 
         ];
         let paragraph = Paragraph::new(text)
@@ -1542,7 +1542,7 @@ impl TTApp {
                 Key::Char('/') => {
                     self.mode = AppMode::TaskFilter;
                 }
-                Key::Char('v') => {
+                Key::Char('z') => {
                     self.hide_task_detail = !self.hide_task_detail;
                 }
                 _ => {}
@@ -1732,11 +1732,11 @@ mod tests {
     #[test]
     fn test_app() {
         let app = TTApp::new();
-        assert_eq!(app.context_name, "".to_string());
-        println!("{:?}", app.tasks.lock().unwrap()[0]);
 
-        dbg!(&app.task_current().unwrap().tags());
-        dbg!(app.style_for_task(&app.task_current().unwrap()));
+        let data = std::fs::read_to_string("./test.json").unwrap();
+        let imported = import(data.as_bytes()).unwrap();
+        dbg!(imported);
+
         //println!("{:?}", app.task_report_columns);
         //println!("{:?}", app.task_report_labels);
 
