@@ -700,7 +700,7 @@ dependencies = [
 
 [[package]]
 name = "taskwarrior-tui"
-version = "0.8.10"
+version = "0.8.11"
 dependencies = [
  "cassowary",
  "chrono",
