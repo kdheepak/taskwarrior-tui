@@ -28,7 +28,7 @@ impl TColor {
 }
 
 #[derive(Debug)]
-pub struct TConfig {
+pub struct Config {
     pub enabled: bool,
     pub color: HashMap<String, TColor>,
     pub obfuscate: bool,
@@ -71,7 +71,7 @@ impl TaskWarriorBool for str {
     }
 }
 
-impl TConfig {
+impl Config {
     pub fn default() -> Result<Self, Box<dyn Error>> {
         let bool_collection = Self::get_bool_collection();
         Ok(Self {
@@ -348,9 +348,9 @@ impl TConfig {
 
 #[cfg(test)]
 mod tests {
-    use crate::config::TConfig;
+    use crate::config::Config;
     #[test]
     fn test_colors() {
-        let tc = TConfig::default();
+        let tc = Config::default();
     }
 }

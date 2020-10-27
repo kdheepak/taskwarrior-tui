@@ -1,5 +1,5 @@
 use crate::calendar::Calendar;
-use crate::config::TConfig;
+use crate::config::Config;
 use crate::help::Help;
 use crate::table::{Row, Table, TableState};
 use crate::task_report::TaskReportTable;
@@ -133,13 +133,13 @@ pub struct TTApp {
     pub task_report_table: TaskReportTable,
     pub calendar_year: i32,
     pub mode: AppMode,
-    pub config: TConfig,
+    pub config: Config,
     pub task_report_show_info: bool,
 }
 
 impl TTApp {
     pub fn new() -> Result<Self, Box<dyn Error>> {
-        let c = TConfig::default()?;
+        let c = Config::default()?;
         let mut app = Self {
             should_quit: false,
             state: TableState::default(),
