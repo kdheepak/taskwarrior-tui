@@ -28,21 +28,27 @@ cd taskwarrior-tui
 cargo build --release
 ```
 
-**Using `brew`** ![](https://img.shields.io/homebrew/v/taskwarrior-tui)
+**Using [`brew`](https://brew.sh/)** [![](https://img.shields.io/homebrew/v/taskwarrior-tui)](https://formulae.brew.sh/formula/taskwarrior-tui)
+
+This installs `task` from `homebrew` as well.
 
 ```bash
 brew install taskwarrior-tui
 ```
 
-**Using `cargo`** ![](https://img.shields.io/crates/v/taskwarrior-tui)
+**Install from [`AUR`](https://wiki.archlinux.org/index.php/Arch_User_Repository)** [![](https://img.shields.io/aur/version/taskwarrior-tui)](https://aur.archlinux.org/packages/taskwarrior-tui-git/)
+
+Use your favorite installation method to download the [AUR package](https://aur.archlinux.org/packages/taskwarrior-tui-git/) maintained by [**@loki7990**](https://github.com/loki7990). For example:
+
+```bash
+yay -S taskwarrior-tui-git
+```
+
+**Using [`cargo`](https://crates.io/)** [![](https://img.shields.io/crates/v/taskwarrior-tui)](https://libraries.io/cargo/taskwarrior-tui)
 
 ```bash
 cargo install taskwarrior-tui
 ```
-
-**Using `AUR`** ![](https://img.shields.io/aur/version/taskwarrior-tui)
-
-Use your favorite installation method to download the [AUR package](https://aur.archlinux.org/packages/taskwarrior-tui-git/) maintained by [**@loki7990**](https://github.com/loki7990).
 
 **Using [`zdharma/zinit`](https://github.com/zdharma/zinit)** ![](https://img.shields.io/github/v/tag/kdheepak/taskwarrior-tui)
 
