@@ -4,6 +4,7 @@
 
 mod app;
 mod calendar;
+mod task_report;
 mod help;
 mod config;
 mod table;
