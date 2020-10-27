@@ -4,6 +4,7 @@
 
 mod app;
 mod calendar;
+mod help;
 mod config;
 mod table;
 mod util;
