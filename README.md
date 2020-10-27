@@ -14,7 +14,7 @@ A Terminal User Interface for [Taskwarrior](https://taskwarrior.org/).
 
 You will need to install `taskwarrior` first. See <https://taskwarrior.org/download/> for more information.
 
-**Manual** ![](https://img.shields.io/github/v/tag/kdheepak/taskwarrior-tui)
+**Manual** (_Recommend_) ![](https://img.shields.io/github/v/tag/kdheepak/taskwarrior-tui)
 
 1. Download the tar.gz file for your OS from [the latest release](https://github.com/kdheepak/taskwarrior-tui/releases/latest).
 2. Unzip the tar.gz file
