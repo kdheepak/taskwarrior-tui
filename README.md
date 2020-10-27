@@ -4,7 +4,6 @@
 [![](https://img.shields.io/github/license/kdheepak/taskwarrior-tui)](./LICENSE)
 [![](https://img.shields.io/github/v/release/kdheepak/taskwarrior-tui)](https://github.com/kdheepak/taskwarrior-tui/releases/latest)
 [![](https://img.shields.io/static/v1?label=platform&message=linux-32%20%7C%20linux-64%20%7C%20osx-64%20%7C%20win-32%20%7C%20win-64&color=lightgrey)](https://github.com/kdheepak/taskwarrior-tui/releases/latest)
-[![](https://img.shields.io/github/downloads/kdheepak/taskwarrior-tui/total)](https://github.com/kdheepak/taskwarrior-tui/releases/latest)
 
 A Terminal User Interface for [Taskwarrior](https://taskwarrior.org/).
 
@@ -14,7 +13,7 @@ A Terminal User Interface for [Taskwarrior](https://taskwarrior.org/).
 
 You will need to install `taskwarrior` first. See <https://taskwarrior.org/download/> for more information.
 
-**Manual** (_Recommend_) ![](https://img.shields.io/github/v/tag/kdheepak/taskwarrior-tui)
+**Manual** (_Recommend_) [![](https://img.shields.io/github/v/tag/kdheepak/taskwarrior-tui)](https://github.com/kdheepak/taskwarrior-tui/releases/latest) [![](https://img.shields.io/github/downloads/kdheepak/taskwarrior-tui/total)](https://github.com/kdheepak/taskwarrior-tui/releases/latest)
 
 1. Download the tar.gz file for your OS from [the latest release](https://github.com/kdheepak/taskwarrior-tui/releases/latest).
 2. Unzip the tar.gz file
