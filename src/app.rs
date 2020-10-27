@@ -1286,6 +1286,12 @@ impl TTApp {
                     }
                 }
                 Key::Down | Key::Char('j') => self.calendar_year += 1,
+                Key::PageUp | Key::Char('K') => {
+                    if self.calendar_year > 0 {
+                        self.calendar_year -= 10
+                    }
+                }
+                Key::PageDown | Key::Char('J') => self.calendar_year += 10,
                 Key::Ctrl('c') | Key::Char('q') => self.should_quit = true,
                 _ => {}
             },
