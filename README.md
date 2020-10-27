@@ -49,7 +49,7 @@ OR
 pacman -S taskwarrior-tui-git
 ```
 
-**Using [`snap`](https://crates.io/)** [![](https://img.shields.io/badge/snap-latest-black)](https://snapcraft.io/taskwarrior-tui)
+**Using [`snap`](https://snapcraft.io/)** [![](https://img.shields.io/badge/snap-latest-black)](https://snapcraft.io/taskwarrior-tui)
 
 ```bash
 snap install taskwarrior-tui
