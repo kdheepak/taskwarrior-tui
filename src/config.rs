@@ -269,6 +269,8 @@ impl TConfig {
         for line in data.split('\n') {
             if line.starts_with(config) {
                 return line.trim_start_matches(config).trim_start().trim_end().to_string();
+            } else if line.starts_with(&config.replace('-', "_")) {
+                return line.trim_start_matches(&config.replace('-', "_")).trim_start().trim_end().to_string();
             }
         }
         "".to_string()
