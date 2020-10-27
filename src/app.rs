@@ -135,6 +135,7 @@ pub struct TTApp {
     pub mode: AppMode,
     pub config: Config,
     pub task_report_show_info: bool,
+    pub task_report_height: u16,
 }
 
 impl TTApp {
@@ -151,6 +152,7 @@ impl TTApp {
             modify: LineBuffer::with_capacity(MAX_LINE),
             error: "".to_string(),
             mode: AppMode::TaskReport,
+            task_report_height: 0,
             task_report_show_info: c.uda_task_report_show_info,
             config: c,
             task_report_table: TaskReportTable::new()?,
@@ -250,6 +252,7 @@ impl TTApp {
                 .constraints([Constraint::Percentage(100)].as_ref())
                 .split(rects[0]);
 
+            self.task_report_height = full_table_layout[0].height;
             self.draw_task_report(f, full_table_layout[0]);
         } else {
             let split_task_layout = Layout::default()
@@ -257,6 +260,7 @@ impl TTApp {
                 .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
                 .split(rects[0]);
 
+            self.task_report_height = split_task_layout[0].height;
             self.draw_task_report(f, split_task_layout[0]);
             self.draw_task_details(f, split_task_layout[1]);
         }
@@ -591,6 +595,7 @@ impl TTApp {
         };
         self.state.select(Some(i));
     }
+
     pub fn previous(&mut self) {
         if self.tasks.lock().unwrap().is_empty() {
             return;
@@ -601,6 +606,40 @@ impl TTApp {
                     self.tasks.lock().unwrap().len() - 1
                 } else {
                     i - 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
+    }
+
+    pub fn next_page(&mut self) {
+        if self.tasks.lock().unwrap().is_empty() {
+            return;
+        }
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i >= self.tasks.lock().unwrap().len() - 1 {
+                    0
+                } else {
+                    i.checked_add(self.task_report_height as usize).unwrap_or(self.tasks.lock().unwrap().len())
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
+    }
+
+    pub fn previous_page(&mut self) {
+        if self.tasks.lock().unwrap().is_empty() {
+            return;
+        }
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    self.tasks.lock().unwrap().len() - 1
+                } else {
+                    i.checked_sub(self.task_report_height as usize).unwrap_or(0)
                 }
             }
             None => 0,
@@ -1063,6 +1102,8 @@ impl TTApp {
                 Key::Char('r') => self.update()?,
                 Key::Down | Key::Char('j') => self.next(),
                 Key::Up | Key::Char('k') => self.previous(),
+                Key::PageDown | Key::Char('J') => self.next_page(),
+                Key::PageUp | Key::Char('K') => self.previous_page(),
                 Key::Char('d') => match self.task_done() {
                     Ok(_) => self.update()?,
                     Err(e) => {
