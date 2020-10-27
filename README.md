@@ -19,7 +19,7 @@ You will need to install `taskwarrior` first. See <https://taskwarrior.org/downl
 2. Unzip the tar.gz file
 3. Run with `./taskwarrior-tui`.
 
-**Install from source** ![](https://img.shields.io/badge/branch-master-red)
+**Install from source** [![](https://img.shields.io/badge/branch-master-red)](https://github.com/kdheepak/taskwarrior-tui)
 
 ```bash
 git clone https://github.com/kdheepak/taskwarrior-tui.git
