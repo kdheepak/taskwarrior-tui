@@ -172,34 +172,6 @@ jobs:
       - name: Build aur package
         run: cargo aur
 
-  appimage:
-    name: Publish appimage package
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v2
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release
-      - name: Download appimage dependiences
-        run: |
-          wget -c "https://raw.githubusercontent.com/linuxdeploy/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh"
-          wget -c "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage"
-          chmod +x linuxdeploy-plugin-gtk.sh
-          chmod +x linuxdeploy-x86_64.AppImage
-          mkdir -p AppDir/usr/bin
-          cp target/release/taskwarrior-tui AppDir/usr/bin
-          ./linuxdeploy-x86_64.AppImage --appdir AppDir --output appimage
-      - name: Releasing assets
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            *.appimage
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   snap:
     name: Push to snap
     runs-on: ubuntu-latest
