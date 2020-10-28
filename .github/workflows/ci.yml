@@ -173,13 +173,14 @@ jobs:
         run: cargo aur
 
   appimage:
+    name: Publish AppImage package
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - name: Build AppImage
-        uses: AppImageCrafters/build-appimage-action@v1
+        uses: AppImageCrafters/build-appimage-action@master
         with:
-          recipe: appimage-builder.yml
+          recipe: .github/appimage-builder.yml
 
   snap:
     name: Push to snap
