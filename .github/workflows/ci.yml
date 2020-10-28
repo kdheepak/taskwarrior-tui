@@ -182,9 +182,15 @@ jobs:
           command: build
           args: --release
       - name: Build AppImage
-        uses: AppImageCrafters/build-appimage-action@master
-        with:
-          recipe: .github/appimage-builder.yml
+        run: |
+          wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x linuxdeploy-x86_64.AppImage
+          chmod +x appimagetool-x86_64.AppImage
+          mkdir -p AppDir/bin
+          cp target/release/taskwarrior-tui AppDir/bin/taskwarrior-tui
+          ./linuxdeploy-x86_64.AppImage --appdir AppDir
+          ./appimagetool-x86_64.AppImage AppDir/
 
   snap:
     name: Push to snap
