@@ -135,7 +135,31 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            target/debian/taskwarrior-tui.deb
+            target/debian/*.deb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  redhat:
+    name: Publish redhat packagge
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+      - name: Install rpm
+        run: sudo apt-get install rpm
+      - name: Install cargo-rpm
+        run: cargo install cargo-rpm
+      - uses: actions/checkout@v1
+      - name: Build rpm package
+        run: cargo rpm build
+      - name: Releasing assets
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            target/release/rpmbuild/RPMS/x86_64/*.rpm
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
