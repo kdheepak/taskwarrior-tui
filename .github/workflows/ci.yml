@@ -124,12 +124,6 @@ jobs:
       - name: Check out Git repository
         uses: actions/checkout@v2
 
-      - name: Build cargo release
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release
-
       - name: Install Snapcraft
         uses: samuelmeuli/action-snapcraft@v1
         with:
