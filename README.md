@@ -35,7 +35,7 @@ This installs `task` from `homebrew` as well.
 brew install taskwarrior-tui
 ```
 
-**Install from [`AUR`](https://wiki.archlinux.org/index.php/Arch_User_Repository)** [![](https://img.shields.io/aur/version/taskwarrior-tui)](https://aur.archlinux.org/packages/taskwarrior-tui-git/) [![](https://img.shields.io/aur/version/taskwarrior-tui)](https://aur.archlinux.org/packages/taskwarrior-tui/)
+**Install from [`AUR`](https://wiki.archlinux.org/index.php/Arch_User_Repository)** [![](https://img.shields.io/aur/version/taskwarrior-tui-git)](https://aur.archlinux.org/packages/taskwarrior-tui-git/) [![](https://img.shields.io/aur/version/taskwarrior-tui)](https://aur.archlinux.org/packages/taskwarrior-tui/)
 
 Use your favorite installation method to download the [AUR git package](https://aur.archlinux.org/packages/taskwarrior-tui-git/) maintained by [**@loki7990**](https://github.com/loki7990). For example:
 
