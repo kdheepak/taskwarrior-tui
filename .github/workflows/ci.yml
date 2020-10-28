@@ -118,9 +118,11 @@ jobs:
           formula: taskwarrior-tui
 
   debian:
-    name: Publish debian packagge
+    name: Publish debian package
     runs-on: ubuntu-latest
     steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v2
       - uses: actions-rs/cargo@v1
         with:
           command: build
@@ -140,9 +142,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   redhat:
-    name: Publish redhat packagge
+    name: Publish redhat package
     runs-on: ubuntu-latest
     steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v2
       - uses: actions-rs/cargo@v1
         with:
           command: build
