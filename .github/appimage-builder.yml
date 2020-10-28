@@ -1,9 +1,8 @@
 version: 1
 script:
   - rm -rf AppDir || true
-  - mkdir -p AppDir/
-  - curl -o taskwarrior-tui.deb "https://github.com/kdheepak/taskwarrior-tui/releases/latest/taskwarrior-tui.deb"
-  - dpkg-deb -x taskwarrior-tui.deb AppDir
+  - mkdir -p AppDir/bin
+  - cp target/release/taskwarrior-tui AppDir/bin/taskwarrior-tui
 
 AppDir:
   path: ./AppDir
