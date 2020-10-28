@@ -41,16 +41,12 @@ Use your favorite installation method to download the [AUR git package](https://
 
 ```bash
 yay -S taskwarrior-tui-git
-# Or
-pacman -S taskwarrior-tui-git
 ```
 
 Or use your favorite installation method to download the [AUR package](https://aur.archlinux.org/packages/taskwarrior-tui/) maintained by [**@orhun**](https://github.com/orhun). For example:
 
 ```bash
 yay -S taskwarrior-tui
-# OR
-pacman -S taskwarrior-tui
 ```
 
 **Using [`snap`](https://snapcraft.io/)** [![](https://snapcraft.io/taskwarrior-tui/badge.svg)](https://snapcraft.io/taskwarrior-tui)
