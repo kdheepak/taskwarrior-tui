@@ -11,6 +11,7 @@ AppDir:
     id: org.taskwarrior-tui.taskwarrior-tui
     name: taskwarrior-tui
     icon: taskwarrior-tui
+    version: 0.8.13
     exec_args: "$APPDIR/usr/bin/taskwarrior-tui $@"
 
   apt:
