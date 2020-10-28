@@ -195,9 +195,17 @@ jobs:
           Type=Application
           Categories=Utility;
           EOF
-          wget https://taskwarrior.org/images/tw-s.png
-          mv tw-s.png AppDir/icon.png
+          wget https://user-images.githubusercontent.com/1813121/97495331-1dda4a80-192d-11eb-94eb-c276f538cfa8.png
+          mv 97495331-1dda4a80-192d-11eb-94eb-c276f538cfa8.png AppDir/icon.png
           ./linuxdeploy-x86_64.AppImage -d AppDir/taskwarrior-tui.desktop -i AppDir/icon.png --appdir AppDir --output appimage
+      - name: Releasing assets
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            taskwarrior-tui-*.AppImage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   snap:
     name: Push to snap
