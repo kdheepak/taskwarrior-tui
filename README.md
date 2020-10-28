@@ -41,11 +41,11 @@ Use your favorite installation method to download the [AUR git package](https://
 
 ```bash
 yay -S taskwarrior-tui-git
-# OR
+# Or
 pacman -S taskwarrior-tui-git
 ```
 
-OR use your favorite installation method to download the [AUR package](https://aur.archlinux.org/packages/taskwarrior-tui-git/) maintained by [**@orhun**](https://github.com/orhun). For example:
+Or use your favorite installation method to download the [AUR package](https://aur.archlinux.org/packages/taskwarrior-tui-git/) maintained by [**@orhun**](https://github.com/orhun). For example:
 
 ```bash
 yay -S taskwarrior-tui
