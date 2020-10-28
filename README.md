@@ -37,18 +37,18 @@ brew install taskwarrior-tui
 
 **Install from [`AUR`](https://wiki.archlinux.org/index.php/Arch_User_Repository)** [![](https://img.shields.io/aur/version/taskwarrior-tui-git)](https://aur.archlinux.org/packages/taskwarrior-tui-git/) [![](https://img.shields.io/aur/version/taskwarrior-tui)](https://aur.archlinux.org/packages/taskwarrior-tui/)
 
-Use your favorite installation method to download the [AUR git package](https://aur.archlinux.org/packages/taskwarrior-tui-git/) maintained by [**@loki7990**](https://github.com/loki7990). For example:
+Use your favorite installation method to download [AUR git](https://aur.archlinux.org/packages/taskwarrior-tui-git/) maintained by [**@loki7990**](https://github.com/loki7990). For example:
 
 ```bash
-yay -S taskwarrior-tui-git
+yay -S taskwarrior-tui-git # build from source master
 ```
 
-Or use your favorite installation method to download the [AUR package](https://aur.archlinux.org/packages/taskwarrior-tui/) maintained by [**@orhun**](https://github.com/orhun). For example:
+Or use your favorite installation method to download [AUR latest release](https://aur.archlinux.org/packages/taskwarrior-tui/) or [AUR precompiled binaries](https://aur.archlinux.org/packages/taskwarrior-tui/) maintained by [**@orhun**](https://github.com/orhun). For example:
 
 ```bash
-yay -S taskwarrior-tui
-# Or for precompiled binaries
-yay -S taskwarrior-tui-bin
+yay -S taskwarrior-tui # build from source latest release
+# Or
+yay -S taskwarrior-tui-bin # download precompiled binaries
 ```
 
 **Using [`snap`](https://snapcraft.io/)** [![](https://snapcraft.io/taskwarrior-tui/badge.svg)](https://snapcraft.io/taskwarrior-tui)
