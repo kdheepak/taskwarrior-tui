@@ -118,7 +118,7 @@ jobs:
           formula: taskwarrior-tui
 
   debian:
-    name: Publish debian package
+    name: Publish deb package
     runs-on: ubuntu-latest
     steps:
       - name: Check out Git repository
@@ -141,7 +141,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   redhat:
-    name: Publish redhat package
+    name: Publish rpm package
     runs-on: ubuntu-latest
     steps:
       - name: Check out Git repository
@@ -158,7 +158,7 @@ jobs:
         run: cargo rpm build
 
   arch:
-    name: Publish AUR package
+    name: Publish aur package
     runs-on: ubuntu-latest
     steps:
       - name: Check out Git repository
@@ -173,7 +173,7 @@ jobs:
         run: cargo aur
 
   appimage:
-    name: Publish AppImage package
+    name: Publish appimage package
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
