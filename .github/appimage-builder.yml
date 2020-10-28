@@ -12,7 +12,8 @@ AppDir:
     name: taskwarrior-tui
     icon: taskwarrior-tui
     version: 0.8.13
-    exec_args: "$APPDIR/usr/bin/taskwarrior-tui $@"
+    exec: $APPDIR/usr/bin/taskwarrior-tui
+    exec_args: $@
 
   apt:
     arch: amd64
