@@ -184,13 +184,19 @@ jobs:
       - name: Build AppImage
         run: |
           wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
-          wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x linuxdeploy-x86_64.AppImage
-          chmod +x appimagetool-x86_64.AppImage
           mkdir -p AppDir/bin
           cp target/release/taskwarrior-tui AppDir/bin/taskwarrior-tui
-          ./linuxdeploy-x86_64.AppImage --appdir AppDir
-          ./appimagetool-x86_64.AppImage AppDir/
+          cat <<EOF AppDir/taskwarrior-tui.desktop
+          [Desktop Entry]
+          Name=taskwarrior-tui
+          Exec=taskwarrior-tui
+          Icon=icon
+          Type=Application
+          Categories=Utility;
+          EOF
+          wget https://user-images.githubusercontent.com/1813121/97491314-963e0d00-1927-11eb-8342-6e02e60000f5.png -o AppDir/icon.png
+          ./linuxdeploy-x86_64.AppImage --appimage-extract-and-run --appdir AppDir --output appimage
 
   snap:
     name: Push to snap
