@@ -172,6 +172,15 @@ jobs:
       - name: Build aur package
         run: cargo aur
 
+  appimage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build AppImage
+        uses: AppImageCrafters/build-appimage-action@v1
+        with:
+          recipe: appimage-builder.yml
+
   snap:
     name: Push to snap
     runs-on: ubuntu-latest
