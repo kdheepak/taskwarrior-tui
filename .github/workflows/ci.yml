@@ -187,7 +187,7 @@ jobs:
           chmod +x linuxdeploy-x86_64.AppImage
           mkdir -p AppDir/bin
           cp target/release/taskwarrior-tui AppDir/bin/taskwarrior-tui
-          cat <<EOF AppDir/taskwarrior-tui.desktop
+          cat <<EOF > AppDir/taskwarrior-tui.desktop
           [Desktop Entry]
           Name=taskwarrior-tui
           Exec=taskwarrior-tui
@@ -195,8 +195,9 @@ jobs:
           Type=Application
           Categories=Utility;
           EOF
-          wget https://user-images.githubusercontent.com/1813121/97491314-963e0d00-1927-11eb-8342-6e02e60000f5.png -o AppDir/icon.png
-          ./linuxdeploy-x86_64.AppImage --appimage-extract-and-run --appdir AppDir --output appimage
+          wget https://taskwarrior.org/images/tw-s.png
+          mv tw-s.png AppDir/icon.png
+          ./linuxdeploy-x86_64.AppImage -d AppDir/taskwarrior-tui.desktop -i AppDir/icon.png --appdir AppDir --output appimage
 
   snap:
     name: Push to snap
