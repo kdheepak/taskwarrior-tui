@@ -129,7 +129,6 @@ jobs:
           args: --release
       - name: Install cargo-deb
         run: cargo install cargo-deb
-      - uses: actions/checkout@v1
       - name: Build deb package
         run: cargo deb -p taskwarrior-tui -o target/debian/taskwarrior-tui.deb
       - name: Releasing assets
@@ -155,7 +154,21 @@ jobs:
         run: sudo apt-get install rpm
       - name: Install cargo-rpm
         run: cargo install cargo-rpm
-      - uses: actions/checkout@v1
+      - name: Build rpm package
+        run: cargo rpm build
+
+  arch:
+    name: Publish AUR package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v2
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+      - name: Install cargo-aur
+        run: cargo install cargo-aur
       - name: Build rpm package
         run: cargo rpm build
       - name: Releasing assets
