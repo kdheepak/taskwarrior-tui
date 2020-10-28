@@ -35,14 +35,22 @@ This installs `task` from `homebrew` as well.
 brew install taskwarrior-tui
 ```
 
-**Install from [`AUR`](https://wiki.archlinux.org/index.php/Arch_User_Repository)** [![](https://img.shields.io/aur/version/taskwarrior-tui)](https://aur.archlinux.org/packages/taskwarrior-tui-git/)
+**Install from [`AUR`](https://wiki.archlinux.org/index.php/Arch_User_Repository)** [![](https://img.shields.io/aur/version/taskwarrior-tui)](https://aur.archlinux.org/packages/taskwarrior-tui-git/) [![](https://img.shields.io/aur/version/taskwarrior-tui)](https://aur.archlinux.org/packages/taskwarrior-tui/)
 
-Use your favorite installation method to download the [AUR package](https://aur.archlinux.org/packages/taskwarrior-tui-git/) maintained by [**@loki7990**](https://github.com/loki7990). For example:
+Use your favorite installation method to download the [AUR git package](https://aur.archlinux.org/packages/taskwarrior-tui-git/) maintained by [**@loki7990**](https://github.com/loki7990). For example:
 
 ```bash
 yay -S taskwarrior-tui-git
 # OR
 pacman -S taskwarrior-tui-git
+```
+
+OR use your favorite installation method to download the [AUR package](https://aur.archlinux.org/packages/taskwarrior-tui-git/) maintained by [**@orhun**](https://github.com/orhun). For example:
+
+```bash
+yay -S taskwarrior-tui
+# OR
+pacman -S taskwarrior-tui
 ```
 
 **Using [`snap`](https://snapcraft.io/)** [![](https://img.shields.io/badge/snap-latest-black)](https://snapcraft.io/taskwarrior-tui)
