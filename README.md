@@ -45,7 +45,7 @@ yay -S taskwarrior-tui-git
 pacman -S taskwarrior-tui-git
 ```
 
-Or use your favorite installation method to download the [AUR package](https://aur.archlinux.org/packages/taskwarrior-tui-git/) maintained by [**@orhun**](https://github.com/orhun). For example:
+Or use your favorite installation method to download the [AUR package](https://aur.archlinux.org/packages/taskwarrior-tui/) maintained by [**@orhun**](https://github.com/orhun). For example:
 
 ```bash
 yay -S taskwarrior-tui
