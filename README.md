@@ -53,7 +53,7 @@ yay -S taskwarrior-tui
 pacman -S taskwarrior-tui
 ```
 
-**Using [`snap`](https://snapcraft.io/)** [![](https://img.shields.io/badge/snap-latest-black)](https://snapcraft.io/taskwarrior-tui)
+**Using [`snap`](https://snapcraft.io/)** [![](https://snapcraft.io/taskwarrior-tui/badge.svg)](https://snapcraft.io/taskwarrior-tui)
 
 ```bash
 snap install taskwarrior-tui
