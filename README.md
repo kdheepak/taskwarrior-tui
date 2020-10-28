@@ -47,6 +47,8 @@ Or use your favorite installation method to download the [AUR package](https://a
 
 ```bash
 yay -S taskwarrior-tui
+# Or for precompiled binaries
+yay -S taskwarrior-tui-bin
 ```
 
 **Using [`snap`](https://snapcraft.io/)** [![](https://snapcraft.io/taskwarrior-tui/badge.svg)](https://snapcraft.io/taskwarrior-tui)

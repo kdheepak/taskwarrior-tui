@@ -185,8 +185,8 @@ jobs:
         run: |
           wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
           chmod +x linuxdeploy-x86_64.AppImage
-          mkdir -p AppDir/bin
-          cp target/release/taskwarrior-tui AppDir/bin/taskwarrior-tui
+          mkdir -p AppDir/usr/bin
+          cp target/release/taskwarrior-tui AppDir/usr/bin/taskwarrior-tui
           cat <<EOF > AppDir/taskwarrior-tui.desktop
           [Desktop Entry]
           Name=taskwarrior-tui
