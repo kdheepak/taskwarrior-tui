@@ -6,9 +6,18 @@ description: |
   A terminal user interface for taskwarrior to manage your tasks efficiently.
 
 grade: stable
-confinement: classic # for running external binaries `task`
+confinement: strict
 
 parts:
+  taskwarrior:
+    plugin: cmake
+    source: https://git.tasktools.org/scm/tm/task.git
+    source-type: git
+    build-packages:
+      - build-essential
+      - libgnutls-dev
+      - uuid-dev
+
   taskwarrior-tui:
     plugin: rust
     source: .
@@ -16,7 +25,5 @@ parts:
 apps:
   taskwarrior-tui:
     command: bin/taskwarrior-tui
-
-layout:
-  /usr/bin/task:
-    bind: $SNAP/usr/bin/task
+  task:
+    command: task
