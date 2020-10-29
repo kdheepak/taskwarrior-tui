@@ -253,5 +253,4 @@ jobs:
           path: taskwarrior-tui_*.snap
 
       - name: Publish snap
-        if: startsWith(github.ref, 'refs/tags/')
         run: snapcraft upload ./taskwarrior-tui_*.snap
