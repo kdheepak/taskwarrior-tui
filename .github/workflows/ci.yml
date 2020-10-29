@@ -171,7 +171,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: taskwarrior-tui
-          path: target/release/rpmbuild/RPMs/x86_64/taskwarrior-tui-*.rpm
+          path: target
   aur:
     name: Publish aur package
     runs-on: ubuntu-latest
