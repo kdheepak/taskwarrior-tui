@@ -166,11 +166,12 @@ jobs:
         run: cargo install cargo-rpm
       - name: Build rpm package
         run: cargo rpm build
+      - run: ls target/release/rpmbuild/RPMs/
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
           name: taskwarrior-tui
-          path: target/release/rpmbuild/RPMs/x86_64/taskwarrior-tui-*.rpm
+          path: target/release/rpmbuild/RPMs/
 
   arch:
     name: Publish aur package
