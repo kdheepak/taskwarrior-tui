@@ -11,7 +11,7 @@ confinement: strict
 parts:
   taskwarrior:
     plugin: cmake
-    source: https://git.tasktools.org/scm/tm/task.git
+    source: https://github.com/GothenburgBitFactory/taskwarrior.git
     source-type: git
     build-packages:
       - build-essential
