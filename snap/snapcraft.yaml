@@ -18,7 +18,9 @@ apps:
     command: bin/taskwarrior-tui
     plugs:
       - home
+  task:
+    command: usr/bin/task
 
 layout:
   /usr/bin/task:
-    bind: $SNAP_DATA/usr/bin/task
+    bind: $SNAP/usr/bin/task
