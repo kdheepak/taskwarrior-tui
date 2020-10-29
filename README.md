@@ -13,7 +13,7 @@ A Terminal User Interface for [Taskwarrior](https://taskwarrior.org/).
 
 You will need to install `taskwarrior` first. See <https://taskwarrior.org/download/> for more information.
 
-**Manual** (_Recommend_) [![](https://img.shields.io/github/v/tag/kdheepak/taskwarrior-tui)](https://github.com/kdheepak/taskwarrior-tui/releases/latest) [![](https://img.shields.io/github/downloads/kdheepak/taskwarrior-tui/total)](https://github.com/kdheepak/taskwarrior-tui/releases/latest)
+**Manual** ( _Recommended_ ) [![](https://img.shields.io/github/v/tag/kdheepak/taskwarrior-tui)](https://github.com/kdheepak/taskwarrior-tui/releases/latest) [![](https://img.shields.io/github/downloads/kdheepak/taskwarrior-tui/total)](https://github.com/kdheepak/taskwarrior-tui/releases/latest)
 
 1. Download the tar.gz file for your OS from [the latest release](https://github.com/kdheepak/taskwarrior-tui/releases/latest).
 2. Unzip the tar.gz file
@@ -35,7 +35,7 @@ This installs `task` from `homebrew` as well.
 brew install taskwarrior-tui
 ```
 
-**Install from [`AUR`](https://wiki.archlinux.org/index.php/Arch_User_Repository)** [![](https://img.shields.io/aur/version/taskwarrior-tui-git)](https://aur.archlinux.org/packages/taskwarrior-tui-git/) [![](https://img.shields.io/aur/version/taskwarrior-tui)](https://aur.archlinux.org/packages/taskwarrior-tui/)
+**Install from [`AUR`](https://wiki.archlinux.org/index.php/Arch_User_Repository)** [![](https://img.shields.io/aur/version/taskwarrior-tui-git)](https://aur.archlinux.org/packages/taskwarrior-tui-git/) [![](https://img.shields.io/aur/version/taskwarrior-tui)](https://aur.archlinux.org/packages/taskwarrior-tui/) [![](https://img.shields.io/aur/version/taskwarrior-tui-bin)](https://aur.archlinux.org/packages/taskwarrior-tui-bin/)
 
 Use your favorite installation method to download from the [AUR git](https://aur.archlinux.org/packages/taskwarrior-tui-git/) maintained by [**@loki7990**](https://github.com/loki7990). For example:
 
