@@ -43,10 +43,17 @@ fn main() -> Result<(), Box<dyn Error>> {
     match r {
         Ok(_) => std::process::exit(0),
         Err(error) => {
-            eprintln!(
-                "{}: {}. Please report as a github issue on https://github.com/kdheepak/taskwarrior-tui",
-                "[taskwarrior-tui error]", error
-            );
+            if error.to_string().to_lowercase().contains("no such file or directory") {
+                eprintln!(
+                    "{}: Unable to find executable `task`: {}. Check that taskwarrior is install correctly and try again.",
+                    "[taskwarrior-tui error]", error
+                );
+            } else {
+                eprintln!(
+                    "{}: {}. Please report as a github issue on https://github.com/kdheepak/taskwarrior-tui",
+                    "[taskwarrior-tui error]", error
+                );
+            }
             std::process::exit(1);
         }
     }
