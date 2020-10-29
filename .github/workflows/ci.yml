@@ -86,6 +86,11 @@ jobs:
           else
             shasum -a 256 taskwarrior-tui-${{ matrix.target }}.tar.gz > taskwarrior-tui-${{ matrix.target }}.sha256
           fi
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: taskwarrior-tui
+          path: target/${{ matrix.target }}/release/taskwarrior-tui${{ matrix.binary_postfix }}
       - name: Releasing assets
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
@@ -131,6 +136,11 @@ jobs:
         run: cargo install cargo-deb
       - name: Build deb package
         run: cargo deb -p taskwarrior-tui -o target/debian/taskwarrior-tui.deb
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: taskwarrior-tui
+          path: target/debian/taskwarrior-tui.deb
       - name: Releasing assets
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
@@ -156,6 +166,11 @@ jobs:
         run: cargo install cargo-rpm
       - name: Build rpm package
         run: cargo rpm build
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: taskwarrior-tui
+          path: taskwarrior-tui.rpm
 
   arch:
     name: Publish aur package
@@ -198,6 +213,11 @@ jobs:
           wget https://user-images.githubusercontent.com/1813121/97495331-1dda4a80-192d-11eb-94eb-c276f538cfa8.png
           mv 97495331-1dda4a80-192d-11eb-94eb-c276f538cfa8.png AppDir/icon.png
           ./linuxdeploy-x86_64.AppImage -d AppDir/taskwarrior-tui.desktop -i AppDir/icon.png --appdir AppDir --output appimage
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: taskwarrior-tui
+          path: taskwarrior-tui-*.AppImage
       - name: Releasing assets
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
@@ -227,4 +247,11 @@ jobs:
         run: sg lxd -c 'snapcraft --use-lxd'
 
       - name: Publish snap
+        if: startsWith(github.ref, 'refs/tags/')
         run: snapcraft upload ./taskwarrior-tui_*.snap
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: taskwarrior-tui
+          path: taskwarrior-tui_*.snap
