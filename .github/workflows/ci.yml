@@ -166,8 +166,7 @@ jobs:
         run: cargo install cargo-rpm
       - name: Build rpm package
         run: cargo rpm build
-      - run: ls target
-      - run: tree
+      - run: ls target/release
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
