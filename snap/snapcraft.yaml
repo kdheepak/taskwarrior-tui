@@ -6,7 +6,7 @@ description: |
   A terminal user interface for taskwarrior to manage your tasks efficiently.
 
 grade: stable
-confinement: classic
+confinement: devmode
 
 parts:
   taskwarrior-tui:
