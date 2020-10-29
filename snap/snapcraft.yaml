@@ -11,18 +11,11 @@ confinement: strict
 parts:
   taskwarrior:
     plugin: cmake
-    override-build: |
-      mkdir -p build
-      cd build
-      cmake \
-        -DBUILD_SYNC=OFF -DCMAKE_INSTALL_PREFIX=$SNAPCRAFT_STAGE/cmake \
-        $SNAPCRAFT_PART_SRC
-      make
-      make install
     source: https://github.com/GothenburgBitFactory/taskwarrior.git
     source-type: git
     build-packages:
       - build-essential
+      - gnutls-dev
 
   taskwarrior-tui:
     plugin: rust
