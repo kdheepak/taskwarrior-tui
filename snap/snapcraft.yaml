@@ -23,7 +23,7 @@ parts:
     source: .
 
 apps:
+  task:
+    command: task
   taskwarrior-tui:
     command: bin/taskwarrior-tui
-  task:
-    command: bin/task
