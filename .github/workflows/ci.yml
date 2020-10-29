@@ -246,12 +246,12 @@ jobs:
       - name: Build snap
         run: sg lxd -c 'snapcraft --use-lxd'
 
-      - name: Publish snap
-        if: startsWith(github.ref, 'refs/tags/')
-        run: snapcraft upload ./taskwarrior-tui_*.snap
-
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
           name: taskwarrior-tui
           path: taskwarrior-tui_*.snap
+
+      - name: Publish snap
+        if: startsWith(github.ref, 'refs/tags/')
+        run: snapcraft upload ./taskwarrior-tui_*.snap
