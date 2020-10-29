@@ -623,7 +623,8 @@ impl TTApp {
                 if i >= self.tasks.lock().unwrap().len() - 1 {
                     0
                 } else {
-                    i.checked_add(self.task_report_height as usize).unwrap_or(self.tasks.lock().unwrap().len())
+                    i.checked_add(self.task_report_height as usize)
+                        .unwrap_or(self.tasks.lock().unwrap().len())
                 }
             }
             None => 0,
@@ -1184,14 +1185,14 @@ impl TTApp {
             AppMode::TaskHelpPopup => match input {
                 Key::Esc | Key::Char('q') => {
                     self.mode = AppMode::TaskReport;
-                },
+                }
                 Key::Char('j') => {
                     self.help_popup.scroll = self.help_popup.scroll.checked_add(1).unwrap_or(0);
                     let th = (self.help_popup.text_height as u16).checked_sub(1).unwrap_or(0);
                     if self.help_popup.scroll > th {
                         self.help_popup.scroll = th
                     }
-                },
+                }
                 Key::Char('k') => {
                     self.help_popup.scroll = self.help_popup.scroll.checked_sub(1).unwrap_or(0);
                 }
