@@ -12,12 +12,17 @@ parts:
   taskwarrior-tui:
     plugin: rust
     source: .
+  prepare: |
+    apt-get update
+    apt-get install taskwarrior -y
 
 apps:
   taskwarrior-tui:
     command: bin/taskwarrior-tui
     plugs:
       - home
+  task:
+    command: usr/bin/task
 
 layout:
   /usr/bin/task:
