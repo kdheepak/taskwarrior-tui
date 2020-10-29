@@ -122,8 +122,8 @@ jobs:
           token: ${{secrets.HOMEBREW_TOKEN}}
           formula: taskwarrior-tui
 
-  debian:
-    name: Publish deb package
+  deb_rpm:
+    name: Publish deb and rpm packages
     runs-on: ubuntu-latest
     steps:
       - name: Check out Git repository
@@ -134,46 +134,34 @@ jobs:
           args: --release
       - name: Install cargo-deb
         run: cargo install cargo-deb
-      - name: Build deb package
-        run: cargo deb -p taskwarrior-tui -o target/debian/taskwarrior-tui.deb
+      - name: Install cargo-rpm
+        run: cargo install cargo-rpm
+      - run: cargo deb --target arm-unknown-linux-musleabihf -p taskwarrior-tui
+      - run: cargo deb --target aarch64-unknown-linux-musl -p taskwarrior-tui
+      - run: cargo rpm build --target arm-unknown-linux-musleabihf
+      - run: cargo rpm build --target aarch64-unknown-linux-musl
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
           name: taskwarrior-tui
-          path: target/debian/taskwarrior-tui.deb
+          path: |
+            target/arm-unknown-linux-musleabihf/debian/*
+            target/aarch64-unknown-linux-musl/debian/*
+            target/arm-unknown-linux-musleabihf/release/rpmbuild/RPMS/armv7hl/*
+            target/aarch64-unknown-linux-musl/release/rpmbuild/RPMS/aarch64/*
       - name: Releasing assets
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            target/debian/*.deb
+            target/arm-unknown-linux-musleabihf/debian/*
+            target/aarch64-unknown-linux-musl/debian/*
+            target/arm-unknown-linux-musleabihf/release/rpmbuild/RPMS/armv7hl/*
+            target/aarch64-unknown-linux-musl/release/rpmbuild/RPMS/aarch64/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  redhat:
-    name: Publish rpm package
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v2
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release
-      - name: Install rpm
-        run: sudo apt-get install rpm
-      - name: Install cargo-rpm
-        run: cargo install cargo-rpm
-      - name: Build rpm package
-        run: cargo rpm build
-      - run: ls target/release/rpmbuild/RPMs/
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: taskwarrior-tui
-          path: target/release/rpmbuild/RPMs/
-
-  arch:
+  aur:
     name: Publish aur package
     runs-on: ubuntu-latest
     steps:
