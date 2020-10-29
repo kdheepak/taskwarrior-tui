@@ -672,9 +672,9 @@ impl TTApp {
             }
         }
 
-        let output = task.output()?;
-        let data = String::from_utf8(output.stdout)?;
-        let error = String::from_utf8(output.stderr)?;
+        let output = task.output().unwrap();
+        let data = String::from_utf8(output.stdout).unwrap();
+        let error = String::from_utf8(output.stderr).unwrap();
         if !error.contains("The expression could not be evaluated.") {
             let imported = import(data.as_bytes())?;
             *(self.tasks.lock().unwrap()) = imported;
