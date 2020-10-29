@@ -11,8 +11,14 @@ confinement: strict
 parts:
   taskwarrior:
     plugin: cmake
-    configflags:
-      - "-DBUILD_SYNC=OFF"
+    override-build: |
+      mkdir -p build
+      cd build
+      cmake \
+        -DBUILD_SYNC=OFF -DCMAKE_INSTALL_PREFIX=$SNAPCRAFT_STAGE/cmake \
+        $SNAPCRAFT_PART_SRC
+      make
+      make install
     source: https://github.com/GothenburgBitFactory/taskwarrior.git
     source-type: git
     build-packages:
@@ -26,4 +32,4 @@ apps:
   taskwarrior-tui:
     command: bin/taskwarrior-tui
   task:
-    command: task
+    command: bin/task
