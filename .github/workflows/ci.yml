@@ -170,7 +170,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: taskwarrior-tui
-          path: taskwarrior-tui-*.rpm
+          path: target/release/rpmbuild/RPMs/taskwarrior-tui-*.rpm
 
   arch:
     name: Publish aur package
