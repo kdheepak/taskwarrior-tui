@@ -18,8 +18,6 @@ apps:
     command: bin/taskwarrior-tui
     plugs:
       - home
-  task:
-    command: usr/bin/task
 
 layout:
   /usr/bin/task:
