@@ -126,16 +126,14 @@ jobs:
     name: Publish deb and rpm packages
     runs-on: ubuntu-latest
     steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v2
-      - uses: actions-rs/cargo@v1
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
         with:
-          command: build
-          args: --release
-      - name: Install cargo-deb
-        run: cargo install cargo-deb
-      - name: Install cargo-rpm
-        run: cargo install cargo-rpm
+          toolchain: stable
+      - run: rustup target add arm-unknown-linux-musleabihf
+      - run: rustup target add aarch64-unknown-linux-musl
+      - run: cargo install cargo-deb
+      - run: cargo install cargo-rpm
       - run: cargo deb --target arm-unknown-linux-musleabihf -p taskwarrior-tui
       - run: cargo deb --target aarch64-unknown-linux-musl -p taskwarrior-tui
       - run: cargo rpm build --target arm-unknown-linux-musleabihf
