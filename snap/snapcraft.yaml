@@ -16,6 +16,7 @@ parts:
     build-packages:
       - build-essential
       - gnutls-dev
+      - uuid-dev
 
   taskwarrior-tui:
     plugin: rust
