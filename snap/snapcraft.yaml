@@ -16,3 +16,7 @@ parts:
 apps:
   taskwarrior-tui:
     command: bin/taskwarrior-tui
+
+layout:
+  /usr/bin/task:
+    bind: $SNAP_DATA/usr/bin/task
