@@ -11,6 +11,8 @@ confinement: strict
 parts:
   taskwarrior:
     plugin: cmake
+    configflags:
+      - "-DBUILD_SYNC=OFF"
     source: https://github.com/GothenburgBitFactory/taskwarrior.git
     source-type: git
     build-packages:
