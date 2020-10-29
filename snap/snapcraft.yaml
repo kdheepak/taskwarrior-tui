@@ -1,5 +1,5 @@
 name: taskwarrior-tui
-base: core18
+base: core20
 version: git
 summary: A terminal user interface for taskwarrior
 description: |
@@ -15,8 +15,6 @@ parts:
     source-type: git
     build-packages:
       - build-essential
-      - libgnutls-dev
-      - uuid-dev
 
   taskwarrior-tui:
     plugin: rust
