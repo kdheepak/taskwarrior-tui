@@ -23,5 +23,8 @@ parts:
     source: .
 
 apps:
+  task:
+    command: usr/local/bin/task
+
   taskwarrior-tui:
     command: bin/taskwarrior-tui
