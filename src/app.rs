@@ -575,6 +575,7 @@ impl TTApp {
     }
 
     pub fn update(&mut self) -> Result<(), Box<dyn Error>> {
+        self.task_report_table.export_headers()?;
         self.export_tasks()?;
         self.update_tags();
         Ok(())
@@ -653,6 +654,7 @@ impl TTApp {
         let mut task = Command::new("task");
 
         task.arg("rc.json.array=on");
+        task.arg("rc.confirmation=off");
         task.arg("export");
 
         let filter = if self.context_filter != *"" {

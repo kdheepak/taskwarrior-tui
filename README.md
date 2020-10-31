@@ -11,15 +11,15 @@ A Terminal User Interface for [Taskwarrior](https://taskwarrior.org/).
 
 ## Installation
 
-You will need to install `taskwarrior` first. See <https://taskwarrior.org/download/> for more information.
+Unless otherwise specified, you will need to install `taskwarrior` first. See <https://taskwarrior.org/download/> for more information.
 
-**Manual** (_Recommend_) [![](https://img.shields.io/github/v/tag/kdheepak/taskwarrior-tui)](https://github.com/kdheepak/taskwarrior-tui/releases/latest) [![](https://img.shields.io/github/downloads/kdheepak/taskwarrior-tui/total)](https://github.com/kdheepak/taskwarrior-tui/releases/latest)
+**Manual** ( _Recommended_ ) [![](https://img.shields.io/github/v/tag/kdheepak/taskwarrior-tui)](https://github.com/kdheepak/taskwarrior-tui/releases/latest) [![](https://img.shields.io/github/downloads/kdheepak/taskwarrior-tui/total)](https://github.com/kdheepak/taskwarrior-tui/releases/latest)
 
 1. Download the tar.gz file for your OS from [the latest release](https://github.com/kdheepak/taskwarrior-tui/releases/latest).
 2. Unzip the tar.gz file
 3. Run with `./taskwarrior-tui`.
 
-**Install from source** ![](https://img.shields.io/badge/branch-master-red)
+**Install from source** [![](https://img.shields.io/badge/branch-master-red)](https://github.com/kdheepak/taskwarrior-tui)
 
 ```bash
 git clone https://github.com/kdheepak/taskwarrior-tui.git
@@ -35,20 +35,27 @@ This installs `task` from `homebrew` as well.
 brew install taskwarrior-tui
 ```
 
-**Install from [`AUR`](https://wiki.archlinux.org/index.php/Arch_User_Repository)** [![](https://img.shields.io/aur/version/taskwarrior-tui)](https://aur.archlinux.org/packages/taskwarrior-tui-git/)
+**Install from [`AUR`](https://wiki.archlinux.org/index.php/Arch_User_Repository)** [![](https://img.shields.io/aur/version/taskwarrior-tui-git)](https://aur.archlinux.org/packages/taskwarrior-tui-git/) [![](https://img.shields.io/aur/version/taskwarrior-tui)](https://aur.archlinux.org/packages/taskwarrior-tui/) [![](https://img.shields.io/aur/version/taskwarrior-tui-bin)](https://aur.archlinux.org/packages/taskwarrior-tui-bin/)
 
-Use your favorite installation method to download the [AUR package](https://aur.archlinux.org/packages/taskwarrior-tui-git/) maintained by [**@loki7990**](https://github.com/loki7990). For example:
-
-```bash
-yay -S taskwarrior-tui-git
-```
-
-OR
+Use your favorite installation method to download from the [AUR git](https://aur.archlinux.org/packages/taskwarrior-tui-git/) maintained by [**@loki7990**](https://github.com/loki7990). For example:
 
 ```bash
-pacman -S taskwarrior-tui-git
+yay -S taskwarrior-tui-git # build from source master
 ```
 
+Or use your favorite installation method to download from the [AUR latest release](https://aur.archlinux.org/packages/taskwarrior-tui/) or the [AUR precompiled binaries](https://aur.archlinux.org/packages/taskwarrior-tui/) maintained by [**@orhun**](https://github.com/orhun). For example:
+
+```bash
+yay -S taskwarrior-tui # build from source latest release
+# Or
+yay -S taskwarrior-tui-bin # download precompiled binaries
+```
+
+**Using [`snap`](https://snapcraft.io/)** [![](https://snapcraft.io/taskwarrior-tui/badge.svg)](https://snapcraft.io/taskwarrior-tui)
+
+```bash
+snap install taskwarrior-tui
+```
 
 **Using [`cargo`](https://crates.io/)** [![](https://img.shields.io/crates/v/taskwarrior-tui)](https://libraries.io/cargo/taskwarrior-tui)
 

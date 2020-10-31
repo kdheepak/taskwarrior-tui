@@ -171,6 +171,15 @@ jobs:
         with:
           name: taskwarrior-tui
           path: target/release/rpmbuild/RPMS/x86_64/taskwarrior-tui-*.x86_64.rpm
+      - name: Releasing assets
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            target/release/rpmbuild/RPMS/x86_64/taskwarrior-tui-*.x86_64.rpm
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   aur:
     name: Publish aur package
     runs-on: ubuntu-latest
@@ -199,8 +208,8 @@ jobs:
         run: |
           wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
           chmod +x linuxdeploy-x86_64.AppImage
-          mkdir -p AppDir/bin
-          cp target/release/taskwarrior-tui AppDir/bin/taskwarrior-tui
+          mkdir -p AppDir/usr/bin
+          cp target/release/taskwarrior-tui AppDir/usr/bin/taskwarrior-tui
           cat <<EOF > AppDir/taskwarrior-tui.desktop
           [Desktop Entry]
           Name=taskwarrior-tui
@@ -250,6 +259,15 @@ jobs:
         with:
           name: taskwarrior-tui
           path: taskwarrior-tui_*.snap
+
+      - name: Releasing assets
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            taskwarrior-tui_*.snap
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish snap
         run: snapcraft upload ./taskwarrior-tui_*.snap
