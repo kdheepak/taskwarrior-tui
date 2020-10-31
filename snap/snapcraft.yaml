@@ -10,7 +10,7 @@ confinement: strict
 
 apps:
   task:
-    command: usr/local/bin/task
+    command: bin/task
 
   taskwarrior-tui:
     command: bin/taskwarrior-tui
