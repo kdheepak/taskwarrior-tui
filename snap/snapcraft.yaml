@@ -9,7 +9,7 @@ grade: stable
 confinement: strict
 
 parts:
-  taskwarrior:
+  task:
     plugin: cmake
     source: https://github.com/GothenburgBitFactory/taskwarrior.git
     source-type: git
