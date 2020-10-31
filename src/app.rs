@@ -451,7 +451,7 @@ impl TTApp {
 
     fn draw_task_report(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
         let (tasks, headers) = self.task_report();
-        if tasks.is_empty() || tasks[0].len() == 0 {
+        if tasks.is_empty() {
             let mut style = Style::default();
             match self.mode {
                 AppMode::TaskReport => style = style.add_modifier(Modifier::BOLD),
