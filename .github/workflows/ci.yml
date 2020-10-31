@@ -251,5 +251,5 @@ jobs:
           name: taskwarrior-tui
           path: taskwarrior-tui_*.snap
 
-      # - name: Publish snap
-      #   run: snapcraft upload ./taskwarrior-tui_*.snap
+      - name: Publish snap
+        run: snapcraft upload ./taskwarrior-tui_*.snap
