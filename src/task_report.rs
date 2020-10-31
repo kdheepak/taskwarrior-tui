@@ -118,6 +118,9 @@ impl TaskReportTable {
 
         // get all tasks as their string representation
         for task in tasks {
+            if self.columns.len() == 0 {
+                break
+            }
             let mut item = vec![];
             for name in &self.columns {
                 let s = self.get_string_attribute(name, &task);
