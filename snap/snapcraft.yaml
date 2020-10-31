@@ -28,8 +28,6 @@ parts:
       - build-essential
       - gnutls-dev
       - uuid-dev
-    organize:
-      usr/local/bin/: bin/
   taskwarrior-tui:
     plugin: rust
     source: .
