@@ -51,6 +51,12 @@ yay -S taskwarrior-tui # build from source latest release
 yay -S taskwarrior-tui-bin # download precompiled binaries
 ```
 
+**Using [`snap`](https://snapcraft.io/)** [![](https://snapcraft.io/taskwarrior-tui/badge.svg)](https://snapcraft.io/taskwarrior-tui)
+
+```bash
+snap install taskwarrior-tui
+```
+
 **Using [`cargo`](https://crates.io/)** [![](https://img.shields.io/crates/v/taskwarrior-tui)](https://libraries.io/cargo/taskwarrior-tui)
 
 ```bash
