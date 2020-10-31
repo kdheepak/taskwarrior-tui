@@ -25,7 +25,7 @@ parts:
       - gnutls-dev
       - uuid-dev
     organize:
-      - usr/local/bin/task: bin/task
+      usr/local/bin/: bin/
 
   taskwarrior-tui:
     plugin: rust
