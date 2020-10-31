@@ -170,14 +170,14 @@ impl TTApp {
 
     pub fn get_context(&mut self) -> Result<(), Box<dyn Error>> {
         let output = Command::new("task").arg("_get").arg("rc.context").output()?;
-        self.context_name = String::from_utf8(output.stdout)?;
+        self.context_name = String::from_utf8_lossy(&output.stdout).to_string();
         self.context_name = self.context_name.strip_suffix('\n').unwrap_or("").to_string();
 
         let output = Command::new("task")
             .arg("_get")
             .arg(format!("rc.context.{}", self.context_name))
             .output()?;
-        self.context_filter = String::from_utf8(output.stdout)?;
+        self.context_filter = String::from_utf8_lossy(&output.stdout).to_string();
         self.context_filter = self.context_filter.strip_suffix('\n').unwrap_or("").to_string();
         Ok(())
     }
@@ -393,7 +393,7 @@ impl TTApp {
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let output = Command::new("task").arg(format!("{}", task_id)).output();
         if let Ok(output) = output {
-            let data = String::from_utf8_lossy(&*output.stdout);
+            let data = String::from_utf8_lossy(&output.stdout);
             let p = Paragraph::new(Text::from(&data[..])).block(
                 Block::default()
                     .borders(Borders::ALL)
@@ -673,8 +673,8 @@ impl TTApp {
         }
 
         let output = task.output()?;
-        let data = String::from_utf8(output.stdout)?;
-        let error = String::from_utf8(output.stderr)?;
+        let data = String::from_utf8_lossy(&output.stdout);
+        let error = String::from_utf8_lossy(&output.stderr);
         if !error.contains("The expression could not be evaluated.") {
             let imported = import(data.as_bytes())?;
             *(self.tasks.lock().unwrap()) = imported;
@@ -851,7 +851,7 @@ impl TTApp {
 
         match output {
             Ok(output) => {
-                let data = String::from_utf8(output.stdout).unwrap_or_default();
+                let data = String::from_utf8_lossy(&output.stdout);
                 for line in data.split('\n') {
                     if line.starts_with("Virtual tags") {
                         let line = line.to_string();
@@ -960,8 +960,8 @@ impl TTApp {
                             Err(format!(
                                 "`task edit` for task `{}` failed. {}{}",
                                 task_id,
-                                String::from_utf8(output.stdout).unwrap_or_default(),
-                                String::from_utf8(output.stderr).unwrap_or_default()
+                                String::from_utf8_lossy(&output.stdout),
+                                String::from_utf8_lossy(&output.stderr),
                             ))
                         } else {
                             Ok(())
