@@ -88,7 +88,7 @@ impl TaskReportTable {
         self.labels = vec![];
 
         let output = Command::new("task").arg("show").arg("report.next.columns").output()?;
-        let data = String::from_utf8(output.stdout)?;
+        let data = String::from_utf8_lossy(&output.stdout);
 
         for line in data.split('\n') {
             if line.starts_with("report.next.columns") {
@@ -100,7 +100,7 @@ impl TaskReportTable {
         }
 
         let output = Command::new("task").arg("show").arg("report.next.labels").output()?;
-        let data = String::from_utf8(output.stdout)?;
+        let data = String::from_utf8_lossy(&output.stdout);
 
         for line in data.split('\n') {
             if line.starts_with("report.next.labels") {

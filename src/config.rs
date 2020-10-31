@@ -98,7 +98,7 @@ impl Config {
         let mut color_collection = HashMap::new();
         let output = Command::new("task").arg("rc.color=off").arg("show").output()?;
 
-        let data = String::from_utf8(output.stdout).expect("Unable to convert stdout to string");
+        let data = String::from_utf8_lossy(&output.stdout);
         for line in data.split('\n') {
             if line.starts_with("color.") {
                 let mut i = line.split(' ');
@@ -264,7 +264,7 @@ impl Config {
             .output()
             .expect("Unable to run `task show`");
 
-        let data = String::from_utf8(output.stdout).expect("Unable to convert stdout to string");
+        let data = String::from_utf8_lossy(&output.stdout);
 
         for line in data.split('\n') {
             if line.starts_with(config) {
