@@ -17,10 +17,14 @@ parts:
       - build-essential
       - gnutls-dev
       - uuid-dev
+    stage:
+        - usr/local/bin/task
 
   taskwarrior-tui:
     plugin: rust
     source: .
+    stage:
+        - bin/taskwarrior-tui
 
 apps:
   task:
