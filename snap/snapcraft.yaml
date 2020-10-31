@@ -8,6 +8,13 @@ description: |
 grade: stable
 confinement: strict
 
+apps:
+  task:
+    command: usr/local/bin/task
+
+  taskwarrior-tui:
+    command: bin/taskwarrior-tui
+
 parts:
   task:
     plugin: cmake
@@ -17,18 +24,9 @@ parts:
       - build-essential
       - gnutls-dev
       - uuid-dev
-    stage:
-        - usr/local/bin/task
+    organize:
+      - usr/local/bin/task: bin/task
 
   taskwarrior-tui:
     plugin: rust
     source: .
-    stage:
-        - bin/taskwarrior-tui
-
-apps:
-  task:
-    command: usr/local/bin/task
-
-  taskwarrior-tui:
-    command: bin/taskwarrior-tui
