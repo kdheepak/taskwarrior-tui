@@ -393,10 +393,7 @@ impl TTApp {
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let output = Command::new("task").arg(format!("{}", task_id)).output();
         if let Ok(output) = output {
-            let data = String::from_utf8(output.stdout).unwrap_or(format!(
-                "Unable to get description of task with id: {}. Please report as an issue on github.",
-                task_id
-            ));
+            let data = String::from_utf8_lossy(&*output.stdout);
             let p = Paragraph::new(Text::from(&data[..])).block(
                 Block::default()
                     .borders(Borders::ALL)
