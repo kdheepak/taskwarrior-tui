@@ -11,9 +11,13 @@ confinement: strict
 apps:
   task:
     command: bin/task
+    environment:
+      PATH: $SNAP/usr/bin:$SNAP/usr/local/bin/:$PATH:$SNAP/bin/:$PATH
 
   taskwarrior-tui:
     command: bin/taskwarrior-tui
+    environment:
+      PATH: $SNAP/usr/bin:$SNAP/usr/local/bin/:$PATH:$SNAP/bin/:$PATH
 
 parts:
   task:
@@ -26,7 +30,6 @@ parts:
       - uuid-dev
     organize:
       usr/local/bin/: bin/
-
   taskwarrior-tui:
     plugin: rust
     source: .
