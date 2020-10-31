@@ -10,7 +10,7 @@ confinement: strict
 
 apps:
   task:
-    command: bin/task
+    command: usr/local/bin/task
     environment:
       PATH: $SNAP/usr/bin:$SNAP/usr/local/bin/:$PATH:$SNAP/bin/:$PATH
 
