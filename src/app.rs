@@ -653,6 +653,7 @@ impl TTApp {
         let mut task = Command::new("task");
 
         task.arg("rc.json.array=on");
+        task.arg("rc.confirmation=off");
         task.arg("export");
 
         let filter = if self.context_filter != *"" {
