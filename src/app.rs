@@ -448,6 +448,7 @@ impl TTApp {
 
     pub fn calculate_widths(&self, tasks: &Vec<Vec<String>>, headers: &Vec<String>, maximum_column_width: u16) -> Vec<usize> {
 
+        // naive implementation of calculate widths
         let mut widths = headers.iter().map(|s| s.len()).collect::<Vec<usize>>();
 
         for row in tasks.iter() {
