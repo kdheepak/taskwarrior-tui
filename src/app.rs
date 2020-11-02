@@ -446,6 +446,33 @@ impl TTApp {
         style
     }
 
+    pub fn calculate_widths(&self, tasks: &Vec<Vec<String>>, headers: &Vec<String>, maximum_column_width: u16) -> Vec<usize> {
+
+        let mut widths = headers.iter().map(|s| s.len()).collect::<Vec<usize>>();
+
+        for row in tasks.iter() {
+            for (i, cell) in row.iter().enumerate() {
+                widths[i] = std::cmp::max(cell.len() + 2, widths[i]);
+            }
+        }
+
+        for (i, header) in headers.iter().enumerate() {
+            if header == "Description" {
+                // always give description the most room to breath
+                widths[i] = maximum_column_width as usize;
+                break
+            }
+        }
+
+        // now start trimming
+        while (widths.iter().sum::<usize>() as u16) >= maximum_column_width - 5 {
+            let index = widths.iter().position(|i| i == widths.iter().max().unwrap()).unwrap();
+            widths[index] -= 1;
+        }
+
+        return widths
+    }
+
     fn draw_task_report(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
         let (tasks, headers) = self.task_report();
         if tasks.is_empty() {
@@ -468,46 +495,8 @@ impl TTApp {
             return;
         }
 
-        let maximum_column_width = rect.width as i16 / tasks[0].len() as i16;
-        let mut description_column_width = rect.width as i16 / tasks[0].len() as i16;
-        let mut description_column_index = 0;
-
-        // set widths proportional to the content
-        let mut widths: Vec<i16> = vec![0; tasks[0].len()];
-
-        for (i, header) in headers.iter().enumerate() {
-            widths[i] = header.len() as i16 + 2;
-            if header != "Description" {
-                description_column_width += std::cmp::max(0, maximum_column_width - widths[i]);
-            } else {
-                description_column_index = i;
-            }
-        }
-        widths[0] += 1;
-
-        let sum_of_remaining_widths: i16 = widths
-            .iter()
-            .enumerate()
-            .filter(|(i, w)| i != &description_column_index)
-            .map(|(i, w)| w)
-            .sum();
-
-        if description_column_width + sum_of_remaining_widths >= rect.width as i16 - 4 {
-            description_column_width = rect.width as i16 - sum_of_remaining_widths - 10;
-        }
-
-        for task in &tasks {
-            for (i, attr) in task.iter().enumerate() {
-                if i == description_column_index {
-                    widths[i] = std::cmp::max(
-                        widths[i],
-                        std::cmp::min(attr.len() as i16 + 2, description_column_width),
-                    );
-                } else {
-                    widths[i] = std::cmp::max(widths[i], std::cmp::min(attr.len() as i16, maximum_column_width));
-                }
-            }
-        }
+        let maximum_column_width = rect.width;
+        let widths = self.calculate_widths(&tasks, &headers, maximum_column_width);
 
         let selected = self.state.selected().unwrap_or_default();
         let header = headers.iter();
@@ -535,7 +524,7 @@ impl TTApp {
 
         let constraints: Vec<Constraint> = widths
             .iter()
-            .map(|i| Constraint::Min((*i).try_into().unwrap_or(10)))
+            .map(|i| Constraint::Length((*i).try_into().unwrap_or(maximum_column_width as u16)))
             .collect();
 
         let mut style = Style::default();
@@ -1381,11 +1370,13 @@ mod tests {
 
     #[test]
     fn test_app() {
-        let app = TTApp::new();
+        let mut app = TTApp::new().unwrap();
 
-        let data = std::fs::read_to_string("./test.json").unwrap();
-        let imported = import(data.as_bytes()).unwrap();
-        dbg!(imported);
+        let (tasks, headers) = app.task_report();
+        let maximum_column_width = 120;
+        let widths = app.calculate_widths(&tasks, &headers, maximum_column_width);
+
+        dbg!(widths);
 
         //println!("{:?}", app.task_report_columns);
         //println!("{:?}", app.task_report_labels);
