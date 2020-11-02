@@ -1,5 +1,6 @@
 use crate::calendar::Calendar;
 use crate::config::Config;
+use crate::context::Context;
 use crate::help::Help;
 use crate::table::{Row, Table, TableState};
 use crate::task_report::TaskReportTable;
@@ -118,13 +119,15 @@ pub enum AppMode {
     TaskHelpPopup,
     TaskError,
     Calendar,
+    ContextMenu,
 }
 
 pub struct TTApp {
     pub should_quit: bool,
-    pub state: TableState,
-    pub context_filter: String,
-    pub context_name: String,
+    pub task_table_state: TableState,
+    pub context_table_state: TableState,
+    pub current_context_filter: String,
+    pub current_context: String,
     pub command: LineBuffer,
     pub filter: LineBuffer,
     pub modify: LineBuffer,
@@ -137,6 +140,7 @@ pub struct TTApp {
     pub task_report_show_info: bool,
     pub task_report_height: u16,
     pub help_popup: Help,
+    pub contexts: Vec<Context>,
 }
 
 impl TTApp {
@@ -144,10 +148,11 @@ impl TTApp {
         let c = Config::default()?;
         let mut app = Self {
             should_quit: false,
-            state: TableState::default(),
+            task_table_state: TableState::default(),
+            context_table_state: TableState::default(),
             tasks: Arc::new(Mutex::new(vec![])),
-            context_filter: "".to_string(),
-            context_name: "".to_string(),
+            current_context_filter: "".to_string(),
+            current_context: "".to_string(),
             command: LineBuffer::with_capacity(MAX_LINE),
             filter: LineBuffer::with_capacity(MAX_LINE),
             modify: LineBuffer::with_capacity(MAX_LINE),
@@ -159,6 +164,7 @@ impl TTApp {
             task_report_table: TaskReportTable::new()?,
             calendar_year: Local::today().year(),
             help_popup: Help::new(),
+            contexts: vec![],
         };
         for c in "status:pending ".chars() {
             app.filter.insert(c, 1);
@@ -170,15 +176,15 @@ impl TTApp {
 
     pub fn get_context(&mut self) -> Result<(), Box<dyn Error>> {
         let output = Command::new("task").arg("_get").arg("rc.context").output()?;
-        self.context_name = String::from_utf8_lossy(&output.stdout).to_string();
-        self.context_name = self.context_name.strip_suffix('\n').unwrap_or("").to_string();
+        self.current_context = String::from_utf8_lossy(&output.stdout).to_string();
+        self.current_context = self.current_context.strip_suffix('\n').unwrap_or("").to_string();
 
         let output = Command::new("task")
             .arg("_get")
-            .arg(format!("rc.context.{}", self.context_name))
+            .arg(format!("rc.context.{}", self.current_context))
             .output()?;
-        self.context_filter = String::from_utf8_lossy(&output.stdout).to_string();
-        self.context_filter = self.context_filter.strip_suffix('\n').unwrap_or("").to_string();
+        self.current_context_filter = String::from_utf8_lossy(&output.stdout).to_string();
+        self.current_context_filter = self.current_context_filter.strip_suffix('\n').unwrap_or("").to_string();
         Ok(())
     }
 
@@ -193,6 +199,7 @@ impl TTApp {
             | AppMode::TaskSubprocess
             | AppMode::TaskLog
             | AppMode::TaskModify => self.draw_task(f),
+            AppMode::ContextMenu => self.draw_context_menu(f),
             AppMode::Calendar => self.draw_calendar(f),
         }
     }
@@ -209,6 +216,8 @@ impl TTApp {
                 Block::default()
                     .title(Spans::from(vec![
                         Span::styled("Task", Style::default().add_modifier(Modifier::DIM)),
+                        Span::from("|"),
+                        Span::styled("Context", Style::default().add_modifier(Modifier::DIM)),
                         Span::from("|"),
                         Span::styled("Calendar", Style::default().add_modifier(Modifier::BOLD)),
                     ]))
@@ -240,8 +249,8 @@ impl TTApp {
     pub fn draw_task(&mut self, f: &mut Frame<impl Backend>) {
         let tasks_is_empty = self.tasks.lock().unwrap().is_empty();
         let tasks_len = self.tasks.lock().unwrap().len();
-        while !tasks_is_empty && self.state.selected().unwrap_or_default() >= tasks_len {
-            self.previous();
+        while !tasks_is_empty && self.task_table_state.selected().unwrap_or_default() >= tasks_len {
+            self.task_report_previous();
         }
         let rects = Layout::default()
             .direction(Direction::Vertical)
@@ -266,7 +275,7 @@ impl TTApp {
             self.draw_task_report(f, split_task_layout[0]);
             self.draw_task_details(f, split_task_layout[1]);
         }
-        let selected = self.state.selected().unwrap_or_default();
+        let selected = self.task_table_state.selected().unwrap_or_default();
         let task_id = if tasks_len == 0 {
             0
         } else {
@@ -353,7 +362,7 @@ impl TTApp {
                 self.draw_command(f, rects[1], self.filter.as_str(), "Filter Tasks");
                 self.draw_help_popup(f, f.size());
             }
-            AppMode::Calendar => {
+            _ => {
                 panic!("Reached unreachable code. Something went wrong");
             }
         }
@@ -363,6 +372,54 @@ impl TTApp {
         let area = centered_rect(80, 90, rect);
         f.render_widget(Clear, area);
         f.render_widget(&self.help_popup, area);
+    }
+
+    fn draw_context_menu(&mut self, f: &mut Frame<impl Backend>) {
+        let rects = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(0)].as_ref())
+            .split(f.size());
+        let area = rects[0];
+
+        f.render_widget(Clear, area);
+
+        let maximum_column_width = area.width;
+
+        let (contexts, headers) = self.get_all_contexts();
+        let widths = self.calculate_widths(&contexts, &headers, maximum_column_width);
+
+        let selected = self.context_table_state.selected().unwrap_or_default();
+        let header = headers.iter();
+        let mut rows = vec![];
+        let style = Style::default();
+        for (i, context) in contexts.iter().enumerate() {
+            rows.push(Row::StyledData(context.iter(), style));
+        }
+
+        let constraints: Vec<Constraint> = widths
+            .iter()
+            .map(|i| Constraint::Length((*i).try_into().unwrap_or(maximum_column_width as u16)))
+            .collect();
+
+        let highlight_style = Style::default().add_modifier(Modifier::BOLD);
+        let t = Table::new(header, rows.into_iter())
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .title(Spans::from(vec![
+                        Span::styled("Task", Style::default().add_modifier(Modifier::DIM)),
+                        Span::from("|"),
+                        Span::styled("Context", Style::default().add_modifier(Modifier::BOLD)),
+                        Span::from("|"),
+                        Span::styled("Calendar", Style::default().add_modifier(Modifier::DIM)),
+                    ])),
+            )
+            .highlight_style(highlight_style)
+            .highlight_symbol(&self.config.uda_selection_indicator)
+            .widths(&constraints);
+
+        f.render_stateful_widget(t, area, &mut self.context_table_state);
     }
 
     fn draw_command<'a, T>(&self, f: &mut Frame<impl Backend>, rect: Rect, text: &str, title: T)
@@ -389,7 +446,7 @@ impl TTApp {
             );
             return;
         }
-        let selected = self.state.selected().unwrap_or_default();
+        let selected = self.task_table_state.selected().unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let output = Command::new("task").arg(format!("{}", task_id)).output();
         if let Ok(output) = output {
@@ -458,8 +515,8 @@ impl TTApp {
         }
 
         for (i, header) in headers.iter().enumerate() {
-            if header == "Description" {
-                // always give description the most room to breath
+            if header == "Description" || header == "Definition" {
+                // always give description or definition the most room to breath
                 widths[i] = maximum_column_width as usize;
                 break
             }
@@ -475,7 +532,7 @@ impl TTApp {
     }
 
     fn draw_task_report(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
-        let (tasks, headers) = self.task_report();
+        let (tasks, headers) = self.get_task_report();
         if tasks.is_empty() {
             let mut style = Style::default();
             match self.mode {
@@ -489,6 +546,8 @@ impl TTApp {
                     .title(Spans::from(vec![
                         Span::styled("Task", style),
                         Span::from("|"),
+                        Span::styled("Context", Style::default().add_modifier(Modifier::DIM)),
+                        Span::from("|"),
                         Span::styled("Calendar", Style::default().add_modifier(Modifier::DIM)),
                     ])),
                 rect,
@@ -499,7 +558,7 @@ impl TTApp {
         let maximum_column_width = rect.width;
         let widths = self.calculate_widths(&tasks, &headers, maximum_column_width);
 
-        let selected = self.state.selected().unwrap_or_default();
+        let selected = self.task_table_state.selected().unwrap_or_default();
         let header = headers.iter();
         let mut rows = vec![];
         let mut highlight_style = Style::default();
@@ -541,6 +600,8 @@ impl TTApp {
                     .title(Spans::from(vec![
                         Span::styled("Task", style),
                         Span::from("|"),
+                        Span::styled("Context", Style::default().add_modifier(Modifier::DIM)),
+                        Span::from("|"),
                         Span::styled("Calendar", Style::default().add_modifier(Modifier::DIM)),
                     ])),
             )
@@ -548,10 +609,16 @@ impl TTApp {
             .highlight_symbol(&self.config.uda_selection_indicator)
             .widths(&constraints);
 
-        f.render_stateful_widget(t, rect, &mut self.state);
+        f.render_stateful_widget(t, rect, &mut self.task_table_state);
     }
 
-    pub fn task_report(&mut self) -> (Vec<Vec<String>>, Vec<String>) {
+    pub fn get_all_contexts(&self) -> (Vec<Vec<String>>, Vec<String>) {
+        let contexts = self.contexts.iter().map(|c| vec![c.name.clone(), c.description.clone(), c.active.clone()]).collect();
+        let headers = vec!["Name".to_string(), "Description".to_string(), "Active".to_string()];
+        (contexts, headers)
+    }
+
+    pub fn get_task_report(&mut self) -> (Vec<Vec<String>>, Vec<String>) {
         let alltasks = &*(self.tasks.lock().unwrap());
 
         self.task_report_table.generate_table(alltasks);
@@ -564,15 +631,54 @@ impl TTApp {
     pub fn update(&mut self) -> Result<(), Box<dyn Error>> {
         self.task_report_table.export_headers()?;
         self.export_tasks()?;
+        self.export_contexts()?;
         self.update_tags();
         Ok(())
     }
 
-    pub fn next(&mut self) {
+    pub fn context_next(&mut self) {
+        let i = match self.context_table_state.selected() {
+            Some(i) => {
+                if i >= self.contexts.len() - 1 {
+                    0
+                } else {
+                    i + 1
+                }
+            },
+            None => 0,
+        };
+        self.context_table_state.select(Some(i));
+    }
+
+    pub fn context_previous(&mut self) {
+        let i = match self.context_table_state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    self.contexts.len() - 1
+                } else {
+                    i - 1
+                }
+            }
+            None => 0,
+        };
+        self.context_table_state.select(Some(i));
+    }
+
+    pub fn context_select(&mut self) {
+        let i = self.context_table_state.selected().unwrap();
+
+        let output = Command::new("task")
+            .arg("context")
+            .arg(&self.contexts[i].name)
+            .output();
+    }
+
+
+    pub fn task_report_next(&mut self) {
         if self.tasks.lock().unwrap().is_empty() {
             return;
         }
-        let i = match self.state.selected() {
+        let i = match self.task_table_state.selected() {
             Some(i) => {
                 if i >= self.tasks.lock().unwrap().len() - 1 {
                     0
@@ -582,14 +688,14 @@ impl TTApp {
             }
             None => 0,
         };
-        self.state.select(Some(i));
+        self.task_table_state.select(Some(i));
     }
 
-    pub fn previous(&mut self) {
+    pub fn task_report_previous(&mut self) {
         if self.tasks.lock().unwrap().is_empty() {
             return;
         }
-        let i = match self.state.selected() {
+        let i = match self.task_table_state.selected() {
             Some(i) => {
                 if i == 0 {
                     self.tasks.lock().unwrap().len() - 1
@@ -599,14 +705,14 @@ impl TTApp {
             }
             None => 0,
         };
-        self.state.select(Some(i));
+        self.task_table_state.select(Some(i));
     }
 
-    pub fn next_page(&mut self) {
+    pub fn task_report_next_page(&mut self) {
         if self.tasks.lock().unwrap().is_empty() {
             return;
         }
-        let i = match self.state.selected() {
+        let i = match self.task_table_state.selected() {
             Some(i) => {
                 if i >= self.tasks.lock().unwrap().len() - 1 {
                     0
@@ -617,14 +723,14 @@ impl TTApp {
             }
             None => 0,
         };
-        self.state.select(Some(i));
+        self.task_table_state.select(Some(i));
     }
 
-    pub fn previous_page(&mut self) {
+    pub fn task_report_previous_page(&mut self) {
         if self.tasks.lock().unwrap().is_empty() {
             return;
         }
-        let i = match self.state.selected() {
+        let i = match self.task_table_state.selected() {
             Some(i) => {
                 if i == 0 {
                     self.tasks.lock().unwrap().len() - 1
@@ -634,7 +740,36 @@ impl TTApp {
             }
             None => 0,
         };
-        self.state.select(Some(i));
+        self.task_table_state.select(Some(i));
+    }
+
+    pub fn export_contexts(&mut self) -> Result<(), Box<dyn Error>> {
+        let output = Command::new("task").arg("context").output()?;
+        let data = String::from_utf8_lossy(&output.stdout);
+
+        self.contexts = vec![];
+
+        for (i, line) in data.trim().split('\n').enumerate() {
+            let line = line.trim();
+            let mut s = line.split(" ");
+            let name = s.next().unwrap_or_default();
+            let active = s.last().unwrap_or_default();
+            let definition = line.replacen(name, "", 1);
+            let definition = definition.strip_suffix(active).unwrap();
+            if i == 0 || i == 1 {
+                continue
+            } else {
+                let context = Context::new(name.to_string(), definition.trim().to_string(), active.to_string());
+                self.contexts.push(context);
+            }
+        }
+        if self.contexts.iter().any(|r| r.active != "no") {
+            self.contexts.insert(0, Context::new("none".to_string(), "".to_string(), "no".to_string()))
+        } else {
+            self.contexts.insert(0, Context::new("none".to_string(), "".to_string(), "yes".to_string()))
+        }
+
+        Ok(())
     }
 
     pub fn export_tasks(&mut self) -> Result<(), Box<dyn Error>> {
@@ -644,8 +779,8 @@ impl TTApp {
         task.arg("rc.confirmation=off");
         task.arg("export");
 
-        let filter = if self.context_filter != *"" {
-            let t = format!("{} {}", self.filter.as_str(), self.context_filter);
+        let filter = if self.current_context_filter != "" {
+            let t = format!("{} {}", self.filter.as_str(), self.current_context_filter);
             t
         } else {
             self.filter.as_str().into()
@@ -743,7 +878,7 @@ impl TTApp {
         if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
-        let selected = self.state.selected().unwrap_or_default();
+        let selected = self.task_table_state.selected().unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let mut command = Command::new("task");
         command.arg(format!("{}", task_id)).arg("modify");
@@ -778,7 +913,7 @@ impl TTApp {
         if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
-        let selected = self.state.selected().unwrap_or_default();
+        let selected = self.task_table_state.selected().unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let mut command = Command::new("task");
         command.arg(format!("{}", task_id)).arg("annotate");
@@ -865,7 +1000,7 @@ impl TTApp {
         if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
-        let selected = self.state.selected().unwrap_or_default();
+        let selected = self.task_table_state.selected().unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let mut command = "start";
         for tag in TTApp::task_virtual_tags(task_id)?.split(' ') {
@@ -888,7 +1023,7 @@ impl TTApp {
         if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
-        let selected = self.state.selected().unwrap_or_default();
+        let selected = self.task_table_state.selected().unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
 
         let output = Command::new("task")
@@ -909,7 +1044,7 @@ impl TTApp {
         if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
-        let selected = self.state.selected().unwrap_or_default();
+        let selected = self.task_table_state.selected().unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let output = Command::new("task").arg(format!("{}", task_id)).arg("done").output();
         match output {
@@ -937,7 +1072,7 @@ impl TTApp {
         if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
-        let selected = self.state.selected().unwrap_or_default();
+        let selected = self.task_table_state.selected().unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let r = Command::new("task").arg(format!("{}", task_id)).arg("edit").spawn();
 
@@ -971,7 +1106,7 @@ impl TTApp {
         if self.tasks.lock().unwrap().is_empty() {
             return None;
         }
-        let selected = self.state.selected().unwrap_or_default();
+        let selected = self.task_table_state.selected().unwrap_or_default();
         Some(self.tasks.lock().unwrap()[selected].clone())
     }
 
@@ -1090,14 +1225,11 @@ impl TTApp {
         match self.mode {
             AppMode::TaskReport => match input {
                 Key::Ctrl('c') | Key::Char('q') => self.should_quit = true,
-                Key::Char(']') => {
-                    self.mode = AppMode::Calendar;
-                }
                 Key::Char('r') => self.update()?,
-                Key::Down | Key::Char('j') => self.next(),
-                Key::Up | Key::Char('k') => self.previous(),
-                Key::PageDown | Key::Char('J') => self.next_page(),
-                Key::PageUp | Key::Char('K') => self.previous_page(),
+                Key::Down | Key::Char('j') => self.task_report_next(),
+                Key::Up | Key::Char('k') => self.task_report_previous(),
+                Key::PageDown | Key::Char('J') => self.task_report_next_page(),
+                Key::PageUp | Key::Char('K') => self.task_report_previous_page(),
                 Key::Char('d') => match self.task_done() {
                     Ok(_) => self.update()?,
                     Err(e) => {
@@ -1169,6 +1301,22 @@ impl TTApp {
                 Key::Char('z') => {
                     self.task_report_show_info = !self.task_report_show_info;
                 }
+                Key::Char(']') => {
+                    self.mode = AppMode::ContextMenu;
+                }
+                _ => {}
+            },
+            AppMode::ContextMenu => match input {
+                Key::Ctrl('c') | Key::Char('q') => self.should_quit = true,
+                Key::Char('[') => {
+                    self.mode = AppMode::TaskReport;
+                },
+                Key::Char(']') => {
+                    self.mode = AppMode::Calendar;
+                }
+                Key::Down | Key::Char('j') => self.context_next(),
+                Key::Up | Key::Char('k') => self.context_previous(),
+                Key::Char('\n') => self.context_select(),
                 _ => {}
             },
             AppMode::TaskHelpPopup => match input {
@@ -1281,8 +1429,9 @@ impl TTApp {
             },
             AppMode::TaskError => self.mode = AppMode::TaskReport,
             AppMode::Calendar => match input {
+                Key::Ctrl('c') | Key::Char('q') => self.should_quit = true,
                 Key::Char('[') => {
-                    self.mode = AppMode::TaskReport;
+                    self.mode = AppMode::ContextMenu;
                 }
                 Key::Up | Key::Char('k') => {
                     if self.calendar_year > 0 {
@@ -1296,7 +1445,6 @@ impl TTApp {
                     }
                 }
                 Key::PageDown | Key::Char('J') => self.calendar_year += 10,
-                Key::Ctrl('c') | Key::Char('q') => self.should_quit = true,
                 _ => {}
             },
         }
@@ -1373,16 +1521,14 @@ mod tests {
     fn test_app() {
         let mut app = TTApp::new().unwrap();
 
-        let (tasks, headers) = app.task_report();
-        let maximum_column_width = 120;
-        let widths = app.calculate_widths(&tasks, &headers, maximum_column_width);
-
-        dbg!(widths);
+        let (contexts, headers) = app.get_all_contexts();
+        dbg!(contexts);
+        dbg!(headers);
 
         //println!("{:?}", app.task_report_columns);
         //println!("{:?}", app.task_report_labels);
 
-        // let (t, h, c) = app.task_report();
+        // let (t, h, c) = app.get_task_report();
         // app.next();
         // app.next();
         // app.modify = "Cannot add this string ' because it has a single quote".to_string();
