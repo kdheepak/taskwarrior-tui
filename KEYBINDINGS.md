@@ -1,7 +1,13 @@
+Keybindings:
+
+    Esc:                                 - Exit current action
+
+    ]: Next view                         - Go to next view
+
+    [: Previous view                     - Go to previous view
+
 
 Keybindings for task report:
-
-    ?: help                              - Help menu
 
     /: task {string}                     - Filter task report
 
@@ -37,9 +43,16 @@ Keybindings for task report:
 
     !: {string}                          - Custom shell command
 
-    ]: Next view                         - Go to next view
+    c: context switcher menu             - Open context switcher menu
 
-    [: Previous view                     - Go to previous view
+    ?: help                              - Help menu
+
+
+Keybindings for context switcher:
+
+    j: {selected+=1}                     - Move forward a context
+
+    k: {selected-=1}                     - Move back a context
 
 
 Keybindings for calendar:
