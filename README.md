@@ -96,6 +96,16 @@ See [KEYBINDINGS.md](./KEYBINDINGS.md) for full list.
 
 </details>
 
+### Context switcher:
+
+<details>
+
+<summary> Click to expand! </summary>
+
+![](https://user-images.githubusercontent.com/1813121/97959948-a746ae00-1d6d-11eb-9ffe-8f76f2a2b32d.gif)
+
+</details>
+
 ### `readline`-like functionality:
 
 <details>
