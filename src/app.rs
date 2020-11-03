@@ -1261,8 +1261,8 @@ impl TTApp {
             AppMode::TaskReport => match input {
                 Key::Ctrl('c') | Key::Char('q') => self.should_quit = true,
                 Key::Char('r') => self.update()?,
-                Key::Char('g') => self.task_report_top(),
-                Key::Char('G') => self.task_report_bottom(),
+                Key::Home | Key::Char('g') => self.task_report_top(),
+                Key::End | Key::Char('G') => self.task_report_bottom(),
                 Key::Down | Key::Char('j') => self.task_report_next(),
                 Key::Up | Key::Char('k') => self.task_report_previous(),
                 Key::PageDown | Key::Char('J') => self.task_report_next_page(),
