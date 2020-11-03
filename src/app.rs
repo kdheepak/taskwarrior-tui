@@ -1301,9 +1301,9 @@ impl TTApp {
                     }
                 },
                 Key::Char('e') => {
-                    events.pause_event_loop(terminal);
+                    events.pause_key_capture(terminal);
                     let r = self.task_edit();
-                    events.resume_event_loop(terminal);
+                    events.resume_key_capture(terminal);
                     match r {
                         Ok(_) => self.update()?,
                         Err(e) => {

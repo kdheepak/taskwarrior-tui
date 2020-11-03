@@ -146,19 +146,27 @@ impl Events {
         *self.pause_ticker.lock().unwrap() = false;
     }
 
-    pub fn pause_event_loop(&self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
+    pub fn pause_event_loop(&self) {
         *self.pause_stdin.lock().unwrap() = true;
+    }
+
+    pub fn resume_event_loop(&self) {
+        *self.pause_stdin.lock().unwrap() = false;
+    }
+
+    pub fn pause_key_capture(&self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
+        self.pause_event_loop();
         std::thread::sleep(std::time::Duration::from_millis(50));
         disable_raw_mode().unwrap();
         execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture).unwrap();
         terminal.show_cursor().unwrap();
     }
 
-    pub fn resume_event_loop(&self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
+    pub fn resume_key_capture(&self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
         enable_raw_mode().unwrap();
         execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture).unwrap();
         std::thread::sleep(std::time::Duration::from_millis(50));
-        *self.pause_stdin.lock().unwrap() = false;
+        self.resume_event_loop();
         terminal.resize(terminal.size().unwrap()).unwrap();
     }
 }
