@@ -217,8 +217,6 @@ impl TTApp {
                     .title(Spans::from(vec![
                         Span::styled("Task", Style::default().add_modifier(Modifier::DIM)),
                         Span::from("|"),
-                        Span::styled("Context", Style::default().add_modifier(Modifier::DIM)),
-                        Span::from("|"),
                         Span::styled("Calendar", Style::default().add_modifier(Modifier::BOLD)),
                     ]))
                     .borders(Borders::ALL)
@@ -424,11 +422,7 @@ impl TTApp {
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded)
                     .title(Spans::from(vec![
-                        Span::styled("Task", Style::default().add_modifier(Modifier::DIM)),
-                        Span::from("|"),
                         Span::styled("Context", Style::default().add_modifier(Modifier::BOLD)),
-                        Span::from("|"),
-                        Span::styled("Calendar", Style::default().add_modifier(Modifier::DIM)),
                     ])),
             )
             .highlight_style(highlight_style)
@@ -562,8 +556,6 @@ impl TTApp {
                     .title(Spans::from(vec![
                         Span::styled("Task", style),
                         Span::from("|"),
-                        Span::styled("Context", Style::default().add_modifier(Modifier::DIM)),
-                        Span::from("|"),
                         Span::styled("Calendar", Style::default().add_modifier(Modifier::DIM)),
                     ])),
                 rect,
@@ -615,8 +607,6 @@ impl TTApp {
                     .border_type(BorderType::Rounded)
                     .title(Spans::from(vec![
                         Span::styled("Task", style),
-                        Span::from("|"),
-                        Span::styled("Context", Style::default().add_modifier(Modifier::DIM)),
                         Span::from("|"),
                         Span::styled("Calendar", Style::default().add_modifier(Modifier::DIM)),
                     ])),
@@ -1318,10 +1308,13 @@ impl TTApp {
                 Key::Char('c') => {
                     self.mode = AppMode::TaskContextMenu;
                 }
+                Key::Char(']') => {
+                    self.mode = AppMode::Calendar;
+                }
                 _ => {}
             },
             AppMode::TaskContextMenu => match input {
-                Key::Esc => {
+                Key::Esc | Key::Char('q') => {
                     self.mode = AppMode::TaskReport;
                 },
                 Key::Down | Key::Char('j') => self.context_next(),
