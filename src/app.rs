@@ -686,7 +686,11 @@ impl TTApp {
         let i = match self.task_table_state.selected() {
             Some(i) => {
                 if i >= self.tasks.lock().unwrap().len() - 1 {
-                    0
+                    if self.config.uda_task_report_looping {
+                        0
+                    } else {
+                        i
+                    }
                 } else {
                     i + 1
                 }
@@ -703,7 +707,11 @@ impl TTApp {
         let i = match self.task_table_state.selected() {
             Some(i) => {
                 if i == 0 {
-                    self.tasks.lock().unwrap().len() - 1
+                    if self.config.uda_task_report_looping {
+                        self.tasks.lock().unwrap().len() - 1
+                    } else {
+                        0
+                    }
                 } else {
                     i - 1
                 }
@@ -720,7 +728,11 @@ impl TTApp {
         let i = match self.task_table_state.selected() {
             Some(i) => {
                 if i >= self.tasks.lock().unwrap().len() - 1 {
-                    0
+                    if self.config.uda_task_report_looping {
+                        0
+                    } else {
+                        i
+                    }
                 } else {
                     i.checked_add(self.task_report_height as usize)
                         .unwrap_or(self.tasks.lock().unwrap().len())
@@ -738,7 +750,11 @@ impl TTApp {
         let i = match self.task_table_state.selected() {
             Some(i) => {
                 if i == 0 {
-                    self.tasks.lock().unwrap().len() - 1
+                    if self.config.uda_task_report_looping {
+                        self.tasks.lock().unwrap().len() - 1
+                    } else {
+                        0
+                    }
                 } else {
                     i.checked_sub(self.task_report_height as usize).unwrap_or(0)
                 }
