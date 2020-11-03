@@ -4,7 +4,7 @@ use crate::context::Context;
 use crate::help::Help;
 use crate::table::{Row, Table, TableState};
 use crate::task_report::TaskReportTable;
-use crate::util::Events;
+use crate::util::{Events, Event};
 use crate::util::Key;
 
 use std::cmp::Ordering;
@@ -679,6 +679,20 @@ impl TTApp {
             .output();
     }
 
+    pub fn task_report_top(&mut self) {
+        if self.tasks.lock().unwrap().is_empty() {
+            return;
+        }
+        self.task_table_state.select(Some(0));
+    }
+
+    pub fn task_report_bottom(&mut self) {
+        if self.tasks.lock().unwrap().is_empty() {
+            return;
+        }
+        self.task_table_state.select(Some(self.tasks.lock().unwrap().len() - 1));
+    }
+
     pub fn task_report_next(&mut self) {
         if self.tasks.lock().unwrap().is_empty() {
             return;
@@ -1247,6 +1261,8 @@ impl TTApp {
             AppMode::TaskReport => match input {
                 Key::Ctrl('c') | Key::Char('q') => self.should_quit = true,
                 Key::Char('r') => self.update()?,
+                Key::Home | Key::Char('g') => self.task_report_top(),
+                Key::End | Key::Char('G') => self.task_report_bottom(),
                 Key::Down | Key::Char('j') => self.task_report_next(),
                 Key::Up | Key::Char('k') => self.task_report_previous(),
                 Key::PageDown | Key::Char('J') => self.task_report_next_page(),
