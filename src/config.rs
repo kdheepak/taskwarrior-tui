@@ -33,24 +33,6 @@ impl TColor {
     }
 }
 
-#[derive(Debug)]
-pub struct Config {
-    pub enabled: bool,
-    pub color: HashMap<String, TColor>,
-    pub obfuscate: bool,
-    pub print_empty_columns: bool,
-    pub rule_precedence_color: Vec<String>,
-    pub uda_task_report_show_info: bool,
-    pub uda_selection_indicator: String,
-    pub uda_selection_bold: bool,
-    pub uda_selection_italic: bool,
-    pub uda_selection_dim: bool,
-    pub uda_selection_blink: bool,
-    pub uda_calendar_months_per_row: usize,
-    pub uda_style_context_active: TColor,
-    pub uda_style_calendar_title: TColor,
-}
-
 trait TaskWarriorBool {
     fn get_bool(&self) -> Option<bool>;
 }
@@ -79,6 +61,26 @@ impl TaskWarriorBool for str {
     }
 }
 
+
+#[derive(Debug)]
+pub struct Config {
+    pub enabled: bool,
+    pub color: HashMap<String, TColor>,
+    pub obfuscate: bool,
+    pub print_empty_columns: bool,
+    pub rule_precedence_color: Vec<String>,
+    pub uda_task_report_show_info: bool,
+    pub uda_task_report_looping: bool,
+    pub uda_selection_indicator: String,
+    pub uda_selection_bold: bool,
+    pub uda_selection_italic: bool,
+    pub uda_selection_dim: bool,
+    pub uda_selection_blink: bool,
+    pub uda_calendar_months_per_row: usize,
+    pub uda_style_context_active: TColor,
+    pub uda_style_calendar_title: TColor,
+}
+
 impl Config {
     pub fn default() -> Result<Self, Box<dyn Error>> {
         let bool_collection = Self::get_bool_collection();
@@ -89,6 +91,7 @@ impl Config {
             color: Self::get_color_collection()?,
             rule_precedence_color: Self::get_rule_precedence_color(),
             uda_task_report_show_info: Self::get_uda_task_report_show_info(),
+            uda_task_report_looping: Self::get_uda_task_report_looping(),
             uda_selection_indicator: Self::get_uda_selection_indicator(),
             uda_selection_bold: Self::get_uda_selection_bold(),
             uda_selection_italic: Self::get_uda_selection_italic(),
@@ -312,6 +315,14 @@ impl Config {
 
     fn get_uda_task_report_show_info() -> bool {
         let s = Self::get_config("uda.taskwarrior-tui.task-report.show-info");
+        match s.get_bool() {
+            Some(b) => b,
+            None => true,
+        }
+    }
+
+    fn get_uda_task_report_looping() -> bool {
+        let s = Self::get_config("uda.taskwarrior-tui.task-report.looping");
         match s.get_bool() {
             Some(b) => b,
             None => true,

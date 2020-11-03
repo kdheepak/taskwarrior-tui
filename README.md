@@ -183,6 +183,9 @@ uda.taskwarrior-tui.selection.dim=no
 uda.taskwarrior-tui.selection.blink=no
 uda.taskwarrior-tui.calendar.months-per-row=4
 uda.taskwarrior-tui.task-report.show-detail=true
+uda.taskwarrior-tui.task-report.looping=true
+uda.taskwarrior-tui.style.context.active=black on rgb444
+uda.taskwarrior-tui.style.calendar.title=black on rgb444
 ```
 
 </details>
