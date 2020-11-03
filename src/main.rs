@@ -5,6 +5,7 @@
 mod app;
 mod calendar;
 mod config;
+mod context;
 mod help;
 mod table;
 mod task_report;
@@ -72,7 +73,8 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
     let maybeapp = TTApp::new();
     match maybeapp {
         Ok(mut app) => {
-            app.next();
+            app.task_report_next();
+            app.context_next();
 
             loop {
                 terminal.draw(|mut frame| app.draw(&mut frame)).unwrap();
