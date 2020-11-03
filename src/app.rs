@@ -675,13 +675,11 @@ impl TTApp {
 
     pub fn context_select(&mut self) {
         let i = self.context_table_state.selected().unwrap();
-
         let output = Command::new("task")
             .arg("context")
             .arg(&self.contexts[i].name)
             .output();
     }
-
 
     pub fn task_report_next(&mut self) {
         if self.tasks.lock().unwrap().is_empty() {
@@ -1325,7 +1323,10 @@ impl TTApp {
                 }
                 Key::Down | Key::Char('j') => self.context_next(),
                 Key::Up | Key::Char('k') => self.context_previous(),
-                Key::Char('\n') => self.context_select(),
+                Key::Char('\n') => {
+                    self.context_select();
+                    self.get_context()?;
+                }
                 _ => {}
             },
             AppMode::TaskHelpPopup => match input {
