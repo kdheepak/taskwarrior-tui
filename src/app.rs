@@ -1257,12 +1257,17 @@ impl TTApp {
         terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
         events: &Events,
     ) -> Result<(), Box<dyn Error>> {
+        events.pause_ticker();
         match self.mode {
             AppMode::TaskReport => match input {
                 Key::Ctrl('c') | Key::Char('q') => self.should_quit = true,
                 Key::Char('r') => self.update()?,
                 Key::End | Key::Char('G') => self.task_report_bottom(),
-                Key::Home | Key::Char('g') => self.task_report_top(),
+                Key::Home => self.task_report_top(),
+                Key::Char('g') => match events.next()? {
+                    Event::Input(Key::Char('g')) => self.task_report_top(),
+                    _ => (),
+                }
                 Key::Down | Key::Char('j') => self.task_report_next(),
                 Key::Up | Key::Char('k') => self.task_report_previous(),
                 Key::PageDown | Key::Char('J') => self.task_report_next_page(),
@@ -1487,6 +1492,7 @@ impl TTApp {
                 _ => {}
             },
         }
+        events.resume_ticker();
         Ok(())
     }
 }

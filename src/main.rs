@@ -111,3 +111,45 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::util::{destruct_terminal, setup_terminal, Event, EventConfig, Events};
+    use crate::util::Key;
+    use std::time::Duration;
+
+    #[test]
+    fn test_main() {
+
+        let mut terminal = setup_terminal();
+        terminal.clear().unwrap();
+        // Setup event handlers
+        let events = Events::with_config(EventConfig {
+            tick_rate: Duration::from_millis(1000),
+        });
+
+        loop {
+
+            match events.next().unwrap() {
+                Event::Input(Key::Char('q')) => break,
+                Event::Input(Key::Char('g')) => {
+                    events.pause_ticker();
+                    match events.next().unwrap() {
+                        Event::Input(Key::Char('g')) => events.resume_ticker(),
+                        _ => (),
+                    }
+                },
+                Event::Input(input) => {
+                    print!("\r\n");
+                    dbg!(input);
+                },
+                Event::Tick => {
+                    print!("\r\n");
+                    dbg!("tick");
+                },
+            };
+
+        }
+        destruct_terminal(terminal);
+    }
+}

@@ -60,6 +60,7 @@ pub struct Events {
     pub rx: mpsc::Receiver<Event<Key>>,
     pub tx: mpsc::Sender<Event<Key>>,
     pub pause_stdin: Arc<Mutex<bool>>,
+    pub pause_ticker: Arc<Mutex<bool>>,
 }
 
 impl Events {
@@ -68,6 +69,7 @@ impl Events {
         use crossterm::event::{KeyCode::*, KeyModifiers};
         let (tx, rx) = mpsc::channel();
         let pause_stdin = Arc::new(Mutex::new(false));
+        let pause_ticker = Arc::new(Mutex::new(false));
         let _input_handle = {
             let tx = tx.clone();
             let pause_stdin = pause_stdin.clone();
@@ -111,7 +113,13 @@ impl Events {
         };
         let _tick_handle = {
             let tx = tx.clone();
+            let pause_ticker = pause_ticker.clone();
             thread::spawn(move || loop {
+                // print!("\r\n");
+                // dbg!(*pause_ticker.lock().unwrap());
+                while *pause_ticker.lock().unwrap() {
+                    thread::sleep(Duration::from_millis(250));
+                }
                 if tx.send(Event::Tick).is_err() {
                     break;
                 }
@@ -119,13 +127,23 @@ impl Events {
             })
         };
 
-        Events { rx, tx, pause_stdin }
+        Events { rx, tx, pause_stdin, pause_ticker }
     }
 
     /// Attempts to read an event.
     /// This function will block the current thread.
     pub fn next(&self) -> Result<Event<Key>, mpsc::RecvError> {
         self.rx.recv()
+    }
+
+    pub fn pause_ticker(&self) {
+        *self.pause_ticker.lock().unwrap() = true;
+        // print!("\r\n");
+        // dbg!(*self.pause_ticker.lock().unwrap());
+    }
+
+    pub fn resume_ticker(&self) {
+        *self.pause_ticker.lock().unwrap() = false;
     }
 
     pub fn pause_event_loop(&self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
