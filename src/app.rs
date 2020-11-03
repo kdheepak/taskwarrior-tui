@@ -26,7 +26,7 @@ use std::sync::{Arc, Mutex};
 use std::{sync::mpsc, thread, time::Duration};
 use tui::{
     backend::Backend,
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Rect, Margin},
     style::{Color, Modifier, Style},
     terminal::Frame,
     text::{Span, Spans, Text},
@@ -118,8 +118,8 @@ pub enum AppMode {
     TaskModify,
     TaskHelpPopup,
     TaskError,
+    TaskContextMenu,
     Calendar,
-    ContextMenu,
 }
 
 pub struct TTApp {
@@ -194,12 +194,12 @@ impl TTApp {
             | AppMode::TaskFilter
             | AppMode::TaskAdd
             | AppMode::TaskAnnotate
+            | AppMode::TaskContextMenu
             | AppMode::TaskError
             | AppMode::TaskHelpPopup
             | AppMode::TaskSubprocess
             | AppMode::TaskLog
             | AppMode::TaskModify => self.draw_task(f),
-            AppMode::ContextMenu => self.draw_context_menu(f),
             AppMode::Calendar => self.draw_calendar(f),
         }
     }
@@ -360,7 +360,11 @@ impl TTApp {
             }
             AppMode::TaskHelpPopup => {
                 self.draw_command(f, rects[1], self.filter.as_str(), "Filter Tasks");
-                self.draw_help_popup(f, f.size());
+                self.draw_help_popup(f);
+            }
+            AppMode::TaskContextMenu => {
+                self.draw_command(f, rects[1], self.filter.as_str(), "Filter Tasks");
+                self.draw_context_menu(f);
             }
             _ => {
                 panic!("Reached unreachable code. Something went wrong");
@@ -368,8 +372,8 @@ impl TTApp {
         }
     }
 
-    fn draw_help_popup(&self, f: &mut Frame<impl Backend>, rect: Rect) {
-        let area = centered_rect(80, 90, rect);
+    fn draw_help_popup(&self, f: &mut Frame<impl Backend>) {
+        let area = centered_rect(80, 90, f.size());
         f.render_widget(Clear, area);
         f.render_widget(&self.help_popup, area);
     }
@@ -379,9 +383,12 @@ impl TTApp {
             .direction(Direction::Vertical)
             .constraints([Constraint::Min(0)].as_ref())
             .split(f.size());
-        let area = rects[0];
 
-        f.render_widget(Clear, area);
+        let area = centered_rect(80, 50, f.size());
+
+        f.render_widget(Clear, area.inner(&Margin {
+            vertical: 0, horizontal: 0,
+        }));
 
         let maximum_column_width = area.width;
 
@@ -1308,19 +1315,15 @@ impl TTApp {
                 Key::Char('z') => {
                     self.task_report_show_info = !self.task_report_show_info;
                 }
-                Key::Char(']') => {
-                    self.mode = AppMode::ContextMenu;
+                Key::Char('c') => {
+                    self.mode = AppMode::TaskContextMenu;
                 }
                 _ => {}
             },
-            AppMode::ContextMenu => match input {
-                Key::Ctrl('c') | Key::Char('q') => self.should_quit = true,
-                Key::Char('[') => {
+            AppMode::TaskContextMenu => match input {
+                Key::Esc => {
                     self.mode = AppMode::TaskReport;
                 },
-                Key::Char(']') => {
-                    self.mode = AppMode::Calendar;
-                }
                 Key::Down | Key::Char('j') => self.context_next(),
                 Key::Up | Key::Char('k') => self.context_previous(),
                 Key::Char('\n') => {
@@ -1441,7 +1444,7 @@ impl TTApp {
             AppMode::Calendar => match input {
                 Key::Ctrl('c') | Key::Char('q') => self.should_quit = true,
                 Key::Char('[') => {
-                    self.mode = AppMode::ContextMenu;
+                    self.mode = AppMode::TaskReport;
                 }
                 Key::Up | Key::Char('k') => {
                     if self.calendar_year > 0 {
