@@ -211,7 +211,7 @@ impl TTApp {
             .constraints([Constraint::Min(0)].as_ref())
             .split(f.size());
         let today = Local::today();
-        let c = Calendar::default()
+        let mut c = Calendar::default()
             .block(
                 Block::default()
                     .title(Spans::from(vec![
@@ -225,6 +225,7 @@ impl TTApp {
             .year(self.calendar_year)
             .date_style(dates_with_styles)
             .months_per_row(self.config.uda_calendar_months_per_row);
+        c.title_background_color = self.config.uda_style_calendar_title.bg;
         f.render_widget(c, rects[0]);
     }
 

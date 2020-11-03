@@ -48,6 +48,7 @@ pub struct Config {
     pub uda_selection_blink: bool,
     pub uda_calendar_months_per_row: usize,
     pub uda_style_context_active: TColor,
+    pub uda_style_calendar_title: TColor,
 }
 
 trait TaskWarriorBool {
@@ -94,6 +95,8 @@ impl Config {
             uda_selection_dim: Self::get_uda_selection_dim(),
             uda_selection_blink: Self::get_uda_selection_blink(),
             uda_calendar_months_per_row: Self::get_uda_months_per_row(),
+            uda_style_calendar_title: Self::get_uda_style("calendar.title")
+                .unwrap_or(TColor::new(Color::Black, Color::Rgb(220, 220, 220), vec![])),
             uda_style_context_active: Self::get_uda_style("context.active")
                 .unwrap_or(TColor::new(Color::Black, Color::Rgb(220, 220, 220), vec![])),
         })

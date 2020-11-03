@@ -25,6 +25,7 @@ pub struct Calendar<'a> {
     pub style: Style,
     pub months_per_row: usize,
     pub date_style: Vec<(NaiveDate, Style)>,
+    pub title_background_color: Color,
 }
 
 impl<'a> Default for Calendar<'a> {
@@ -38,6 +39,7 @@ impl<'a> Default for Calendar<'a> {
             year,
             month,
             date_style: vec![],
+            title_background_color: Color::White,
         }
     }
 }
@@ -157,7 +159,7 @@ impl<'a> Widget for Calendar<'a> {
                 let d = &mut days[c];
                 let m = d.0.month() as usize;
                 let s = format!("{:^20}", month_names[m - 1]);
-                let style = Style::default().bg(Color::Rgb(220, 220, 220));
+                let style = Style::default().bg(self.title_background_color);
                 if m == today.month() as usize && self.year + year as i32 == today.year() {
                     buf.set_string(x, y, &s, style.add_modifier(Modifier::BOLD));
                 } else {
@@ -170,7 +172,7 @@ impl<'a> Widget for Calendar<'a> {
             for c in startm..endm {
                 let d = &mut days[c];
                 let m = d.0.month() as usize;
-                let style = Style::default().bg(Color::Rgb(220, 220, 220));
+                let style = Style::default().bg(self.title_background_color);
                 if m == today.month() as usize && self.year + year as i32 == today.year() {
                     buf.set_string(
                         x as u16,
