@@ -391,9 +391,18 @@ impl TTApp {
         let selected = self.context_table_state.selected().unwrap_or_default();
         let header = headers.iter();
         let mut rows = vec![];
-        let style = Style::default();
+        let mut highlight_style = Style::default();
         for (i, context) in contexts.iter().enumerate() {
+            let mut style = Style::default();
+            if &self.contexts[i].active == "yes" {
+                style = style
+                    .fg(self.config.uda_style_context_active.fg)
+                    .bg(self.config.uda_style_context_active.bg)
+            }
             rows.push(Row::StyledData(context.iter(), style));
+            if i == self.context_table_state.selected().unwrap_or_default() {
+                highlight_style = style;
+            }
         }
 
         let constraints: Vec<Constraint> = widths
@@ -401,7 +410,7 @@ impl TTApp {
             .map(|i| Constraint::Length((*i).try_into().unwrap_or(maximum_column_width as u16)))
             .collect();
 
-        let highlight_style = Style::default().add_modifier(Modifier::BOLD);
+        let highlight_style = highlight_style.add_modifier(Modifier::BOLD);
         let t = Table::new(header, rows.into_iter())
             .block(
                 Block::default()

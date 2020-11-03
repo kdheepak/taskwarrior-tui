@@ -19,10 +19,16 @@ impl Default for TColor {
 
 impl TColor {
     pub fn default() -> Self {
-        TColor {
+        Self {
             fg: Color::Black,
             bg: Color::White,
             modifiers: vec![],
+        }
+    }
+
+    pub fn new(fg: Color, bg: Color, modifiers: Vec<Modifier>) -> Self {
+        Self {
+            fg, bg, modifiers,
         }
     }
 }
@@ -41,6 +47,7 @@ pub struct Config {
     pub uda_selection_dim: bool,
     pub uda_selection_blink: bool,
     pub uda_calendar_months_per_row: usize,
+    pub uda_style_context_active: TColor,
 }
 
 trait TaskWarriorBool {
@@ -87,11 +94,23 @@ impl Config {
             uda_selection_dim: Self::get_uda_selection_dim(),
             uda_selection_blink: Self::get_uda_selection_blink(),
             uda_calendar_months_per_row: Self::get_uda_months_per_row(),
+            uda_style_context_active: Self::get_uda_style("context.active")
+                .unwrap_or(TColor::new(Color::Black, Color::Rgb(220, 220, 220), vec![])),
         })
     }
 
     fn get_bool_collection() -> HashMap<String, bool> {
         HashMap::new()
+    }
+
+    fn get_uda_style(config: &str) -> Option<TColor> {
+        let c = format!("uda.taskwarrior-tui.style.{}", config);
+        let s = Self::get_config(&c);
+        if s == "" {
+            None
+        } else {
+            Some(Self::get_tcolor(&s))
+        }
     }
 
     fn get_color_collection() -> Result<HashMap<String, TColor>, Box<dyn Error>> {
