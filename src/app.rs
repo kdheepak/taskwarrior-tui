@@ -162,6 +162,7 @@ pub enum AppMode {
     TaskError,
     TaskContextMenu,
     TaskJump,
+    TaskDeletePrompt,
     Calendar,
 }
 
@@ -172,6 +173,7 @@ pub struct TaskwarriorTuiApp {
     pub context_table_state: TableState,
     pub current_context_filter: String,
     pub current_context: String,
+    pub delete: LineBuffer,
     pub command: LineBuffer,
     pub filter: LineBuffer,
     pub modify: LineBuffer,
@@ -244,6 +246,7 @@ impl TaskwarriorTuiApp {
             current_selection_id: None,
             current_context_filter: "".to_string(),
             current_context: "".to_string(),
+            delete: LineBuffer::with_capacity(MAX_LINE),
             command: LineBuffer::with_capacity(MAX_LINE),
             filter: LineBuffer::with_capacity(MAX_LINE),
             modify: LineBuffer::with_capacity(MAX_LINE),
@@ -313,6 +316,7 @@ impl TaskwarriorTuiApp {
             | AppMode::TaskAdd
             | AppMode::TaskAnnotate
             | AppMode::TaskContextMenu
+            | AppMode::TaskDeletePrompt
             | AppMode::TaskError
             | AppMode::TaskHelpPopup
             | AppMode::TaskSubprocess
@@ -564,6 +568,16 @@ impl TaskwarriorTuiApp {
                     false,
                 );
                 self.draw_context_menu(f, 80, 50);
+            }
+            AppMode::TaskDeletePrompt => {
+                f.set_cursor(rects[1].x + self.delete.pos() as u16 + 1, rects[1].y + 1);
+                f.render_widget(Clear, rects[1]);
+                self.draw_command(
+                    f,
+                    rects[1],
+                    self.delete.as_str(),
+                    Span::styled("Delete Task?", Style::default().add_modifier(Modifier::BOLD)),
+                );
             }
             _ => {
                 panic!("Reached unreachable code. Something went wrong");
@@ -2097,11 +2111,17 @@ impl TaskwarriorTuiApp {
                         }
                     }
                 } else if input == self.keyconfig.delete {
-                    match self.task_delete() {
-                        Ok(_) => self.update(true)?,
-                        Err(e) => {
-                            self.mode = AppMode::TaskError;
-                            self.error = e;
+                    self.mode = AppMode::TaskDeletePrompt;
+                    match self.task_current() {
+                        Some(t) => {
+                            let s = format!(
+                                "Delete task {} - '{}' ? Hit `x` again or `Enter` to confirm. Hit `Esc` to cancel.",
+                                t.id().unwrap_or_default(),
+                                t.description()
+                            );
+                            self.delete.update(&s, s.len())
+                        },
+                        None => self.mode = AppMode::TaskReport,
                         }
                     }
                 } else if input == self.keyconfig.start_stop {
@@ -2736,6 +2756,23 @@ impl TaskwarriorTuiApp {
                     self.update_input_for_completion();
                     self.dirty = true;
                 }
+            },
+            AppMode::TaskDeletePrompt => match input {
+                Key::Char('x') | Key::Char('\n') => match self.task_delete() {
+                    Ok(_) => {
+                        self.mode = AppMode::TaskReport;
+                        self.update()?;
+                    }
+                    Err(e) => {
+                        self.mode = AppMode::TaskError;
+                        self.error = e;
+                    }
+                },
+                Key::Esc => {
+                    self.delete.update("", 0);
+                    self.mode = AppMode::TaskReport;
+                }
+                _ => handle_movement(&mut self.command, input),
             },
             AppMode::TaskError => self.mode = AppMode::TaskReport,
             AppMode::Calendar => {
