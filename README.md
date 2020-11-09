@@ -57,11 +57,13 @@ yay -S taskwarrior-tui-bin # download precompiled binaries
 snap install taskwarrior-tui
 ```
 
+<!--
 **Using [`cargo`](https://crates.io/)** [![](https://img.shields.io/crates/v/taskwarrior-tui)](https://libraries.io/cargo/taskwarrior-tui)
 
 ```bash
 cargo install taskwarrior-tui
 ```
+-->
 
 **Using [`zdharma/zinit`](https://github.com/zdharma/zinit)** [![](https://img.shields.io/github/v/tag/kdheepak/taskwarrior-tui)](https://github.com/kdheepak/taskwarrior-tui/releases/latest)
 
