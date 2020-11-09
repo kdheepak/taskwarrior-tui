@@ -28,6 +28,7 @@ rand = "0.7"
 shlex = "0.1"
 chrono = "0.4"
 unicode-width = "0.1"
+unicode-segmentation = "1.6"
 tui = { version = "0.12", optional = true, default-features = false }
 crossterm = { version = "0.17", optional = true, default-features = false }
 rustyline = "6.3.0"

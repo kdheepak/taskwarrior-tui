@@ -714,6 +714,7 @@ dependencies = [
  "shlex",
  "task-hookrs",
  "tui",
+ "unicode-segmentation",
  "unicode-width",
  "uuid",
 ]
