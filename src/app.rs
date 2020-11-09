@@ -20,6 +20,9 @@ use task_hookrs::task::Task;
 use task_hookrs::uda::UDAValue;
 use uuid::Uuid;
 
+use unicode_segmentation::Graphemes;
+use unicode_segmentation::UnicodeSegmentation;
+
 use chrono::{Datelike, Local, NaiveDate, NaiveDateTime, TimeZone};
 
 use std::sync::{Arc, Mutex};
@@ -283,7 +286,14 @@ impl TTApp {
         match self.mode {
             AppMode::TaskReport => self.draw_command(f, rects[1], self.filter.as_str(), "Filter Tasks"),
             AppMode::TaskFilter => {
-                f.set_cursor(rects[1].x + self.filter.pos() as u16 + 1, rects[1].y + 1);
+                let mut position = self.filter.as_str().graphemes(true).count();
+                for (i, (_i, g)) in self.filter.as_str().grapheme_indices(true).enumerate() {
+                    if _i == self.filter.pos() {
+                        position = i;
+                        break
+                    }
+                }
+                f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
                 self.draw_command(
                     f,
@@ -293,7 +303,14 @@ impl TTApp {
                 );
             }
             AppMode::TaskModify => {
-                f.set_cursor(rects[1].x + self.modify.pos() as u16 + 1, rects[1].y + 1);
+                let mut position = self.modify.as_str().graphemes(true).count();
+                for (i, (_i, g)) in self.modify.as_str().grapheme_indices(true).enumerate() {
+                    if _i == self.modify.pos() {
+                        position = i;
+                        break
+                    }
+                }
+                f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
                 self.draw_command(
                     f,
@@ -306,7 +323,14 @@ impl TTApp {
                 );
             }
             AppMode::TaskLog => {
-                f.set_cursor(rects[1].x + self.command.pos() as u16 + 1, rects[1].y + 1);
+                let mut position = self.command.as_str().graphemes(true).count();
+                for (i, (_i, g)) in self.command.as_str().grapheme_indices(true).enumerate() {
+                    if _i == self.command.pos() {
+                        position = i;
+                        break
+                    }
+                }
+                f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
                 self.draw_command(
                     f,
@@ -316,7 +340,14 @@ impl TTApp {
                 );
             }
             AppMode::TaskSubprocess => {
-                f.set_cursor(rects[1].x + self.command.pos() as u16 + 1, rects[1].y + 1);
+                let mut position = self.command.as_str().graphemes(true).count();
+                for (i, (_i, g)) in self.command.as_str().grapheme_indices(true).enumerate() {
+                    if _i == self.command.pos() {
+                        position = i;
+                        break
+                    }
+                }
+                f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
                 self.draw_command(
                     f,
@@ -326,7 +357,14 @@ impl TTApp {
                 );
             }
             AppMode::TaskAnnotate => {
-                f.set_cursor(rects[1].x + self.command.pos() as u16 + 1, rects[1].y + 1);
+                let mut position = self.command.as_str().graphemes(true).count();
+                for (i, (_i, g)) in self.command.as_str().grapheme_indices(true).enumerate() {
+                    if _i == self.command.pos() {
+                        position = i;
+                        break
+                    }
+                }
+                f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
                 self.draw_command(
                     f,
@@ -339,7 +377,14 @@ impl TTApp {
                 );
             }
             AppMode::TaskAdd => {
-                f.set_cursor(rects[1].x + self.command.pos() as u16 + 1, rects[1].y + 1);
+                let mut position = self.command.as_str().graphemes(true).count();
+                for (i, (_i, g)) in self.command.as_str().grapheme_indices(true).enumerate() {
+                    if _i == self.command.pos() {
+                        position = i;
+                        break
+                    }
+                }
+                f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
                 self.draw_command(
                     f,
@@ -1317,7 +1362,7 @@ impl TTApp {
                     match self.task_current() {
                         Some(t) => {
                             let s = format!("{} ", t.description());
-                            self.modify.update(&s, s.len())
+                            self.modify.update(&s, s.as_str().graphemes(true).count())
                         }
                         None => self.modify.update("", 0),
                     }
