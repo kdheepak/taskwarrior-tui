@@ -895,6 +895,9 @@ impl TTApp {
 
         let shell = self.command.as_str().replace("'", "\\'");
 
+        let selected = self.task_table_state.selected().unwrap_or_default();
+        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
+
         match shlex::split(&shell) {
             Some(cmd) => {
                 // first argument must be a binary
@@ -904,15 +907,26 @@ impl TTApp {
                     if i == 0 {
                         continue;
                     }
+                    let mut s = s.replace("{id}", &task_id.to_string());
+                    for (k, v) in self.tasks.lock().unwrap()[selected].uda().iter() {
+                        match v {
+                            UDAValue::Str(v) => s = s.replace(k, &format!("{:?}", v)),
+                            _ => (),
+                        }
+                    }
                     command.arg(&s);
                 }
                 let output = command.output();
                 match output {
-                    Ok(_) => {
-                        self.command.update("", 0);
-                        Ok(())
+                    Ok(o) => {
+                        if o.status.code().unwrap() == 0 {
+                            self.command.update("", 0);
+                            Ok(())
+                        } else {
+                            Err(format!("{} {}", String::from_utf8_lossy(&o.stderr), String::from_utf8_lossy(&o.stderr)))
+                        }
                     }
-                    Err(_) => Err(format!("Shell command `{}` exited with non-zero output", shell,)),
+                    Err(_) => Err(format!("Shell command `{}` failed to execute process", shell,)),
                 }
             }
             None => Err(format!("Cannot run subprocess. Unable to shlex split `{}`", shell)),
