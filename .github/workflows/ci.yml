@@ -110,11 +110,6 @@ jobs:
         with:
           toolchain: stable
           override: true
-      - uses: actions-rs/cargo@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          command: publish
-          args: --token ${{ secrets.CARGO_API_KEY }} --allow-dirty
 
   homebrew:
     name: Bump Homebrew formula
@@ -275,4 +270,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish snap
+        if: startsWith(github.ref, 'refs/tags/')
         run: snapcraft upload ./taskwarrior-tui_*.snap
