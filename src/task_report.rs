@@ -2,6 +2,7 @@ use chrono::{Datelike, Local, NaiveDate, NaiveDateTime, TimeZone};
 use std::error::Error;
 use std::process::Command;
 use task_hookrs::task::Task;
+use task_hookrs::uda::UDAValue;
 
 pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime) -> String {
     let mut seconds = (to_dt - from_dt).num_seconds();
@@ -226,7 +227,18 @@ impl TaskReportTable {
                 Some(f) => format!("{:.2}", *f),
                 None => "0.00".to_string(),
             },
-            _ => "".to_string(),
+            s => {
+                let u = &task.uda();
+                let v = u.get(s);
+                if v.is_none() {
+                    return "".to_string();
+                }
+                match v.unwrap() {
+                    UDAValue::Str(s) => s.to_string(),
+                    UDAValue::F64(f) => f.to_string(),
+                    UDAValue::U64(u) => u.to_string(),
+                }
+            },
         }
     }
 }
