@@ -20,8 +20,8 @@ impl Default for TColor {
 impl TColor {
     pub fn default() -> Self {
         Self {
-            fg: Color::Black,
-            bg: Color::White,
+            fg: Color::Reset,
+            bg: Color::Reset,
             modifiers: vec![],
         }
     }
@@ -99,9 +99,9 @@ impl Config {
             uda_selection_blink: Self::get_uda_selection_blink(),
             uda_calendar_months_per_row: Self::get_uda_months_per_row(),
             uda_style_calendar_title: Self::get_uda_style("calendar.title")
-                .unwrap_or(TColor::new(Color::Black, Color::Rgb(220, 220, 220), vec![])),
+                .unwrap_or(TColor::new(Color::Reset, Color::Reset, vec![])),
             uda_style_context_active: Self::get_uda_style("context.active")
-                .unwrap_or(TColor::new(Color::Black, Color::Rgb(220, 220, 220), vec![])),
+                .unwrap_or(TColor::new(Color::Reset, Color::Reset, vec![])),
         })
     }
 
@@ -166,8 +166,8 @@ impl Config {
         }
         let foreground = foreground.replace("inverse ", "");
         TColor {
-            fg: Self::get_color_foreground(foreground.as_str(), Color::Black),
-            bg: Self::get_color_background(background.as_str(), Color::White),
+            fg: Self::get_color_foreground(foreground.as_str(), Color::Reset),
+            bg: Self::get_color_background(background.as_str(), Color::Reset),
             modifiers,
         }
     }
