@@ -39,7 +39,7 @@ impl<'a> Default for Calendar<'a> {
             year,
             month,
             date_style: vec![],
-            title_background_color: Color::White,
+            title_background_color: Color::Reset,
         }
     }
 }
