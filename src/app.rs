@@ -504,7 +504,7 @@ impl TTApp {
         }
         let selected = self.task_table_state.selected().unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
-        let output = Command::new("task").arg(format!("{}", task_id)).output();
+        let output = Command::new("task").arg("rc.color=off").arg(format!("{}", task_id)).output();
         if let Ok(output) = output {
             let data = String::from_utf8_lossy(&output.stdout);
             let p = Paragraph::new(Text::from(&data[..])).block(
