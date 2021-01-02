@@ -1058,10 +1058,12 @@ impl TTApp {
             Ok(output) => {
                 let data = String::from_utf8_lossy(&output.stdout);
                 for line in data.split('\n') {
-                    if line.starts_with("Virtual tags") {
-                        let line = line.to_string();
-                        let line = line.replace("Virtual tags", "");
-                        return Ok(line);
+                    for prefix in vec!["Virtual tags", "Virtual"] {
+                        if line.starts_with(prefix) {
+                            let line = line.to_string();
+                            let line = line.replace(prefix, "");
+                            return Ok(line);
+                        }
                     }
                 }
                 Err(format!(
