@@ -221,7 +221,41 @@ impl TaskReportTable {
                     .join(","),
                 None => "".to_string(),
             },
-            "description.count" => task.description().to_string(),
+            "description.count" => {
+                let c = match task.annotations() {
+                    Some(a) => format!("[{}]", a.iter().count()),
+                    None => format!(""),
+                };
+                format!("{} {}", task.description().to_string(), c)
+            },
+            "description.truncated_count" => {
+                let c = match task.annotations() {
+                    Some(a) => format!(" [{}]", a.iter().count()),
+                    None => format!(""),
+                };
+                let mut d = task.description().to_string();
+                let mut end = 20;
+                while !d.is_char_boundary(end) && end < d.len() {
+                    end += 1;
+                }
+                d.truncate(end);
+                if d != task.description().to_string() {
+                    d = format!("{}...", d);
+                }
+                format!("{}{}", d, c)
+            },
+            "description.truncated" => {
+                let mut d = task.description().to_string();
+                let mut end = 20;
+                while !d.is_char_boundary(end) && end < d.len() {
+                    end += 1;
+                }
+                d.truncate(end);
+                if d != task.description().to_string() {
+                    d = format!("{}...", d);
+                }
+                format!("{}", d)
+            },
             "description" => task.description().to_string(),
             "urgency" => match &task.urgency() {
                 Some(f) => format!("{:.2}", *f),
