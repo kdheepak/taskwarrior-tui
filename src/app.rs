@@ -612,6 +612,13 @@ impl TTApp {
         let maximum_column_width = rect.width;
         let widths = self.calculate_widths(&tasks, &headers, maximum_column_width);
 
+        for (i, header) in headers.iter().enumerate() {
+            if header == "Description" || header == "Definition" {
+                self.task_report_table.description_width = widths[i] - 3*headers.iter().len();
+                break
+            }
+        }
+
         let selected = self.task_table_state.selected().unwrap_or_default();
         let header = headers.iter();
         let mut rows = vec![];

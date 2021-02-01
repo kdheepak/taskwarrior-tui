@@ -37,6 +37,7 @@ pub struct TaskReportTable {
     pub columns: Vec<String>,
     pub tasks: Vec<Vec<String>>,
     pub virtual_tags: Vec<String>,
+    pub description_width: usize,
 }
 
 impl TaskReportTable {
@@ -79,6 +80,7 @@ impl TaskReportTable {
             columns: vec![],
             tasks: vec![vec![]],
             virtual_tags: virtual_tags.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
+            description_width: 100,
         };
         task_report_table.export_headers()?;
         Ok(task_report_table)
@@ -234,7 +236,7 @@ impl TaskReportTable {
                     None => format!(""),
                 };
                 let mut d = task.description().to_string();
-                let mut end = 20;
+                let mut end = self.description_width;
                 while !d.is_char_boundary(end) && end < d.len() {
                     end += 1;
                 }
@@ -246,7 +248,7 @@ impl TaskReportTable {
             },
             "description.truncated" => {
                 let mut d = task.description().to_string();
-                let mut end = 20;
+                let mut end = self.description_width;
                 while !d.is_char_boundary(end) && end < d.len() {
                     end += 1;
                 }
