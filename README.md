@@ -35,20 +35,18 @@ This installs `task` from `homebrew` as well.
 brew install taskwarrior-tui
 ```
 
-**Install from [`AUR`](https://wiki.archlinux.org/index.php/Arch_User_Repository)** [![](https://img.shields.io/aur/version/taskwarrior-tui-git)](https://aur.archlinux.org/packages/taskwarrior-tui-git/) [![](https://img.shields.io/aur/version/taskwarrior-tui)](https://aur.archlinux.org/packages/taskwarrior-tui/) [![](https://img.shields.io/aur/version/taskwarrior-tui-bin)](https://aur.archlinux.org/packages/taskwarrior-tui-bin/)
+**Installation for Arch Linux** [![](https://img.shields.io/archlinux/v/community/x86_64/taskwarrior-tui)](https://archlinux.org/packages/community/x86_64/taskwarrior-tui/) [![](https://img.shields.io/aur/version/taskwarrior-tui-git)](https://aur.archlinux.org/packages/taskwarrior-tui-git/)
 
-Use your favorite installation method to download from the [AUR git](https://aur.archlinux.org/packages/taskwarrior-tui-git/) maintained by [**@loki7990**](https://github.com/loki7990). For example:
+Use [pacman](https://wiki.archlinux.org/index.php/Pacman) to install it from the [community repository](https://archlinux.org/packages/community/x86_64/taskwarrior-tui/):
+
+```bash
+pacman -S taskwarrior-tui
+```
+
+Or use your favorite [AUR helper](https://wiki.archlinux.org/index.php/AUR_helpers) to download the [git](https://aur.archlinux.org/packages/taskwarrior-tui-git/) package maintained by [**@loki7990**](https://github.com/loki7990). For example:
 
 ```bash
 yay -S taskwarrior-tui-git # build from source master
-```
-
-Or use your favorite installation method to download from the [AUR latest release](https://aur.archlinux.org/packages/taskwarrior-tui/) or the [AUR precompiled binaries](https://aur.archlinux.org/packages/taskwarrior-tui/) maintained by [**@orhun**](https://github.com/orhun). For example:
-
-```bash
-yay -S taskwarrior-tui # build from source latest release
-# Or
-yay -S taskwarrior-tui-bin # download precompiled binaries
 ```
 
 **Using [`snap`](https://snapcraft.io/)** [![](https://snapcraft.io/taskwarrior-tui/badge.svg)](https://snapcraft.io/taskwarrior-tui)
