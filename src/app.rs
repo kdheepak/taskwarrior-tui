@@ -614,7 +614,7 @@ impl TTApp {
 
         for (i, header) in headers.iter().enumerate() {
             if header == "Description" || header == "Definition" {
-                self.task_report_table.description_width = widths[i] - 3*headers.iter().len();
+                self.task_report_table.description_width = widths[i] - 2*headers.iter().len();
                 break
             }
         }
