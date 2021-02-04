@@ -237,6 +237,9 @@ impl TaskReportTable {
                 };
                 let mut d = task.description().to_string();
                 let mut end = self.description_width;
+                if self.description_width >= c.len() {
+                    end = self.description_width - c.len();
+                }
                 while !d.is_char_boundary(end) && end < d.len() {
                     end += 1;
                 }

@@ -581,6 +581,9 @@ impl TTApp {
         // now start trimming
         while (widths.iter().sum::<usize>() as u16) >= maximum_column_width - 5 {
             let index = widths.iter().position(|i| i == widths.iter().max().unwrap()).unwrap();
+            if widths[index] == 1 {
+                break
+            }
             widths[index] -= 1;
         }
 
@@ -614,7 +617,9 @@ impl TTApp {
 
         for (i, header) in headers.iter().enumerate() {
             if header == "Description" || header == "Definition" {
-                self.task_report_table.description_width = widths[i] - 2*headers.iter().len();
+                if widths[i] > headers.iter().len() {
+                    self.task_report_table.description_width = widths[i] - headers.iter().len();
+                }
                 break
             }
         }
