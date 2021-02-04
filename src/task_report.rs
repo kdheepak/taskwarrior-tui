@@ -240,24 +240,24 @@ impl TaskReportTable {
                 if self.description_width >= c.len() {
                     end = self.description_width - c.len();
                 }
-                while !d.is_char_boundary(end) && end < d.len() {
+                while end < d.len() && !d.is_char_boundary(end)  {
                     end += 1;
                 }
                 d.truncate(end);
                 if d != task.description().to_string() {
-                    d = format!("{}...", d);
+                    d = format!("{}…", d);
                 }
                 format!("{}{}", d, c)
             },
             "description.truncated" => {
                 let mut d = task.description().to_string();
                 let mut end = self.description_width;
-                while !d.is_char_boundary(end) && end < d.len() {
+                while end < d.len() && !d.is_char_boundary(end) {
                     end += 1;
                 }
                 d.truncate(end);
                 if d != task.description().to_string() {
-                    d = format!("{}...", d);
+                    d = format!("{}…", d);
                 }
                 format!("{}", d)
             },
