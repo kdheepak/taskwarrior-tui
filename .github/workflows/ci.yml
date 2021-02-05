@@ -28,13 +28,6 @@ jobs:
             binary: 'taskwarrior-tui-x86_64-unknown-linux-musl'
             upx_args: --best --lzma
             strip: true
-          - os: ubuntu-latest
-            target: i686-unknown-linux-musl
-            rust_flags: ''
-            features: ''
-            binary_postfix: ''
-            upx_args: --best --lzma
-            strip: true
           - os: windows-latest
             target: x86_64-pc-windows-gnu
             rust_flags: -C target-feature=+crt-static
