@@ -2,6 +2,7 @@ use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    cursor,
 };
 use tui::{backend::CrosstermBackend, Terminal};
 
@@ -50,10 +51,10 @@ pub fn setup_terminal() -> Terminal<CrosstermBackend<io::Stdout>> {
     Terminal::new(backend).unwrap()
 }
 
-pub fn destruct_terminal(mut terminal: Terminal<CrosstermBackend<io::Stdout>>) {
+pub fn destruct_terminal() {
     disable_raw_mode().unwrap();
     execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture).unwrap();
-    terminal.show_cursor().unwrap();
+    execute!(io::stdout(), cursor::Show).unwrap();
 }
 
 pub struct Events {

@@ -17,6 +17,7 @@ use std::env;
 use std::error::Error;
 use std::io::Write;
 use std::time::Duration;
+use std::panic;
 
 use crate::util::Key;
 use app::{AppMode, TTApp};
@@ -25,6 +26,7 @@ const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
 
 fn main() -> Result<(), Box<dyn Error>> {
+    better_panic::install();
     let matches = App::new(APP_NAME)
         .version(APP_VERSION)
         .author("Dheepak Krishnamurthy <@kdheepak>")
@@ -65,6 +67,11 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
     let mut terminal = setup_terminal();
     terminal.clear()?;
 
+    panic::set_hook(Box::new(|panic_info| {
+        destruct_terminal();
+        better_panic::Settings::auto().create_panic_handler()(panic_info);
+    }));
+
     // Setup event handlers
     let events = Events::with_config(EventConfig {
         tick_rate: Duration::from_millis(1000),
@@ -84,21 +91,21 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                     Event::Input(input) => {
                         let r = app.handle_input(input, &mut terminal, &events);
                         if r.is_err() {
-                            destruct_terminal(terminal);
+                            destruct_terminal();
                             return r;
                         }
                     }
                     Event::Tick => {
                         let r = app.update();
                         if r.is_err() {
-                            destruct_terminal(terminal);
+                            destruct_terminal();
                             return r;
                         }
                     }
                 }
 
                 if app.should_quit {
-                    destruct_terminal(terminal);
+                    destruct_terminal();
                     break;
                 }
             }
@@ -106,7 +113,7 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
             Ok(())
         }
         Err(e) => {
-            destruct_terminal(terminal);
+            destruct_terminal();
             Err(e)
         }
     }
