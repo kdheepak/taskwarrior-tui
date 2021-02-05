@@ -1376,7 +1376,7 @@ impl TTApp {
                     match self.task_current() {
                         Some(t) => {
                             let s = format!("{} ", t.description());
-                            self.modify.update(&s, s.as_str().graphemes(true).count())
+                            self.modify.update(&s, s.as_str().len())
                         }
                         None => self.modify.update("", 0),
                     }
