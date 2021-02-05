@@ -65,7 +65,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
     // Terminal initialization
     let mut terminal = setup_terminal();
-    terminal.clear()?;
 
     panic::set_hook(Box::new(|panic_info| {
         destruct_terminal();
