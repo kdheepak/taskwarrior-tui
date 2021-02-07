@@ -156,6 +156,6 @@ mod tests {
             };
 
         }
-        destruct_terminal(terminal);
+        destruct_terminal();
     }
 }
