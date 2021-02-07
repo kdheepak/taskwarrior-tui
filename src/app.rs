@@ -1623,7 +1623,7 @@ mod tests {
 
     #[test]
     fn test_app() {
-        let mut app = TTApp::new().unwrap();
+        let app = TTApp::new().unwrap();
 
         let (contexts, headers) = app.get_all_contexts();
         dbg!(contexts);
