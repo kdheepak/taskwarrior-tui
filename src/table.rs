@@ -15,6 +15,8 @@ use tui::{
     widgets::{Block, StatefulWidget, Widget},
 };
 use unicode_width::UnicodeWidthStr;
+use unicode_segmentation::Graphemes;
+use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Debug, Clone)]
 pub struct TableState {
@@ -272,10 +274,18 @@ where
         let mut x = table_area.left();
 
         // Draw header
+        let mut header_index = usize::MAX;
+        let mut index = 0;
         if y < table_area.bottom() {
             for (w, t) in solved_widths.iter().zip(self.header.by_ref()) {
-                buf.set_stringn(x, y, format!("{}", t), *w as usize, self.header_style);
+                if t.to_string() == "ID" {
+                    buf.set_stringn(x, y, format!("{symbol:>width$}", symbol=t, width=*w as usize), *w as usize, self.header_style);
+                    header_index = index;
+                } else {
+                    buf.set_stringn(x, y, format!("{}", t), *w as usize, self.header_style);
+                }
                 x += *w + self.column_spacing;
+                index += 1;
             }
         }
         y += 1 + self.header_gap;
@@ -323,7 +333,11 @@ where
                             *w as usize,
                             style,
                         );
-                        format!("{}{}", symbol, elt)
+                        if c == header_index {
+                            format!("{symbol}{elt:>width$}", symbol = symbol, elt = elt, width = *w as usize - symbol.to_string().graphemes(true).count())
+                        } else {
+                            format!("{symbol}{elt:<width$}", symbol = symbol, elt = elt, width = *w as usize - symbol.to_string().graphemes(true).count())
+                        }
                     } else {
                         buf.set_stringn(
                             x - 1,
@@ -332,7 +346,11 @@ where
                             *w as usize + 1,
                             style,
                         );
-                        format!("{}", elt)
+                        if c == header_index {
+                            format!("{elt:>width$}", elt = elt, width = *w as usize)
+                        } else {
+                            format!("{elt:<width$}", elt = elt, width = *w as usize)
+                        }
                     };
                     buf.set_stringn(x, y + i as u16, s, *w as usize, style);
                     x += *w + self.column_spacing;
