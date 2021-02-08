@@ -274,14 +274,18 @@ where
         let mut x = table_area.left();
 
         // Draw header
+        let mut header_index = usize::MAX;
+        let mut index = 0;
         if y < table_area.bottom() {
             for (w, t) in solved_widths.iter().zip(self.header.by_ref()) {
                 if t.to_string() == "ID" {
                     buf.set_stringn(x, y, format!("{symbol:>width$}", symbol=t, width=*w as usize), *w as usize, self.header_style);
+                    header_index = index;
                 } else {
                     buf.set_stringn(x, y, format!("{}", t), *w as usize, self.header_style);
                 }
                 x += *w + self.column_spacing;
+                index += 1;
             }
         }
         y += 1 + self.header_gap;
@@ -293,8 +297,6 @@ where
         };
         let highlight_symbol = self.highlight_symbol.unwrap_or("");
         let blank_symbol = iter::repeat(" ").take(highlight_symbol.width()).collect::<String>();
-
-        let header_index = self.header.by_ref().into_iter().position(|r| r.to_string() == "ID").unwrap_or_else(|| 0);
 
         // Draw rows
         let default_style = Style::default();

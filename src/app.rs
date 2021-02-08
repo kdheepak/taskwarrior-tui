@@ -436,7 +436,7 @@ impl TTApp {
 
         let (contexts, headers) = self.get_all_contexts();
 
-        let maximum_column_width = area.width - 2;
+        let maximum_column_width = area.width;
         let widths = self.calculate_widths(&contexts, &headers, maximum_column_width);
 
         let selected = self.context_table_state.selected().unwrap_or_default();
@@ -618,7 +618,7 @@ impl TTApp {
             return;
         }
 
-        let maximum_column_width = rect.width - 2;
+        let maximum_column_width = rect.width;
         let widths = self.calculate_widths(&tasks, &headers, maximum_column_width);
 
         for (i, header) in headers.iter().enumerate() {
