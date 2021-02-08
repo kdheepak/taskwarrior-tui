@@ -577,6 +577,12 @@ impl TTApp {
                 break
             }
         }
+        for (i, header) in headers.iter().enumerate() {
+            if header == "ID" {
+                // always give ID a couple of extra for indicator
+                widths[i] += self.config.uda_selection_indicator.as_str().graphemes(true).count();
+            }
+        }
 
         // now start trimming
         while (widths.iter().sum::<usize>() as u16) >= maximum_column_width - (headers.len()) as u16 {
@@ -587,13 +593,6 @@ impl TTApp {
             widths[index] -= 1;
         }
 
-        for (i, header) in headers.iter().enumerate() {
-            if header == "ID" {
-                // always give ID a couple of extra for indicator
-                widths[i] += 2;
-                break
-            }
-        }
         return widths
     }
 
