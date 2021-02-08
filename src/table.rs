@@ -305,6 +305,7 @@ where
             } else {
                 0
             };
+            let header_index = self.header.by_ref().into_iter().position(|r| r.to_string() == "ID").unwrap_or_else(|| 0);
             for (i, row) in self.rows.skip(state.offset).take(remaining).enumerate() {
                 let (data, style, symbol) = match row {
                     Row::Data(d) | Row::StyledData(d, _) if Some(i) == state.selected.map(|s| s - state.offset) => {
@@ -334,7 +335,12 @@ where
                         );
                         format!("{}", elt)
                     };
-                    buf.set_stringn(x, y + i as u16, s, *w as usize, style);
+                    let cell = if c == header_index {
+                        format!("{symbol:>width$}", symbol = s, width = *w as usize)
+                    } else {
+                        format!("{symbol:<width$}", symbol = s, width = *w as usize)
+                    };
+                    buf.set_stringn(x, y + i as u16, cell, *w as usize, style);
                     x += *w + self.column_spacing;
                 }
             }
