@@ -434,9 +434,9 @@ impl TTApp {
             vertical: 0, horizontal: 0,
         }));
 
-        let maximum_column_width = area.width;
-
         let (contexts, headers) = self.get_all_contexts();
+
+        let maximum_column_width = area.width - 2;
         let widths = self.calculate_widths(&contexts, &headers, maximum_column_width);
 
         let selected = self.context_table_state.selected().unwrap_or_default();
@@ -566,7 +566,7 @@ impl TTApp {
 
         for row in tasks.iter() {
             for (i, cell) in row.iter().enumerate() {
-                widths[i] = std::cmp::max(cell.len() + 2, widths[i]);
+                widths[i] = std::cmp::max(cell.len(), widths[i]);
             }
         }
 
@@ -579,7 +579,7 @@ impl TTApp {
         }
 
         // now start trimming
-        while (widths.iter().sum::<usize>() as u16) >= maximum_column_width - 5 {
+        while (widths.iter().sum::<usize>() as u16) >= maximum_column_width - (headers.len()) as u16 {
             let index = widths.iter().position(|i| i == widths.iter().max().unwrap()).unwrap();
             if widths[index] == 1 {
                 break
@@ -587,6 +587,13 @@ impl TTApp {
             widths[index] -= 1;
         }
 
+        for (i, header) in headers.iter().enumerate() {
+            if header == "ID" {
+                // always give ID a couple of extra for indicator
+                widths[i] += 2;
+                break
+            }
+        }
         return widths
     }
 
@@ -612,14 +619,12 @@ impl TTApp {
             return;
         }
 
-        let maximum_column_width = rect.width;
+        let maximum_column_width = rect.width - 2;
         let widths = self.calculate_widths(&tasks, &headers, maximum_column_width);
 
         for (i, header) in headers.iter().enumerate() {
             if header == "Description" || header == "Definition" {
-                if widths[i] > headers.iter().len() {
-                    self.task_report_table.description_width = widths[i] - 1;
-                }
+                self.task_report_table.description_width = widths[i] - 1;
                 break
             }
         }
