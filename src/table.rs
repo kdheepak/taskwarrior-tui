@@ -278,6 +278,7 @@ where
         let mut index = 0;
         if y < table_area.bottom() {
             for (w, t) in solved_widths.iter().zip(self.header.by_ref()) {
+                buf.set_stringn(x, y, format!("{symbol:>width$}", symbol=" ", width=*w as usize), *w as usize, self.header_style);
                 if t.to_string() == "ID" {
                     buf.set_stringn(x, y, format!("{symbol:>width$}", symbol=t, width=*w as usize), *w as usize, self.header_style);
                     header_index = index;

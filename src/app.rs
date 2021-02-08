@@ -471,6 +471,7 @@ impl TTApp {
                         Span::styled("Context", Style::default().add_modifier(Modifier::BOLD)),
                     ])),
             )
+            .header_style(Style::default().add_modifier(Modifier::UNDERLINED))
             .highlight_style(highlight_style)
             .highlight_symbol(&self.config.uda_selection_indicator)
             .widths(&constraints);
@@ -673,6 +674,7 @@ impl TTApp {
                         Span::styled("Calendar", Style::default().add_modifier(Modifier::DIM)),
                     ])),
             )
+            .header_style(Style::default().add_modifier(Modifier::UNDERLINED))
             .highlight_style(highlight_style)
             .highlight_symbol(&self.config.uda_selection_indicator)
             .widths(&constraints);
