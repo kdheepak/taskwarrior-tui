@@ -700,7 +700,7 @@ impl TTApp {
 
     pub fn update(&mut self) -> Result<(), Box<dyn Error>> {
         self.task_report_table.export_headers()?;
-        self.export_tasks()?;
+        let _ = self.export_tasks();
         self.export_contexts()?;
         self.update_tags();
         Ok(())
