@@ -19,9 +19,24 @@ Steps to reproduce the behavior:
 <!--
 Please provide a minimal working example of the bug with screenshots if possible.
 
-You can set the TASKDATA and TASKRC environment variables to point to a different location for temporary fresh taskwarrior session. See taskwarrior documentation for more information.
+You can set the TASKDATA and TASKRC environment variables to point to a different location for temporary fresh taskwarrior session.
 
-If possible, please provide contents of `.taskrc`, and `.task` folder.
+You can use the following fake task list to reproduce your error:
+
+```bash
+git clone https://github.com/kdheepak/taskwarrior-testdata/
+```
+
+After you clone the above repository, run the following lines in your shell.
+
+```bash
+export TASKRC=`pwd`/taskwarrior-testdata/data/.taskrc
+export TASKDATA=`pwd`/taskwarrior-testdata/data/.task
+```
+
+See taskwarrior documentation for more information.
+
+Use your favorite tool to generate a screenshot or a gif of the error.
 -->
 
 **Environment (please complete the following information):**
@@ -42,18 +57,3 @@ task --version
 **Additional context and information**
 
 <!-- Please provide detailed stacktraces, screenshot, etc here. If `taskwarrior-tui` crashes, you can set the RUST_BACKTRACE=1 for a detailed stacktrace. -->
-
-**Screenshots / Gif**
-
-You can use the following task list to reproduce your error:
-
-https://github.com/kdheepak/taskwarrior-testdata/tree/master/.task
-
-Clone the above repository and run the following lines in your shell.
-
-```bash
-export TASKRC=`pwd`/taskwarrior-testdata/data/.taskrc
-export TASKDATA=`pwd`/taskwarrior-testdata/data/.task
-```
-
-Use your favorite tool to generate a screenshot or a gif of the error.
