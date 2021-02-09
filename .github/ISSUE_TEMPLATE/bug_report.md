@@ -42,3 +42,18 @@ task --version
 **Additional context and information**
 
 <!-- Please provide detailed stacktraces, screenshot, etc here. If `taskwarrior-tui` crashes, you can set the RUST_BACKTRACE=1 for a detailed stacktrace. -->
+
+**Screenshots / Gif**
+
+You can use the following task list to reproduce your error:
+
+https://github.com/kdheepak/taskwarrior-testdata/tree/master/.task
+
+Clone the above repository and run the following lines in your shell.
+
+```bash
+export TASKRC=`pwd`/taskwarrior-testdata/data/.taskrc
+export TASKDATA=`pwd`/taskwarrior-testdata/data/.task
+```
+
+Use your favorite tool to generate a screenshot or a gif of the error.
