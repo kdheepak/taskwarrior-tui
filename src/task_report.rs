@@ -189,6 +189,8 @@ impl TaskReportTable {
                 Some(v) => vague_format_date_time(NaiveDateTime::new(v.date(), v.time()), Local::now().naive_utc()),
                 None => "".to_string(),
             },
+            "status.short" => task.status().to_string().chars().next().unwrap().to_string(),
+            "status" => task.status().to_string(),
             "project" => match task.project() {
                 Some(p) => p.to_string(),
                 None => "".to_string(),
