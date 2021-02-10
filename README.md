@@ -75,6 +75,14 @@ zinit load kdheepak/taskwarrior-tui
 
 ## Usage
 
+_Tip_: Alias `tt` to `taskwarrior-tui`.
+
+Add the following to your dotfiles (e.g. `~/.bashrc`, `~/.zshrc`):
+
+```
+alias tt="taskwarrior-tui"
+```
+
 ### See it in action:
 
 <details>
@@ -190,3 +198,9 @@ uda.taskwarrior-tui.style.calendar.title=black on rgb444
 ```
 
 </details>
+
+# Related
+
+For a similar effort, check out `vit`:
+
+- `vit`: <https://github.com/vit-project/vit>
