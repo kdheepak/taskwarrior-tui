@@ -505,7 +505,8 @@ impl TTApp {
         }
         let selected = self.task_table_state.selected().unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
-        let output = Command::new("task").arg("rc.color=off").arg(format!("{}", task_id)).output();
+        let task_uuid = self.tasks.lock().unwrap()[selected].uuid().clone();
+        let output = Command::new("task").arg("rc.color=off").arg(format!("{}", task_uuid)).output();
         if let Ok(output) = output {
             let data = String::from_utf8_lossy(&output.stdout);
             let p = Paragraph::new(Text::from(&data[..])).block(
@@ -978,8 +979,10 @@ impl TTApp {
         }
         let selected = self.task_table_state.selected().unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
+        let task_uuid = self.tasks.lock().unwrap()[selected].uuid().clone();
         let mut command = Command::new("task");
-        command.arg(format!("{}", task_id)).arg("modify");
+        command.arg("rc.confirmation=off");
+        command.arg(format!("{}", task_uuid)).arg("modify");
 
         let shell = self.modify.as_str().replace("'", "\\'");
 
@@ -990,19 +993,23 @@ impl TTApp {
                 }
                 let output = command.output();
                 match output {
-                    Ok(_) => {
-                        self.modify.update("", 0);
-                        Ok(())
+                    Ok(o) => {
+                        if o.status.success() {
+                            self.modify.update("", 0);
+                            Ok(())
+                        } else {
+                            Err(format!("Unable to modify task with uuid {}. Failed with status code {}", task_uuid, o.status.code().unwrap()))
+                        }
                     }
                     Err(_) => Err(format!(
                         "Cannot run `task {} modify {}`. Check documentation for more information",
-                        task_id, shell,
+                        task_uuid, shell,
                     )),
                 }
             }
             None => Err(format!(
                 "Unable to run `task {} modify`. Cannot shlex split `{}`",
-                task_id, shell,
+                task_uuid, shell,
             )),
         }
     }
@@ -1013,8 +1020,9 @@ impl TTApp {
         }
         let selected = self.task_table_state.selected().unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
+        let task_uuid = self.tasks.lock().unwrap()[selected].uuid().clone();
         let mut command = Command::new("task");
-        command.arg(format!("{}", task_id)).arg("annotate");
+        command.arg(format!("{}", task_uuid)).arg("annotate");
 
         let shell = self.command.as_str().replace("'", "\\'");
 
@@ -1025,19 +1033,23 @@ impl TTApp {
                 }
                 let output = command.output();
                 match output {
-                    Ok(_) => {
-                        self.command.update("", 0);
-                        Ok(())
+                    Ok(o) => {
+                        if o.status.success() {
+                            self.command.update("", 0);
+                            Ok(())
+                        } else {
+                            Err(format!("Unable to annotate task with uuid {}. Failed with status code {}", task_uuid, o.status.code().unwrap()))
+                        }
                     }
                     Err(_) => Err(format!(
                         "Cannot run `task {} annotate {}`. Check documentation for more information",
-                        task_id, shell
+                        task_uuid, shell
                     )),
                 }
             }
             None => Err(format!(
                 "Unable to run `task {} annotate`. Cannot shlex split `{}`",
-                task_id, shell
+                task_uuid, shell
             )),
         }
     }
@@ -1069,8 +1081,8 @@ impl TTApp {
         }
     }
 
-    pub fn task_virtual_tags(task_id: u64) -> Result<String, String> {
-        let output = Command::new("task").arg(format!("{}", task_id)).output();
+    pub fn task_virtual_tags(task_uuid: Uuid) -> Result<String, String> {
+        let output = Command::new("task").arg(format!("{}", task_uuid)).output();
 
         match output {
             Ok(output) => {
@@ -1086,12 +1098,12 @@ impl TTApp {
                 }
                 Err(format!(
                     "Cannot find any tags for `task {}`. Check documentation for more information",
-                    task_id
+                    task_uuid
                 ))
             }
             Err(_) => Err(format!(
                 "Cannot run `task {}`. Check documentation for more information",
-                task_id
+                task_uuid
             )),
         }
     }
@@ -1102,19 +1114,20 @@ impl TTApp {
         }
         let selected = self.task_table_state.selected().unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
+        let task_uuid = self.tasks.lock().unwrap()[selected].uuid().clone();
         let mut command = "start";
-        for tag in TTApp::task_virtual_tags(task_id)?.split(' ') {
+        for tag in TTApp::task_virtual_tags(task_uuid)?.split(' ') {
             if tag == "ACTIVE" {
                 command = "stop"
             }
         }
 
-        let output = Command::new("task").arg(format!("{}", task_id)).arg(command).output();
+        let output = Command::new("task").arg(format!("{}", task_uuid)).arg(command).output();
         match output {
             Ok(_) => Ok(()),
             Err(_) => Err(format!(
                 "Cannot run `task {}` for task `{}`. Check documentation for more information",
-                command, task_id,
+                command, task_uuid,
             )),
         }
     }
@@ -1125,17 +1138,18 @@ impl TTApp {
         }
         let selected = self.task_table_state.selected().unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
+        let task_uuid = self.tasks.lock().unwrap()[selected].uuid().clone();
 
         let output = Command::new("task")
             .arg("rc.confirmation=off")
-            .arg(format!("{}", task_id))
+            .arg(format!("{}", task_uuid))
             .arg("delete")
             .output();
         match output {
             Ok(_) => Ok(()),
             Err(_) => Err(format!(
                 "Cannot run `task delete` for task `{}`. Check documentation for more information",
-                task_id
+                task_uuid
             )),
         }
     }
@@ -1146,12 +1160,13 @@ impl TTApp {
         }
         let selected = self.task_table_state.selected().unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
-        let output = Command::new("task").arg(format!("{}", task_id)).arg("done").output();
+        let task_uuid = self.tasks.lock().unwrap()[selected].uuid().clone();
+        let output = Command::new("task").arg(format!("{}", task_uuid)).arg("done").output();
         match output {
             Ok(_) => Ok(()),
             Err(_) => Err(format!(
                 "Cannot run `task done` for task `{}`. Check documentation for more information",
-                task_id
+                task_uuid
             )),
         }
     }
@@ -1174,7 +1189,8 @@ impl TTApp {
         }
         let selected = self.task_table_state.selected().unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
-        let r = Command::new("task").arg(format!("{}", task_id)).arg("edit").spawn();
+        let task_uuid = self.tasks.lock().unwrap()[selected].uuid().clone();
+        let r = Command::new("task").arg(format!("{}", task_uuid)).arg("edit").spawn();
 
         match r {
             Ok(child) => {
@@ -1184,7 +1200,7 @@ impl TTApp {
                         if !output.status.success() {
                             Err(format!(
                                 "`task edit` for task `{}` failed. {}{}",
-                                task_id,
+                                task_uuid,
                                 String::from_utf8_lossy(&output.stdout),
                                 String::from_utf8_lossy(&output.stderr),
                             ))
@@ -1192,12 +1208,12 @@ impl TTApp {
                             Ok(())
                         }
                     }
-                    Err(err) => Err(format!("Cannot run `task edit` for task `{}`. {}", task_id, err)),
+                    Err(err) => Err(format!("Cannot run `task edit` for task `{}`. {}", task_uuid, err)),
                 }
             }
             _ => Err(format!(
                 "Cannot start `task edit` for task `{}`. Check documentation for more information",
-                task_id
+                task_uuid
             )),
         }
     }
