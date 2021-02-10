@@ -4,6 +4,7 @@
 [![](https://img.shields.io/github/license/kdheepak/taskwarrior-tui)](./LICENSE)
 [![](https://img.shields.io/github/v/release/kdheepak/taskwarrior-tui)](https://github.com/kdheepak/taskwarrior-tui/releases/latest)
 [![](https://img.shields.io/static/v1?label=platform&message=linux-32%20%7C%20linux-64%20%7C%20osx-64%20%7C%20win-32%20%7C%20win-64&color=lightgrey)](https://github.com/kdheepak/taskwarrior-tui/releases/latest)
+[![](https://img.shields.io/github/languages/top/kdheepak/taskwarrior-tui)](https://github.com/kdheepak/taskwarrior-tui)
 
 A Terminal User Interface for [Taskwarrior](https://taskwarrior.org/).
 
