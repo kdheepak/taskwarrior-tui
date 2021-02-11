@@ -7,8 +7,8 @@ use crossterm::{
 use tui::{backend::CrosstermBackend, Terminal};
 
 use std::io::{self, Write};
-use std::sync::{Arc};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::{sync::mpsc, thread, time::Duration};
 
 #[derive(Debug, Clone, Copy)]
