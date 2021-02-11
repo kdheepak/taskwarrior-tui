@@ -126,8 +126,7 @@ mod tests {
 
     #[test]
     fn test_main() {
-        let mut terminal = setup_terminal();
-        terminal.clear().unwrap();
+        let terminal = setup_terminal();
         // Setup event handlers
         let events = Events::with_config(EventConfig {
             tick_rate: Duration::from_millis(1000),
