@@ -176,7 +176,7 @@ impl Config {
         let s = s.trim_end();
         if s.contains("color") {
             let s = s.trim_start_matches("bright ");
-            let c = (s.as_bytes()[5] as char).to_digit(10).unwrap_or_default() as u8;
+            let c = s.trim_start_matches("color").parse::<u8>().unwrap_or_default();
             Color::Indexed(c)
         } else if s.contains("gray") {
             let s = s.trim_start_matches("bright ");
@@ -231,7 +231,7 @@ impl Config {
         let s = s.trim_end();
         if s.contains("color") {
             let s = s.trim_start_matches("bright ");
-            let c = (s.as_bytes()[5] as char).to_digit(10).unwrap_or_default() as u8;
+            let c = s.trim_start_matches("color").parse::<u8>().unwrap_or_default();
             Color::Indexed(c.wrapping_shl(8))
         } else if s.contains("gray") {
             let s = s.trim_start_matches("bright ");
