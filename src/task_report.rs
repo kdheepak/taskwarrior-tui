@@ -121,7 +121,7 @@ impl TaskReportTable {
 
         // get all tasks as their string representation
         for task in tasks {
-            if self.columns.len() == 0 {
+            if self.columns.is_empty() {
                 break;
             }
             let mut item = vec![];
@@ -246,7 +246,7 @@ impl TaskReportTable {
                     end += 1;
                 }
                 d.truncate(end);
-                if d != task.description().to_string() {
+                if d != *task.description() {
                     d = format!("{}…", d);
                 }
                 format!("{}{}", d, c)
@@ -258,10 +258,10 @@ impl TaskReportTable {
                     end += 1;
                 }
                 d.truncate(end);
-                if d != task.description().to_string() {
+                if d != *task.description() {
                     d = format!("{}…", d);
                 }
-                format!("{}", d)
+                d.to_string()
             }
             "description" => task.description().to_string(),
             "urgency" => match &task.urgency() {

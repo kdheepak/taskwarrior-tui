@@ -21,8 +21,14 @@ impl Help {
         Self {
             title: "Help".to_string(),
             scroll: 0,
-            text_height: TEXT.lines().map(|line| Spans::from(format!("{}\n", line))).count(),
+            text_height: TEXT.lines().count(),
         }
+    }
+}
+
+impl Default for Help {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

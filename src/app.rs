@@ -510,7 +510,7 @@ impl TTApp {
         }
         let selected = self.task_table_state.selected().unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
-        let task_uuid = self.tasks.lock().unwrap()[selected].uuid().clone();
+        let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
         let output = Command::new("task")
             .arg("rc.color=off")
             .arg(format!("{}", task_uuid))
@@ -571,8 +571,8 @@ impl TTApp {
 
     pub fn calculate_widths(
         &self,
-        tasks: &Vec<Vec<String>>,
-        headers: &Vec<String>,
+        tasks: &[Vec<String>],
+        headers: &[String],
         maximum_column_width: u16,
     ) -> Vec<usize> {
         // naive implementation of calculate widths
@@ -607,7 +607,7 @@ impl TTApp {
             widths[index] -= 1;
         }
 
-        return widths;
+        widths
     }
 
     fn draw_task_report(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
@@ -826,7 +826,7 @@ impl TTApp {
                     }
                 } else {
                     i.checked_add(self.task_report_height as usize)
-                        .unwrap_or(self.tasks.lock().unwrap().len())
+                        .unwrap_or_else(|| self.tasks.lock().unwrap().len())
                 }
             }
             None => 0,
@@ -847,7 +847,7 @@ impl TTApp {
                         0
                     }
                 } else {
-                    i.checked_sub(self.task_report_height as usize).unwrap_or(0)
+                    i.saturating_sub(self.task_report_height as usize)
                 }
             }
             None => 0,
@@ -863,7 +863,7 @@ impl TTApp {
 
         for (i, line) in data.trim().split('\n').enumerate() {
             let line = line.trim();
-            let mut s = line.split(" ");
+            let mut s = line.split(' ');
             let name = s.next().unwrap_or_default();
             let active = s.last().unwrap_or_default();
             let definition = line.replacen(name, "", 1);
@@ -893,7 +893,7 @@ impl TTApp {
         task.arg("rc.confirmation=off");
         task.arg("export");
 
-        let filter = if self.current_context_filter != "" {
+        let filter = if self.current_context_filter.is_empty() {
             let t = format!("{} {}", self.filter.as_str(), self.current_context_filter);
             t
         } else {
@@ -994,7 +994,7 @@ impl TTApp {
         }
         let selected = self.task_table_state.selected().unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
-        let task_uuid = self.tasks.lock().unwrap()[selected].uuid().clone();
+        let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
         let mut command = Command::new("task");
         command.arg("rc.confirmation=off");
         command.arg(format!("{}", task_uuid)).arg("modify");
@@ -1039,7 +1039,7 @@ impl TTApp {
         }
         let selected = self.task_table_state.selected().unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
-        let task_uuid = self.tasks.lock().unwrap()[selected].uuid().clone();
+        let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
         let mut command = Command::new("task");
         command.arg(format!("{}", task_uuid)).arg("annotate");
 
@@ -1111,7 +1111,7 @@ impl TTApp {
             Ok(output) => {
                 let data = String::from_utf8_lossy(&output.stdout);
                 for line in data.split('\n') {
-                    for prefix in vec!["Virtual tags", "Virtual"] {
+                    for prefix in &["Virtual tags", "Virtual"] {
                         if line.starts_with(prefix) {
                             let line = line.to_string();
                             let line = line.replace(prefix, "");
@@ -1137,7 +1137,7 @@ impl TTApp {
         }
         let selected = self.task_table_state.selected().unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
-        let task_uuid = self.tasks.lock().unwrap()[selected].uuid().clone();
+        let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
         let mut command = "start";
         for tag in TTApp::task_virtual_tags(task_uuid)?.split(' ') {
             if tag == "ACTIVE" {
@@ -1161,7 +1161,7 @@ impl TTApp {
         }
         let selected = self.task_table_state.selected().unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
-        let task_uuid = self.tasks.lock().unwrap()[selected].uuid().clone();
+        let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
 
         let output = Command::new("task")
             .arg("rc.confirmation=off")
@@ -1183,7 +1183,7 @@ impl TTApp {
         }
         let selected = self.task_table_state.selected().unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
-        let task_uuid = self.tasks.lock().unwrap()[selected].uuid().clone();
+        let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
         let output = Command::new("task").arg(format!("{}", task_uuid)).arg("done").output();
         match output {
             Ok(_) => Ok(()),
@@ -1212,7 +1212,7 @@ impl TTApp {
         }
         let selected = self.task_table_state.selected().unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
-        let task_uuid = self.tasks.lock().unwrap()[selected].uuid().clone();
+        let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
         let r = Command::new("task").arg(format!("{}", task_uuid)).arg("edit").spawn();
 
         match r {
@@ -1300,17 +1300,13 @@ impl TTApp {
             if task.annotations().is_some() {
                 add_tag(&mut task, "ANNOTATED".to_string());
             }
-            if task.tags().is_some() {
-                if !task
-                    .tags()
-                    .unwrap()
-                    .iter()
-                    .filter(|s| !self.task_report_table.virtual_tags.contains(s))
-                    .next()
-                    .is_none()
-                {
-                    add_tag(&mut task, "TAGGED".to_string());
-                }
+            if task.tags().is_some() && task
+                .tags()
+                .unwrap()
+                .iter()
+                .find(|s| !self.task_report_table.virtual_tags.contains(s))
+                .is_some() {
+                add_tag(&mut task, "TAGGED".to_string());
             }
             if task.mask().is_some() {
                 add_tag(&mut task, "TEMPLATE".to_string());
@@ -1368,10 +1364,7 @@ impl TTApp {
                 Key::Char('r') => self.update()?,
                 Key::End | Key::Char('G') => self.task_report_bottom(),
                 Key::Home => self.task_report_top(),
-                Key::Char('g') => match events.next()? {
-                    Event::Input(Key::Char('g')) => self.task_report_top(),
-                    _ => (),
-                },
+                Key::Char('g') => if let Event::Input(Key::Char('g')) = events.next()? { self.task_report_top() },
                 Key::Down | Key::Char('j') => self.task_report_next(),
                 Key::Up | Key::Char('k') => self.task_report_previous(),
                 Key::PageDown | Key::Char('J') => self.task_report_next_page(),
@@ -1473,13 +1466,13 @@ impl TTApp {
                 }
                 Key::Char('j') => {
                     self.help_popup.scroll = self.help_popup.scroll.checked_add(1).unwrap_or(0);
-                    let th = (self.help_popup.text_height as u16).checked_sub(1).unwrap_or(0);
+                    let th = (self.help_popup.text_height as u16).saturating_sub(1);
                     if self.help_popup.scroll > th {
                         self.help_popup.scroll = th
                     }
                 }
                 Key::Char('k') => {
-                    self.help_popup.scroll = self.help_popup.scroll.checked_sub(1).unwrap_or(0);
+                    self.help_popup.scroll = self.help_popup.scroll.saturating_sub(1);
                 }
                 _ => {}
             },

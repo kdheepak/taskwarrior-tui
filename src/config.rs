@@ -95,12 +95,12 @@ impl Config {
             uda_selection_dim: Self::get_uda_selection_dim(),
             uda_selection_blink: Self::get_uda_selection_blink(),
             uda_calendar_months_per_row: Self::get_uda_months_per_row(),
-            uda_style_calendar_title: Self::get_uda_style("calendar.title").unwrap_or(TColor::new(
+            uda_style_calendar_title: Self::get_uda_style("calendar.title").unwrap_or_else(|| TColor::new(
                 Color::Reset,
                 Color::Reset,
                 vec![],
             )),
-            uda_style_context_active: Self::get_uda_style("context.active").unwrap_or(TColor::new(
+            uda_style_context_active: Self::get_uda_style("context.active").unwrap_or_else(|| TColor::new(
                 Color::Reset,
                 Color::Reset,
                 vec![],
@@ -115,7 +115,7 @@ impl Config {
     fn get_uda_style(config: &str) -> Option<TColor> {
         let c = format!("uda.taskwarrior-tui.style.{}", config);
         let s = Self::get_config(&c);
-        if s == "" {
+        if s.is_empty() {
             None
         } else {
             Some(Self::get_tcolor(&s))
@@ -317,19 +317,11 @@ impl Config {
     }
 
     fn get_uda_task_report_show_info() -> bool {
-        let s = Self::get_config("uda.taskwarrior-tui.task-report.show-info");
-        match s.get_bool() {
-            Some(b) => b,
-            None => true,
-        }
+        Self::get_config("uda.taskwarrior-tui.task-report.show-info").get_bool().unwrap_or(true)
     }
 
     fn get_uda_task_report_looping() -> bool {
-        let s = Self::get_config("uda.taskwarrior-tui.task-report.looping");
-        match s.get_bool() {
-            Some(b) => b,
-            None => true,
-        }
+        Self::get_config("uda.taskwarrior-tui.task-report.looping").get_bool().unwrap_or(true)
     }
 
     fn get_uda_selection_indicator() -> String {
@@ -342,43 +334,23 @@ impl Config {
     }
 
     fn get_uda_selection_bold() -> bool {
-        let s = Self::get_config("uda.taskwarrior-tui.selection.bold");
-        match s.get_bool() {
-            Some(b) => b,
-            None => true,
-        }
+        Self::get_config("uda.taskwarrior-tui.selection.bold").get_bool().unwrap_or(true)
     }
 
     fn get_uda_selection_italic() -> bool {
-        let s = Self::get_config("uda.taskwarrior-tui.selection.italic");
-        match s.get_bool() {
-            Some(b) => b,
-            None => false,
-        }
+        Self::get_config("uda.taskwarrior-tui.selection.italic").get_bool().unwrap_or(false)
     }
 
     fn get_uda_selection_dim() -> bool {
-        let s = Self::get_config("uda.taskwarrior-tui.selection.dim");
-        match s.get_bool() {
-            Some(b) => b,
-            None => false,
-        }
+        Self::get_config("uda.taskwarrior-tui.selection.dim").get_bool().unwrap_or(false)
     }
 
     fn get_uda_selection_blink() -> bool {
-        let s = Self::get_config("uda.taskwarrior-tui.selection.blink");
-        match s.get_bool() {
-            Some(b) => b,
-            None => false,
-        }
+        Self::get_config("uda.taskwarrior-tui.selection.blink").get_bool().unwrap_or(false)
     }
 
     fn get_uda_months_per_row() -> usize {
-        let s = Self::get_config("uda.taskwarrior-tui.calendar.months-per-row");
-        match s.parse::<usize>() {
-            Ok(i) => i,
-            Err(e) => 4,
-        }
+        Self::get_config("uda.taskwarrior-tui.calendar.months-per-row").parse::<usize>().unwrap_or(4)
     }
 }
 
