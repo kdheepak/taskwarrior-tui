@@ -569,12 +569,7 @@ impl TTApp {
         style
     }
 
-    pub fn calculate_widths(
-        &self,
-        tasks: &[Vec<String>],
-        headers: &[String],
-        maximum_column_width: u16,
-    ) -> Vec<usize> {
+    pub fn calculate_widths(&self, tasks: &[Vec<String>], headers: &[String], maximum_column_width: u16) -> Vec<usize> {
         // naive implementation of calculate widths
         let mut widths = headers.iter().map(|s| s.len()).collect::<Vec<usize>>();
 
@@ -1300,12 +1295,14 @@ impl TTApp {
             if task.annotations().is_some() {
                 add_tag(&mut task, "ANNOTATED".to_string());
             }
-            if task.tags().is_some() && task
-                .tags()
-                .unwrap()
-                .iter()
-                .find(|s| !self.task_report_table.virtual_tags.contains(s))
-                .is_some() {
+            if task.tags().is_some()
+                && task
+                    .tags()
+                    .unwrap()
+                    .iter()
+                    .find(|s| !self.task_report_table.virtual_tags.contains(s))
+                    .is_some()
+            {
                 add_tag(&mut task, "TAGGED".to_string());
             }
             if task.mask().is_some() {
@@ -1364,7 +1361,11 @@ impl TTApp {
                 Key::Char('r') => self.update()?,
                 Key::End | Key::Char('G') => self.task_report_bottom(),
                 Key::Home => self.task_report_top(),
-                Key::Char('g') => if let Event::Input(Key::Char('g')) = events.next()? { self.task_report_top() },
+                Key::Char('g') => {
+                    if let Event::Input(Key::Char('g')) = events.next()? {
+                        self.task_report_top()
+                    }
+                }
                 Key::Down | Key::Char('j') => self.task_report_next(),
                 Key::Up | Key::Char('k') => self.task_report_previous(),
                 Key::PageDown | Key::Char('J') => self.task_report_next_page(),
