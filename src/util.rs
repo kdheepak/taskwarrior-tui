@@ -1,8 +1,8 @@
 use crossterm::{
+    cursor,
     event::{self, DisableMouseCapture, EnableMouseCapture},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen, Clear, ClearType},
-    cursor,
+    terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use tui::{backend::CrosstermBackend, Terminal};
 
@@ -129,7 +129,12 @@ impl Events {
             })
         };
 
-        Events { rx, tx, pause_stdin, pause_ticker }
+        Events {
+            rx,
+            tx,
+            pause_stdin,
+            pause_ticker,
+        }
     }
 
     /// Attempts to read an event.

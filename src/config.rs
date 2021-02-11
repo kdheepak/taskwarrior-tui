@@ -27,9 +27,7 @@ impl TColor {
     }
 
     pub fn new(fg: Color, bg: Color, modifiers: Vec<Modifier>) -> Self {
-        Self {
-            fg, bg, modifiers,
-        }
+        Self { fg, bg, modifiers }
     }
 }
 
@@ -60,7 +58,6 @@ impl TaskWarriorBool for str {
         }
     }
 }
-
 
 #[derive(Debug)]
 pub struct Config {
@@ -98,10 +95,16 @@ impl Config {
             uda_selection_dim: Self::get_uda_selection_dim(),
             uda_selection_blink: Self::get_uda_selection_blink(),
             uda_calendar_months_per_row: Self::get_uda_months_per_row(),
-            uda_style_calendar_title: Self::get_uda_style("calendar.title")
-                .unwrap_or(TColor::new(Color::Reset, Color::Reset, vec![])),
-            uda_style_context_active: Self::get_uda_style("context.active")
-                .unwrap_or(TColor::new(Color::Reset, Color::Reset, vec![])),
+            uda_style_calendar_title: Self::get_uda_style("calendar.title").unwrap_or(TColor::new(
+                Color::Reset,
+                Color::Reset,
+                vec![],
+            )),
+            uda_style_context_active: Self::get_uda_style("context.active").unwrap_or(TColor::new(
+                Color::Reset,
+                Color::Reset,
+                vec![],
+            )),
         })
     }
 

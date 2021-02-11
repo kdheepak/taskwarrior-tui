@@ -16,8 +16,8 @@ use clap::{App, Arg};
 use std::env;
 use std::error::Error;
 use std::io::Write;
-use std::time::Duration;
 use std::panic;
+use std::time::Duration;
 
 use crate::util::Key;
 use app::{AppMode, TTApp};
@@ -120,13 +120,12 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::util::{destruct_terminal, setup_terminal, Event, EventConfig, Events};
     use crate::util::Key;
+    use crate::util::{destruct_terminal, setup_terminal, Event, EventConfig, Events};
     use std::time::Duration;
 
     #[test]
     fn test_main() {
-
         let mut terminal = setup_terminal();
         terminal.clear().unwrap();
         // Setup event handlers
@@ -141,15 +140,15 @@ mod tests {
                     Event::Input(Key::Char('g')) => events.resume_ticker(),
                     _ => (),
                 }
-            },
+            }
             Event::Input(input) => {
                 print!("\r\n");
                 dbg!(input);
-            },
+            }
             Event::Tick => {
                 print!("\r\n");
                 dbg!("tick");
-            },
+            }
         };
 
         destruct_terminal();

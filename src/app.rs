@@ -4,8 +4,8 @@ use crate::context::Context;
 use crate::help::Help;
 use crate::table::{Row, Table, TableState};
 use crate::task_report::TaskReportTable;
-use crate::util::{Events, Event};
 use crate::util::Key;
+use crate::util::{Event, Events};
 
 use std::cmp::Ordering;
 use std::convert::TryInto;
@@ -29,7 +29,7 @@ use std::sync::{Arc, Mutex};
 use std::{sync::mpsc, thread, time::Duration};
 use tui::{
     backend::Backend,
-    layout::{Alignment, Constraint, Direction, Layout, Rect, Margin},
+    layout::{Alignment, Constraint, Direction, Layout, Margin, Rect},
     style::{Color, Modifier, Style},
     terminal::Frame,
     text::{Span, Spans, Text},
@@ -290,7 +290,7 @@ impl TTApp {
                 for (i, (_i, g)) in self.filter.as_str().grapheme_indices(true).enumerate() {
                     if _i == self.filter.pos() {
                         position = i;
-                        break
+                        break;
                     }
                 }
                 f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
@@ -307,7 +307,7 @@ impl TTApp {
                 for (i, (_i, g)) in self.modify.as_str().grapheme_indices(true).enumerate() {
                     if _i == self.modify.pos() {
                         position = i;
-                        break
+                        break;
                     }
                 }
                 f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
@@ -327,7 +327,7 @@ impl TTApp {
                 for (i, (_i, g)) in self.command.as_str().grapheme_indices(true).enumerate() {
                     if _i == self.command.pos() {
                         position = i;
-                        break
+                        break;
                     }
                 }
                 f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
@@ -344,7 +344,7 @@ impl TTApp {
                 for (i, (_i, g)) in self.command.as_str().grapheme_indices(true).enumerate() {
                     if _i == self.command.pos() {
                         position = i;
-                        break
+                        break;
                     }
                 }
                 f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
@@ -361,7 +361,7 @@ impl TTApp {
                 for (i, (_i, g)) in self.command.as_str().grapheme_indices(true).enumerate() {
                     if _i == self.command.pos() {
                         position = i;
-                        break
+                        break;
                     }
                 }
                 f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
@@ -381,7 +381,7 @@ impl TTApp {
                 for (i, (_i, g)) in self.command.as_str().grapheme_indices(true).enumerate() {
                     if _i == self.command.pos() {
                         position = i;
-                        break
+                        break;
                     }
                 }
                 f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
@@ -430,9 +430,13 @@ impl TTApp {
 
         let area = centered_rect(80, 50, f.size());
 
-        f.render_widget(Clear, area.inner(&Margin {
-            vertical: 0, horizontal: 0,
-        }));
+        f.render_widget(
+            Clear,
+            area.inner(&Margin {
+                vertical: 0,
+                horizontal: 0,
+            }),
+        );
 
         let (contexts, headers) = self.get_all_contexts();
 
@@ -467,9 +471,10 @@ impl TTApp {
                 Block::default()
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded)
-                    .title(Spans::from(vec![
-                        Span::styled("Context", Style::default().add_modifier(Modifier::BOLD)),
-                    ])),
+                    .title(Spans::from(vec![Span::styled(
+                        "Context",
+                        Style::default().add_modifier(Modifier::BOLD),
+                    )])),
             )
             .header_style(Style::default().add_modifier(Modifier::UNDERLINED))
             .highlight_style(highlight_style)
@@ -506,7 +511,10 @@ impl TTApp {
         let selected = self.task_table_state.selected().unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let task_uuid = self.tasks.lock().unwrap()[selected].uuid().clone();
-        let output = Command::new("task").arg("rc.color=off").arg(format!("{}", task_uuid)).output();
+        let output = Command::new("task")
+            .arg("rc.color=off")
+            .arg(format!("{}", task_uuid))
+            .output();
         if let Ok(output) = output {
             let data = String::from_utf8_lossy(&output.stdout);
             let p = Paragraph::new(Text::from(&data[..])).block(
@@ -561,8 +569,12 @@ impl TTApp {
         style
     }
 
-    pub fn calculate_widths(&self, tasks: &Vec<Vec<String>>, headers: &Vec<String>, maximum_column_width: u16) -> Vec<usize> {
-
+    pub fn calculate_widths(
+        &self,
+        tasks: &Vec<Vec<String>>,
+        headers: &Vec<String>,
+        maximum_column_width: u16,
+    ) -> Vec<usize> {
         // naive implementation of calculate widths
         let mut widths = headers.iter().map(|s| s.len()).collect::<Vec<usize>>();
 
@@ -576,7 +588,7 @@ impl TTApp {
             if header == "Description" || header == "Definition" {
                 // always give description or definition the most room to breath
                 widths[i] = maximum_column_width as usize;
-                break
+                break;
             }
         }
         for (i, header) in headers.iter().enumerate() {
@@ -590,12 +602,12 @@ impl TTApp {
         while (widths.iter().sum::<usize>() as u16) >= maximum_column_width - (headers.len()) as u16 {
             let index = widths.iter().position(|i| i == widths.iter().max().unwrap()).unwrap();
             if widths[index] == 1 {
-                break
+                break;
             }
             widths[index] -= 1;
         }
 
-        return widths
+        return widths;
     }
 
     fn draw_task_report(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
@@ -626,7 +638,7 @@ impl TTApp {
         for (i, header) in headers.iter().enumerate() {
             if header == "Description" || header == "Definition" {
                 self.task_report_table.description_width = widths[i] - 1;
-                break
+                break;
             }
         }
 
@@ -684,7 +696,11 @@ impl TTApp {
     }
 
     pub fn get_all_contexts(&self) -> (Vec<Vec<String>>, Vec<String>) {
-        let contexts = self.contexts.iter().map(|c| vec![c.name.clone(), c.description.clone(), c.active.clone()]).collect();
+        let contexts = self
+            .contexts
+            .iter()
+            .map(|c| vec![c.name.clone(), c.description.clone(), c.active.clone()])
+            .collect();
         let headers = vec!["Name".to_string(), "Description".to_string(), "Active".to_string()];
         (contexts, headers)
     }
@@ -715,7 +731,7 @@ impl TTApp {
                 } else {
                     i + 1
                 }
-            },
+            }
             None => 0,
         };
         self.context_table_state.select(Some(i));
@@ -737,10 +753,7 @@ impl TTApp {
 
     pub fn context_select(&mut self) {
         let i = self.context_table_state.selected().unwrap();
-        let output = Command::new("task")
-            .arg("context")
-            .arg(&self.contexts[i].name)
-            .output();
+        let output = Command::new("task").arg("context").arg(&self.contexts[i].name).output();
     }
 
     pub fn task_report_top(&mut self) {
@@ -856,16 +869,18 @@ impl TTApp {
             let definition = line.replacen(name, "", 1);
             let definition = definition.strip_suffix(active).unwrap();
             if i == 0 || i == 1 {
-                continue
+                continue;
             } else {
                 let context = Context::new(name.to_string(), definition.trim().to_string(), active.to_string());
                 self.contexts.push(context);
             }
         }
         if self.contexts.iter().any(|r| r.active != "no") {
-            self.contexts.insert(0, Context::new("none".to_string(), "".to_string(), "no".to_string()))
+            self.contexts
+                .insert(0, Context::new("none".to_string(), "".to_string(), "no".to_string()))
         } else {
-            self.contexts.insert(0, Context::new("none".to_string(), "".to_string(), "yes".to_string()))
+            self.contexts
+                .insert(0, Context::new("none".to_string(), "".to_string(), "yes".to_string()))
         }
 
         Ok(())
@@ -998,7 +1013,11 @@ impl TTApp {
                             self.modify.update("", 0);
                             Ok(())
                         } else {
-                            Err(format!("Unable to modify task with uuid {}. Failed with status code {}", task_uuid, o.status.code().unwrap()))
+                            Err(format!(
+                                "Unable to modify task with uuid {}. Failed with status code {}",
+                                task_uuid,
+                                o.status.code().unwrap()
+                            ))
                         }
                     }
                     Err(_) => Err(format!(
@@ -1038,7 +1057,11 @@ impl TTApp {
                             self.command.update("", 0);
                             Ok(())
                         } else {
-                            Err(format!("Unable to annotate task with uuid {}. Failed with status code {}", task_uuid, o.status.code().unwrap()))
+                            Err(format!(
+                                "Unable to annotate task with uuid {}. Failed with status code {}",
+                                task_uuid,
+                                o.status.code().unwrap()
+                            ))
                         }
                     }
                     Err(_) => Err(format!(
@@ -1348,7 +1371,7 @@ impl TTApp {
                 Key::Char('g') => match events.next()? {
                     Event::Input(Key::Char('g')) => self.task_report_top(),
                     _ => (),
-                }
+                },
                 Key::Down | Key::Char('j') => self.task_report_next(),
                 Key::Up | Key::Char('k') => self.task_report_previous(),
                 Key::PageDown | Key::Char('J') => self.task_report_next_page(),
@@ -1435,7 +1458,7 @@ impl TTApp {
             AppMode::TaskContextMenu => match input {
                 Key::Esc | Key::Char('q') => {
                     self.mode = AppMode::TaskReport;
-                },
+                }
                 Key::Down | Key::Char('j') => self.context_next(),
                 Key::Up | Key::Char('k') => self.context_previous(),
                 Key::Char('\n') => {
@@ -1641,6 +1664,5 @@ mod tests {
     fn test_app() {
         let app = TTApp::new().unwrap();
         assert!(app.task_by_index(0).is_some())
-
     }
 }

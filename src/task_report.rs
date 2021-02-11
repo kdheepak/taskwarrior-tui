@@ -122,7 +122,7 @@ impl TaskReportTable {
         // get all tasks as their string representation
         for task in tasks {
             if self.columns.len() == 0 {
-                break
+                break;
             }
             let mut item = vec![];
             for name in &self.columns {
@@ -231,7 +231,7 @@ impl TaskReportTable {
                     None => format!(""),
                 };
                 format!("{} {}", task.description().to_string(), c)
-            },
+            }
             "description.truncated_count" => {
                 let c = match task.annotations() {
                     Some(a) => format!(" [{}]", a.iter().count()),
@@ -242,7 +242,7 @@ impl TaskReportTable {
                 if self.description_width >= c.len() {
                     end = self.description_width - c.len();
                 }
-                while end < d.len() && !d.is_char_boundary(end)  {
+                while end < d.len() && !d.is_char_boundary(end) {
                     end += 1;
                 }
                 d.truncate(end);
@@ -250,7 +250,7 @@ impl TaskReportTable {
                     d = format!("{}…", d);
                 }
                 format!("{}{}", d, c)
-            },
+            }
             "description.truncated" => {
                 let mut d = task.description().to_string();
                 let mut end = self.description_width;
@@ -262,7 +262,7 @@ impl TaskReportTable {
                     d = format!("{}…", d);
                 }
                 format!("{}", d)
-            },
+            }
             "description" => task.description().to_string(),
             "urgency" => match &task.urgency() {
                 Some(f) => format!("{:.2}", *f),
@@ -279,7 +279,7 @@ impl TaskReportTable {
                     UDAValue::F64(f) => f.to_string(),
                     UDAValue::U64(u) => u.to_string(),
                 }
-            },
+            }
         }
     }
 }

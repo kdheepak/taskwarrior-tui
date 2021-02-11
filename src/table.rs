@@ -14,9 +14,9 @@ use tui::{
     style::Style,
     widgets::{Block, StatefulWidget, Widget},
 };
-use unicode_width::UnicodeWidthStr;
 use unicode_segmentation::Graphemes;
 use unicode_segmentation::UnicodeSegmentation;
+use unicode_width::UnicodeWidthStr;
 
 #[derive(Debug, Clone)]
 pub struct TableState {
@@ -278,9 +278,21 @@ where
         let mut index = 0;
         if y < table_area.bottom() {
             for (w, t) in solved_widths.iter().zip(self.header.by_ref()) {
-                buf.set_stringn(x, y, format!("{symbol:>width$}", symbol=" ", width=*w as usize), *w as usize, self.header_style);
+                buf.set_stringn(
+                    x,
+                    y,
+                    format!("{symbol:>width$}", symbol = " ", width = *w as usize),
+                    *w as usize,
+                    self.header_style,
+                );
                 if t.to_string() == "ID" {
-                    buf.set_stringn(x, y, format!("{symbol:>width$}", symbol=t, width=*w as usize), *w as usize, self.header_style);
+                    buf.set_stringn(
+                        x,
+                        y,
+                        format!("{symbol:>width$}", symbol = t, width = *w as usize),
+                        *w as usize,
+                        self.header_style,
+                    );
                     header_index = index;
                 } else {
                     buf.set_stringn(x, y, format!("{}", t), *w as usize, self.header_style);
@@ -335,9 +347,19 @@ where
                             style,
                         );
                         if c == header_index {
-                            format!("{symbol}{elt:>width$}", symbol = symbol, elt = elt, width = *w as usize - symbol.to_string().graphemes(true).count())
+                            format!(
+                                "{symbol}{elt:>width$}",
+                                symbol = symbol,
+                                elt = elt,
+                                width = *w as usize - symbol.to_string().graphemes(true).count()
+                            )
                         } else {
-                            format!("{symbol}{elt:<width$}", symbol = symbol, elt = elt, width = *w as usize - symbol.to_string().graphemes(true).count())
+                            format!(
+                                "{symbol}{elt:<width$}",
+                                symbol = symbol,
+                                elt = elt,
+                                width = *w as usize - symbol.to_string().graphemes(true).count()
+                            )
                         }
                     } else {
                         buf.set_stringn(
