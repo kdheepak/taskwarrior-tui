@@ -1,0 +1,266 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macOS-latest
+            target: x86_64-apple-darwin
+            rust_flags: ''
+            features: ''
+            binary_postfix: ''
+            upx_args: --best
+            strip: true
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            rust_flags: ''
+            features: ''
+            binary_postfix: ''
+            upx_args: --best --lzma
+            strip: true
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            rust_flags: ''
+            features: ''
+            binary: 'taskwarrior-tui-x86_64-unknown-linux-musl'
+            upx_args: --best --lzma
+            strip: true
+          - os: windows-latest
+            target: x86_64-pc-windows-gnu
+            rust_flags: -C target-feature=+crt-static
+            features: ''
+            binary_postfix: '.exe'
+            upx_args: -9
+            strip: false
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            rust_flags: -C target-feature=+crt-static
+            features: ''
+            binary_postfix: '.exe'
+            upx_args: -9
+            strip: false
+          - os: windows-latest
+            target: i686-pc-windows-msvc
+            rust_flags: -C target-feature=+crt-static
+            features: ''
+            binary_postfix: '.exe'
+            upx_args: -9
+            strip: false
+    env:
+      RUSTFLAGS: ${{ matrix.rust_flags }}
+      MACOSX_DEPLOYMENT_TARGET: 10.7
+    steps:
+      - uses: actions/checkout@master
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+          default: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release ${{matrix.features}} --target=${{ matrix.target }}
+      - name: Compress binaries
+        uses: svenstaro/upx-action@v2
+        with:
+          file: target/${{ matrix.target }}/release/taskwarrior-tui${{ matrix.binary_postfix }}
+          args: ${{ matrix.upx_args }}
+          strip: ${{ matrix.strip }}
+      - name: Packaging binary
+        shell: bash
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar czvf taskwarrior-tui-${{ matrix.target }}.tar.gz taskwarrior-tui${{ matrix.binary_postfix }}
+          if [[ ${{ runner.os }} == 'Windows' ]]; then
+            certutil -hashfile taskwarrior-tui-${{ matrix.target }}.tar.gz sha256 | grep -E [A-Fa-f0-9]{64} > taskwarrior-tui-${{ matrix.target }}.sha256
+          else
+            shasum -a 256 taskwarrior-tui-${{ matrix.target }}.tar.gz > taskwarrior-tui-${{ matrix.target }}.sha256
+          fi
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: taskwarrior-tui
+          path: target/${{ matrix.target }}/release/taskwarrior-tui-${{ matrix.target }}.tar.gz
+      - name: Releasing assets
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            target/${{ matrix.target }}/release/taskwarrior-tui-${{ matrix.target }}.tar.gz
+            target/${{ matrix.target }}/release/taskwarrior-tui-${{ matrix.target }}.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    name: Publishing to Cargo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+  homebrew:
+    name: Bump Homebrew formula
+    runs-on: macos-latest
+    steps:
+      - name: Update Homebrew formula
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: dawidd6/action-homebrew-bump-formula@v3
+        with:
+          token: ${{secrets.HOMEBREW_TOKEN}}
+          formula: taskwarrior-tui
+
+  deb:
+    name: Publish deb package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v2
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+      - name: Install cargo-deb
+        run: cargo install cargo-deb
+      - name: Build deb package
+        run: cargo deb -p taskwarrior-tui -o target/debian/taskwarrior-tui.deb
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: taskwarrior-tui
+          path: target/debian/taskwarrior-tui.deb
+      - name: Releasing assets
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            target/debian/*.deb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  rpm:
+    name: Publish rpm package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v2
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+      - name: Install rpm
+        run: sudo apt-get install rpm
+      - name: Install cargo-rpm
+        run: cargo install cargo-rpm
+      - name: Build rpm package
+        run: cargo rpm build
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: taskwarrior-tui
+          path: target/release/rpmbuild/RPMS/x86_64/taskwarrior-tui-*.x86_64.rpm
+      - name: Releasing assets
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            target/release/rpmbuild/RPMS/x86_64/taskwarrior-tui-*.x86_64.rpm
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  aur:
+    name: Publish aur package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v2
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+      - name: Install cargo-aur
+        run: cargo install cargo-aur
+      - name: Build aur package
+        run: cargo aur
+
+  appimage:
+    name: Publish appimage package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+      - name: Build AppImage
+        run: |
+          wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          chmod +x linuxdeploy-x86_64.AppImage
+          mkdir -p AppDir/usr/bin
+          cp target/release/taskwarrior-tui AppDir/usr/bin/taskwarrior-tui
+          cat <<EOF > AppDir/taskwarrior-tui.desktop
+          [Desktop Entry]
+          Name=taskwarrior-tui
+          Exec=taskwarrior-tui
+          Icon=icon
+          Type=Application
+          Categories=Utility;
+          EOF
+          wget https://user-images.githubusercontent.com/1813121/97495331-1dda4a80-192d-11eb-94eb-c276f538cfa8.png
+          mv 97495331-1dda4a80-192d-11eb-94eb-c276f538cfa8.png AppDir/icon.png
+          ./linuxdeploy-x86_64.AppImage -d AppDir/taskwarrior-tui.desktop -i AppDir/icon.png --appdir AppDir --output appimage
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: taskwarrior-tui
+          path: taskwarrior-tui-*.AppImage
+      - name: Releasing assets
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            taskwarrior-tui-*.AppImage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  snap:
+    name: Push to snap
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v2
+
+      - name: Install Snapcraft
+        uses: samuelmeuli/action-snapcraft@v1
+        with:
+          use_lxd: true
+          snapcraft_token: ${{ secrets.SNAPCRAFT_TOKEN }}
+
+      - name: Install review tools
+        run: sudo snap install review-tools
+
+      - name: Build snap
+        run: sg lxd -c 'snapcraft --use-lxd'
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: taskwarrior-tui
+          path: taskwarrior-tui_*.snap
+
+      - name: Releasing assets
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            taskwarrior-tui_*.snap
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish snap
+        run: snapcraft upload ./taskwarrior-tui_*.snap
