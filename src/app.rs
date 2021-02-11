@@ -1655,7 +1655,6 @@ mod tests {
 
     #[test]
     fn test_app() {
-        let app = TTApp::new().unwrap();
-        assert!(app.task_by_index(0).is_some())
+        let app = TTApp::new();
     }
 }
