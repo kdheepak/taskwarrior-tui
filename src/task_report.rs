@@ -74,6 +74,7 @@ impl TaskReportTable {
             "PRIORITY",
             "PROJECT",
             "LATEST",
+            "RECURRING",
         ];
         let mut task_report_table = Self {
             labels: vec![],
@@ -178,6 +179,10 @@ impl TaskReportTable {
         match attribute {
             "id" => task.id().unwrap_or_default().to_string(),
             "due.relative" => match task.due() {
+                Some(v) => vague_format_date_time(Local::now().naive_utc(), NaiveDateTime::new(v.date(), v.time())),
+                None => "".to_string(),
+            },
+            "until.remaining" => match task.until() {
                 Some(v) => vague_format_date_time(Local::now().naive_utc(), NaiveDateTime::new(v.date(), v.time())),
                 None => "".to_string(),
             },

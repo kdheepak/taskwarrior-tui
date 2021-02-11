@@ -545,11 +545,38 @@ impl TTApp {
         }
     }
 
+    fn task_by_id(&self, id: u64) -> Option<Task> {
+        let tasks = &self.tasks.lock().unwrap();
+        let m = tasks.iter().find(|t| t.id().unwrap() == id);
+        match m {
+            Some(v) => Some(v.clone()),
+            None => None,
+        }
+    }
+
     fn style_for_task(&self, task: &Task) -> Style {
         let virtual_tag_names_in_precedence = &self.config.rule_precedence_color;
 
+        let virtual_tag_names_in_precedence = virtual_tag_names_in_precedence.iter().filter(|n| *n != "tagged");
+
         let mut style = Style::default();
 
+        if task
+            .tags()
+            .unwrap_or(&vec![])
+            .contains(&"tagged".to_string().replace(".", "").to_uppercase())
+        {
+            let color_tag_name = "color.tagged";
+            // dbg!(&color_tag_name);
+            let c = self.config.color.get(color_tag_name).cloned().unwrap_or_default();
+            style = style.fg(c.fg).bg(c.bg);
+            for modifier in c.modifiers {
+                style = style.add_modifier(modifier);
+            }
+        }
+
+        // dbg!(task.tags());
+        // dbg!(&virtual_tag_names_in_precedence);
         for tag_name in virtual_tag_names_in_precedence {
             if task
                 .tags()
@@ -557,12 +584,12 @@ impl TTApp {
                 .contains(&tag_name.to_string().replace(".", "").to_uppercase())
             {
                 let color_tag_name = format!("color.{}", tag_name);
+                // dbg!(&color_tag_name);
                 let c = self.config.color.get(&color_tag_name).cloned().unwrap_or_default();
                 style = style.fg(c.fg).bg(c.bg);
                 for modifier in c.modifiers {
                     style = style.add_modifier(modifier);
                 }
-                break;
             }
         }
 
@@ -1315,6 +1342,9 @@ impl TTApp {
             }
             if task.due().is_some() {
                 add_tag(&mut task, "DUE".to_string());
+            }
+            if task.recur().is_some() {
+                add_tag(&mut task, "RECURRING".to_string());
             }
             if let Some(d) = task.due() {
                 let status = task.status();
