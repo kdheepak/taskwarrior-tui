@@ -134,28 +134,24 @@ mod tests {
             tick_rate: Duration::from_millis(1000),
         });
 
-        loop {
+        match events.next().unwrap() {
+            Event::Input(Key::Char('g')) => {
+                events.pause_ticker();
+                match events.next().unwrap() {
+                    Event::Input(Key::Char('g')) => events.resume_ticker(),
+                    _ => (),
+                }
+            },
+            Event::Input(input) => {
+                print!("\r\n");
+                dbg!(input);
+            },
+            Event::Tick => {
+                print!("\r\n");
+                dbg!("tick");
+            },
+        };
 
-            match events.next().unwrap() {
-                Event::Input(Key::Char('q')) => break,
-                Event::Input(Key::Char('g')) => {
-                    events.pause_ticker();
-                    match events.next().unwrap() {
-                        Event::Input(Key::Char('g')) => events.resume_ticker(),
-                        _ => (),
-                    }
-                },
-                Event::Input(input) => {
-                    print!("\r\n");
-                    dbg!(input);
-                },
-                Event::Tick => {
-                    print!("\r\n");
-                    dbg!("tick");
-                },
-            };
-
-        }
         destruct_terminal();
     }
 }

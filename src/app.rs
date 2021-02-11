@@ -1635,38 +1635,12 @@ pub fn add_tag(task: &mut Task, tag: String) {
 
 #[cfg(test)]
 mod tests {
-    use crate::app::TTApp;
-    use crate::util::setup_terminal;
-    use std::io::stdin;
-
-    use std::{sync::mpsc, thread, time::Duration};
-    use task_hookrs::import::import;
-    use task_hookrs::task::Task;
+    use super::*;
 
     #[test]
     fn test_app() {
         let app = TTApp::new().unwrap();
+        assert!(app.task_by_index(0).is_some())
 
-        let (contexts, headers) = app.get_all_contexts();
-        dbg!(contexts);
-        dbg!(headers);
-
-        //println!("{:?}", app.task_report_columns);
-        //println!("{:?}", app.task_report_labels);
-
-        // let (t, h, c) = app.get_task_report();
-        // app.next();
-        // app.next();
-        // app.modify = "Cannot add this string ' because it has a single quote".to_string();
-        // println!("{}", app.modify);
-        // // if let Ok(tasks) = import(stdin()) {
-        // //     for task in tasks {
-        // //         println!("Task: {}, entered {:?} is {} -> {}",
-        // //                   task.uuid(),
-        // //                   task.entry(),
-        // //                   task.status(),
-        // //                   task.description());
-        // //     }
-        // // }
     }
 }
