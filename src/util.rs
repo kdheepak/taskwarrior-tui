@@ -78,7 +78,7 @@ impl Events {
             let pause_stdin = pause_stdin.clone();
             thread::spawn(move || {
                 loop {
-                    if pause_stdin.load(Ordering::Relaxed) {
+                    if pause_stdin.load(Ordering::SeqCst) {
                         thread::sleep(Duration::from_millis(250));
                         continue;
                     }
@@ -120,7 +120,7 @@ impl Events {
             thread::spawn(move || loop {
                 // print!("\r\n");
                 // dbg!(*pause_ticker.lock().unwrap());
-                while pause_ticker.load(Ordering::Relaxed) {
+                while pause_ticker.load(Ordering::SeqCst) {
                     thread::sleep(Duration::from_millis(250));
                 }
                 if tx.send(Event::Tick).is_err() {
@@ -145,24 +145,23 @@ impl Events {
     }
 
     pub fn pause_ticker(&self) {
-        self.pause_ticker.swap(true, Ordering::Relaxed);
+        self.pause_ticker.swap(true, Ordering::SeqCst);
     }
 
     pub fn resume_ticker(&self) {
-        self.pause_ticker.swap(false, Ordering::Relaxed);
+        self.pause_ticker.swap(false, Ordering::SeqCst);
     }
 
     pub fn pause_event_loop(&self) {
-        self.pause_stdin.swap(true, Ordering::Relaxed);
+        self.pause_stdin.swap(true, Ordering::SeqCst);
     }
 
     pub fn resume_event_loop(&self) {
-        self.pause_stdin.swap(false, Ordering::Relaxed);
+        self.pause_stdin.swap(false, Ordering::SeqCst);
     }
 
     pub fn pause_key_capture(&self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
         self.pause_event_loop();
-        std::thread::sleep(std::time::Duration::from_millis(50));
         disable_raw_mode().unwrap();
         execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture).unwrap();
         terminal.show_cursor().unwrap();
@@ -171,7 +170,6 @@ impl Events {
     pub fn resume_key_capture(&self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
         enable_raw_mode().unwrap();
         execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture).unwrap();
-        std::thread::sleep(std::time::Duration::from_millis(50));
         self.resume_event_loop();
         terminal.resize(terminal.size().unwrap()).unwrap();
     }
