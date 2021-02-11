@@ -25,6 +25,10 @@ Keybindings for task report:
 
     K: {selected-=pageheight}            - Move page up in task report
 
+    gg: {selected=last}                  - Go to top
+
+    G: {selected=last}                   - Go to bottom
+
     l: task log {string}                 - Log new task
 
     m: task {selected} modify {string}   - Modify selected task

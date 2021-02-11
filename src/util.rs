@@ -1,13 +1,14 @@
 use crossterm::{
+    cursor,
     event::{self, DisableMouseCapture, EnableMouseCapture},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen, Clear, ClearType},
-    cursor,
+    terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use tui::{backend::CrosstermBackend, Terminal};
 
 use std::io::{self, Write};
-use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::{sync::mpsc, thread, time::Duration};
 
 #[derive(Debug, Clone, Copy)]
@@ -61,8 +62,8 @@ pub fn destruct_terminal() {
 pub struct Events {
     pub rx: mpsc::Receiver<Event<Key>>,
     pub tx: mpsc::Sender<Event<Key>>,
-    pub pause_stdin: Arc<Mutex<bool>>,
-    pub pause_ticker: Arc<Mutex<bool>>,
+    pub pause_stdin: Arc<AtomicBool>,
+    pub pause_ticker: Arc<AtomicBool>,
 }
 
 impl Events {
@@ -70,14 +71,14 @@ impl Events {
     pub fn with_config(config: EventConfig) -> Events {
         use crossterm::event::{KeyCode::*, KeyModifiers};
         let (tx, rx) = mpsc::channel();
-        let pause_stdin = Arc::new(Mutex::new(false));
-        let pause_ticker = Arc::new(Mutex::new(false));
+        let pause_stdin = Arc::new(AtomicBool::new(false));
+        let pause_ticker = Arc::new(AtomicBool::new(false));
         let _input_handle = {
             let tx = tx.clone();
             let pause_stdin = pause_stdin.clone();
             thread::spawn(move || {
                 loop {
-                    if *pause_stdin.lock().unwrap() {
+                    if pause_stdin.load(Ordering::Relaxed) {
                         thread::sleep(Duration::from_millis(250));
                         continue;
                     }
@@ -119,7 +120,7 @@ impl Events {
             thread::spawn(move || loop {
                 // print!("\r\n");
                 // dbg!(*pause_ticker.lock().unwrap());
-                while *pause_ticker.lock().unwrap() {
+                while pause_ticker.load(Ordering::Relaxed) {
                     thread::sleep(Duration::from_millis(250));
                 }
                 if tx.send(Event::Tick).is_err() {
@@ -129,7 +130,12 @@ impl Events {
             })
         };
 
-        Events { rx, tx, pause_stdin, pause_ticker }
+        Events {
+            rx,
+            tx,
+            pause_stdin,
+            pause_ticker,
+        }
     }
 
     /// Attempts to read an event.
@@ -139,21 +145,19 @@ impl Events {
     }
 
     pub fn pause_ticker(&self) {
-        *self.pause_ticker.lock().unwrap() = true;
-        // print!("\r\n");
-        // dbg!(*self.pause_ticker.lock().unwrap());
+        self.pause_ticker.swap(true, Ordering::Relaxed);
     }
 
     pub fn resume_ticker(&self) {
-        *self.pause_ticker.lock().unwrap() = false;
+        self.pause_ticker.swap(false, Ordering::Relaxed);
     }
 
     pub fn pause_event_loop(&self) {
-        *self.pause_stdin.lock().unwrap() = true;
+        self.pause_stdin.swap(true, Ordering::Relaxed);
     }
 
     pub fn resume_event_loop(&self) {
-        *self.pause_stdin.lock().unwrap() = false;
+        self.pause_stdin.swap(false, Ordering::Relaxed);
     }
 
     pub fn pause_key_capture(&self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {

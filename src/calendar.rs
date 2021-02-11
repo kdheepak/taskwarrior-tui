@@ -129,7 +129,7 @@ impl<'a> Widget for Calendar<'a> {
             })
             .collect();
 
-        let mut startm = 0 as usize;
+        let mut startm = 0_usize;
         if self.months_per_row > area.width as usize / 8 / 3 || self.months_per_row == 0 {
             self.months_per_row = area.width as usize / 8 / 3;
         }
@@ -152,11 +152,10 @@ impl<'a> Widget for Calendar<'a> {
         loop {
             let endm = std::cmp::min(startm + self.months_per_row, 12);
             let mut x = area.x + startx;
-            for c in startm..endm {
+            for (c, d) in days.iter_mut().enumerate().take(endm).skip(startm) {
                 if c > startm {
                     x += 1;
                 }
-                let d = &mut days[c];
                 let m = d.0.month() as usize;
                 let s = format!("{:^20}", month_names[m - 1]);
                 let style = Style::default().bg(self.title_background_color);
@@ -169,25 +168,15 @@ impl<'a> Widget for Calendar<'a> {
             }
             y += 1;
             let mut x = area.x + startx;
-            for c in startm..endm {
-                let d = &mut days[c];
+            for d in days.iter_mut().take(endm).skip(startm) {
                 let m = d.0.month() as usize;
                 let style = Style::default().bg(self.title_background_color);
-                if m == today.month() as usize && self.year + year as i32 == today.year() {
-                    buf.set_string(
-                        x as u16,
-                        y,
-                        "Su Mo Tu We Th Fr Sa",
-                        style.add_modifier(Modifier::UNDERLINED),
-                    );
-                } else {
-                    buf.set_string(
-                        x as u16,
-                        y,
-                        "Su Mo Tu We Th Fr Sa",
-                        style.add_modifier(Modifier::UNDERLINED),
-                    );
-                }
+                buf.set_string(
+                    x as u16,
+                    y,
+                    "Su Mo Tu We Th Fr Sa",
+                    style.add_modifier(Modifier::UNDERLINED),
+                );
                 x += 21 + 1;
             }
             y += 1;
