@@ -1300,8 +1300,7 @@ impl TTApp {
                     .tags()
                     .unwrap()
                     .iter()
-                    .find(|s| !self.task_report_table.virtual_tags.contains(s))
-                    .is_some()
+                    .any(|s| !self.task_report_table.virtual_tags.contains(s))
             {
                 add_tag(&mut task, "TAGGED".to_string());
             }

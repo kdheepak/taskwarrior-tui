@@ -261,7 +261,7 @@ impl TaskReportTable {
                 if d != *task.description() {
                     d = format!("{}…", d);
                 }
-                d.to_string()
+                d
             }
             "description" => task.description().to_string(),
             "urgency" => match &task.urgency() {
