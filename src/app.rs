@@ -554,7 +554,6 @@ impl TTApp {
         }
     }
 
-
     fn style_for_task(&self, task: &Task) -> Style {
         let virtual_tag_names_in_precedence = &self.config.rule_precedence_color;
 
@@ -565,14 +564,15 @@ impl TTApp {
         if task
             .tags()
             .unwrap_or(&vec![])
-            .contains(&"tagged".to_string().replace(".", "").to_uppercase()) {
-                let color_tag_name = "color.tagged";
-                // dbg!(&color_tag_name);
-                let c = self.config.color.get(color_tag_name).cloned().unwrap_or_default();
-                style = style.fg(c.fg).bg(c.bg);
-                for modifier in c.modifiers {
-                    style = style.add_modifier(modifier);
-                }
+            .contains(&"tagged".to_string().replace(".", "").to_uppercase())
+        {
+            let color_tag_name = "color.tagged";
+            // dbg!(&color_tag_name);
+            let c = self.config.color.get(color_tag_name).cloned().unwrap_or_default();
+            style = style.fg(c.fg).bg(c.bg);
+            for modifier in c.modifiers {
+                style = style.add_modifier(modifier);
+            }
         }
 
         // dbg!(task.tags());
@@ -1687,5 +1687,4 @@ mod tests {
     fn test_app() {
         let app = TTApp::new();
     }
-
 }
