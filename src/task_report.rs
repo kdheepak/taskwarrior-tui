@@ -1,4 +1,5 @@
 use chrono::{Datelike, Local, NaiveDate, NaiveDateTime, TimeZone};
+use itertools::join;
 use std::error::Error;
 use std::process::Command;
 use task_hookrs::task::Task;
@@ -127,7 +128,7 @@ impl TaskReportTable {
             }
             let mut item = vec![];
             for name in &self.columns {
-                let s = self.get_string_attribute(name, &task);
+                let s = self.get_string_attribute(name, &task, tasks);
                 item.push(s);
             }
             self.tasks.push(item)
@@ -175,7 +176,7 @@ impl TaskReportTable {
         (tasks, headers)
     }
 
-    pub fn get_string_attribute(&self, attribute: &str, task: &Task) -> String {
+    pub fn get_string_attribute(&self, attribute: &str, task: &Task, tasks: &[Task]) -> String {
         match attribute {
             "id" => task.id().unwrap_or_default().to_string(),
             "due.relative" => match task.due() {
@@ -206,6 +207,20 @@ impl TaskReportTable {
                         "".to_string()
                     } else {
                         format!("{}", v.len())
+                    }
+                }
+                None => "".to_string(),
+            },
+            "depends" => match task.depends() {
+                Some(v) => {
+                    if v.is_empty() {
+                        "".to_string()
+                    } else {
+                        let mut dt = vec![];
+                        for u in v {
+                            dt.push(tasks.iter().find(|t| t.uuid() == u).unwrap().id().unwrap());
+                        }
+                        join(dt.iter().map(|i| i.to_string()), " ")
                     }
                 }
                 None => "".to_string(),
