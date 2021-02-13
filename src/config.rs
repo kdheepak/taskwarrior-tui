@@ -63,7 +63,7 @@ impl TaskWarriorBool for str {
 pub struct Config {
     pub enabled: bool,
     pub color: HashMap<String, TColor>,
-    pub default_filter: String,
+    pub filter: String,
     pub obfuscate: bool,
     pub print_empty_columns: bool,
     pub rule_precedence_color: Vec<String>,
@@ -87,7 +87,7 @@ impl Config {
             obfuscate: bool_collection.get("obfuscate").cloned().unwrap_or(false),
             print_empty_columns: bool_collection.get("print_empty_columns").cloned().unwrap_or(false),
             color: Self::get_color_collection()?,
-            default_filter: Self::get_default_filter(),
+            filter: Self::get_filter(),
             rule_precedence_color: Self::get_rule_precedence_color(),
             uda_task_report_show_info: Self::get_uda_task_report_show_info(),
             uda_task_report_looping: Self::get_uda_task_report_looping(),
@@ -312,7 +312,7 @@ impl Config {
             .collect::<Vec<_>>()
     }
 
-    fn get_default_filter() -> String {
+    fn get_filter() -> String {
         Self::get_config("report.next.filter")
     }
 
