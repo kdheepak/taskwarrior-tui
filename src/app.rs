@@ -169,7 +169,7 @@ impl TTApp {
             help_popup: Help::new(),
             contexts: vec![],
         };
-        for c in "status:pending ".chars() {
+        for c in app.config.default_filter.chars() {
             app.filter.insert(c, 1);
         }
         app.get_context()?;
