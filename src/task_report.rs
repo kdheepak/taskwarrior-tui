@@ -218,7 +218,10 @@ impl TaskReportTable {
                     } else {
                         let mut dt = vec![];
                         for u in v {
-                            dt.push(tasks.iter().find(|t| t.uuid() == u).unwrap().id().unwrap());
+                            match tasks.iter().find(|t| t.uuid() == u) {
+                                Some(t) => dt.push(t.id().unwrap()),
+                                None => (),
+                            }
                         }
                         join(dt.iter().map(|i| i.to_string()), " ")
                     }
