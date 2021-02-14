@@ -1,4 +1,5 @@
 use crate::calendar::Calendar;
+use crate::config;
 use crate::config::Config;
 use crate::context::Context;
 use crate::help::Help;
@@ -574,23 +575,26 @@ impl TTApp {
                         .get(&format!("color.{}priority.{}", tag_name, p))
                         .cloned()
                         .unwrap_or_default();
-                    style = style.fg(c.fg).bg(c.bg);
-                    for modifier in c.modifiers {
-                        style = style.add_modifier(modifier);
-                    }
+                    style = config::blend(style, c);
                 }
-            }
-            if task
+            } else if tag_name == "project." {
+                if let Some(p) = task.project() {
+                    let c = self
+                        .config
+                        .color
+                        .get(&format!("color.project.{}", p))
+                        .cloned()
+                        .unwrap_or_default();
+                    style = config::blend(style, c);
+                }
+            } else if task
                 .tags()
                 .unwrap_or(&vec![])
                 .contains(&tag_name.to_string().replace(".", "").to_uppercase())
             {
                 let color_tag_name = format!("color.{}", tag_name);
                 let c = self.config.color.get(&color_tag_name).cloned().unwrap_or_default();
-                style = style.fg(c.fg).bg(c.bg);
-                for modifier in c.modifiers {
-                    style = style.add_modifier(modifier);
-                }
+                style = config::blend(style, c);
             }
         }
 
@@ -1353,11 +1357,10 @@ impl TTApp {
                     let reference = TimeZone::from_utc_datetime(now.offset(), d);
                     let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
                     let d = d.clone();
-                    let reference = reference - chrono::Duration::nanoseconds(1);
-                    if reference.month() == now.month() {
+                    if (reference - chrono::Duration::nanoseconds(1)).month() == now.month() {
                         add_tag(&mut task, "MONTH".to_string());
                     }
-                    if reference.month() % 4 == now.month() % 4 {
+                    if (reference - chrono::Duration::nanoseconds(1)).month() % 4 == now.month() % 4 {
                         add_tag(&mut task, "QUARTER".to_string());
                     }
                     match get_date_state(&d, self.config.due) {
@@ -1367,6 +1370,12 @@ impl TTApp {
                         }
                         DateState::AfterToday => {
                             add_tag(&mut task, "DUE".to_string());
+                            if reference.day() == now.day() + 1 {
+                                add_tag(&mut task, "TOMORROW".to_string());
+                            }
+                            if reference.year() == now.year() {
+                                add_tag(&mut task, "YEAR".to_string());
+                            }
                         }
                         _ => (),
                     }
@@ -1701,15 +1710,67 @@ mod tests {
     }
 
     #[test]
-    fn test_task_style() {
-        let app = TTApp::new();
-        match app {
-            Ok(app) => {
-                if let Some(task) = app.task_by_id(1) {
-                    let style = app.style_for_task(&task);
-                }
-            }
-            _ => {}
+    fn test_task_tags() {
+        let app = TTApp::new().unwrap();
+        let task = app.task_by_id(1).unwrap();
+
+        let tags = vec!["PENDING".to_string(), "PRIORITY".to_string()];
+
+        for tag in tags {
+            assert!(task.tags().unwrap().contains(&tag));
         }
+
+        let app = TTApp::new().unwrap();
+        let task = app.task_by_id(11).unwrap();
+        let tags = vec![
+            "COLOR",
+            "PENDING",
+            "ANNOTATED",
+            "TAGGED",
+            // "MONTH",
+            // "QUARTER",
+            // "DUE",
+            // "TOMORROW",
+            // "YEAR",
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect::<Vec<String>>();
+        for tag in tags {
+            assert!(task.tags().unwrap().contains(&tag));
+        }
+    }
+
+    #[test]
+    fn test_task_style() {
+        let app = TTApp::new().unwrap();
+        let task = app.task_by_id(1).unwrap();
+        for r in vec![
+            "deleted",
+            "completed",
+            "active",
+            "keyword.",
+            "tag.",
+            "project.",
+            "overdue",
+            "scheduled",
+            "due.today",
+            "due",
+            "blocked",
+            "blocking",
+            "recurring",
+            "tagged",
+            "uda.",
+        ] {
+            assert!(app.config.rule_precedence_color.contains(&r.to_string()));
+        }
+        let style = app.style_for_task(&task);
+
+        dbg!(style);
+        assert!(style == Style::default().fg(Color::Green).bg(Color::Reset));
+
+        let task = app.task_by_id(11).unwrap();
+        let style = app.style_for_task(&task);
+        dbg!(style);
     }
 }
