@@ -41,7 +41,7 @@ use rustyline::At;
 use rustyline::Editor;
 use rustyline::Word;
 
-use std::io::{self};
+use std::io;
 use tui::{backend::CrosstermBackend, Terminal};
 
 const MAX_LINE: usize = 4096;
@@ -58,14 +58,16 @@ pub fn cmp(t1: &Task, t2: &Task) -> Ordering {
     urgency2.partial_cmp(&urgency1).unwrap_or(Ordering::Less)
 }
 
+#[derive(Debug)]
 pub enum DateState {
     BeforeToday,
     EarlierToday,
     LaterToday,
     AfterToday,
+    NotDue,
 }
 
-pub fn get_date_state(reference: &Date) -> DateState {
+pub fn get_date_state(reference: &Date, due: usize) -> DateState {
     let now = Local::now();
     let reference = TimeZone::from_utc_datetime(now.offset(), reference);
     let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
@@ -81,7 +83,12 @@ pub fn get_date_state(reference: &Date) -> DateState {
             return DateState::LaterToday;
         }
     }
-    DateState::AfterToday
+
+    if reference <= now + chrono::Duration::days(7) {
+        DateState::AfterToday
+    } else {
+        DateState::NotDue
+    }
 }
 
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
@@ -556,34 +563,15 @@ impl TTApp {
     fn style_for_task(&self, task: &Task) -> Style {
         let virtual_tag_names_in_precedence = &self.config.rule_precedence_color;
 
-        let virtual_tag_names_in_precedence = virtual_tag_names_in_precedence.iter().filter(|n| *n != "tagged");
-
         let mut style = Style::default();
 
-        if task
-            .tags()
-            .unwrap_or(&vec![])
-            .contains(&"tagged".to_string().replace(".", "").to_uppercase())
-        {
-            let color_tag_name = "color.tagged";
-            // dbg!(&color_tag_name);
-            let c = self.config.color.get(color_tag_name).cloned().unwrap_or_default();
-            style = style.fg(c.fg).bg(c.bg);
-            for modifier in c.modifiers {
-                style = style.add_modifier(modifier);
-            }
-        }
-
-        // dbg!(task.tags());
-        // dbg!(&virtual_tag_names_in_precedence);
-        for tag_name in virtual_tag_names_in_precedence {
+        for tag_name in virtual_tag_names_in_precedence.iter().rev() {
             if task
                 .tags()
                 .unwrap_or(&vec![])
                 .contains(&tag_name.to_string().replace(".", "").to_uppercase())
             {
                 let color_tag_name = format!("color.{}", tag_name);
-                // dbg!(&color_tag_name);
                 let c = self.config.color.get(&color_tag_name).cloned().unwrap_or_default();
                 style = style.fg(c.fg).bg(c.bg);
                 for modifier in c.modifiers {
@@ -1339,21 +1327,32 @@ impl TTApp {
             if task.priority().is_some() {
                 add_tag(&mut task, "PRIORITY".to_string());
             }
-            if task.due().is_some() {
-                add_tag(&mut task, "DUE".to_string());
-            }
             if task.recur().is_some() {
                 add_tag(&mut task, "RECURRING".to_string());
+                let r = task.recur().unwrap();
             }
             if let Some(d) = task.due() {
                 let status = task.status();
                 // due today
                 if status != &TaskStatus::Completed && status != &TaskStatus::Deleted {
-                    let today = Local::now().naive_utc().date();
-                    match get_date_state(d) {
+                    let now = Local::now();
+                    let reference = TimeZone::from_utc_datetime(now.offset(), d);
+                    let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
+                    let d = d.clone();
+                    let reference = reference - chrono::Duration::nanoseconds(1);
+                    if reference.month() == now.month() {
+                        add_tag(&mut task, "MONTH".to_string());
+                    }
+                    if reference.month() % 4 == now.month() % 4 {
+                        add_tag(&mut task, "QUARTER".to_string());
+                    }
+                    match get_date_state(&d, self.config.due) {
                         DateState::EarlierToday | DateState::LaterToday => {
                             add_tag(&mut task, "TODAY".to_string());
                             add_tag(&mut task, "DUETODAY".to_string());
+                        }
+                        DateState::AfterToday => {
+                            add_tag(&mut task, "DUE".to_string());
                         }
                         _ => (),
                     }
@@ -1685,5 +1684,18 @@ mod tests {
     #[test]
     fn test_app() {
         let app = TTApp::new();
+    }
+
+    #[test]
+    fn test_task_style() {
+        let app = TTApp::new();
+        match app {
+            Ok(app) => {
+                if let Some(task) = app.task_by_id(27) {
+                    let style = app.style_for_task(&task);
+                }
+            }
+            _ => {}
+        }
     }
 }

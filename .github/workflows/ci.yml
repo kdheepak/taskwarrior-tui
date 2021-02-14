@@ -1,4 +1,4 @@
-on: [push, pull_request]
+on: [pull_request]
 
 name: CI
 
@@ -20,6 +20,9 @@ jobs:
   test:
     name: Test Suite
     runs-on: ubuntu-latest
+    env:
+      TASKRC: taskwarrior-testdata/.taskrc
+      TASKDATA: taskwarrior-testdata/.task
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -28,6 +31,13 @@ jobs:
           toolchain: stable
           override: true
       - run: sudo apt-get update && sudo apt-get install -y taskwarrior taskd
+      - uses: actions/checkout@v2
+        with:
+          repository: kdheepak/taskwarrior-testdata
+          path: taskwarrior-testdata
+      - run: |
+          # prepare taskwarrior, initial setup
+          task rc.confirmation=off || echo 0
       - uses: actions-rs/cargo@v1
         with:
           command: test
@@ -65,6 +75,9 @@ jobs:
           args: -- -D warnings
   grcov:
     runs-on: ubuntu-latest
+    env:
+      TASKRC: taskwarrior-testdata/.taskrc
+      TASKDATA: taskwarrior-testdata/.task
     steps:
       - uses: actions/checkout@v2
       - name: Install toolchain
@@ -73,6 +86,14 @@ jobs:
           toolchain: nightly
           override: true
           profile: minimal
+      - run: sudo apt-get update && sudo apt-get install -y taskwarrior taskd
+      - uses: actions/checkout@v2
+        with:
+          repository: kdheepak/taskwarrior-testdata
+          path: taskwarrior-testdata
+      - run: |
+          # prepare taskwarrior, initial setup
+          task rc.confirmation=off || echo 0
       - name: Execute tests
         uses: actions-rs/cargo@v1
         with:
