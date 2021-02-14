@@ -66,6 +66,7 @@ pub struct Config {
     pub filter: String,
     pub obfuscate: bool,
     pub print_empty_columns: bool,
+    pub due: usize,
     pub rule_precedence_color: Vec<String>,
     pub uda_task_report_show_info: bool,
     pub uda_task_report_looping: bool,
@@ -88,6 +89,7 @@ impl Config {
             print_empty_columns: bool_collection.get("print_empty_columns").cloned().unwrap_or(false),
             color: Self::get_color_collection()?,
             filter: Self::get_filter(),
+            due: Self::get_due(),
             rule_precedence_color: Self::get_rule_precedence_color(),
             uda_task_report_show_info: Self::get_uda_task_report_show_info(),
             uda_task_report_looping: Self::get_uda_task_report_looping(),
@@ -302,6 +304,10 @@ impl Config {
             }
         }
         "".to_string()
+    }
+
+    fn get_due() -> usize {
+        Self::get_config("due").parse::<usize>().unwrap_or(7)
     }
 
     fn get_rule_precedence_color() -> Vec<String> {
