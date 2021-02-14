@@ -2,7 +2,18 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::process::Command;
 use std::str;
-use tui::style::{Color, Modifier};
+use tui::style::{Color, Modifier, Style};
+
+pub fn blend(style: Style, c: TColor) -> Style {
+    let mut style = style.fg(c.fg);
+    if style.bg.is_none() || c.bg != Color::Reset {
+        style = style.bg(c.bg);
+    }
+    for modifier in c.modifiers {
+        style = style.add_modifier(modifier);
+    }
+    style
+}
 
 #[derive(Debug, Clone)]
 pub struct TColor {
@@ -29,6 +40,8 @@ impl TColor {
     pub fn new(fg: Color, bg: Color, modifiers: Vec<Modifier>) -> Self {
         Self { fg, bg, modifiers }
     }
+
+    pub fn blend(&mut self, c: Color) {}
 }
 
 trait TaskWarriorBool {
@@ -191,37 +204,37 @@ impl Config {
             let c = 16 + red * 36 + green * 6 + blue;
             Color::Indexed(c)
         } else if s == "bright red" {
-            Color::Red
-        } else if s == "bright green" {
-            Color::Green
-        } else if s == "bright yellow" {
-            Color::Yellow
-        } else if s == "bright blue" {
-            Color::Blue
-        } else if s == "bright magenta" {
-            Color::Magenta
-        } else if s == "bright cyan" {
-            Color::Cyan
-        } else if s == "bright white" {
-            Color::White
-        } else if s == "bright black" {
-            Color::Black
-        } else if s.contains("red") {
             Color::LightRed
-        } else if s.contains("green") {
+        } else if s == "bright green" {
             Color::LightGreen
-        } else if s.contains("yellow") {
+        } else if s == "bright yellow" {
             Color::LightYellow
-        } else if s.contains("blue") {
+        } else if s == "bright blue" {
             Color::LightBlue
-        } else if s.contains("magenta") {
+        } else if s == "bright magenta" {
             Color::LightMagenta
-        } else if s.contains("cyan") {
+        } else if s == "bright cyan" {
             Color::LightCyan
-        } else if s.contains("white") {
+        } else if s == "bright white" {
             Color::Indexed(7)
-        } else if s.contains("black") {
+        } else if s == "bright black" {
             Color::Indexed(0)
+        } else if s.contains("red") {
+            Color::Red
+        } else if s.contains("green") {
+            Color::Green
+        } else if s.contains("yellow") {
+            Color::Yellow
+        } else if s.contains("blue") {
+            Color::Blue
+        } else if s.contains("magenta") {
+            Color::Magenta
+        } else if s.contains("cyan") {
+            Color::Cyan
+        } else if s.contains("white") {
+            Color::White
+        } else if s.contains("black") {
+            Color::Black
         } else {
             default
         }
