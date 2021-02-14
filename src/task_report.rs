@@ -197,6 +197,10 @@ impl TaskReportTable {
             },
             "status.short" => task.status().to_string().chars().next().unwrap().to_string(),
             "status" => task.status().to_string(),
+            "priority" => match task.priority() {
+                Some(p) => p.to_owned(),
+                None => "".to_string(),
+            },
             "project" => match task.project() {
                 Some(p) => p.to_string(),
                 None => "".to_string(),
@@ -218,9 +222,8 @@ impl TaskReportTable {
                     } else {
                         let mut dt = vec![];
                         for u in v {
-                            match tasks.iter().find(|t| t.uuid() == u) {
-                                Some(t) => dt.push(t.id().unwrap()),
-                                None => (),
+                            if let Some(t) = tasks.iter().find(|t| t.uuid() == u) {
+                                dt.push(t.id().unwrap())
                             }
                         }
                         join(dt.iter().map(|i| i.to_string()), " ")
