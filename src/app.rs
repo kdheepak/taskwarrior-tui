@@ -566,6 +566,15 @@ impl TTApp {
         let mut style = Style::default();
 
         for tag_name in virtual_tag_names_in_precedence.iter().rev() {
+            if tag_name == "uda." {
+                if let Some(p) = task.priority() {
+                    let c = self.config.color.get(&format!("color.{}priority.{}", tag_name, p)).cloned().unwrap_or_default();
+                    style = style.fg(c.fg).bg(c.bg);
+                    for modifier in c.modifiers {
+                        style = style.add_modifier(modifier);
+                    }
+                }
+            }
             if task
                 .tags()
                 .unwrap_or(&vec![])
@@ -1691,7 +1700,7 @@ mod tests {
         let app = TTApp::new();
         match app {
             Ok(app) => {
-                if let Some(task) = app.task_by_id(27) {
+                if let Some(task) = app.task_by_id(1) {
                     let style = app.style_for_task(&task);
                 }
             }

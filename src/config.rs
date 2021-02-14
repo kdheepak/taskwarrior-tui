@@ -313,7 +313,6 @@ impl Config {
     fn get_rule_precedence_color() -> Vec<String> {
         let data = Self::get_config("rule.precedence.color");
         data.split(',')
-            .filter(|s| !s.ends_with('.'))
             .map(|s| s.to_string())
             .collect::<Vec<_>>()
     }
