@@ -768,7 +768,7 @@ dependencies = [
 [[package]]
 name = "task-hookrs"
 version = "0.7.0"
-source = "git+https://github.com/matthiasbeyer/task-hookrs#bc70cae87ee3b48c720cf446c7f70374b78692e7"
+source = "git+https://github.com/matthiasbeyer/task-hookrs#e40c961c074cdeec067854b617c30e69fa2c0448"
 dependencies = [
  "chrono",
  "derive_builder",

@@ -17,7 +17,6 @@ use task_hookrs::date::Date;
 use task_hookrs::import::import;
 use task_hookrs::status::TaskStatus;
 use task_hookrs::task::Task;
-use task_hookrs::uda::UDAValue;
 use uuid::Uuid;
 
 use unicode_segmentation::Graphemes;
@@ -1338,7 +1337,7 @@ impl TTApp {
                 add_tag(&mut task, "PROJECT".to_string());
             }
             if task.priority().is_some() {
-                add_tag(&mut task, "PROJECT".to_string());
+                add_tag(&mut task, "PRIORITY".to_string());
             }
             if task.due().is_some() {
                 add_tag(&mut task, "DUE".to_string());
