@@ -1767,9 +1767,10 @@ mod tests {
         let style = app.style_for_task(&task);
 
         dbg!(style);
-        assert!(style == Style::default().fg(Color::Green).bg(Color::Reset));
+        assert!(style == Style::default().fg(Color::Green));
 
         let task = app.task_by_id(11).unwrap();
+        dbg!(task.tags().unwrap());
         let style = app.style_for_task(&task);
         dbg!(style);
     }

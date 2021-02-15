@@ -7,11 +7,14 @@ use tui::style::{Color, Modifier, Style};
 pub fn blend(style: Style, c: TColor) -> Style {
     let mut style = style;
 
-    if style.fg.is_none() || c.fg != Color::Reset {
+    let mut c = c;
+    c.upgrade();
+
+    if c.fg != Color::Reset {
         style = style.fg(c.fg);
     }
 
-    if style.bg.is_none() || c.bg != Color::Reset {
+    if c.bg != Color::Reset {
         style = style.bg(c.bg);
     }
 
@@ -48,7 +51,32 @@ impl TColor {
         Self { fg, bg, modifiers }
     }
 
-    pub fn blend(&mut self, c: Color) {}
+    pub fn upgrade(&mut self) {
+        if self.modifiers.contains(&Modifier::BOLD) {
+            self.fg = match self.fg {
+                Color::Red => Color::LightRed,
+                Color::Green => Color::LightGreen,
+                Color::Yellow => Color::LightYellow,
+                Color::Blue => Color::LightBlue,
+                Color::Magenta => Color::LightMagenta,
+                Color::Cyan => Color::LightCyan,
+                Color::White => Color::Indexed(7),
+                Color::Black => Color::Indexed(0),
+                x => x,
+            };
+            self.bg = match self.bg {
+                Color::Red => Color::LightRed,
+                Color::Green => Color::LightGreen,
+                Color::Yellow => Color::LightYellow,
+                Color::Blue => Color::LightBlue,
+                Color::Magenta => Color::LightMagenta,
+                Color::Cyan => Color::LightCyan,
+                Color::White => Color::Indexed(7),
+                Color::Black => Color::Indexed(0),
+                x => x,
+            };
+        }
+    }
 }
 
 trait TaskWarriorBool {
