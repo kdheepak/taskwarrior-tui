@@ -71,7 +71,7 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
 
     // Setup event handlers
     let events = Events::with_config(EventConfig {
-        tick_rate: Duration::from_millis(1000),
+        tick_rate: Duration::from_millis(250),
     });
 
     let maybeapp = TTApp::new();

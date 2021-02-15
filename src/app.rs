@@ -1255,6 +1255,8 @@ impl TTApp {
                                 String::from_utf8_lossy(&output.stderr),
                             ))
                         } else {
+                            String::from_utf8_lossy(&output.stdout);
+                            String::from_utf8_lossy(&output.stderr);
                             Ok(())
                         }
                     }
@@ -1404,7 +1406,6 @@ impl TTApp {
         terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
         events: &Events,
     ) -> Result<(), Box<dyn Error>> {
-        events.pause_ticker();
         match self.mode {
             AppMode::TaskReport => match input {
                 Key::Ctrl('c') | Key::Char('q') => self.should_quit = true,
@@ -1640,7 +1641,6 @@ impl TTApp {
                 _ => {}
             },
         }
-        events.resume_ticker();
         Ok(())
     }
 }
