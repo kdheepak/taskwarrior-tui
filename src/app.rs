@@ -567,12 +567,12 @@ impl TTApp {
         let mut style = Style::default();
 
         for tag_name in virtual_tag_names_in_precedence.iter().rev() {
-            if tag_name == "uda." {
+            if tag_name == "uda." || tag_name == "priority" {
                 if let Some(p) = task.priority() {
                     let c = self
                         .config
                         .color
-                        .get(&format!("color.{}priority.{}", tag_name, p))
+                        .get(&format!("color.uda.priority.{}", p))
                         .cloned()
                         .unwrap_or_default();
                     style = config::blend(style, c);
@@ -1285,6 +1285,7 @@ impl TTApp {
         for l_i in 0..tasks.len() {
             let default_deps = vec![];
             let deps = tasks[l_i].depends().unwrap_or(&default_deps).clone();
+            add_tag(&mut tasks[l_i], "UNBLOCKED".to_string());
             for dep in deps {
                 for r_i in 0..tasks.len() {
                     if tasks[r_i].uuid() == &dep {
@@ -1295,6 +1296,7 @@ impl TTApp {
                             && rstatus != &TaskStatus::Completed
                             && rstatus != &TaskStatus::Deleted
                         {
+                            remove_tag(&mut tasks[l_i], "UNBLOCKED".to_string());
                             add_tag(&mut tasks[l_i], "BLOCKED".to_string());
                             add_tag(&mut tasks[r_i], "BLOCKING".to_string());
                         }
@@ -1337,6 +1339,9 @@ impl TTApp {
                     .any(|s| !self.task_report_table.virtual_tags.contains(s))
             {
                 add_tag(&mut task, "TAGGED".to_string());
+            }
+            if !task.uda().is_empty() {
+                add_tag(&mut task, "UDA".to_string());
             }
             if task.mask().is_some() {
                 add_tag(&mut task, "TEMPLATE".to_string());
@@ -1700,6 +1705,14 @@ pub fn add_tag(task: &mut Task, tag: String) {
     }
 }
 
+pub fn remove_tag(task: &mut Task, tag: String) {
+    if let Some(t) = task.tags_mut() {
+        if let Some(index) = t.iter().position(|x| *x == tag) {
+            t.remove(index);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1736,6 +1749,7 @@ mod tests {
         .iter()
         .map(|s| s.to_string())
         .collect::<Vec<String>>();
+        dbg!(task.tags());
         for tag in tags {
             assert!(task.tags().unwrap().contains(&tag));
         }
@@ -1769,7 +1783,7 @@ mod tests {
         dbg!(style);
         assert!(style == Style::default().fg(Color::Green));
 
-        let task = app.task_by_id(11).unwrap();
+        let task = app.task_by_id(2).unwrap();
         dbg!(task.tags().unwrap());
         let style = app.style_for_task(&task);
         dbg!(style);

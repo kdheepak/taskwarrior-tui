@@ -7,9 +7,6 @@ use tui::style::{Color, Modifier, Style};
 pub fn blend(style: Style, c: TColor) -> Style {
     let mut style = style;
 
-    let mut c = c;
-    c.upgrade();
-
     if c.fg != Color::Reset {
         style = style.fg(c.fg);
     }
