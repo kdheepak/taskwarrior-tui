@@ -145,6 +145,7 @@ impl Events {
     pub fn pause_key_capture(&self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
         self.pause_event_loop();
         terminal.flush().unwrap();
+        thread::sleep(Duration::from_millis(250));
         disable_raw_mode().unwrap();
         execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture).unwrap();
         terminal.show_cursor().unwrap();
@@ -154,6 +155,7 @@ impl Events {
         execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture).unwrap();
         enable_raw_mode().unwrap();
         terminal.flush().unwrap();
+        thread::sleep(Duration::from_millis(250));
         self.resume_event_loop();
         terminal.resize(terminal.size().unwrap()).unwrap();
     }
