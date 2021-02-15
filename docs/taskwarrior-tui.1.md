@@ -1,4 +1,4 @@
-% taskwarrior-tui(1) v0.10.1
+% taskwarrior-tui(1) v0.10.2
 
 <!-- This is the exa(1) man page, written in Markdown. -->
 <!-- To generate the roff version, run `just man`, -->
