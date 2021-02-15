@@ -9,7 +9,7 @@ use tui::{backend::CrosstermBackend, Terminal};
 use std::io::{self, Write};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use std::{sync::mpsc, thread, time::Duration};
+use std::{sync::mpsc, thread, time::Duration, time::Instant};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Key {
@@ -63,7 +63,6 @@ pub struct Events {
     pub rx: mpsc::Receiver<Event<Key>>,
     pub tx: mpsc::Sender<Event<Key>>,
     pub pause_stdin: Arc<AtomicBool>,
-    pub pause_ticker: Arc<AtomicBool>,
 }
 
 impl Events {
@@ -72,84 +71,67 @@ impl Events {
         use crossterm::event::{KeyCode::*, KeyModifiers};
         let (tx, rx) = mpsc::channel();
         let pause_stdin = Arc::new(AtomicBool::new(false));
-        let pause_ticker = Arc::new(AtomicBool::new(false));
+        let tick_rate = config.tick_rate;
         let _input_handle = {
             let tx = tx.clone();
             let pause_stdin = pause_stdin.clone();
             thread::spawn(move || {
+                let mut last_tick = Instant::now();
                 loop {
+                    let timeout = tick_rate
+                        .checked_sub(last_tick.elapsed())
+                        .unwrap_or_else(|| Duration::from_secs(0));
+
                     if pause_stdin.load(Ordering::SeqCst) {
                         thread::sleep(Duration::from_millis(250));
                         continue;
                     }
+
                     // poll for tick rate duration, if no event, sent tick event.
-                    if let event::Event::Key(key) = event::read().unwrap() {
-                        let key = match key.code {
-                            Backspace => Key::Backspace,
-                            Enter => Key::Char('\n'),
-                            Left => Key::Left,
-                            Right => Key::Right,
-                            Up => Key::Up,
-                            Down => Key::Down,
-                            Home => Key::Home,
-                            End => Key::End,
-                            PageUp => Key::PageUp,
-                            PageDown => Key::PageDown,
-                            Tab => Key::Char('\t'),
-                            BackTab => Key::BackTab,
-                            Delete => Key::Delete,
-                            Insert => Key::Insert,
-                            F(k) => Key::F(k),
-                            Null => Key::Null,
-                            Esc => Key::Esc,
-                            Char(c) => match key.modifiers {
-                                KeyModifiers::NONE | KeyModifiers::SHIFT => Key::Char(c),
-                                KeyModifiers::CONTROL => Key::Ctrl(c),
-                                KeyModifiers::ALT => Key::Alt(c),
-                                _ => Key::Null,
-                            },
-                        };
-                        tx.send(Event::Input(key)).unwrap();
+                    if event::poll(timeout).unwrap() {
+                        if let event::Event::Key(key) = event::read().unwrap() {
+                            let key = match key.code {
+                                Backspace => Key::Backspace,
+                                Enter => Key::Char('\n'),
+                                Left => Key::Left,
+                                Right => Key::Right,
+                                Up => Key::Up,
+                                Down => Key::Down,
+                                Home => Key::Home,
+                                End => Key::End,
+                                PageUp => Key::PageUp,
+                                PageDown => Key::PageDown,
+                                Tab => Key::Char('\t'),
+                                BackTab => Key::BackTab,
+                                Delete => Key::Delete,
+                                Insert => Key::Insert,
+                                F(k) => Key::F(k),
+                                Null => Key::Null,
+                                Esc => Key::Esc,
+                                Char(c) => match key.modifiers {
+                                    KeyModifiers::NONE | KeyModifiers::SHIFT => Key::Char(c),
+                                    KeyModifiers::CONTROL => Key::Ctrl(c),
+                                    KeyModifiers::ALT => Key::Alt(c),
+                                    _ => Key::Null,
+                                },
+                            };
+                            tx.send(Event::Input(key)).unwrap();
+                        }
+                    }
+
+                    if last_tick.elapsed() >= tick_rate && tx.send(Event::Tick).is_ok() {
+                        last_tick = Instant::now();
                     }
                 }
             })
         };
-        let _tick_handle = {
-            let tx = tx.clone();
-            let pause_ticker = pause_ticker.clone();
-            thread::spawn(move || loop {
-                // print!("\r\n");
-                // dbg!(*pause_ticker.lock().unwrap());
-                while pause_ticker.load(Ordering::SeqCst) {
-                    thread::sleep(Duration::from_millis(250));
-                }
-                if tx.send(Event::Tick).is_err() {
-                    break;
-                }
-                thread::sleep(config.tick_rate);
-            })
-        };
-
-        Events {
-            rx,
-            tx,
-            pause_stdin,
-            pause_ticker,
-        }
+        Events { rx, tx, pause_stdin }
     }
 
     /// Attempts to read an event.
     /// This function will block the current thread.
     pub fn next(&self) -> Result<Event<Key>, mpsc::RecvError> {
         self.rx.recv()
-    }
-
-    pub fn pause_ticker(&self) {
-        self.pause_ticker.swap(true, Ordering::SeqCst);
-    }
-
-    pub fn resume_ticker(&self) {
-        self.pause_ticker.swap(false, Ordering::SeqCst);
     }
 
     pub fn pause_event_loop(&self) {
@@ -162,14 +144,16 @@ impl Events {
 
     pub fn pause_key_capture(&self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
         self.pause_event_loop();
+        thread::sleep(Duration::from_millis(250));
         disable_raw_mode().unwrap();
         execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture).unwrap();
         terminal.show_cursor().unwrap();
     }
 
     pub fn resume_key_capture(&self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
-        enable_raw_mode().unwrap();
         execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture).unwrap();
+        enable_raw_mode().unwrap();
+        thread::sleep(Duration::from_millis(250));
         self.resume_event_loop();
         terminal.resize(terminal.size().unwrap()).unwrap();
     }
