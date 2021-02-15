@@ -5,13 +5,20 @@ use std::str;
 use tui::style::{Color, Modifier, Style};
 
 pub fn blend(style: Style, c: TColor) -> Style {
-    let mut style = style.fg(c.fg);
+    let mut style = style;
+
+    if style.fg.is_none() || c.fg != Color::Reset {
+        style = style.fg(c.fg);
+    }
+
     if style.bg.is_none() || c.bg != Color::Reset {
         style = style.bg(c.bg);
     }
-    for modifier in c.modifiers {
-        style = style.add_modifier(modifier);
+
+    for m in c.modifiers {
+        style = style.add_modifier(m);
     }
+
     style
 }
 
