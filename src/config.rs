@@ -4,78 +4,6 @@ use std::process::Command;
 use std::str;
 use tui::style::{Color, Modifier, Style};
 
-pub fn blend(style: Style, c: TColor) -> Style {
-    let mut style = style;
-
-    if c.fg != Color::Reset {
-        style = style.fg(c.fg);
-    }
-
-    if c.bg != Color::Reset {
-        style = style.bg(c.bg);
-    }
-
-    for m in c.modifiers {
-        style = style.add_modifier(m);
-    }
-
-    style
-}
-
-#[derive(Debug, Clone)]
-pub struct TColor {
-    pub fg: Color,
-    pub bg: Color,
-    pub modifiers: Vec<Modifier>,
-}
-
-impl Default for TColor {
-    fn default() -> Self {
-        TColor::default()
-    }
-}
-
-impl TColor {
-    pub fn default() -> Self {
-        Self {
-            fg: Color::Reset,
-            bg: Color::Reset,
-            modifiers: vec![],
-        }
-    }
-
-    pub fn new(fg: Color, bg: Color, modifiers: Vec<Modifier>) -> Self {
-        Self { fg, bg, modifiers }
-    }
-
-    pub fn upgrade(&mut self) {
-        if self.modifiers.contains(&Modifier::BOLD) {
-            self.fg = match self.fg {
-                Color::Red => Color::LightRed,
-                Color::Green => Color::LightGreen,
-                Color::Yellow => Color::LightYellow,
-                Color::Blue => Color::LightBlue,
-                Color::Magenta => Color::LightMagenta,
-                Color::Cyan => Color::LightCyan,
-                Color::White => Color::Indexed(7),
-                Color::Black => Color::Indexed(0),
-                x => x,
-            };
-            self.bg = match self.bg {
-                Color::Red => Color::LightRed,
-                Color::Green => Color::LightGreen,
-                Color::Yellow => Color::LightYellow,
-                Color::Blue => Color::LightBlue,
-                Color::Magenta => Color::LightMagenta,
-                Color::Cyan => Color::LightCyan,
-                Color::White => Color::Indexed(7),
-                Color::Black => Color::Indexed(0),
-                x => x,
-            };
-        }
-    }
-}
-
 trait TaskWarriorBool {
     fn get_bool(&self) -> Option<bool>;
 }
@@ -107,7 +35,7 @@ impl TaskWarriorBool for str {
 #[derive(Debug)]
 pub struct Config {
     pub enabled: bool,
-    pub color: HashMap<String, TColor>,
+    pub color: HashMap<String, Style>,
     pub filter: String,
     pub obfuscate: bool,
     pub print_empty_columns: bool,
@@ -121,8 +49,8 @@ pub struct Config {
     pub uda_selection_dim: bool,
     pub uda_selection_blink: bool,
     pub uda_calendar_months_per_row: usize,
-    pub uda_style_context_active: TColor,
-    pub uda_style_calendar_title: TColor,
+    pub uda_style_context_active: Style,
+    pub uda_style_calendar_title: Style,
 }
 
 impl Config {
@@ -144,10 +72,8 @@ impl Config {
             uda_selection_dim: Self::get_uda_selection_dim(),
             uda_selection_blink: Self::get_uda_selection_blink(),
             uda_calendar_months_per_row: Self::get_uda_months_per_row(),
-            uda_style_calendar_title: Self::get_uda_style("calendar.title")
-                .unwrap_or_else(|| TColor::new(Color::Reset, Color::Reset, vec![])),
-            uda_style_context_active: Self::get_uda_style("context.active")
-                .unwrap_or_else(|| TColor::new(Color::Reset, Color::Reset, vec![])),
+            uda_style_calendar_title: Self::get_uda_style("calendar.title").unwrap_or_default(),
+            uda_style_context_active: Self::get_uda_style("context.active").unwrap_or_default(),
         })
     }
 
@@ -155,7 +81,7 @@ impl Config {
         HashMap::new()
     }
 
-    fn get_uda_style(config: &str) -> Option<TColor> {
+    fn get_uda_style(config: &str) -> Option<Style> {
         let c = format!("uda.taskwarrior-tui.style.{}", config);
         let s = Self::get_config(&c);
         if s.is_empty() {
@@ -165,7 +91,7 @@ impl Config {
         }
     }
 
-    fn get_color_collection() -> Result<HashMap<String, TColor>, Box<dyn Error>> {
+    fn get_color_collection() -> Result<HashMap<String, Style>, Box<dyn Error>> {
         let mut color_collection = HashMap::new();
         let output = Command::new("task").arg("rc.color=off").arg("show").output()?;
 
@@ -187,11 +113,11 @@ impl Config {
         Ok(color_collection)
     }
 
-    fn get_tcolor(line: &str) -> TColor {
+    pub fn get_tcolor(line: &str) -> Style {
         let (foreground, background) = line.split_at(line.to_lowercase().find("on ").unwrap_or_else(|| line.len()));
         let (mut foreground, mut background) = (String::from(foreground), String::from(background));
         background = background.replace("on ", "");
-        let mut modifiers = vec![];
+        let mut modifiers = Modifier::empty();
         if foreground.contains("bright") {
             foreground = foreground.replace("bright ", "");
             background = background.replace("bright ", "");
@@ -200,130 +126,136 @@ impl Config {
         foreground = foreground.replace("grey", "gray");
         background = background.replace("grey", "gray");
         if foreground.contains("underline") {
-            modifiers.push(Modifier::UNDERLINED);
+            modifiers |= Modifier::UNDERLINED;
         }
         let foreground = foreground.replace("underline ", "");
+        // TODO: use bold, bright boolean flags
         if foreground.contains("bold") {
-            modifiers.push(Modifier::BOLD);
+            modifiers |= Modifier::BOLD;
         }
-        let foreground = foreground.replace("bold ", "");
+        // let foreground = foreground.replace("bold ", "");
         if foreground.contains("inverse") {
-            modifiers.push(Modifier::REVERSED);
+            modifiers |= Modifier::REVERSED;
         }
         let foreground = foreground.replace("inverse ", "");
-        TColor {
-            fg: Self::get_color_foreground(foreground.as_str(), Color::Reset),
-            bg: Self::get_color_background(background.as_str(), Color::Reset),
-            modifiers,
+        let mut style = Style::default();
+        if let Some(fg) = Self::get_color_foreground(foreground.as_str()) {
+            style = style.fg(fg);
         }
+        if let Some(bg) = Self::get_color_background(background.as_str()) {
+            style = style.bg(bg);
+        }
+        style = style.add_modifier(modifiers);
+        style
     }
-    fn get_color_foreground(s: &str, default: Color) -> Color {
+
+    fn get_color_foreground(s: &str) -> Option<Color> {
         let s = s.trim_start();
         let s = s.trim_end();
         if s.contains("color") {
-            let s = s.trim_start_matches("bright ");
             let c = s.trim_start_matches("color").parse::<u8>().unwrap_or_default();
-            Color::Indexed(c)
+            Some(Color::Indexed(c))
         } else if s.contains("gray") {
-            let s = s.trim_start_matches("bright ");
             let c = 232 + s.trim_start_matches("gray").parse::<u8>().unwrap_or_default();
-            Color::Indexed(c)
+            Some(Color::Indexed(c))
         } else if s.contains("rgb") {
-            let s = s.trim_start_matches("bright ");
             let red = (s.as_bytes()[3] as char).to_digit(10).unwrap_or_default() as u8;
             let green = (s.as_bytes()[4] as char).to_digit(10).unwrap_or_default() as u8;
             let blue = (s.as_bytes()[5] as char).to_digit(10).unwrap_or_default() as u8;
             let c = 16 + red * 36 + green * 6 + blue;
-            Color::Indexed(c)
-        } else if s == "bright red" {
-            Color::LightRed
-        } else if s == "bright green" {
-            Color::LightGreen
-        } else if s == "bright yellow" {
-            Color::LightYellow
-        } else if s == "bright blue" {
-            Color::LightBlue
-        } else if s == "bright magenta" {
-            Color::LightMagenta
-        } else if s == "bright cyan" {
-            Color::LightCyan
-        } else if s == "bright white" {
-            Color::Indexed(7)
-        } else if s == "bright black" {
-            Color::Indexed(0)
-        } else if s.contains("red") {
-            Color::Red
-        } else if s.contains("green") {
-            Color::Green
-        } else if s.contains("yellow") {
-            Color::Yellow
-        } else if s.contains("blue") {
-            Color::Blue
-        } else if s.contains("magenta") {
-            Color::Magenta
-        } else if s.contains("cyan") {
-            Color::Cyan
-        } else if s.contains("white") {
-            Color::White
-        } else if s.contains("black") {
-            Color::Black
+            Some(Color::Indexed(c))
+        } else if s == "bold black" {
+            Some(Color::Indexed(8))
+        } else if s == "bold red" {
+            Some(Color::Indexed(9))
+        } else if s == "bold green" {
+            Some(Color::Indexed(10))
+        } else if s == "bold yellow" {
+            Some(Color::Indexed(11))
+        } else if s == "bold blue" {
+            Some(Color::Indexed(12))
+        } else if s == "bold magenta" {
+            Some(Color::Indexed(13))
+        } else if s == "bold cyan" {
+            Some(Color::Indexed(14))
+        } else if s == "bold white" {
+            Some(Color::Indexed(15))
+        } else if s == "black" {
+            Some(Color::Indexed(0))
+        } else if s == "red" {
+            Some(Color::Indexed(1))
+        } else if s == "green" {
+            Some(Color::Indexed(2))
+        } else if s == "yellow" {
+            Some(Color::Indexed(3))
+        } else if s == "blue" {
+            Some(Color::Indexed(4))
+        } else if s == "magenta" {
+            Some(Color::Indexed(5))
+        } else if s == "cyan" {
+            Some(Color::Indexed(6))
+        } else if s == "white" {
+            Some(Color::Indexed(7))
         } else {
-            default
+            None
         }
     }
 
-    fn get_color_background(s: &str, default: Color) -> Color {
+    fn get_color_background(s: &str) -> Option<Color> {
         let s = s.trim_start();
         let s = s.trim_end();
-        if s.contains("color") {
+        if s.contains("bright color") {
             let s = s.trim_start_matches("bright ");
             let c = s.trim_start_matches("color").parse::<u8>().unwrap_or_default();
-            Color::Indexed(c.wrapping_shl(8))
+            Some(Color::Indexed(c.wrapping_shl(8)))
+        } else if s.contains("color") {
+            let c = s.trim_start_matches("color").parse::<u8>().unwrap_or_default();
+            Some(Color::Indexed(c))
         } else if s.contains("gray") {
             let s = s.trim_start_matches("bright ");
             let c = 232 + s.trim_start_matches("gray").parse::<u8>().unwrap_or_default();
-            Color::Indexed(c.wrapping_shl(8))
+            Some(Color::Indexed(c.wrapping_shl(8)))
         } else if s.contains("rgb") {
             let s = s.trim_start_matches("bright ");
             let red = (s.as_bytes()[3] as char).to_digit(10).unwrap_or_default() as u8;
             let green = (s.as_bytes()[4] as char).to_digit(10).unwrap_or_default() as u8;
             let blue = (s.as_bytes()[5] as char).to_digit(10).unwrap_or_default() as u8;
             let c = 16 + red * 36 + green * 6 + blue;
-            Color::Indexed(c.wrapping_shl(8))
-        } else if s == "bright red" {
-            Color::LightRed
-        } else if s == "bright green" {
-            Color::LightGreen
-        } else if s == "bright yellow" {
-            Color::LightYellow
-        } else if s == "bright blue" {
-            Color::LightBlue
-        } else if s == "bright magenta" {
-            Color::LightMagenta
-        } else if s == "bright cyan" {
-            Color::LightCyan
-        } else if s == "bright white" {
-            Color::White
+            Some(Color::Indexed(c.wrapping_shl(8)))
         } else if s == "bright black" {
-            Color::Black
-        } else if s.contains("red") {
-            Color::Red
-        } else if s.contains("green") {
-            Color::Green
-        } else if s.contains("yellow") {
-            Color::Yellow
-        } else if s.contains("blue") {
-            Color::Blue
-        } else if s.contains("magenta") {
-            Color::Magenta
-        } else if s.contains("cyan") {
-            Color::Cyan
-        } else if s.contains("white") {
-            Color::Indexed(7)
-        } else if s.contains("black") {
-            Color::Indexed(0)
+            Some(Color::Indexed(8))
+        } else if s == "bright red" {
+            Some(Color::Indexed(9))
+        } else if s == "bright green" {
+            Some(Color::Indexed(10))
+        } else if s == "bright yellow" {
+            Some(Color::Indexed(11))
+        } else if s == "bright blue" {
+            Some(Color::Indexed(12))
+        } else if s == "bright magenta" {
+            Some(Color::Indexed(13))
+        } else if s == "bright cyan" {
+            Some(Color::Indexed(14))
+        } else if s == "bright white" {
+            Some(Color::Indexed(15))
+        } else if s == "black" {
+            Some(Color::Indexed(0))
+        } else if s == "red" {
+            Some(Color::Indexed(1))
+        } else if s == "green" {
+            Some(Color::Indexed(2))
+        } else if s == "yellow" {
+            Some(Color::Indexed(3))
+        } else if s == "blue" {
+            Some(Color::Indexed(4))
+        } else if s == "magenta" {
+            Some(Color::Indexed(5))
+        } else if s == "cyan" {
+            Some(Color::Indexed(6))
+        } else if s == "white" {
+            Some(Color::Indexed(7))
         } else {
-            default
+            None
         }
     }
 
@@ -418,9 +350,133 @@ impl Config {
 
 #[cfg(test)]
 mod tests {
-    use crate::config::Config;
+    use super::*;
     #[test]
     fn test_colors() {
         let tc = Config::default();
+        let c = Config::get_tcolor("red on blue");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(1));
+        assert_eq!(c.bg.unwrap(), Color::Indexed(4));
+
+        let c = Config::get_tcolor("bold red");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(9));
+        assert!(c.bg.is_none());
+        assert_eq!(c.add_modifier & Modifier::BOLD, Modifier::BOLD);
+
+        let c = Config::get_tcolor("white on red");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(7));
+        assert_eq!(c.bg.unwrap(), Color::Indexed(1));
+
+        let c = Config::get_tcolor("blue");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(4));
+        assert!(c.bg.is_none());
+
+        let c = Config::get_tcolor("black on bright green");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(0));
+        assert_eq!(c.bg.unwrap(), Color::Indexed(10));
+
+        let c = Config::get_tcolor("magenta");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(5));
+        assert!(c.bg.is_none());
+
+        let c = Config::get_tcolor("white on green");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(7));
+        assert_eq!(c.bg.unwrap(), Color::Indexed(2));
+
+        let c = Config::get_tcolor("black on white");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(0));
+        assert_eq!(c.bg.unwrap(), Color::Indexed(7));
+
+        let c = Config::get_tcolor("black on bright white");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(0));
+        assert_eq!(c.bg.unwrap(), Color::Indexed(15));
+
+        let c = Config::get_tcolor("bold white");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(15));
+        assert!(c.bg.is_none());
+
+        let c = Config::get_tcolor("white");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(7));
+        assert!(c.bg.is_none());
+
+        let c = Config::get_tcolor("bold yellow");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(11));
+        assert!(c.bg.is_none());
+
+        let c = Config::get_tcolor("green");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(2));
+        assert!(c.bg.is_none());
+
+        let c = Config::get_tcolor("yellow");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(3));
+        assert!(c.bg.is_none());
+
+        let c = Config::get_tcolor("red");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(1));
+        assert!(c.bg.is_none());
+
+        let c = Config::get_tcolor("bold red");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(9));
+        assert!(c.bg.is_none());
+
+        let c = Config::get_tcolor("on green");
+        assert!(c.fg.is_none());
+        assert_eq!(c.bg.unwrap(), Color::Indexed(2));
+
+        let c = Config::get_tcolor("on red");
+        assert!(c.fg.is_none());
+        assert_eq!(c.bg.unwrap(), Color::Indexed(1));
+
+        let c = Config::get_tcolor("on yellow");
+        assert!(c.fg.is_none());
+        assert_eq!(c.bg.unwrap(), Color::Indexed(3));
+
+        let c = Config::get_tcolor("black on red");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(0));
+        assert_eq!(c.bg.unwrap(), Color::Indexed(1));
+
+        let c = Config::get_tcolor("black on yellow");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(0));
+        assert_eq!(c.bg.unwrap(), Color::Indexed(3));
+
+        let c = Config::get_tcolor("black on green");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(0));
+        assert_eq!(c.bg.unwrap(), Color::Indexed(2));
+
+        let c = Config::get_tcolor("white on black");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(7));
+        assert_eq!(c.bg.unwrap(), Color::Indexed(0));
+
+        let c = Config::get_tcolor("black on green");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(0));
+        assert_eq!(c.bg.unwrap(), Color::Indexed(2));
+
+        let c = Config::get_tcolor("white on red");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(7));
+        assert_eq!(c.bg.unwrap(), Color::Indexed(1));
+
+        let c = Config::get_tcolor("bold white on red");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(15));
+        assert_eq!(c.bg.unwrap(), Color::Indexed(1));
+
+        let c = Config::get_tcolor("black on bright yellow");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(0));
+        assert_eq!(c.bg.unwrap(), Color::Indexed(11));
+
+        let c = Config::get_tcolor("black on bright red");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(0));
+        assert_eq!(c.bg.unwrap(), Color::Indexed(9));
+
+        let c = Config::get_tcolor("bold white on bright blue");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(15));
+        assert_eq!(c.bg.unwrap(), Color::Indexed(12));
+
+        let c = Config::get_tcolor("white on bright black");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(7));
+        assert_eq!(c.bg.unwrap(), Color::Indexed(8));
+
+        let c = Config::get_tcolor("bold blue");
+        assert_eq!(c.fg.unwrap(), Color::Indexed(12));
+        assert!(c.bg.is_none());
     }
 }
