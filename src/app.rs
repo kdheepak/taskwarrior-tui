@@ -235,7 +235,7 @@ impl TTApp {
             .year(self.calendar_year)
             .date_style(dates_with_styles)
             .months_per_row(self.config.uda_calendar_months_per_row);
-        c.title_background_color = self.config.uda_style_calendar_title.bg;
+        c.title_background_color = self.config.uda_style_calendar_title.bg.unwrap_or(Color::Black);
         f.render_widget(c, rects[0]);
     }
 
@@ -457,9 +457,7 @@ impl TTApp {
         for (i, context) in contexts.iter().enumerate() {
             let mut style = Style::default();
             if &self.contexts[i].active == "yes" {
-                style = style
-                    .fg(self.config.uda_style_context_active.fg)
-                    .bg(self.config.uda_style_context_active.bg)
+                style = self.config.uda_style_context_active;
             }
             rows.push(Row::StyledData(context.iter(), style));
             if i == self.context_table_state.selected().unwrap_or_default() {
@@ -569,23 +567,31 @@ impl TTApp {
         for tag_name in virtual_tag_names_in_precedence.iter().rev() {
             if tag_name == "uda." || tag_name == "priority" {
                 if let Some(p) = task.priority() {
-                    let c = self
+                    let s = self
                         .config
                         .color
                         .get(&format!("color.uda.priority.{}", p))
                         .cloned()
                         .unwrap_or_default();
-                    style = config::blend(style, c);
+                    style = style.patch(s);
+                }
+            } else if tag_name == "tag." {
+                if let Some(tags) = task.tags() {
+                    for t in tags {
+                        let color_tag_name = format!("color.tag.{}", t);
+                        let s = self.config.color.get(&color_tag_name).cloned().unwrap_or_default();
+                        style = style.patch(s);
+                    }
                 }
             } else if tag_name == "project." {
                 if let Some(p) = task.project() {
-                    let c = self
+                    let s = self
                         .config
                         .color
                         .get(&format!("color.project.{}", p))
                         .cloned()
                         .unwrap_or_default();
-                    style = config::blend(style, c);
+                    style = style.patch(s);
                 }
             } else if task
                 .tags()
@@ -593,8 +599,8 @@ impl TTApp {
                 .contains(&tag_name.to_string().replace(".", "").to_uppercase())
             {
                 let color_tag_name = format!("color.{}", tag_name);
-                let c = self.config.color.get(&color_tag_name).cloned().unwrap_or_default();
-                style = config::blend(style, c);
+                let s = self.config.color.get(&color_tag_name).cloned().unwrap_or_default();
+                style = style.patch(s);
             }
         }
 
@@ -1781,9 +1787,9 @@ mod tests {
         let style = app.style_for_task(&task);
 
         dbg!(style);
-        assert!(style == Style::default().fg(Color::Green));
+        assert_eq!(style, Style::default().fg(Color::Indexed(2)));
 
-        let task = app.task_by_id(2).unwrap();
+        let task = app.task_by_id(11).unwrap();
         dbg!(task.tags().unwrap());
         let style = app.style_for_task(&task);
         dbg!(style);
