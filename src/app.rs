@@ -518,6 +518,7 @@ impl TTApp {
         let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
         let output = Command::new("task")
             .arg("rc.color=off")
+            .arg(format!("rc.defaultwidth={}", f.size().width))
             .arg(format!("{}", task_uuid))
             .output();
         if let Ok(output) = output {
