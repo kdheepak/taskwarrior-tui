@@ -87,9 +87,9 @@ impl Events {
                         continue;
                     }
 
-                    let timeout = Duration::from_millis(25)
+                    let timeout = Duration::from_millis(10)
                         .checked_sub(last_tick.elapsed())
-                        .unwrap_or_else(|| Duration::from_millis(10));
+                        .unwrap_or_else(|| Duration::from_millis(5));
 
                     if event::poll(timeout).unwrap() {
                         if let event::Event::Key(key) = event::read().unwrap() {
