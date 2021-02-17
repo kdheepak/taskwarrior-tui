@@ -1795,4 +1795,40 @@ mod tests {
         let style = app.style_for_task(&task);
         dbg!(style);
     }
+
+    #[test]
+    fn test_task_context() {
+        let mut app = TTApp::new().unwrap();
+
+        assert!(app.get_context().is_ok());
+        assert!(app.update().is_ok());
+
+        app.context_next();
+        app.context_select();
+
+        assert_eq!(app.tasks.lock().unwrap().len(), 26);
+        assert_eq!(app.current_context_filter, "");
+
+        assert_eq!(app.context_table_state.selected(), Some(0));
+        app.context_next();
+        app.context_select();
+        assert_eq!(app.context_table_state.selected(), Some(1));
+
+        assert!(app.get_context().is_ok());
+        assert!(app.update().is_ok());
+
+        assert_eq!(app.tasks.lock().unwrap().len(), 1);
+        assert_eq!(app.current_context_filter, "+finance -private");
+
+        assert_eq!(app.context_table_state.selected(), Some(1));
+        app.context_previous();
+        app.context_select();
+        assert_eq!(app.context_table_state.selected(), Some(0));
+
+        assert!(app.get_context().is_ok());
+        assert!(app.update().is_ok());
+
+        assert_eq!(app.tasks.lock().unwrap().len(), 26);
+        assert_eq!(app.current_context_filter, "");
+    }
 }
