@@ -518,7 +518,7 @@ impl TTApp {
         let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
         let output = Command::new("task")
             .arg("rc.color=off")
-            .arg(format!("rc.defaultwidth={}", f.size().width-2))
+            .arg(format!("rc.defaultwidth={}", f.size().width - 2))
             .arg(format!("{}", task_uuid))
             .output();
         if let Ok(output) = output {
@@ -927,7 +927,7 @@ impl TTApp {
         task.arg("rc.confirmation=off");
         task.arg("export");
 
-        let filter = if self.current_context_filter.is_empty() {
+        let filter = if !self.current_context_filter.is_empty() {
             let t = format!("{} {}", self.filter.as_str(), self.current_context_filter);
             t
         } else {
