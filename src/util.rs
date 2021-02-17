@@ -11,7 +11,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::{sync::mpsc, thread, time::Duration, time::Instant};
 
-#[derive(Debug, Clone, Copy)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub enum Key {
     Backspace,
     Left,
