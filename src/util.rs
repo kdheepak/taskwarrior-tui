@@ -79,14 +79,18 @@ impl Events {
             thread::spawn(move || {
                 let mut last_tick = Instant::now();
                 loop {
+
                     if pause_stdin.load(Ordering::SeqCst) {
                         thread::sleep(Duration::from_millis(250));
                         thread::park();
                         continue;
                     }
 
-                    // poll for tick rate duration, if no event, sent tick event.
-                    if event::poll(Duration::from_millis(10)).unwrap() {
+                    let timeout = Duration::from_millis(25)
+                        .checked_sub(last_tick.elapsed())
+                        .unwrap_or_else(|| Duration::from_millis(10));
+
+                    if event::poll(timeout).unwrap() {
                         if let event::Event::Key(key) = event::read().unwrap() {
                             let key = match key.code {
                                 Backspace => Key::Backspace,
