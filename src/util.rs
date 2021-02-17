@@ -80,13 +80,13 @@ impl Events {
                 let mut last_tick = Instant::now();
                 loop {
                     if pause_stdin.load(Ordering::SeqCst) {
+                        thread::sleep(Duration::from_millis(250));
                         thread::park();
-                        // thread::sleep(Duration::from_millis(250));
                         continue;
                     }
 
                     // poll for tick rate duration, if no event, sent tick event.
-                    if event::poll(Duration::from_millis(0)).unwrap() {
+                    if event::poll(Duration::from_millis(10)).unwrap() {
                         if let event::Event::Key(key) = event::read().unwrap() {
                             let key = match key.code {
                                 Backspace => Key::Backspace,
