@@ -63,6 +63,7 @@ pub struct Events {
     pub rx: mpsc::Receiver<Event<Key>>,
     pub tx: mpsc::Sender<Event<Key>>,
     pub pause_stdin: Arc<AtomicBool>,
+    pub handle: Option<thread::JoinHandle<()>>,
 }
 
 impl Events {
@@ -72,23 +73,20 @@ impl Events {
         let (tx, rx) = mpsc::channel();
         let pause_stdin = Arc::new(AtomicBool::new(false));
         let tick_rate = config.tick_rate;
-        let _input_handle = {
+        let handle = Some({
             let tx = tx.clone();
             let pause_stdin = pause_stdin.clone();
             thread::spawn(move || {
                 let mut last_tick = Instant::now();
                 loop {
-                    let timeout = tick_rate
-                        .checked_sub(last_tick.elapsed())
-                        .unwrap_or_else(|| Duration::from_secs(0));
-
                     if pause_stdin.load(Ordering::SeqCst) {
-                        thread::sleep(Duration::from_millis(250));
+                        thread::park();
+                        // thread::sleep(Duration::from_millis(250));
                         continue;
                     }
 
                     // poll for tick rate duration, if no event, sent tick event.
-                    if event::poll(timeout).unwrap() {
+                    if event::poll(Duration::from_millis(0)).unwrap() {
                         if let event::Event::Key(key) = event::read().unwrap() {
                             let key = match key.code {
                                 Backspace => Key::Backspace,
@@ -124,8 +122,13 @@ impl Events {
                     }
                 }
             })
-        };
-        Events { rx, tx, pause_stdin }
+        });
+        Events {
+            rx,
+            tx,
+            pause_stdin,
+            handle,
+        }
     }
 
     /// Attempts to read an event.
@@ -135,17 +138,24 @@ impl Events {
     }
 
     pub fn pause_event_loop(&self) {
-        self.pause_stdin.swap(true, Ordering::SeqCst);
+        self.pause_stdin.store(true, Ordering::SeqCst);
+        thread::yield_now();
+        while !self.pause_stdin.load(Ordering::SeqCst) {
+            thread::sleep(Duration::from_millis(50));
+        }
     }
 
     pub fn resume_event_loop(&self) {
-        self.pause_stdin.swap(false, Ordering::SeqCst);
+        self.pause_stdin.store(false, Ordering::SeqCst);
+        thread::yield_now();
+        while self.pause_stdin.load(Ordering::SeqCst) {
+            thread::sleep(Duration::from_millis(50));
+        }
+        self.handle.as_ref().unwrap().thread().unpark();
     }
 
     pub fn pause_key_capture(&self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
         self.pause_event_loop();
-        terminal.flush().unwrap();
-        thread::sleep(Duration::from_millis(250));
         disable_raw_mode().unwrap();
         execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture).unwrap();
         terminal.show_cursor().unwrap();
@@ -154,8 +164,6 @@ impl Events {
     pub fn resume_key_capture(&self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
         execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture).unwrap();
         enable_raw_mode().unwrap();
-        terminal.flush().unwrap();
-        thread::sleep(Duration::from_millis(250));
         self.resume_event_loop();
         terminal.resize(terminal.size().unwrap()).unwrap();
     }
