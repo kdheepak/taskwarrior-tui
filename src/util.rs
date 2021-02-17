@@ -83,6 +83,7 @@ impl Events {
                     if pause_stdin.load(Ordering::SeqCst) {
                         thread::sleep(Duration::from_millis(250));
                         thread::park();
+                        last_tick = Instant::now();
                         continue;
                     }
 
