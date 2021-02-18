@@ -45,6 +45,8 @@ use rustyline::Word;
 use std::io;
 use tui::{backend::CrosstermBackend, Terminal};
 
+use regex::Regex;
+
 const MAX_LINE: usize = 4096;
 
 pub fn cmp(t1: &Task, t2: &Task) -> Ordering {
@@ -675,7 +677,6 @@ impl TTApp {
                 break;
             }
         }
-
         let selected = self.task_table_state.selected().unwrap_or_default();
         let header = headers.iter();
         let mut rows = vec![];
@@ -1377,8 +1378,12 @@ impl TTApp {
                     if (reference - chrono::Duration::nanoseconds(1)).month() % 4 == now.month() % 4 {
                         add_tag(&mut task, "QUARTER".to_string());
                     }
+                    if reference.year() == now.year() {
+                        add_tag(&mut task, "YEAR".to_string());
+                    }
                     match get_date_state(&d, self.config.due) {
                         DateState::EarlierToday | DateState::LaterToday => {
+                            add_tag(&mut task, "DUE".to_string());
                             add_tag(&mut task, "TODAY".to_string());
                             add_tag(&mut task, "DUETODAY".to_string());
                         }
@@ -1386,9 +1391,6 @@ impl TTApp {
                             add_tag(&mut task, "DUE".to_string());
                             if reference.day() == now.day() + 1 {
                                 add_tag(&mut task, "TOMORROW".to_string());
-                            }
-                            if reference.year() == now.year() {
-                                add_tag(&mut task, "YEAR".to_string());
                             }
                         }
                         _ => (),
@@ -1723,6 +1725,8 @@ pub fn remove_tag(task: &mut Task, tag: String) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tui::backend::TestBackend;
+    use tui::buffer::Buffer;
 
     #[test]
     fn test_app() {
@@ -1742,21 +1746,10 @@ mod tests {
 
         let app = TTApp::new().unwrap();
         let task = app.task_by_id(11).unwrap();
-        let tags = vec![
-            "COLOR",
-            "PENDING",
-            "ANNOTATED",
-            "TAGGED",
-            // "MONTH",
-            // "QUARTER",
-            // "DUE",
-            // "TOMORROW",
-            // "YEAR",
-        ]
-        .iter()
-        .map(|s| s.to_string())
-        .collect::<Vec<String>>();
-        dbg!(task.tags());
+        let tags = vec!["finance", "UNBLOCKED", "PENDING", "TAGGED", "UDA"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>();
         for tag in tags {
             assert!(task.tags().unwrap().contains(&tag));
         }
@@ -1767,19 +1760,19 @@ mod tests {
         let app = TTApp::new().unwrap();
         let task = app.task_by_id(1).unwrap();
         for r in vec![
-            "deleted",
-            "completed",
             "active",
-            "keyword.",
-            "tag.",
-            "project.",
-            "overdue",
-            "scheduled",
-            "due.today",
-            "due",
             "blocked",
             "blocking",
+            "completed",
+            "deleted",
+            "due",
+            "due.today",
+            "keyword.",
+            "overdue",
+            "project.",
             "recurring",
+            "scheduled",
+            "tag.",
             "tagged",
             "uda.",
         ] {
@@ -1787,13 +1780,10 @@ mod tests {
         }
         let style = app.style_for_task(&task);
 
-        dbg!(style);
         assert_eq!(style, Style::default().fg(Color::Indexed(2)));
 
         let task = app.task_by_id(11).unwrap();
-        dbg!(task.tags().unwrap());
         let style = app.style_for_task(&task);
-        dbg!(style);
     }
 
     #[test]
@@ -1830,5 +1820,230 @@ mod tests {
 
         assert_eq!(app.tasks.lock().unwrap().len(), 26);
         assert_eq!(app.current_context_filter, "");
+    }
+
+    #[test]
+    fn test_task_tomorrow() {
+        let total_tasks: u64 = 26;
+
+        let mut app = TTApp::new().unwrap();
+        assert!(app.get_context().is_ok());
+        assert!(app.update().is_ok());
+        assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
+        assert_eq!(app.current_context_filter, "");
+
+        let now = Local::now();
+        let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
+
+        let mut command = Command::new("task");
+        command.arg("add");
+        let message = format!(
+            "'new task for testing tomorrow' due:{:04}-{:02}-{:02}",
+            now.year(),
+            now.month(),
+            now.day() + 1
+        );
+
+        let shell = message.as_str().replace("'", "\\'");
+        let cmd = shlex::split(&shell).unwrap();
+        for s in cmd {
+            command.arg(&s);
+        }
+        let output = command.output().unwrap();
+        let s = String::from_utf8_lossy(&output.stdout);
+        let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
+        let caps = re.captures(&s).unwrap();
+        let task_id = caps["task_id"].parse::<u64>().unwrap();
+        assert_eq!(task_id, total_tasks + 1);
+
+        assert!(app.get_context().is_ok());
+        assert!(app.update().is_ok());
+        assert_eq!(app.tasks.lock().unwrap().len(), (total_tasks + 1) as usize);
+        assert_eq!(app.current_context_filter, "");
+
+        let task = app.task_by_id(task_id).unwrap();
+
+        for s in &[
+            "DUE",
+            "MONTH",
+            "PENDING",
+            "QUARTER",
+            "TOMORROW",
+            "UDA",
+            "UNBLOCKED",
+            "YEAR",
+        ] {
+            assert!(task.tags().unwrap().contains(&s.to_string()));
+        }
+
+        let output = Command::new("task")
+            .arg("rc.confirmation=off")
+            .arg("undo")
+            .output()
+            .unwrap();
+
+        let mut app = TTApp::new().unwrap();
+        assert!(app.get_context().is_ok());
+        assert!(app.update().is_ok());
+        assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
+        assert_eq!(app.current_context_filter, "");
+    }
+
+    #[test]
+    fn test_task_earlier_today() {
+        let total_tasks: u64 = 26;
+
+        let mut app = TTApp::new().unwrap();
+        assert!(app.get_context().is_ok());
+        assert!(app.update().is_ok());
+        assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
+        assert_eq!(app.current_context_filter, "");
+
+        let now = Local::now();
+        let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
+
+        let mut command = Command::new("task");
+        command.arg("add");
+        let message = format!(
+            "'new task for testing earlier today' due:{:04}-{:02}-{:02}",
+            now.year(),
+            now.month(),
+            now.day()
+        );
+
+        let shell = message.as_str().replace("'", "\\'");
+        let cmd = shlex::split(&shell).unwrap();
+        for s in cmd {
+            command.arg(&s);
+        }
+        let output = command.output().unwrap();
+        let s = String::from_utf8_lossy(&output.stdout);
+        let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
+        let caps = re.captures(&s).unwrap();
+        let task_id = caps["task_id"].parse::<u64>().unwrap();
+        assert_eq!(task_id, total_tasks + 1);
+
+        assert!(app.get_context().is_ok());
+        assert!(app.update().is_ok());
+        assert_eq!(app.tasks.lock().unwrap().len(), (total_tasks + 1) as usize);
+        assert_eq!(app.current_context_filter, "");
+
+        let task = app.task_by_id(task_id).unwrap();
+        for s in &[
+            "DUE",
+            "DUETODAY",
+            "MONTH",
+            "OVERDUE",
+            "PENDING",
+            "QUARTER",
+            "TODAY",
+            "UDA",
+            "UNBLOCKED",
+            "YEAR",
+        ] {
+            assert!(task.tags().unwrap().contains(&s.to_string()));
+        }
+
+        let output = Command::new("task")
+            .arg("rc.confirmation=off")
+            .arg("undo")
+            .output()
+            .unwrap();
+
+        let mut app = TTApp::new().unwrap();
+        assert!(app.get_context().is_ok());
+        assert!(app.update().is_ok());
+        assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
+        assert_eq!(app.current_context_filter, "");
+    }
+
+    use tui::widgets::{BarChart, Block, Borders};
+    #[test]
+    fn test_draw_task_report() {
+        let test_case = |expected: &Buffer| {
+            let mut app = TTApp::new().unwrap();
+
+            app.task_report_next();
+            app.context_next();
+
+            let backend = TestBackend::new(50, 15);
+            let mut terminal = Terminal::new(backend).unwrap();
+
+            terminal
+                .draw(|f| {
+                    app.draw(f);
+                    app.draw(f);
+                })
+                .unwrap();
+            assert_eq!(terminal.backend().size().unwrap(), expected.area);
+            terminal.backend().assert_buffer(expected);
+        };
+
+        let mut expected = Buffer::with_lines(vec![
+            "╭Task|Calendar───────────────────────────────────╮",
+            "│  ID Age Deps P Proj Tag   Due Until Descr Urg  │",
+            "│                                                │",
+            "│•  8 4mo      U                      Run … 23.00│",
+            "│  10 4mo        colo COLOR -8d       … [2] 14.80│",
+            "╰────────────────────────────────────────────────╯",
+            "╭Task 8──────────────────────────────────────────╮",
+            "│                                                │",
+            "│Name        Value                               │",
+            "│----------- ------------------------------------│",
+            "│ID          8                                   │",
+            "╰────────────────────────────────────────────────╯",
+            "╭Filter Tasks────────────────────────────────────╮",
+            "│status:pending -private                         │",
+            "╰────────────────────────────────────────────────╯",
+        ]);
+
+        for i in 1..=4 {
+            // Task
+            expected
+                .get_mut(i, 0)
+                .set_style(Style::default().add_modifier(Modifier::BOLD));
+        }
+        for i in 6..=13 {
+            // Calendar
+            expected
+                .get_mut(i, 0)
+                .set_style(Style::default().add_modifier(Modifier::DIM));
+        }
+
+        for r in &[
+            1..=4,   // ID
+            6..=8,   // Age
+            10..=13, // Deps
+            15..=15, // P
+            17..=20, // Proj
+            22..=26, // Tag
+            28..=30, // Due
+            32..=36, // Until
+            38..=42, // Descr
+            44..=48, // Urg
+        ] {
+            for i in r.clone().into_iter() {
+                expected
+                    .get_mut(i, 1)
+                    .set_style(Style::default().add_modifier(Modifier::UNDERLINED));
+            }
+        }
+
+        for i in 1..expected.area().width - 1 {
+            expected.get_mut(i, 3).set_style(
+                Style::default()
+                    .fg(Color::Indexed(0))
+                    .bg(Color::Indexed(15))
+                    .add_modifier(Modifier::BOLD),
+            );
+        }
+
+        for i in 1..expected.area().width - 1 {
+            expected
+                .get_mut(i, 4)
+                .set_style(Style::default().fg(Color::Indexed(9)).bg(Color::Indexed(4)));
+        }
+
+        test_case(&expected);
     }
 }
