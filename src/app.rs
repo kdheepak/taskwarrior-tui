@@ -1957,6 +1957,78 @@ mod tests {
         assert_eq!(app.current_context_filter, "");
     }
 
+    use chrono::Timelike;
+
+    #[test]
+    fn test_task_later_today() {
+        let total_tasks: u64 = 26;
+
+        let mut app = TTApp::new().unwrap();
+        assert!(app.get_context().is_ok());
+        assert!(app.update().is_ok());
+        assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
+        assert_eq!(app.current_context_filter, "");
+
+        let now = Local::now();
+        let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
+
+        let mut command = Command::new("task");
+        command.arg("add");
+        let message = format!(
+            "'new task for testing later today' due:'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}'",
+            now.year(),
+            now.month(),
+            now.day(),
+            now.hour(),
+            now.minute() + 1,
+            now.second(),
+        );
+
+        let shell = message.as_str().replace("'", "\\'");
+        let cmd = shlex::split(&shell).unwrap();
+        for s in cmd {
+            command.arg(&s);
+        }
+        let output = command.output().unwrap();
+        let s = String::from_utf8_lossy(&output.stdout);
+        let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
+        let caps = re.captures(&s).unwrap();
+        let task_id = caps["task_id"].parse::<u64>().unwrap();
+        assert_eq!(task_id, total_tasks + 1);
+
+        assert!(app.get_context().is_ok());
+        assert!(app.update().is_ok());
+        assert_eq!(app.tasks.lock().unwrap().len(), (total_tasks + 1) as usize);
+        assert_eq!(app.current_context_filter, "");
+
+        let task = app.task_by_id(task_id).unwrap();
+        for s in &[
+            "DUE",
+            "DUETODAY",
+            "MONTH",
+            "PENDING",
+            "QUARTER",
+            "TODAY",
+            "UDA",
+            "UNBLOCKED",
+            "YEAR",
+        ] {
+            assert!(task.tags().unwrap().contains(&s.to_string()));
+        }
+
+        let output = Command::new("task")
+            .arg("rc.confirmation=off")
+            .arg("undo")
+            .output()
+            .unwrap();
+
+        let mut app = TTApp::new().unwrap();
+        assert!(app.get_context().is_ok());
+        assert!(app.update().is_ok());
+        assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
+        assert_eq!(app.current_context_filter, "");
+    }
+
     use tui::widgets::{BarChart, Block, Borders};
     #[test]
     fn test_draw_task_report() {
@@ -1984,7 +2056,7 @@ mod tests {
             "│  ID Age Deps P Proj Tag   Due Until Descr Urg  │",
             "│                                                │",
             "│•  8 4mo      U                      Run … 23.00│",
-            "│  10 4mo        colo COLOR -8d       … [2] 14.80│",
+            "│  14 6mo      U      none            ähe   15.00│",
             "╰────────────────────────────────────────────────╯",
             "╭Task 8──────────────────────────────────────────╮",
             "│                                                │",
@@ -2041,7 +2113,7 @@ mod tests {
         for i in 1..expected.area().width - 1 {
             expected
                 .get_mut(i, 4)
-                .set_style(Style::default().fg(Color::Indexed(9)).bg(Color::Indexed(4)));
+                .set_style(Style::default().fg(Color::Indexed(1)).bg(Color::Indexed(4)));
         }
 
         test_case(&expected);
