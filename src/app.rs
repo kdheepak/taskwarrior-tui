@@ -1787,6 +1787,14 @@ mod tests {
     }
 
     #[test]
+    fn test_taskwarrior_in_order() {
+        test_task_context();
+        test_task_tomorrow();
+        test_task_earlier_today();
+        test_task_later_today();
+        test_draw_task_report();
+    }
+
     fn test_task_context() {
         let mut app = TTApp::new().unwrap();
 
@@ -1822,7 +1830,6 @@ mod tests {
         assert_eq!(app.current_context_filter, "");
     }
 
-    #[test]
     fn test_task_tomorrow() {
         let total_tasks: u64 = 26;
 
@@ -1889,7 +1896,6 @@ mod tests {
         assert_eq!(app.current_context_filter, "");
     }
 
-    #[test]
     fn test_task_earlier_today() {
         let total_tasks: u64 = 26;
 
@@ -1957,10 +1963,9 @@ mod tests {
         assert_eq!(app.current_context_filter, "");
     }
 
-    use chrono::Timelike;
-
-    #[test]
     fn test_task_later_today() {
+        use chrono::Timelike;
+
         let total_tasks: u64 = 26;
 
         let mut app = TTApp::new().unwrap();
@@ -2029,8 +2034,6 @@ mod tests {
         assert_eq!(app.current_context_filter, "");
     }
 
-    use tui::widgets::{BarChart, Block, Borders};
-    #[test]
     fn test_draw_task_report() {
         let test_case = |expected: &Buffer| {
             let mut app = TTApp::new().unwrap();
@@ -2108,7 +2111,7 @@ mod tests {
 
         let mut expected = Buffer::with_lines(vec![
             "╭Task|Calendar───────────────────────────────────╮",
-            "│  ID Age Deps P Proj Tag   Due Until Descr Urg  │",
+            "│  ID Age Deps P Proj Tag  Due  Until Descr Urg  │",
             "│                                                │",
             "│• 27 0s       U                      new … 15.00│",
             "│  28 0s       U      none            new … 15.00│",
@@ -2143,8 +2146,8 @@ mod tests {
             10..=13, // Deps
             15..=15, // P
             17..=20, // Proj
-            22..=26, // Tag
-            28..=30, // Due
+            22..=25, // Tag
+            27..=30, // Due
             32..=36, // Until
             38..=42, // Descr
             44..=48, // Urg
