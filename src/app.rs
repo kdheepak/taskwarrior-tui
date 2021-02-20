@@ -2038,15 +2038,70 @@ mod tests {
             app.task_report_next();
             app.context_next();
 
+            let total_tasks: u64 = 26;
+
+            assert!(app.get_context().is_ok());
+            assert!(app.update().is_ok());
+            assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
+            assert_eq!(app.current_context_filter, "");
+
+            let now = Local::now();
+            let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
+
+            let mut command = Command::new("task");
+            command.arg("add");
+            let message = "'new task 1 for testing draw' priority:U";
+
+            let shell = message.replace("'", "\\'");
+            let cmd = shlex::split(&shell).unwrap();
+            for s in cmd {
+                command.arg(&s);
+            }
+            let output = command.output().unwrap();
+            let s = String::from_utf8_lossy(&output.stdout);
+            let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
+            let caps = re.captures(&s).unwrap();
+            let task_id = caps["task_id"].parse::<u64>().unwrap();
+            assert_eq!(task_id, total_tasks + 1);
+
+            let mut command = Command::new("task");
+            command.arg("add");
+            let message = "'new task 2 for testing draw' priority:U +none";
+
+            let shell = message.replace("'", "\\'");
+            let cmd = shlex::split(&shell).unwrap();
+            for s in cmd {
+                command.arg(&s);
+            }
+            let output = command.output().unwrap();
+            let s = String::from_utf8_lossy(&output.stdout);
+            let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
+            let caps = re.captures(&s).unwrap();
+            let task_id = caps["task_id"].parse::<u64>().unwrap();
+            assert_eq!(task_id, total_tasks + 2);
+
+            app.update().unwrap();
+
             let backend = TestBackend::new(50, 15);
             let mut terminal = Terminal::new(backend).unwrap();
-
             terminal
                 .draw(|f| {
                     app.draw(f);
                     app.draw(f);
                 })
                 .unwrap();
+
+            let output = Command::new("task")
+                .arg("rc.confirmation=off")
+                .arg("undo")
+                .output()
+                .unwrap();
+            let output = Command::new("task")
+                .arg("rc.confirmation=off")
+                .arg("undo")
+                .output()
+                .unwrap();
+
             assert_eq!(terminal.backend().size().unwrap(), expected.area);
             terminal.backend().assert_buffer(expected);
         };
@@ -2055,14 +2110,14 @@ mod tests {
             "╭Task|Calendar───────────────────────────────────╮",
             "│  ID Age Deps P Proj Tag   Due Until Descr Urg  │",
             "│                                                │",
-            "│•  8 4mo      U                      Run … 23.00│",
-            "│  14 6mo      U      none            ähe   15.00│",
+            "│• 27 0s       U                      new … 15.00│",
+            "│  28 0s       U      none            new … 15.00│",
             "╰────────────────────────────────────────────────╯",
-            "╭Task 8──────────────────────────────────────────╮",
+            "╭Task 27─────────────────────────────────────────╮",
             "│                                                │",
             "│Name        Value                               │",
             "│----------- ------------------------------------│",
-            "│ID          8                                   │",
+            "│ID          27                                  │",
             "╰────────────────────────────────────────────────╯",
             "╭Filter Tasks────────────────────────────────────╮",
             "│status:pending -private                         │",
@@ -2104,8 +2159,8 @@ mod tests {
         for i in 1..expected.area().width - 1 {
             expected.get_mut(i, 3).set_style(
                 Style::default()
-                    .fg(Color::Indexed(0))
-                    .bg(Color::Indexed(15))
+                    .fg(Color::Indexed(1))
+                    .bg(Color::Reset)
                     .add_modifier(Modifier::BOLD),
             );
         }
