@@ -1738,8 +1738,11 @@ mod tests {
         let mut f = File::open(Path::new(env!("TASKDATA")).parent().unwrap().join("export.json")).unwrap();
         let mut s = String::new();
         f.read_to_string(&mut s).unwrap();
-        let t = task_hookrs::import::import(s.as_bytes()).unwrap();
-        assert!(task_hookrs::tw::save(&t).is_ok());
+        let tasks = task_hookrs::import::import(s.as_bytes()).unwrap();
+        // tasks.iter_mut().find(| t | t.id().unwrap() == 1).unwrap().priority_mut().replace(&mut "H".to_string());
+        // tasks.iter_mut().find(| t | t.id().unwrap() == 2).unwrap().priority_mut().replace(&mut "H".to_string());
+        // tasks.iter_mut().find(| t | t.id().unwrap() == 4).unwrap().tags_mut().replace(&mut vec!["test".to_string(), "another tag".to_string()]);
+        assert!(task_hookrs::tw::save(&tasks).is_ok());
     }
 
     fn teardown() {
