@@ -1725,21 +1725,24 @@ pub fn remove_tag(task: &mut Task, tag: String) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::ffi::OsStr;
+    use std::fs::File;
+    use std::path::Path;
     use tui::backend::TestBackend;
     use tui::buffer::Buffer;
 
     fn setup() {
+        use std::io::Read;
         use std::io::Write;
         use std::process::Stdio;
-        let s = String::from_utf8_lossy(include_bytes!("../tests/data/export.json"));
+        let mut f = File::open(Path::new(env!("TASKDATA")).parent().unwrap().join("export.json")).unwrap();
+        let mut s = String::new();
+        f.read_to_string(&mut s).unwrap();
         let t = task_hookrs::import::import(s.as_bytes()).unwrap();
         assert!(task_hookrs::tw::save(&t).is_ok());
     }
 
     fn teardown() {
-        use std::ffi::OsStr;
-        use std::path::Path;
-
         let cd = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/.task");
         std::fs::remove_dir_all(cd).unwrap();
     }
