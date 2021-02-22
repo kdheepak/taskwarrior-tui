@@ -1728,13 +1728,37 @@ mod tests {
     use tui::backend::TestBackend;
     use tui::buffer::Buffer;
 
-    #[test]
-    fn test_app() {
-        let app = TTApp::new();
+    fn setup() {
+        use std::io::Write;
+        use std::process::Stdio;
+        let s = String::from_utf8_lossy(include_bytes!("../tests/data/export.json"));
+        let t = task_hookrs::import::import(s.as_bytes()).unwrap();
+        assert!(task_hookrs::tw::save(&t).is_ok());
+    }
+
+    fn teardown() {
+        use std::ffi::OsStr;
+        use std::path::Path;
+
+        let cd = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/.task");
+        std::fs::remove_dir_all(cd).unwrap();
     }
 
     #[test]
+    fn test_taskwarrior_tui() {
+        setup();
+        test_draw_task_report();
+        test_task_tags();
+        test_task_style();
+        test_task_context();
+        test_task_tomorrow();
+        test_task_earlier_today();
+        test_task_later_today();
+        teardown();
+    }
+
     fn test_task_tags() {
+        // testing tags
         let app = TTApp::new().unwrap();
         let task = app.task_by_id(1).unwrap();
 
@@ -1755,7 +1779,6 @@ mod tests {
         }
     }
 
-    #[test]
     fn test_task_style() {
         let app = TTApp::new().unwrap();
         let task = app.task_by_id(1).unwrap();
@@ -1784,15 +1807,6 @@ mod tests {
 
         let task = app.task_by_id(11).unwrap();
         let style = app.style_for_task(&task);
-    }
-
-    #[test]
-    fn test_taskwarrior_in_order() {
-        test_task_context();
-        test_task_tomorrow();
-        test_task_earlier_today();
-        test_task_later_today();
-        test_draw_task_report();
     }
 
     fn test_task_context() {
@@ -2111,10 +2125,10 @@ mod tests {
 
         let mut expected = Buffer::with_lines(vec![
             "╭Task|Calendar───────────────────────────────────╮",
-            "│  ID Age Deps P Proj Tag  Due  Until Descr Urg  │",
+            "│  ID Age Deps P Projec Tag    Due  Descrip Urg  │",
             "│                                                │",
-            "│• 27 0s       U                      new … 15.00│",
-            "│  28 0s       U      none            new … 15.00│",
+            "│• 27 0s       U                    new ta… 15.00│",
+            "│  28 0s       U        none        new ta… 15.00│",
             "╰────────────────────────────────────────────────╯",
             "╭Task 27─────────────────────────────────────────╮",
             "│                                                │",
@@ -2145,11 +2159,10 @@ mod tests {
             6..=8,   // Age
             10..=13, // Deps
             15..=15, // P
-            17..=20, // Proj
-            22..=25, // Tag
-            27..=30, // Due
-            32..=36, // Until
-            38..=42, // Descr
+            17..=22, // Projec
+            24..=29, // Tag
+            31..=34, // Due
+            36..=42, // Descr
             44..=48, // Urg
         ] {
             for i in r.clone().into_iter() {
