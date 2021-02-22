@@ -29,7 +29,8 @@ cd taskwarrior-tui
 cargo build --release
 ```
 
-**Using [`brew`](https://brew.sh/)** [![](https://img.shields.io/homebrew/v/taskwarrior-tui)](https://formulae.brew.sh/formula/taskwarrior-tui)
+**Using [`brew`](https://brew.sh/)** [![](https://img.shields.io/homebrew/v/taskwarrior-tui)](https://formulae.brew.sh/formula/taskwarrior-tui) [![](https://shields-staging-pr-6209.herokuapp.com/homebrew/installs/dy/taskwarrior-tui)](https://formulae.brew.sh/formula/taskwarrior-tui)
+
 
 This installs `task` from `homebrew` as well.
 
