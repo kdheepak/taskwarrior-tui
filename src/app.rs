@@ -1743,7 +1743,7 @@ mod tests {
     }
 
     fn teardown() {
-        let cd = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/.task");
+        let cd = Path::new(env!("TASKDATA"));
         std::fs::remove_dir_all(cd).unwrap();
     }
 
