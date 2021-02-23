@@ -1763,6 +1763,7 @@ mod tests {
 
     #[test]
     fn test_taskwarrior_tui() {
+        test_draw_empty_task_report();
         setup();
         test_draw_task_report();
         test_task_tags();
@@ -2063,6 +2064,72 @@ mod tests {
         assert!(app.update().is_ok());
         assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
+    }
+
+    fn test_draw_empty_task_report() {
+        let test_case = |expected: &Buffer| {
+            let mut app = TTApp::new().unwrap();
+
+            app.task_report_next();
+            app.context_next();
+
+            let total_tasks: u64 = 0;
+
+            assert!(app.get_context().is_ok());
+            assert!(app.update().is_ok());
+            assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
+            assert_eq!(app.current_context_filter, "");
+
+            let now = Local::now();
+            let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
+
+            app.update().unwrap();
+
+            let backend = TestBackend::new(50, 15);
+            let mut terminal = Terminal::new(backend).unwrap();
+            terminal
+                .draw(|f| {
+                    app.draw(f);
+                    app.draw(f);
+                })
+                .unwrap();
+
+            assert_eq!(terminal.backend().size().unwrap(), expected.area);
+            terminal.backend().assert_buffer(expected);
+        };
+
+        let mut expected = Buffer::with_lines(vec![
+            "╭Task|Calendar───────────────────────────────────╮",
+            "│                                                │",
+            "│                                                │",
+            "│                                                │",
+            "│                                                │",
+            "╰────────────────────────────────────────────────╯",
+            "╭Task not found──────────────────────────────────╮",
+            "│                                                │",
+            "│                                                │",
+            "│                                                │",
+            "│                                                │",
+            "╰────────────────────────────────────────────────╯",
+            "╭Filter Tasks────────────────────────────────────╮",
+            "│status:pending -private                         │",
+            "╰────────────────────────────────────────────────╯",
+        ]);
+
+        for i in 1..=4 {
+            // Task
+            expected
+                .get_mut(i, 0)
+                .set_style(Style::default().add_modifier(Modifier::BOLD));
+        }
+        for i in 6..=13 {
+            // Calendar
+            expected
+                .get_mut(i, 0)
+                .set_style(Style::default().add_modifier(Modifier::DIM));
+        }
+
+        test_case(&expected);
     }
 
     fn test_draw_task_report() {
