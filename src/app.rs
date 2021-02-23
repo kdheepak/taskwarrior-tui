@@ -1763,8 +1763,26 @@ mod tests {
 
     #[test]
     fn test_taskwarrior_tui() {
+        let app = TTApp::new().unwrap();
+        assert!(app.task_by_index(1).is_none());
+
+        let app = TTApp::new().unwrap();
+        assert!(app
+            .task_by_uuid(Uuid::parse_str("0b11967d-9dae-4333-a137-c3b1e8a641d3").unwrap())
+            .is_none());
+
         test_draw_empty_task_report();
+
         setup();
+
+        let app = TTApp::new().unwrap();
+        assert!(app.task_by_index(1).is_some());
+
+        let app = TTApp::new().unwrap();
+        assert!(app
+            .task_by_uuid(Uuid::parse_str("0b11967d-9dae-4333-a137-c3b1e8a641d3").unwrap())
+            .is_some());
+
         test_draw_task_report();
         test_task_tags();
         test_task_style();
