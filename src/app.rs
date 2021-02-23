@@ -1765,7 +1765,6 @@ mod tests {
     fn test_taskwarrior_tui() {
         setup();
         test_draw_task_report();
-        test_draw_task_report_with_show_information();
         test_task_tags();
         test_task_style();
         test_task_context();
@@ -2119,6 +2118,14 @@ mod tests {
 
             let backend = TestBackend::new(50, 15);
             let mut terminal = Terminal::new(backend).unwrap();
+            app.task_report_show_info = !app.task_report_show_info;
+            terminal
+                .draw(|f| {
+                    app.draw(f);
+                    app.draw(f);
+                })
+                .unwrap();
+            app.task_report_show_info = !app.task_report_show_info;
             terminal
                 .draw(|f| {
                     app.draw(f);
@@ -2203,177 +2210,6 @@ mod tests {
             expected
                 .get_mut(i, 4)
                 .set_style(Style::default().fg(Color::Indexed(1)).bg(Color::Indexed(4)));
-        }
-
-        test_case(&expected);
-    }
-
-    fn test_draw_task_report_with_show_information() {
-        let test_case = |expected: &Buffer| {
-            let mut app = TTApp::new().unwrap();
-
-            app.task_report_show_info = !app.task_report_show_info;
-            app.task_report_next();
-            app.context_next();
-
-            let total_tasks: u64 = 26;
-
-            assert!(app.get_context().is_ok());
-            assert!(app.update().is_ok());
-            assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
-            assert_eq!(app.current_context_filter, "");
-
-            let now = Local::now();
-            let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
-
-            let mut command = Command::new("task");
-            command.arg("add");
-            let message = "'new task 1 for testing draw' priority:U";
-
-            let shell = message.replace("'", "\\'");
-            let cmd = shlex::split(&shell).unwrap();
-            for s in cmd {
-                command.arg(&s);
-            }
-            let output = command.output().unwrap();
-            let s = String::from_utf8_lossy(&output.stdout);
-            let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
-            let caps = re.captures(&s).unwrap();
-            let task_id = caps["task_id"].parse::<u64>().unwrap();
-            assert_eq!(task_id, total_tasks + 1);
-
-            let mut command = Command::new("task");
-            command.arg("add");
-            let message = "'new task 2 for testing draw' priority:U +none";
-
-            let shell = message.replace("'", "\\'");
-            let cmd = shlex::split(&shell).unwrap();
-            for s in cmd {
-                command.arg(&s);
-            }
-            let output = command.output().unwrap();
-            let s = String::from_utf8_lossy(&output.stdout);
-            let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
-            let caps = re.captures(&s).unwrap();
-            let task_id = caps["task_id"].parse::<u64>().unwrap();
-            assert_eq!(task_id, total_tasks + 2);
-
-            app.update().unwrap();
-
-            let backend = TestBackend::new(50, 15);
-            let mut terminal = Terminal::new(backend).unwrap();
-            terminal
-                .draw(|f| {
-                    app.draw(f);
-                    app.draw(f);
-                })
-                .unwrap();
-
-            let output = Command::new("task")
-                .arg("rc.confirmation=off")
-                .arg("undo")
-                .output()
-                .unwrap();
-            let output = Command::new("task")
-                .arg("rc.confirmation=off")
-                .arg("undo")
-                .output()
-                .unwrap();
-
-            assert_eq!(terminal.backend().size().unwrap(), expected.area);
-            terminal.backend().assert_buffer(expected);
-        };
-
-        let mut expected = Buffer::with_lines(vec![
-            "╭Task|Calendar───────────────────────────────────╮",
-            "│  ID Age Deps P Projec Tag    Due  Descrip Urg  │",
-            "│                                                │",
-            "│• 27 0s       U                    new ta… 15.00│",
-            "│  28 0s       U        none        new ta… 15.00│",
-            "│  10 4mo        colort COLOR  -13d Su… [2] 14.80│",
-            "│   7 4mo                      -7d  Log ta… 13.80│",
-            "│   2 4mo      L               -10d Edit t… 12.00│",
-            "│   8 4mo                           Run cu… 9.80 │",
-            "│  26 12d                           See he… 9.80 │",
-            "│   1 4mo      H                    Move b… 6.00 │",
-            "╰────────────────────────────────────────────────╯",
-            "╭Filter Tasks────────────────────────────────────╮",
-            "│status:pending -private                         │",
-            "╰────────────────────────────────────────────────╯",
-        ]);
-
-        for i in 1..=4 {
-            // Task
-            expected
-                .get_mut(i, 0)
-                .set_style(Style::default().add_modifier(Modifier::BOLD));
-        }
-        for i in 6..=13 {
-            // Calendar
-            expected
-                .get_mut(i, 0)
-                .set_style(Style::default().add_modifier(Modifier::DIM));
-        }
-
-        for r in &[
-            1..=4,   // ID
-            6..=8,   // Age
-            10..=13, // Deps
-            15..=15, // P
-            17..=22, // Projec
-            24..=29, // Tag
-            31..=34, // Due
-            36..=42, // Descr
-            44..=48, // Urg
-        ] {
-            for i in r.clone().into_iter() {
-                expected
-                    .get_mut(i, 1)
-                    .set_style(Style::default().add_modifier(Modifier::UNDERLINED));
-            }
-        }
-
-        for i in 1..expected.area().width - 1 {
-            expected.get_mut(i, 3).set_style(
-                Style::default()
-                    .fg(Color::Indexed(1))
-                    .bg(Color::Reset)
-                    .add_modifier(Modifier::BOLD),
-            );
-        }
-
-        for i in 1..expected.area().width - 1 {
-            expected
-                .get_mut(i, 4)
-                .set_style(Style::default().fg(Color::Indexed(1)).bg(Color::Indexed(4)));
-        }
-
-        for i in 1..expected.area().width - 1 {
-            expected
-                .get_mut(i, 5)
-                .set_style(Style::default().fg(Color::Indexed(9)).bg(Color::Indexed(4)));
-        }
-
-        for i in 1..expected.area().width - 1 {
-            for j in &[6, 7] {
-                expected
-                    .get_mut(i, *j)
-                    .set_style(Style::default().fg(Color::Indexed(9)));
-            }
-        }
-
-        for i in 1..expected.area().width - 1 {
-            for j in &[8, 9] {
-                expected
-                    .get_mut(i, *j)
-                    .set_style(Style::default().fg(Color::Indexed(0)).bg(Color::Indexed(15)));
-            }
-        }
-
-        for i in 1..expected.area().width - 1 {
-            expected
-                .get_mut(i, 10)
-                .set_style(Style::default().fg(Color::Indexed(2)).bg(Color::Reset));
         }
 
         test_case(&expected);
