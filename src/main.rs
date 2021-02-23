@@ -52,7 +52,8 @@ fn main() -> Result<(), Box<dyn Error>> {
                 );
             } else {
                 eprintln!(
-                    "[taskwarrior-tui error]: {}. Please report as a github issue on https://github.com/kdheepak/taskwarrior-tui", error
+                    "[taskwarrior-tui error]: {}. Please report as a github issue on https://github.com/kdheepak/taskwarrior-tui",
+                    error
                 );
             }
             std::process::exit(1);
