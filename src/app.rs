@@ -2199,6 +2199,12 @@ mod tests {
             let task_id = caps["task_id"].parse::<u64>().unwrap();
             assert_eq!(task_id, total_tasks + 2);
 
+            app.task_report_next();
+            app.task_report_previous();
+            app.task_report_next_page();
+            app.task_report_previous_page();
+            app.task_report_bottom();
+            app.task_report_top();
             app.update().unwrap();
 
             let backend = TestBackend::new(50, 15);
