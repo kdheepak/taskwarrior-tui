@@ -1761,6 +1761,7 @@ mod tests {
     #[test]
     fn test_taskwarrior_tui() {
         setup();
+        test_draw_help_popup();
         test_draw_task_report();
         test_draw_task_report_with_show_information();
         test_task_tags();
@@ -2456,6 +2457,63 @@ mod tests {
             expected
                 .get_mut(i, 5)
                 .set_style(Style::default().bg(Color::Black).add_modifier(Modifier::UNDERLINED));
+        }
+
+        test_case(&expected);
+    }
+
+    #[test]
+    fn test_draw_help_popup() {
+        let test_case = |expected: &Buffer| {
+            let mut app = TTApp::new().unwrap();
+
+            app.mode = AppMode::TaskHelpPopup;
+            app.task_report_next();
+            app.context_next();
+            app.update().unwrap();
+
+            let backend = TestBackend::new(50, 15);
+            let mut terminal = Terminal::new(backend).unwrap();
+            terminal
+                .draw(|f| {
+                    app.draw(f);
+                    app.draw(f);
+                })
+                .unwrap();
+
+            assert_eq!(terminal.backend().size().unwrap(), expected.area);
+            terminal.backend().assert_buffer(expected);
+        };
+
+        let mut expected = Buffer::with_lines(vec![
+            "╭Task╭Help──────────────────────────────────╮────╮",
+            "│    │Keybindings:                          │    │",
+            "│    │                                      │    │",
+            "│    │    Esc:                              │    │",
+            "│    │                                      │    │",
+            "╰────│    ]: Next view                      │────╯",
+            "╭Task│                                      │────╮",
+            "│    │    [: Previous view                  │    │",
+            "│    │                                      │    │",
+            "│    │                                      │    │",
+            "│    │Keybindings for task report:          │    │",
+            "╰────│                                      │────╯",
+            "╭Filt╰──────────────────────────────────────╯────╮",
+            "│status:pending -private                         │",
+            "╰────────────────────────────────────────────────╯",
+        ]);
+
+        for i in 1..=4 {
+            // Task
+            expected
+                .get_mut(i, 0)
+                .set_style(Style::default().add_modifier(Modifier::DIM));
+        }
+        for i in 6..=9 {
+            // Calendar
+            expected
+                .get_mut(i, 0)
+                .set_style(Style::default().add_modifier(Modifier::BOLD));
         }
 
         test_case(&expected);
