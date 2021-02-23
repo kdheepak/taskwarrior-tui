@@ -1731,6 +1731,14 @@ mod tests {
     use tui::backend::TestBackend;
     use tui::buffer::Buffer;
 
+    #[test]
+    fn test_centered_rect() {
+        assert_eq!(
+            centered_rect(50, 50, Rect::new(0, 0, 100, 100)),
+            Rect::new(25, 25, 50, 50)
+        );
+    }
+
     fn setup() {
         use std::io::Read;
         use std::io::Write;
@@ -2191,6 +2199,91 @@ mod tests {
             expected
                 .get_mut(i, 4)
                 .set_style(Style::default().fg(Color::Indexed(1)).bg(Color::Indexed(4)));
+        }
+
+        test_case(&expected);
+    }
+
+    #[test]
+    fn test_draw_calendar() {
+        let test_case = |expected: &Buffer| {
+            let mut app = TTApp::new().unwrap();
+
+            app.task_report_next();
+            app.context_next();
+            app.update().unwrap();
+
+            app.calendar_year = 2020;
+            app.mode = AppMode::Calendar;
+
+            let backend = TestBackend::new(50, 15);
+            let mut terminal = Terminal::new(backend).unwrap();
+            terminal
+                .draw(|f| {
+                    app.draw(f);
+                    app.draw(f);
+                })
+                .unwrap();
+
+            assert_eq!(terminal.backend().size().unwrap(), expected.area);
+            terminal.backend().assert_buffer(expected);
+        };
+
+        let mut expected = Buffer::with_lines(vec![
+            "╭Task|Calendar───────────────────────────────────╮",
+            "│                                                │",
+            "│                      2020                      │",
+            "│                                                │",
+            "│        January               February          │",
+            "│  Su Mo Tu We Th Fr Sa  Su Mo Tu We Th Fr Sa    │",
+            "│            1  2  3  4                     1    │",
+            "│   5  6  7  8  9 10 11   2  3  4  5  6  7  8    │",
+            "│  12 13 14 15 16 17 18   9 10 11 12 13 14 15    │",
+            "│  19 20 21 22 23 24 25  16 17 18 19 20 21 22    │",
+            "│  26 27 28 29 30 31     23 24 25 26 27 28 29    │",
+            "│                                                │",
+            "│                                                │",
+            "│                                                │",
+            "╰────────────────────────────────────────────────╯",
+        ]);
+
+        for i in 1..=4 {
+            // Task
+            expected
+                .get_mut(i, 0)
+                .set_style(Style::default().add_modifier(Modifier::DIM));
+        }
+        for i in 6..=13 {
+            // Calendar
+            expected
+                .get_mut(i, 0)
+                .set_style(Style::default().add_modifier(Modifier::BOLD));
+        }
+
+        for i in 1..=48 {
+            expected
+                .get_mut(i, 2)
+                .set_style(Style::default().add_modifier(Modifier::UNDERLINED));
+        }
+
+        for i in 3..=22 {
+            expected.get_mut(i, 4).set_style(Style::default().bg(Color::Black));
+        }
+
+        for i in 25..=44 {
+            expected.get_mut(i, 4).set_style(Style::default().bg(Color::Black));
+        }
+
+        for i in 3..=22 {
+            expected
+                .get_mut(i, 5)
+                .set_style(Style::default().bg(Color::Black).add_modifier(Modifier::UNDERLINED));
+        }
+
+        for i in 25..=44 {
+            expected
+                .get_mut(i, 5)
+                .set_style(Style::default().bg(Color::Black).add_modifier(Modifier::UNDERLINED));
         }
 
         test_case(&expected);
