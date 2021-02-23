@@ -413,11 +413,11 @@ impl TTApp {
             }
             AppMode::TaskHelpPopup => {
                 self.draw_command(f, rects[1], self.filter.as_str(), "Filter Tasks");
-                self.draw_help_popup(f);
+                self.draw_help_popup(f, 80, 90);
             }
             AppMode::TaskContextMenu => {
                 self.draw_command(f, rects[1], self.filter.as_str(), "Filter Tasks");
-                self.draw_context_menu(f);
+                self.draw_context_menu(f, 80, 50);
             }
             _ => {
                 panic!("Reached unreachable code. Something went wrong");
@@ -425,19 +425,19 @@ impl TTApp {
         }
     }
 
-    fn draw_help_popup(&self, f: &mut Frame<impl Backend>) {
-        let area = centered_rect(80, 90, f.size());
+    fn draw_help_popup(&self, f: &mut Frame<impl Backend>, percent_x: u16, percent_y: u16) {
+        let area = centered_rect(percent_x, percent_y, f.size());
         f.render_widget(Clear, area);
         f.render_widget(&self.help_popup, area);
     }
 
-    fn draw_context_menu(&mut self, f: &mut Frame<impl Backend>) {
+    fn draw_context_menu(&mut self, f: &mut Frame<impl Backend>, percent_x: u16, percent_y: u16) {
         let rects = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Min(0)].as_ref())
             .split(f.size());
 
-        let area = centered_rect(80, 50, f.size());
+        let area = centered_rect(percent_x, percent_y, f.size());
 
         f.render_widget(
             Clear,
@@ -628,7 +628,7 @@ impl TTApp {
             }
         }
         for (i, header) in headers.iter().enumerate() {
-            if header == "ID" {
+            if header == "ID" || header == "Name" {
                 // always give ID a couple of extra for indicator
                 widths[i] += self.config.uda_selection_indicator.as_str().graphemes(true).count();
             }
@@ -898,6 +898,9 @@ impl TTApp {
 
         for (i, line) in data.trim().split('\n').enumerate() {
             let line = line.trim();
+            if line == "" || line == "Use 'task context none' to unset the current context." {
+                continue;
+            }
             let mut s = line.split(' ');
             let name = s.next().unwrap_or_default();
             let active = s.last().unwrap_or_default();
@@ -1761,7 +1764,6 @@ mod tests {
     #[test]
     fn test_taskwarrior_tui() {
         setup();
-        test_draw_help_popup();
         test_draw_task_report();
         test_draw_task_report_with_show_information();
         test_task_tags();
@@ -2472,12 +2474,11 @@ mod tests {
             app.context_next();
             app.update().unwrap();
 
-            let backend = TestBackend::new(50, 15);
+            let backend = TestBackend::new(40, 12);
             let mut terminal = Terminal::new(backend).unwrap();
             terminal
                 .draw(|f| {
-                    app.draw(f);
-                    app.draw(f);
+                    app.draw_help_popup(f, 100, 100);
                 })
                 .unwrap();
 
@@ -2486,33 +2487,97 @@ mod tests {
         };
 
         let mut expected = Buffer::with_lines(vec![
-            "╭Task╭Help──────────────────────────────────╮────╮",
-            "│    │Keybindings:                          │    │",
-            "│    │                                      │    │",
-            "│    │    Esc:                              │    │",
-            "│    │                                      │    │",
-            "╰────│    ]: Next view                      │────╯",
-            "╭Task│                                      │────╮",
-            "│    │    [: Previous view                  │    │",
-            "│    │                                      │    │",
-            "│    │                                      │    │",
-            "│    │Keybindings for task report:          │    │",
-            "╰────│                                      │────╯",
-            "╭Filt╰──────────────────────────────────────╯────╮",
-            "│status:pending -private                         │",
-            "╰────────────────────────────────────────────────╯",
+            "╭Help──────────────────────────────────╮",
+            "│Keybindings:                          │",
+            "│                                      │",
+            "│    Esc:                              │",
+            "│                                      │",
+            "│    ]: Next view                      │",
+            "│                                      │",
+            "│    [: Previous view                  │",
+            "│                                      │",
+            "│                                      │",
+            "│Keybindings for task report:          │",
+            "╰──────────────────────────────────────╯",
         ]);
 
         for i in 1..=4 {
-            // Task
-            expected
-                .get_mut(i, 0)
-                .set_style(Style::default().add_modifier(Modifier::DIM));
-        }
-        for i in 6..=9 {
             // Calendar
             expected
                 .get_mut(i, 0)
+                .set_style(Style::default().add_modifier(Modifier::BOLD));
+        }
+
+        test_case(&expected);
+    }
+
+    fn test_draw_context_menu() {
+        let test_case = |expected: &Buffer| {
+            let mut app = TTApp::new().unwrap();
+
+            app.mode = AppMode::TaskContextMenu;
+            app.task_report_next();
+            app.context_next();
+            app.update().unwrap();
+
+            let backend = TestBackend::new(80, 10);
+            let mut terminal = Terminal::new(backend).unwrap();
+            terminal
+                .draw(|f| {
+                    app.draw_context_menu(f, 100, 100);
+                    app.draw_context_menu(f, 100, 100);
+                })
+                .unwrap();
+
+            assert_eq!(terminal.backend().size().unwrap(), expected.area);
+            terminal.backend().assert_buffer(expected);
+        };
+
+        let mut expected = Buffer::with_lines(vec![
+            "╭Context───────────────────────────────────────────────────────────────────────╮",
+            "│Name       Description                                                  Active│",
+            "│                                                                              │",
+            "│• none                                                                  yes   │",
+            "│  finance  +finance -private                                            no    │",
+            "│  personal +personal -private                                           no    │",
+            "│  work     -personal -private                                           no    │",
+            "│                                                                              │",
+            "│                                                                              │",
+            "╰──────────────────────────────────────────────────────────────────────────────╯",
+        ]);
+
+        for i in 1..=7 {
+            // Task
+            expected
+                .get_mut(i, 0)
+                .set_style(Style::default().add_modifier(Modifier::BOLD));
+        }
+
+        for i in 1..=10 {
+            // Task
+            expected
+                .get_mut(i, 1)
+                .set_style(Style::default().add_modifier(Modifier::UNDERLINED));
+        }
+
+        for i in 12..=71 {
+            // Task
+            expected
+                .get_mut(i, 1)
+                .set_style(Style::default().add_modifier(Modifier::UNDERLINED));
+        }
+
+        for i in 73..=78 {
+            // Task
+            expected
+                .get_mut(i, 1)
+                .set_style(Style::default().add_modifier(Modifier::UNDERLINED));
+        }
+
+        for i in 1..=78 {
+            // Task
+            expected
+                .get_mut(i, 3)
                 .set_style(Style::default().add_modifier(Modifier::BOLD));
         }
 
