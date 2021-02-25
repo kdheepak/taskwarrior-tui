@@ -13,8 +13,6 @@ Keybindings for task report:
 
     a: task add {string}                 - Add new task
 
-    d: task {selected} done              - Mark task as done
-
     e: task {selected} edit              - Open selected task in editor
 
     j: {selected+=1}                     - Move down in task report
@@ -39,11 +37,17 @@ Keybindings for task report:
 
     u: task undo                         - Undo
 
-    x: task delete {selected}            - Delete
+    x: task {selected} done              - Mark task as done
 
     z: toggle task info                  - Toggle task info view
 
     A: task {selected} annotate {string} - Annotate current task
+
+    dd: task delete {selected}           - Delete current task with prompt
+
+    gg: task top of list                 - Go to top of the task list
+
+    G: task bottom of list               - Go to bottom of the task list
 
     !: {string}                          - Custom shell command
 
