@@ -1433,7 +1433,7 @@ impl TTApp {
                         }
                         DateState::AfterToday => {
                             add_tag(&mut task, "DUE".to_string());
-                            if reference.day() == now.day() + 1 {
+                            if reference.date() == (now + chrono::Duration::days(1)).date() {
                                 add_tag(&mut task, "TOMORROW".to_string());
                             }
                         }
@@ -1935,11 +1935,12 @@ mod tests {
 
         let mut command = Command::new("task");
         command.arg("add");
+        let tomorrow = now + chrono::Duration::days(1);
         let message = format!(
             "'new task for testing tomorrow' due:{:04}-{:02}-{:02}",
-            now.year(),
-            now.month(),
-            now.day() + 1
+            tomorrow.year(),
+            tomorrow.month(),
+            tomorrow.day(),
         );
 
         let shell = message.as_str().replace("'", "\\'");
@@ -1950,7 +1951,14 @@ mod tests {
         let output = command.output().unwrap();
         let s = String::from_utf8_lossy(&output.stdout);
         let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
+        let caps = re.captures(&s);
+        if caps.is_none() {
+            let s = String::from_utf8_lossy(&output.stderr);
+            dbg!(s);
+            assert!(false);
+        }
         let caps = re.captures(&s).unwrap();
+
         let task_id = caps["task_id"].parse::<u64>().unwrap();
         assert_eq!(task_id, total_tasks + 1);
 
