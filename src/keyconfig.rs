@@ -66,54 +66,68 @@ impl Default for KeyConfig {
 
 impl KeyConfig {
     pub fn update(&mut self) -> Result<(), Box<dyn Error>> {
-        self.quit = self.get_config("taskwarrior-tui.keyconfig.quit").unwrap_or(self.quit);
+        self.quit = self
+            .get_config("uda.taskwarrior-tui.keyconfig.quit")
+            .unwrap_or(self.quit);
         self.refresh = self
-            .get_config("taskwarrior-tui.keyconfig.refresh")
+            .get_config("uda.taskwarrior-tui.keyconfig.refresh")
             .unwrap_or(self.refresh);
         self.go_to_bottom = self
-            .get_config("taskwarrior-tui.keyconfig.go-to-bottom")
+            .get_config("uda.taskwarrior-tui.keyconfig.go-to-bottom")
             .unwrap_or(self.go_to_bottom);
         self.go_to_top = self
-            .get_config("taskwarrior-tui.keyconfig.go-to-top")
+            .get_config("uda.taskwarrior-tui.keyconfig.go-to-top")
             .unwrap_or(self.go_to_top);
-        self.down = self.get_config("taskwarrior-tui.keyconfig.down").unwrap_or(self.down);
-        self.up = self.get_config("taskwarrior-tui.keyconfig.up").unwrap_or(self.up);
+        self.down = self
+            .get_config("uda.taskwarrior-tui.keyconfig.down")
+            .unwrap_or(self.down);
+        self.up = self.get_config("uda.taskwarrior-tui.keyconfig.up").unwrap_or(self.up);
         self.page_down = self
-            .get_config("taskwarrior-tui.keyconfig.page-down")
+            .get_config("uda.taskwarrior-tui.keyconfig.page-down")
             .unwrap_or(self.page_down);
         self.page_up = self
-            .get_config("taskwarrior-tui.keyconfig.page-up")
+            .get_config("uda.taskwarrior-tui.keyconfig.page-up")
             .unwrap_or(self.page_up);
         self.delete = self
-            .get_config("taskwarrior-tui.keyconfig.delete")
+            .get_config("uda.taskwarrior-tui.keyconfig.delete")
             .unwrap_or(self.delete);
-        self.done = self.get_config("taskwarrior-tui.keyconfig.done").unwrap_or(self.done);
+        self.done = self
+            .get_config("uda.taskwarrior-tui.keyconfig.done")
+            .unwrap_or(self.done);
         self.start_stop = self
-            .get_config("taskwarrior-tui.keyconfig.start-stop")
+            .get_config("uda.taskwarrior-tui.keyconfig.start-stop")
             .unwrap_or(self.start_stop);
-        self.undo = self.get_config("taskwarrior-tui.keyconfig.undo").unwrap_or(self.undo);
-        self.edit = self.get_config("taskwarrior-tui.keyconfig.edit").unwrap_or(self.edit);
+        self.undo = self
+            .get_config("uda.taskwarrior-tui.keyconfig.undo")
+            .unwrap_or(self.undo);
+        self.edit = self
+            .get_config("uda.taskwarrior-tui.keyconfig.edit")
+            .unwrap_or(self.edit);
         self.modify = self
-            .get_config("taskwarrior-tui.keyconfig.modify")
+            .get_config("uda.taskwarrior-tui.keyconfig.modify")
             .unwrap_or(self.modify);
-        self.shell = self.get_config("taskwarrior-tui.keyconfig.shell").unwrap_or(self.shell);
-        self.log = self.get_config("taskwarrior-tui.keyconfig.log").unwrap_or(self.log);
-        self.add = self.get_config("taskwarrior-tui.keyconfig.add").unwrap_or(self.add);
+        self.shell = self
+            .get_config("uda.taskwarrior-tui.keyconfig.shell")
+            .unwrap_or(self.shell);
+        self.log = self.get_config("uda.taskwarrior-tui.keyconfig.log").unwrap_or(self.log);
+        self.add = self.get_config("uda.taskwarrior-tui.keyconfig.add").unwrap_or(self.add);
         self.annotate = self
-            .get_config("taskwarrior-tui.keyconfig.annotate")
+            .get_config("uda.taskwarrior-tui.keyconfig.annotate")
             .unwrap_or(self.annotate);
         self.filter = self
-            .get_config("taskwarrior-tui.keyconfig.filter")
+            .get_config("uda.taskwarrior-tui.keyconfig.filter")
             .unwrap_or(self.filter);
-        self.zoom = self.get_config("taskwarrior-tui.keyconfig.zoom").unwrap_or(self.zoom);
+        self.zoom = self
+            .get_config("uda.taskwarrior-tui.keyconfig.zoom")
+            .unwrap_or(self.zoom);
         self.context_menu = self
-            .get_config("taskwarrior-tui.keyconfig.context-menu")
+            .get_config("uda.taskwarrior-tui.keyconfig.context-menu")
             .unwrap_or(self.context_menu);
         self.next_tab = self
-            .get_config("taskwarrior-tui.keyconfig.next-tab")
+            .get_config("uda.taskwarrior-tui.keyconfig.next-tab")
             .unwrap_or(self.next_tab);
         self.previous_tab = self
-            .get_config("taskwarrior-tui.keyconfig.previous-tab")
+            .get_config("uda.taskwarrior-tui.keyconfig.previous-tab")
             .unwrap_or(self.previous_tab);
         self.check()
     }

@@ -197,6 +197,9 @@ uda.taskwarrior-tui.task-report.show-info=true
 uda.taskwarrior-tui.task-report.looping=true
 uda.taskwarrior-tui.style.context.active=black on rgb444
 uda.taskwarrior-tui.style.calendar.title=black on rgb444
+uda.taskwarrior-tui.keyconfig.quit=Q
+uda.taskwarrior-tui.keyconfig.done=x
+uda.taskwarrior-tui.keyconfig.delete=d
 ```
 
 </details>
