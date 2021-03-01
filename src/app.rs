@@ -13,6 +13,9 @@ use std::convert::TryInto;
 use std::error::Error;
 use std::process::Command;
 use std::result::Result;
+use std::time::SystemTime;
+use std::fs;
+use std::path::Path;
 
 use task_hookrs::date::Date;
 use task_hookrs::import::import;
@@ -153,6 +156,7 @@ pub struct TTApp {
     pub task_report_height: u16,
     pub help_popup: Help,
     pub contexts: Vec<Context>,
+    pub last_export: Option<SystemTime>,
 }
 
 impl TTApp {
@@ -177,6 +181,7 @@ impl TTApp {
             calendar_year: Local::today().year(),
             help_popup: Help::new(),
             contexts: vec![],
+            last_export: None,
         };
         for c in app.config.filter.chars() {
             app.filter.insert(c, 1);
@@ -751,10 +756,13 @@ impl TTApp {
     }
 
     pub fn update(&mut self) -> Result<(), Box<dyn Error>> {
-        self.task_report_table.export_headers()?;
-        let _ = self.export_tasks();
-        self.export_contexts()?;
-        self.update_tags();
+        if self.tasks_changed_since(self.last_export)? {
+            self.last_export = Some(std::time::SystemTime::now());
+            self.task_report_table.export_headers()?;
+            let _ = self.export_tasks();
+            self.export_contexts()?;
+            self.update_tags();
+        }
         Ok(())
     }
 
@@ -922,6 +930,35 @@ impl TTApp {
         }
 
         Ok(())
+    }
+
+    fn get_pending_file_mtime(&self) -> Result<SystemTime, Box<dyn Error>> {
+        let data_dir = shellexpand::tilde(&self.config.data_location).into_owned();
+        let pending_fp = Path::new(&data_dir).join("pending.data");
+        Ok(fs::metadata(pending_fp)?.modified()?)
+    }
+
+    pub fn tasks_changed_since(&mut self, prev: Option<SystemTime>) -> Result<bool, Box<dyn Error>> {
+        if let Some(prev) = prev {
+            match self.get_pending_file_mtime() {
+                Ok(mtime) => {
+                    if mtime > prev {
+                        Ok(true)
+                    } else {
+                        // Unfortunately, we can not use std::time::Instant which is guaranteed to be monotonic,
+                        // because we need to compare it to a file mtime as SystemTime, so as a safety for unexpected
+                        // time shifts, cap maximum wait to 1 min
+                        let now = SystemTime::now();
+                        let max_delta = Duration::from_secs(60);
+                        Ok(now.duration_since(prev)? >  max_delta)
+                    }
+                },
+                Err(_) => Ok(true),
+            }
+        }
+        else {
+            Ok(true)
+        }
     }
 
     pub fn export_tasks(&mut self) -> Result<(), Box<dyn Error>> {

@@ -37,6 +37,7 @@ pub struct Config {
     pub enabled: bool,
     pub color: HashMap<String, Style>,
     pub filter: String,
+    pub data_location: String,
     pub obfuscate: bool,
     pub print_empty_columns: bool,
     pub due: usize,
@@ -62,6 +63,7 @@ impl Config {
             print_empty_columns: bool_collection.get("print_empty_columns").cloned().unwrap_or(false),
             color: Self::get_color_collection()?,
             filter: Self::get_filter(),
+            data_location: Self::get_data_location(),
             due: Self::get_due(),
             rule_precedence_color: Self::get_rule_precedence_color(),
             uda_task_report_show_info: Self::get_uda_task_report_show_info(),
@@ -294,6 +296,10 @@ impl Config {
 
     fn get_filter() -> String {
         Self::get_config("report.next.filter")
+    }
+
+    fn get_data_location() -> String {
+        Self::get_config("data.location")
     }
 
     fn get_uda_task_report_show_info() -> bool {
