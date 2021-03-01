@@ -932,15 +932,20 @@ impl TTApp {
         Ok(())
     }
 
-    fn get_pending_file_mtime(&self) -> Result<SystemTime, Box<dyn Error>> {
+    fn get_task_files_max_mtime(&self) -> Result<SystemTime, Box<dyn Error>> {
         let data_dir = shellexpand::tilde(&self.config.data_location).into_owned();
-        let pending_fp = Path::new(&data_dir).join("pending.data");
-        Ok(fs::metadata(pending_fp)?.modified()?)
+        let mut mtimes = Vec::new();
+        for fname in &["backlog.data", "completed.data", "pending.data"] {
+            let pending_fp = Path::new(&data_dir).join(fname);
+            let mtime = fs::metadata(pending_fp)?.modified()?;
+            mtimes.push(mtime);
+        }
+        Ok(*mtimes.iter().max().unwrap())
     }
 
     pub fn tasks_changed_since(&mut self, prev: Option<SystemTime>) -> Result<bool, Box<dyn Error>> {
         if let Some(prev) = prev {
-            match self.get_pending_file_mtime() {
+            match self.get_task_files_max_mtime() {
                 Ok(mtime) => {
                     if mtime > prev {
                         Ok(true)
