@@ -809,7 +809,7 @@ dependencies = [
 
 [[package]]
 name = "taskwarrior-tui"
-version = "0.10.4"
+version = "0.11.0"
 dependencies = [
  "better-panic",
  "cassowary",
