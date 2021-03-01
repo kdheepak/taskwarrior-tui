@@ -94,7 +94,7 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
                         }
                     }
                     Event::Tick => {
-                        let r = app.update();
+                        let r = app.update(false);
                         if r.is_err() {
                             destruct_terminal();
                             return r;

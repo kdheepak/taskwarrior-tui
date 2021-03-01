@@ -11,8 +11,11 @@ use crate::util::{Event, Events};
 use std::cmp::Ordering;
 use std::convert::TryInto;
 use std::error::Error;
+use std::fs;
+use std::path::Path;
 use std::process::Command;
 use std::result::Result;
+use std::time::SystemTime;
 
 use task_hookrs::date::Date;
 use task_hookrs::import::import;
@@ -153,6 +156,7 @@ pub struct TTApp {
     pub task_report_height: u16,
     pub help_popup: Help,
     pub contexts: Vec<Context>,
+    pub last_export: Option<SystemTime>,
 }
 
 impl TTApp {
@@ -177,12 +181,13 @@ impl TTApp {
             calendar_year: Local::today().year(),
             help_popup: Help::new(),
             contexts: vec![],
+            last_export: None,
         };
         for c in app.config.filter.chars() {
             app.filter.insert(c, 1);
         }
         app.get_context()?;
-        app.update()?;
+        app.update(true)?;
         Ok(app)
     }
 
@@ -547,19 +552,13 @@ impl TTApp {
     fn task_by_uuid(&self, uuid: Uuid) -> Option<Task> {
         let tasks = &self.tasks.lock().unwrap();
         let m = tasks.iter().find(|t| *t.uuid() == uuid);
-        match m {
-            Some(v) => Some(v.clone()),
-            None => None,
-        }
+        m.cloned()
     }
 
     fn task_by_id(&self, id: u64) -> Option<Task> {
         let tasks = &self.tasks.lock().unwrap();
         let m = tasks.iter().find(|t| t.id().unwrap() == id);
-        match m {
-            Some(v) => Some(v.clone()),
-            None => None,
-        }
+        m.cloned()
     }
 
     fn style_for_task(&self, task: &Task) -> Style {
@@ -750,11 +749,14 @@ impl TTApp {
         (tasks, headers)
     }
 
-    pub fn update(&mut self) -> Result<(), Box<dyn Error>> {
-        self.task_report_table.export_headers()?;
-        let _ = self.export_tasks();
-        self.export_contexts()?;
-        self.update_tags();
+    pub fn update(&mut self, force: bool) -> Result<(), Box<dyn Error>> {
+        if force || self.tasks_changed_since(self.last_export)? {
+            self.last_export = Some(std::time::SystemTime::now());
+            self.task_report_table.export_headers()?;
+            let _ = self.export_tasks();
+            self.export_contexts()?;
+            self.update_tags();
+        }
         Ok(())
     }
 
@@ -898,7 +900,7 @@ impl TTApp {
 
         for (i, line) in data.trim().split('\n').enumerate() {
             let line = line.trim();
-            if line == "" || line == "Use 'task context none' to unset the current context." {
+            if line.is_empty() || line == "Use 'task context none' to unset the current context." {
                 continue;
             }
             let mut s = line.split(' ');
@@ -922,6 +924,39 @@ impl TTApp {
         }
 
         Ok(())
+    }
+
+    fn get_task_files_max_mtime(&self) -> Result<SystemTime, Box<dyn Error>> {
+        let data_dir = shellexpand::tilde(&self.config.data_location).into_owned();
+        let mut mtimes = Vec::new();
+        for fname in &["backlog.data", "completed.data", "pending.data"] {
+            let pending_fp = Path::new(&data_dir).join(fname);
+            let mtime = fs::metadata(pending_fp)?.modified()?;
+            mtimes.push(mtime);
+        }
+        Ok(*mtimes.iter().max().unwrap())
+    }
+
+    pub fn tasks_changed_since(&mut self, prev: Option<SystemTime>) -> Result<bool, Box<dyn Error>> {
+        if let Some(prev) = prev {
+            match self.get_task_files_max_mtime() {
+                Ok(mtime) => {
+                    if mtime > prev {
+                        Ok(true)
+                    } else {
+                        // Unfortunately, we can not use std::time::Instant which is guaranteed to be monotonic,
+                        // because we need to compare it to a file mtime as SystemTime, so as a safety for unexpected
+                        // time shifts, cap maximum wait to 1 min
+                        let now = SystemTime::now();
+                        let max_delta = Duration::from_secs(60);
+                        Ok(now.duration_since(prev)? > max_delta)
+                    }
+                }
+                Err(_) => Ok(true),
+            }
+        } else {
+            Ok(true)
+        }
     }
 
     pub fn export_tasks(&mut self) -> Result<(), Box<dyn Error>> {
@@ -1375,6 +1410,7 @@ impl TTApp {
                     let reference = TimeZone::from_utc_datetime(now.offset(), d);
                     let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
                     let d = d.clone();
+                    dbg!(reference, now);
                     if (reference - chrono::Duration::nanoseconds(1)).month() == now.month() {
                         add_tag(&mut task, "MONTH".to_string());
                     }
@@ -1392,7 +1428,7 @@ impl TTApp {
                         }
                         DateState::AfterToday => {
                             add_tag(&mut task, "DUE".to_string());
-                            if reference.day() == now.day() + 1 {
+                            if reference.date() == (now + chrono::Duration::days(1)).date() {
                                 add_tag(&mut task, "TOMORROW".to_string());
                             }
                         }
@@ -1426,7 +1462,7 @@ impl TTApp {
         match self.mode {
             AppMode::TaskReport => match input {
                 Key::Ctrl('c') | Key::Char('q') => self.should_quit = true,
-                Key::Char('r') => self.update()?,
+                Key::Char('r') => self.update(true)?,
                 Key::End | Key::Char('G') => self.task_report_bottom(),
                 Key::Home => self.task_report_top(),
                 Key::Char('g') => {
@@ -1439,28 +1475,28 @@ impl TTApp {
                 Key::PageDown | Key::Char('J') => self.task_report_next_page(),
                 Key::PageUp | Key::Char('K') => self.task_report_previous_page(),
                 Key::Char('d') => match self.task_done() {
-                    Ok(_) => self.update()?,
+                    Ok(_) => self.update(true)?,
                     Err(e) => {
                         self.mode = AppMode::TaskError;
                         self.error = e;
                     }
                 },
                 Key::Char('x') => match self.task_delete() {
-                    Ok(_) => self.update()?,
+                    Ok(_) => self.update(true)?,
                     Err(e) => {
                         self.mode = AppMode::TaskError;
                         self.error = e;
                     }
                 },
                 Key::Char('s') => match self.task_start_or_stop() {
-                    Ok(_) => self.update()?,
+                    Ok(_) => self.update(true)?,
                     Err(e) => {
                         self.mode = AppMode::TaskError;
                         self.error = e;
                     }
                 },
                 Key::Char('u') => match self.task_undo() {
-                    Ok(_) => self.update()?,
+                    Ok(_) => self.update(true)?,
                     Err(e) => {
                         self.mode = AppMode::TaskError;
                         self.error = e;
@@ -1471,7 +1507,7 @@ impl TTApp {
                     let r = self.task_edit();
                     events.resume_key_capture(terminal);
                     match r {
-                        Ok(_) => self.update()?,
+                        Ok(_) => self.update(true)?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
                             self.error = e;
@@ -1549,7 +1585,7 @@ impl TTApp {
                 Key::Char('\n') => match self.task_modify() {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
-                        self.update()?;
+                        self.update(true)?;
                     }
                     Err(e) => {
                         self.mode = AppMode::TaskError;
@@ -1566,7 +1602,7 @@ impl TTApp {
                 Key::Char('\n') => match self.task_subprocess() {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
-                        self.update()?;
+                        self.update(true)?;
                     }
                     Err(e) => {
                         self.mode = AppMode::TaskError;
@@ -1583,7 +1619,7 @@ impl TTApp {
                 Key::Char('\n') => match self.task_log() {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
-                        self.update()?;
+                        self.update(true)?;
                     }
                     Err(e) => {
                         self.mode = AppMode::TaskError;
@@ -1600,7 +1636,7 @@ impl TTApp {
                 Key::Char('\n') => match self.task_annotate() {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
-                        self.update()?;
+                        self.update(true)?;
                     }
                     Err(e) => {
                         self.mode = AppMode::TaskError;
@@ -1617,7 +1653,7 @@ impl TTApp {
                 Key::Char('\n') => match self.task_add() {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
-                        self.update()?;
+                        self.update(true)?;
                     }
                     Err(e) => {
                         self.mode = AppMode::TaskError;
@@ -1633,7 +1669,7 @@ impl TTApp {
             AppMode::TaskFilter => match input {
                 Key::Char('\n') | Key::Esc => {
                     self.mode = AppMode::TaskReport;
-                    self.update()?;
+                    self.update(true)?;
                 }
                 _ => handle_movement(&mut self.filter, input),
             },
@@ -1849,7 +1885,7 @@ mod tests {
         let mut app = TTApp::new().unwrap();
 
         assert!(app.get_context().is_ok());
-        assert!(app.update().is_ok());
+        assert!(app.update(true).is_ok());
 
         app.context_next();
         app.context_select();
@@ -1863,7 +1899,7 @@ mod tests {
         assert_eq!(app.context_table_state.selected(), Some(1));
 
         assert!(app.get_context().is_ok());
-        assert!(app.update().is_ok());
+        assert!(app.update(true).is_ok());
 
         assert_eq!(app.tasks.lock().unwrap().len(), 1);
         assert_eq!(app.current_context_filter, "+finance -private");
@@ -1874,7 +1910,7 @@ mod tests {
         assert_eq!(app.context_table_state.selected(), Some(0));
 
         assert!(app.get_context().is_ok());
-        assert!(app.update().is_ok());
+        assert!(app.update(true).is_ok());
 
         assert_eq!(app.tasks.lock().unwrap().len(), 26);
         assert_eq!(app.current_context_filter, "");
@@ -1885,7 +1921,7 @@ mod tests {
 
         let mut app = TTApp::new().unwrap();
         assert!(app.get_context().is_ok());
-        assert!(app.update().is_ok());
+        assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -1894,11 +1930,12 @@ mod tests {
 
         let mut command = Command::new("task");
         command.arg("add");
+        let tomorrow = now + chrono::Duration::days(1);
         let message = format!(
             "'new task for testing tomorrow' due:{:04}-{:02}-{:02}",
-            now.year(),
-            now.month(),
-            now.day() + 1
+            tomorrow.year(),
+            tomorrow.month(),
+            tomorrow.day(),
         );
 
         let shell = message.as_str().replace("'", "\\'");
@@ -1909,12 +1946,19 @@ mod tests {
         let output = command.output().unwrap();
         let s = String::from_utf8_lossy(&output.stdout);
         let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
+        let caps = re.captures(&s);
+        if caps.is_none() {
+            let s = String::from_utf8_lossy(&output.stderr);
+            dbg!(s);
+            assert!(false);
+        }
         let caps = re.captures(&s).unwrap();
+
         let task_id = caps["task_id"].parse::<u64>().unwrap();
         assert_eq!(task_id, total_tasks + 1);
 
         assert!(app.get_context().is_ok());
-        assert!(app.update().is_ok());
+        assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.lock().unwrap().len(), (total_tasks + 1) as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -1941,7 +1985,7 @@ mod tests {
 
         let mut app = TTApp::new().unwrap();
         assert!(app.get_context().is_ok());
-        assert!(app.update().is_ok());
+        assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
     }
@@ -1951,7 +1995,7 @@ mod tests {
 
         let mut app = TTApp::new().unwrap();
         assert!(app.get_context().is_ok());
-        assert!(app.update().is_ok());
+        assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -1960,14 +2004,9 @@ mod tests {
 
         let mut command = Command::new("task");
         command.arg("add");
-        let message = format!(
-            "'new task for testing earlier today' due:{:04}-{:02}-{:02}",
-            now.year(),
-            now.month(),
-            now.day()
-        );
+        let message = "'new task for testing earlier today' due:now";
 
-        let shell = message.as_str().replace("'", "\\'");
+        let shell = message.replace("'", "\\'");
         let cmd = shlex::split(&shell).unwrap();
         for s in cmd {
             command.arg(&s);
@@ -1980,7 +2019,7 @@ mod tests {
         assert_eq!(task_id, total_tasks + 1);
 
         assert!(app.get_context().is_ok());
-        assert!(app.update().is_ok());
+        assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.lock().unwrap().len(), (total_tasks + 1) as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -1997,6 +2036,7 @@ mod tests {
             "UNBLOCKED",
             "YEAR",
         ] {
+            dbg!(s, task.tags());
             assert!(task.tags().unwrap().contains(&s.to_string()));
         }
 
@@ -2008,7 +2048,7 @@ mod tests {
 
         let mut app = TTApp::new().unwrap();
         assert!(app.get_context().is_ok());
-        assert!(app.update().is_ok());
+        assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
     }
@@ -2020,7 +2060,7 @@ mod tests {
 
         let mut app = TTApp::new().unwrap();
         assert!(app.get_context().is_ok());
-        assert!(app.update().is_ok());
+        assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -2052,7 +2092,7 @@ mod tests {
         assert_eq!(task_id, total_tasks + 1);
 
         assert!(app.get_context().is_ok());
-        assert!(app.update().is_ok());
+        assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.lock().unwrap().len(), (total_tasks + 1) as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -2079,7 +2119,7 @@ mod tests {
 
         let mut app = TTApp::new().unwrap();
         assert!(app.get_context().is_ok());
-        assert!(app.update().is_ok());
+        assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
     }
@@ -2094,14 +2134,14 @@ mod tests {
             let total_tasks: u64 = 0;
 
             assert!(app.get_context().is_ok());
-            assert!(app.update().is_ok());
+            assert!(app.update(true).is_ok());
             assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
             assert_eq!(app.current_context_filter, "");
 
             let now = Local::now();
             let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
 
-            app.update().unwrap();
+            app.update(true).unwrap();
 
             let backend = TestBackend::new(50, 15);
             let mut terminal = Terminal::new(backend).unwrap();
@@ -2160,7 +2200,7 @@ mod tests {
             let total_tasks: u64 = 26;
 
             assert!(app.get_context().is_ok());
-            assert!(app.update().is_ok());
+            assert!(app.update(true).is_ok());
             assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
             assert_eq!(app.current_context_filter, "");
 
@@ -2205,7 +2245,7 @@ mod tests {
             app.task_report_previous_page();
             app.task_report_bottom();
             app.task_report_top();
-            app.update().unwrap();
+            app.update(true).unwrap();
 
             let backend = TestBackend::new(50, 15);
             let mut terminal = Terminal::new(backend).unwrap();
@@ -2313,7 +2353,7 @@ mod tests {
 
             app.task_report_next();
             app.context_next();
-            app.update().unwrap();
+            app.update(true).unwrap();
 
             app.calendar_year = 2020;
             app.mode = AppMode::Calendar;
@@ -2399,7 +2439,7 @@ mod tests {
             app.mode = AppMode::TaskHelpPopup;
             app.task_report_next();
             app.context_next();
-            app.update().unwrap();
+            app.update(true).unwrap();
 
             let backend = TestBackend::new(40, 12);
             let mut terminal = Terminal::new(backend).unwrap();
@@ -2445,7 +2485,7 @@ mod tests {
             app.mode = AppMode::TaskContextMenu;
             app.task_report_next();
             app.context_next();
-            app.update().unwrap();
+            app.update(true).unwrap();
 
             let backend = TestBackend::new(80, 10);
             let mut terminal = Terminal::new(backend).unwrap();
