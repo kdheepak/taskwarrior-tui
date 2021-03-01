@@ -199,7 +199,7 @@ uda.taskwarrior-tui.style.context.active=black on rgb444
 uda.taskwarrior-tui.style.calendar.title=black on rgb444
 ```
 
-Here are the default key bindings
+And here are the default key bindings:
 
 ```plaintext
 uda.taskwarrior-tui.keyconfig.quit=q
