@@ -793,9 +793,12 @@ impl TTApp {
         self.context_table_state.select(Some(i));
     }
 
-    pub fn context_select(&mut self) {
+    pub fn context_select(&mut self) -> Result<(), String> {
         let i = self.context_table_state.selected().unwrap();
-        let output = Command::new("task").arg("context").arg(&self.contexts[i].name).output();
+        let mut command = Command::new("task");
+        command.arg("context").arg(&self.contexts[i].name);
+        let output = command.output();
+        Ok(())
     }
 
     pub fn task_report_top(&mut self) {
@@ -1561,8 +1564,16 @@ impl TTApp {
                 } else if input == Key::Up || input == self.keyconfig.up {
                     self.context_previous();
                 } else if input == Key::Char('\n') {
-                    self.context_select();
-                    self.get_context()?;
+                    match self.context_select() {
+                        Ok(_) => {
+                            self.get_context()?;
+                            self.update(true)?;
+                        }
+                        Err(e) => {
+                            self.mode = AppMode::TaskError;
+                            self.error = e;
+                        }
+                    }
                 }
             }
             AppMode::TaskHelpPopup => {
