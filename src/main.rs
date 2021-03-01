@@ -7,6 +7,7 @@ mod calendar;
 mod config;
 mod context;
 mod help;
+mod keyconfig;
 mod table;
 mod task_report;
 mod util;
