@@ -552,19 +552,13 @@ impl TTApp {
     fn task_by_uuid(&self, uuid: Uuid) -> Option<Task> {
         let tasks = &self.tasks.lock().unwrap();
         let m = tasks.iter().find(|t| *t.uuid() == uuid);
-        match m {
-            Some(v) => Some(v.clone()),
-            None => None,
-        }
+        m.cloned()
     }
 
     fn task_by_id(&self, id: u64) -> Option<Task> {
         let tasks = &self.tasks.lock().unwrap();
         let m = tasks.iter().find(|t| t.id().unwrap() == id);
-        match m {
-            Some(v) => Some(v.clone()),
-            None => None,
-        }
+        m.cloned()
     }
 
     fn style_for_task(&self, task: &Task) -> Style {
@@ -906,7 +900,7 @@ impl TTApp {
 
         for (i, line) in data.trim().split('\n').enumerate() {
             let line = line.trim();
-            if line == "" || line == "Use 'task context none' to unset the current context." {
+            if line.is_empty() || line == "Use 'task context none' to unset the current context." {
                 continue;
             }
             let mut s = line.split(' ');
