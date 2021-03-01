@@ -1410,6 +1410,7 @@ impl TTApp {
                     let reference = TimeZone::from_utc_datetime(now.offset(), d);
                     let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
                     let d = d.clone();
+                    dbg!(reference, now);
                     if (reference - chrono::Duration::nanoseconds(1)).month() == now.month() {
                         add_tag(&mut task, "MONTH".to_string());
                     }
@@ -2003,14 +2004,9 @@ mod tests {
 
         let mut command = Command::new("task");
         command.arg("add");
-        let message = format!(
-            "'new task for testing earlier today' due:{:04}-{:02}-{:02}",
-            now.year(),
-            now.month(),
-            now.day()
-        );
+        let message = "'new task for testing earlier today' due:now";
 
-        let shell = message.as_str().replace("'", "\\'");
+        let shell = message.replace("'", "\\'");
         let cmd = shlex::split(&shell).unwrap();
         for s in cmd {
             command.arg(&s);
@@ -2040,6 +2036,7 @@ mod tests {
             "UNBLOCKED",
             "YEAR",
         ] {
+            dbg!(s, task.tags());
             assert!(task.tags().unwrap().contains(&s.to_string()));
         }
 
