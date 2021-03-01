@@ -187,7 +187,7 @@ impl TTApp {
             app.filter.insert(c, 1);
         }
         app.get_context()?;
-        app.update()?;
+        app.update(true)?;
         Ok(app)
     }
 
@@ -755,8 +755,8 @@ impl TTApp {
         (tasks, headers)
     }
 
-    pub fn update(&mut self) -> Result<(), Box<dyn Error>> {
-        if self.tasks_changed_since(self.last_export)? {
+    pub fn update(&mut self, force: bool) -> Result<(), Box<dyn Error>> {
+        if force || self.tasks_changed_since(self.last_export)? {
             self.last_export = Some(std::time::SystemTime::now());
             self.task_report_table.export_headers()?;
             let _ = self.export_tasks();
@@ -1467,7 +1467,7 @@ impl TTApp {
         match self.mode {
             AppMode::TaskReport => match input {
                 Key::Ctrl('c') | Key::Char('q') => self.should_quit = true,
-                Key::Char('r') => self.update()?,
+                Key::Char('r') => self.update(true)?,
                 Key::End | Key::Char('G') => self.task_report_bottom(),
                 Key::Home => self.task_report_top(),
                 Key::Char('g') => {
@@ -1480,28 +1480,28 @@ impl TTApp {
                 Key::PageDown | Key::Char('J') => self.task_report_next_page(),
                 Key::PageUp | Key::Char('K') => self.task_report_previous_page(),
                 Key::Char('d') => match self.task_done() {
-                    Ok(_) => self.update()?,
+                    Ok(_) => self.update(true)?,
                     Err(e) => {
                         self.mode = AppMode::TaskError;
                         self.error = e;
                     }
                 },
                 Key::Char('x') => match self.task_delete() {
-                    Ok(_) => self.update()?,
+                    Ok(_) => self.update(true)?,
                     Err(e) => {
                         self.mode = AppMode::TaskError;
                         self.error = e;
                     }
                 },
                 Key::Char('s') => match self.task_start_or_stop() {
-                    Ok(_) => self.update()?,
+                    Ok(_) => self.update(true)?,
                     Err(e) => {
                         self.mode = AppMode::TaskError;
                         self.error = e;
                     }
                 },
                 Key::Char('u') => match self.task_undo() {
-                    Ok(_) => self.update()?,
+                    Ok(_) => self.update(true)?,
                     Err(e) => {
                         self.mode = AppMode::TaskError;
                         self.error = e;
@@ -1512,7 +1512,7 @@ impl TTApp {
                     let r = self.task_edit();
                     events.resume_key_capture(terminal);
                     match r {
-                        Ok(_) => self.update()?,
+                        Ok(_) => self.update(true)?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
                             self.error = e;
@@ -1590,7 +1590,7 @@ impl TTApp {
                 Key::Char('\n') => match self.task_modify() {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
-                        self.update()?;
+                        self.update(true)?;
                     }
                     Err(e) => {
                         self.mode = AppMode::TaskError;
@@ -1607,7 +1607,7 @@ impl TTApp {
                 Key::Char('\n') => match self.task_subprocess() {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
-                        self.update()?;
+                        self.update(true)?;
                     }
                     Err(e) => {
                         self.mode = AppMode::TaskError;
@@ -1624,7 +1624,7 @@ impl TTApp {
                 Key::Char('\n') => match self.task_log() {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
-                        self.update()?;
+                        self.update(true)?;
                     }
                     Err(e) => {
                         self.mode = AppMode::TaskError;
@@ -1641,7 +1641,7 @@ impl TTApp {
                 Key::Char('\n') => match self.task_annotate() {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
-                        self.update()?;
+                        self.update(true)?;
                     }
                     Err(e) => {
                         self.mode = AppMode::TaskError;
@@ -1658,7 +1658,7 @@ impl TTApp {
                 Key::Char('\n') => match self.task_add() {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
-                        self.update()?;
+                        self.update(true)?;
                     }
                     Err(e) => {
                         self.mode = AppMode::TaskError;
@@ -1674,7 +1674,7 @@ impl TTApp {
             AppMode::TaskFilter => match input {
                 Key::Char('\n') | Key::Esc => {
                     self.mode = AppMode::TaskReport;
-                    self.update()?;
+                    self.update(true)?;
                 }
                 _ => handle_movement(&mut self.filter, input),
             },
@@ -1890,7 +1890,7 @@ mod tests {
         let mut app = TTApp::new().unwrap();
 
         assert!(app.get_context().is_ok());
-        assert!(app.update().is_ok());
+        assert!(app.update(true).is_ok());
 
         app.context_next();
         app.context_select();
@@ -1904,7 +1904,7 @@ mod tests {
         assert_eq!(app.context_table_state.selected(), Some(1));
 
         assert!(app.get_context().is_ok());
-        assert!(app.update().is_ok());
+        assert!(app.update(true).is_ok());
 
         assert_eq!(app.tasks.lock().unwrap().len(), 1);
         assert_eq!(app.current_context_filter, "+finance -private");
@@ -1915,7 +1915,7 @@ mod tests {
         assert_eq!(app.context_table_state.selected(), Some(0));
 
         assert!(app.get_context().is_ok());
-        assert!(app.update().is_ok());
+        assert!(app.update(true).is_ok());
 
         assert_eq!(app.tasks.lock().unwrap().len(), 26);
         assert_eq!(app.current_context_filter, "");
@@ -1926,7 +1926,7 @@ mod tests {
 
         let mut app = TTApp::new().unwrap();
         assert!(app.get_context().is_ok());
-        assert!(app.update().is_ok());
+        assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -1955,7 +1955,7 @@ mod tests {
         assert_eq!(task_id, total_tasks + 1);
 
         assert!(app.get_context().is_ok());
-        assert!(app.update().is_ok());
+        assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.lock().unwrap().len(), (total_tasks + 1) as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -1982,7 +1982,7 @@ mod tests {
 
         let mut app = TTApp::new().unwrap();
         assert!(app.get_context().is_ok());
-        assert!(app.update().is_ok());
+        assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
     }
@@ -1992,7 +1992,7 @@ mod tests {
 
         let mut app = TTApp::new().unwrap();
         assert!(app.get_context().is_ok());
-        assert!(app.update().is_ok());
+        assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -2021,7 +2021,7 @@ mod tests {
         assert_eq!(task_id, total_tasks + 1);
 
         assert!(app.get_context().is_ok());
-        assert!(app.update().is_ok());
+        assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.lock().unwrap().len(), (total_tasks + 1) as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -2049,7 +2049,7 @@ mod tests {
 
         let mut app = TTApp::new().unwrap();
         assert!(app.get_context().is_ok());
-        assert!(app.update().is_ok());
+        assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
     }
@@ -2061,7 +2061,7 @@ mod tests {
 
         let mut app = TTApp::new().unwrap();
         assert!(app.get_context().is_ok());
-        assert!(app.update().is_ok());
+        assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -2093,7 +2093,7 @@ mod tests {
         assert_eq!(task_id, total_tasks + 1);
 
         assert!(app.get_context().is_ok());
-        assert!(app.update().is_ok());
+        assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.lock().unwrap().len(), (total_tasks + 1) as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -2120,7 +2120,7 @@ mod tests {
 
         let mut app = TTApp::new().unwrap();
         assert!(app.get_context().is_ok());
-        assert!(app.update().is_ok());
+        assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
     }
@@ -2135,14 +2135,14 @@ mod tests {
             let total_tasks: u64 = 0;
 
             assert!(app.get_context().is_ok());
-            assert!(app.update().is_ok());
+            assert!(app.update(true).is_ok());
             assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
             assert_eq!(app.current_context_filter, "");
 
             let now = Local::now();
             let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
 
-            app.update().unwrap();
+            app.update(true).unwrap();
 
             let backend = TestBackend::new(50, 15);
             let mut terminal = Terminal::new(backend).unwrap();
@@ -2201,7 +2201,7 @@ mod tests {
             let total_tasks: u64 = 26;
 
             assert!(app.get_context().is_ok());
-            assert!(app.update().is_ok());
+            assert!(app.update(true).is_ok());
             assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
             assert_eq!(app.current_context_filter, "");
 
@@ -2246,7 +2246,7 @@ mod tests {
             app.task_report_previous_page();
             app.task_report_bottom();
             app.task_report_top();
-            app.update().unwrap();
+            app.update(true).unwrap();
 
             let backend = TestBackend::new(50, 15);
             let mut terminal = Terminal::new(backend).unwrap();
@@ -2354,7 +2354,7 @@ mod tests {
 
             app.task_report_next();
             app.context_next();
-            app.update().unwrap();
+            app.update(true).unwrap();
 
             app.calendar_year = 2020;
             app.mode = AppMode::Calendar;
@@ -2440,7 +2440,7 @@ mod tests {
             app.mode = AppMode::TaskHelpPopup;
             app.task_report_next();
             app.context_next();
-            app.update().unwrap();
+            app.update(true).unwrap();
 
             let backend = TestBackend::new(40, 12);
             let mut terminal = Terminal::new(backend).unwrap();
@@ -2486,7 +2486,7 @@ mod tests {
             app.mode = AppMode::TaskContextMenu;
             app.task_report_next();
             app.context_next();
-            app.update().unwrap();
+            app.update(true).unwrap();
 
             let backend = TestBackend::new(80, 10);
             let mut terminal = Terminal::new(backend).unwrap();
