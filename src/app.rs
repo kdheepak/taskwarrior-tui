@@ -11,11 +11,11 @@ use crate::util::{Event, Events};
 use std::cmp::Ordering;
 use std::convert::TryInto;
 use std::error::Error;
+use std::fs;
+use std::path::Path;
 use std::process::Command;
 use std::result::Result;
 use std::time::SystemTime;
-use std::fs;
-use std::path::Path;
 
 use task_hookrs::date::Date;
 use task_hookrs::import::import;
@@ -950,13 +950,12 @@ impl TTApp {
                         // time shifts, cap maximum wait to 1 min
                         let now = SystemTime::now();
                         let max_delta = Duration::from_secs(60);
-                        Ok(now.duration_since(prev)? >  max_delta)
+                        Ok(now.duration_since(prev)? > max_delta)
                     }
-                },
+                }
                 Err(_) => Ok(true),
             }
-        }
-        else {
+        } else {
             Ok(true)
         }
     }
