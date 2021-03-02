@@ -269,7 +269,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish snap
-        run: snapcraft upload ./taskwarrior-tui_*.snap
+        if: startsWith(github.ref, 'refs/tags/')
+        run: snapcraft upload --release stable ./taskwarrior-tui_*.snap
 
   grcov:
     runs-on: ubuntu-latest
