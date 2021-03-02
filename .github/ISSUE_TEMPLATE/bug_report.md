@@ -30,8 +30,14 @@ git clone https://github.com/kdheepak/taskwarrior-testdata/
 After you clone the above repository, run the following lines in your shell.
 
 ```bash
-export TASKRC=`pwd`/taskwarrior-testdata/data/.taskrc
-export TASKDATA=`pwd`/taskwarrior-testdata/data/.task
+export TASKRC=`pwd`/taskwarrior-testdata/.taskrc
+export TASKDATA=`pwd`/taskwarrior-testdata/.task
+```
+
+Then run the following:
+
+```bash
+task import `pwd`/taskwarrior-testdata/export.json
 ```
 
 See taskwarrior documentation for more information.
