@@ -1,4 +1,4 @@
-% taskwarrior-tui(1) v0.11.0
+% taskwarrior-tui(1) v0.11.1
 
 <!-- This is the taskwarrior-tui(1) man page, written in Markdown. -->
 <!-- To generate the roff version, run `just man`, -->
