@@ -1896,14 +1896,14 @@ mod tests {
         assert!(app.update(true).is_ok());
 
         app.context_next();
-        app.context_select();
+        app.context_select().unwrap();
 
         assert_eq!(app.tasks.lock().unwrap().len(), 26);
         assert_eq!(app.current_context_filter, "");
 
         assert_eq!(app.context_table_state.selected(), Some(0));
         app.context_next();
-        app.context_select();
+        app.context_select().unwrap();
         assert_eq!(app.context_table_state.selected(), Some(1));
 
         assert!(app.get_context().is_ok());
@@ -1914,7 +1914,7 @@ mod tests {
 
         assert_eq!(app.context_table_state.selected(), Some(1));
         app.context_previous();
-        app.context_select();
+        app.context_select().unwrap();
         assert_eq!(app.context_table_state.selected(), Some(0));
 
         assert!(app.get_context().is_ok());
@@ -2287,7 +2287,7 @@ mod tests {
 
         let mut expected = Buffer::with_lines(vec![
             "╭Task|Calendar───────────────────────────────────╮",
-            "│  ID Age Deps P Projec Tag    Due  Descrip Urg  │",
+            "│  ID Age Deps P Projec Tag     Due Descrip Urg  │",
             "│                                                │",
             "│• 27 0s       U                    new ta… 15.00│",
             "│  28 0s       U        none        new ta… 15.00│",
@@ -2322,8 +2322,8 @@ mod tests {
             10..=13, // Deps
             15..=15, // P
             17..=22, // Projec
-            24..=29, // Tag
-            31..=34, // Due
+            24..=30, // Tag
+            32..=34, // Due
             36..=42, // Descr
             44..=48, // Urg
         ] {
