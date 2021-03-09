@@ -11,6 +11,7 @@ mod keyconfig;
 mod table;
 mod task_report;
 mod util;
+mod history;
 
 use crate::util::{destruct_terminal, setup_terminal, Event, EventConfig, Events};
 use anyhow::Result;
