@@ -288,7 +288,7 @@ jobs:
           toolchain: nightly
           override: true
           profile: minimal
-      - run: sudo apt-get update && sudo apt-get install -y taskwarrior taskd
+      - run: sudo apt-get update && sudo apt-get install -y taskwarrior
       - uses: actions/checkout@v2
         with:
           repository: kdheepak/taskwarrior-testdata
