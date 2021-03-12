@@ -975,7 +975,7 @@ impl TTApp {
         task.arg("export");
 
         let filter = if !self.current_context_filter.is_empty() {
-            let t = format!("{} {}", self.filter.as_str(), self.current_context_filter);
+            let t = format!("{} '\\({}\\)'", self.filter.as_str(), self.current_context_filter);
             t
         } else {
             self.filter.as_str().into()
