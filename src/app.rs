@@ -1679,7 +1679,10 @@ impl TTApp {
                     self.mode = AppMode::TaskReport;
                     self.update(true)?;
                 }
-                _ => handle_movement(&mut self.filter, input),
+                _ => {
+                    handle_movement(&mut self.filter, input);
+                    // TODO: call self.update(true) here for instant filter updates
+                }
             },
             AppMode::TaskError => self.mode = AppMode::TaskReport,
             AppMode::Calendar => {
