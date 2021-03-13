@@ -1162,7 +1162,7 @@ impl TTApp {
         let mut command = Command::new("task");
         command.arg("add");
 
-        let shell = self.command.as_str().replace("'", "\\'");
+        let shell = self.command.as_str();
 
         match shlex::split(&shell) {
             Some(cmd) => {
