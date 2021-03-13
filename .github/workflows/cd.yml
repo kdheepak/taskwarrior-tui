@@ -236,7 +236,7 @@ jobs:
 
   snap:
     name: Push to snap
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v2
