@@ -38,8 +38,8 @@ impl Default for KeyConfig {
         Self {
             quit: Key::Char('q'),
             refresh: Key::Char('r'),
-            go_to_bottom: Key::End,
-            go_to_top: Key::Home,
+            go_to_bottom: Key::Char('G'),
+            go_to_top: Key::Char('g'),
             down: Key::Char('j'),
             up: Key::Char('k'),
             page_down: Key::Char('J'),

@@ -70,8 +70,8 @@ Keybindings for task report:
 `K`
 : {selected-=pageheight}            - Move page up in task report
 
-`gg`
-: {selected=last}                  - Go to top
+`g`
+: {selected=first}                  - Go to top
 
 `G`
 : {selected=last}                   - Go to bottom
