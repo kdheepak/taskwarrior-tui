@@ -1097,6 +1097,7 @@ impl TTApp {
         }
 
         let shell = format!("{} {}", shell, task_uuid);
+        let shell = shellexpand::tilde(&shell).into_owned();
         match shlex::split(&shell) {
             Some(cmd) => {
                 let mut command = Command::new(&cmd[0]);
@@ -1116,10 +1117,7 @@ impl TTApp {
                             ))
                         }
                     }
-                    Err(_) => Err(format!(
-                        "Cannot run `{}`. Check documentation for more information",
-                        shell,
-                    )),
+                    Err(s) => Err(format!("`{}` failed: {}", shell, s,)),
                 }
             }
             None => Err(format!("Unable to run `{}`. Cannot shlex split `{}`", shell, shell)),
