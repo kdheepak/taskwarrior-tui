@@ -87,7 +87,7 @@ impl Config {
 
     fn get_uda_shortcuts() -> Vec<String> {
         let mut v = vec![];
-        for s in 0..9 {
+        for s in 0..=9 {
             let c = format!("uda.taskwarrior-tui.shortcuts.{}", s);
             let s = Self::get_config(&c);
             v.push(s);
