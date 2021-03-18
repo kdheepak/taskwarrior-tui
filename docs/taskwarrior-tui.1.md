@@ -103,7 +103,7 @@ Keybindings for task report:
 `!`
 : {string}                          - Custom shell command
 
-`0-9`
+`1-9`
 : {string}                          - Run user defined shortcuts
 
 `c`
