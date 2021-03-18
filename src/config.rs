@@ -92,7 +92,7 @@ impl Config {
             let s = Self::get_config(&c);
             v.push(s);
         }
-        return v;
+        v
     }
 
     fn get_uda_style(config: &str) -> Option<Style> {
