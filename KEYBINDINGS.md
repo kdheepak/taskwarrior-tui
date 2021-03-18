@@ -47,6 +47,8 @@ Keybindings for task report:
 
     !: {string}                          - Custom shell command
 
+    0-9: {string}                        - Run user defined shortcuts
+
     c: context switcher menu             - Open context switcher menu
 
     ?: help                              - Help menu
