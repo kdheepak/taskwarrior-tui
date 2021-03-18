@@ -52,6 +52,7 @@ pub struct Config {
     pub uda_calendar_months_per_row: usize,
     pub uda_style_context_active: Style,
     pub uda_style_calendar_title: Style,
+    pub uda_shortcuts: Vec<String>,
 }
 
 impl Config {
@@ -76,11 +77,22 @@ impl Config {
             uda_calendar_months_per_row: Self::get_uda_months_per_row(),
             uda_style_calendar_title: Self::get_uda_style("calendar.title").unwrap_or_default(),
             uda_style_context_active: Self::get_uda_style("context.active").unwrap_or_default(),
+            uda_shortcuts: Self::get_uda_shortcuts(),
         })
     }
 
     fn get_bool_collection() -> HashMap<String, bool> {
         HashMap::new()
+    }
+
+    fn get_uda_shortcuts() -> Vec<String> {
+        let mut v = vec![];
+        for s in 0..9 {
+            let c = format!("uda.taskwarrior-tui.shortcuts.{}", s);
+            let s = Self::get_config(&c);
+            v.push(s);
+        }
+        return v;
     }
 
     fn get_uda_style(config: &str) -> Option<Style> {

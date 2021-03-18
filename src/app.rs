@@ -1083,6 +1083,49 @@ impl TTApp {
         }
     }
 
+    pub fn task_shortcut(&mut self, s: usize) -> Result<(), String> {
+        if self.tasks.lock().unwrap().is_empty() {
+            return Ok(());
+        }
+        let selected = self.task_table_state.selected().unwrap_or_default();
+        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
+        let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
+        let shell = &self.config.uda_shortcuts[s];
+
+        if shell.is_empty() {
+            return Err("Trying to run empty shortcut.".to_string());
+        }
+
+        let shell = format!("{} {}", shell, task_uuid);
+        match shlex::split(&shell) {
+            Some(cmd) => {
+                let mut command = Command::new(&cmd[0]);
+                for s in cmd.iter().skip(1) {
+                    command.arg(&s);
+                }
+                let output = command.output();
+                match output {
+                    Ok(o) => {
+                        if o.status.success() {
+                            Ok(())
+                        } else {
+                            Err(format!(
+                                "Unable to run shortcut {}. Failed with status code {}",
+                                s,
+                                o.status.code().unwrap()
+                            ))
+                        }
+                    }
+                    Err(_) => Err(format!(
+                        "Cannot run `{}`. Check documentation for more information",
+                        shell,
+                    )),
+                }
+            }
+            None => Err(format!("Unable to run `{}`. Cannot shlex split `{}`", shell, shell)),
+        }
+    }
+
     pub fn task_modify(&mut self) -> Result<(), String> {
         if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
@@ -1562,6 +1605,86 @@ impl TTApp {
                     self.mode = AppMode::TaskHelpPopup;
                 } else if input == self.keyconfig.filter {
                     self.mode = AppMode::TaskFilter;
+                } else if input == self.keyconfig.shortcut0 {
+                    match self.task_shortcut(0) {
+                        Ok(_) => self.update(true)?,
+                        Err(e) => {
+                            self.mode = AppMode::TaskError;
+                            self.error = e;
+                        }
+                    }
+                } else if input == self.keyconfig.shortcut1 {
+                    match self.task_shortcut(1) {
+                        Ok(_) => self.update(true)?,
+                        Err(e) => {
+                            self.mode = AppMode::TaskError;
+                            self.error = e;
+                        }
+                    }
+                } else if input == self.keyconfig.shortcut2 {
+                    match self.task_shortcut(2) {
+                        Ok(_) => self.update(true)?,
+                        Err(e) => {
+                            self.mode = AppMode::TaskError;
+                            self.error = e;
+                        }
+                    }
+                } else if input == self.keyconfig.shortcut3 {
+                    match self.task_shortcut(3) {
+                        Ok(_) => self.update(true)?,
+                        Err(e) => {
+                            self.mode = AppMode::TaskError;
+                            self.error = e;
+                        }
+                    }
+                } else if input == self.keyconfig.shortcut4 {
+                    match self.task_shortcut(4) {
+                        Ok(_) => self.update(true)?,
+                        Err(e) => {
+                            self.mode = AppMode::TaskError;
+                            self.error = e;
+                        }
+                    }
+                } else if input == self.keyconfig.shortcut5 {
+                    match self.task_shortcut(5) {
+                        Ok(_) => self.update(true)?,
+                        Err(e) => {
+                            self.mode = AppMode::TaskError;
+                            self.error = e;
+                        }
+                    }
+                } else if input == self.keyconfig.shortcut6 {
+                    match self.task_shortcut(6) {
+                        Ok(_) => self.update(true)?,
+                        Err(e) => {
+                            self.mode = AppMode::TaskError;
+                            self.error = e;
+                        }
+                    }
+                } else if input == self.keyconfig.shortcut7 {
+                    match self.task_shortcut(7) {
+                        Ok(_) => self.update(true)?,
+                        Err(e) => {
+                            self.mode = AppMode::TaskError;
+                            self.error = e;
+                        }
+                    }
+                } else if input == self.keyconfig.shortcut8 {
+                    match self.task_shortcut(8) {
+                        Ok(_) => self.update(true)?,
+                        Err(e) => {
+                            self.mode = AppMode::TaskError;
+                            self.error = e;
+                        }
+                    }
+                } else if input == self.keyconfig.shortcut9 {
+                    match self.task_shortcut(9) {
+                        Ok(_) => self.update(true)?,
+                        Err(e) => {
+                            self.mode = AppMode::TaskError;
+                            self.error = e;
+                        }
+                    }
                 } else if input == self.keyconfig.zoom {
                     self.task_report_show_info = !self.task_report_show_info;
                 } else if input == self.keyconfig.context_menu {

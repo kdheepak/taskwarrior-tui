@@ -31,6 +31,16 @@ pub struct KeyConfig {
     pub context_menu: Key,
     pub next_tab: Key,
     pub previous_tab: Key,
+    pub shortcut0: Key,
+    pub shortcut1: Key,
+    pub shortcut2: Key,
+    pub shortcut3: Key,
+    pub shortcut4: Key,
+    pub shortcut5: Key,
+    pub shortcut6: Key,
+    pub shortcut7: Key,
+    pub shortcut8: Key,
+    pub shortcut9: Key,
 }
 
 impl Default for KeyConfig {
@@ -60,6 +70,16 @@ impl Default for KeyConfig {
             context_menu: Key::Char('c'),
             next_tab: Key::Char(']'),
             previous_tab: Key::Char('['),
+            shortcut0: Key::Char('0'),
+            shortcut1: Key::Char('1'),
+            shortcut2: Key::Char('2'),
+            shortcut3: Key::Char('3'),
+            shortcut4: Key::Char('4'),
+            shortcut5: Key::Char('5'),
+            shortcut6: Key::Char('6'),
+            shortcut7: Key::Char('7'),
+            shortcut8: Key::Char('8'),
+            shortcut9: Key::Char('9'),
         }
     }
 }
