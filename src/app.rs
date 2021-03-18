@@ -1603,14 +1603,6 @@ impl TTApp {
                     self.mode = AppMode::TaskHelpPopup;
                 } else if input == self.keyconfig.filter {
                     self.mode = AppMode::TaskFilter;
-                } else if input == self.keyconfig.shortcut0 {
-                    match self.task_shortcut(0) {
-                        Ok(_) => self.update(true)?,
-                        Err(e) => {
-                            self.mode = AppMode::TaskError;
-                            self.error = e;
-                        }
-                    }
                 } else if input == self.keyconfig.shortcut1 {
                     match self.task_shortcut(1) {
                         Ok(_) => self.update(true)?,
