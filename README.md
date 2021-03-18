@@ -238,29 +238,29 @@ uda.taskwarrior-tui.keyconfig.previous-tab=[
 You can configure shortcuts to execute custom commands from your `taskwarrior`'s `taskrc` file (default: `~/.taskrc`). You have to map a shortcut to an executable file :
 
 ```plaintext
-uda.taskwarrior-tui.shortcuts.1=~/local/bin/taskwarrior-tui-shortcut-1
-uda.taskwarrior-tui.shortcuts.2=~/local/bin/taskwarrior-tui-shortcut-2
-uda.taskwarrior-tui.shortcuts.3=~/local/bin/taskwarrior-tui-shortcut-3
-uda.taskwarrior-tui.shortcuts.4=~/local/bin/taskwarrior-tui-shortcut-4
-uda.taskwarrior-tui.shortcuts.5=~/local/bin/taskwarrior-tui-shortcut-5
-uda.taskwarrior-tui.shortcuts.6=~/local/bin/taskwarrior-tui-shortcut-6
-uda.taskwarrior-tui.shortcuts.7=~/local/bin/taskwarrior-tui-shortcut-7
-uda.taskwarrior-tui.shortcuts.8=~/local/bin/taskwarrior-tui-shortcut-8
-uda.taskwarrior-tui.shortcuts.9=~/local/bin/taskwarrior-tui-shortcut-9
+uda.taskwarrior-tui.shortcuts.1=~/.config/taskwarrior-tui/shortcut-scripts/toggle-next-tag.sh
+uda.taskwarrior-tui.shortcuts.2=~/.config/taskwarrior-tui/shortcut-scripts/sync.sh
+...
 ```
-PS1 : file can have any name, but MUST be executable.
+PS1 : file can have any name in any location, but MUST be executable.
 PS2 : 0 iz reserved for future use, see <https://github.com/kdheepak/taskwarrior-tui/pull/142>
 
 When you hit the shortcut, the script will be executed with the `selected task uuid` as a parameter :
 
 ```plaintext
-~/local/bin/taskwarrior-tui-shortcut-1 $selected_task_uuid
+~/.config/taskwarrior-tui/shortcut-scripts/toggle-next-tag.sh $selected_task_uuid
 ```
 
-For exemple, you can add the `next` tag to the currently selected task with the following script in `~/local/bin/taskwarrior-tui-shortcut-1` :
+For exemple, you can add the `next` tag to the currently selected task with the following script in `~/.config/taskwarrior-tui/shortcut-scripts/toggle-next-tag.sh` :
 
 ```plaintext
 task $1 mod +next
+```
+
+By default, shortcuts are linked to the `1-9` number row keys. They can be customized as any other keys through `uda.taskwarrior-tui.keyconfig.shortcut0=<key>`. For exemple :
+
+```plaintext
+uda.taskwarrior-tui.keyconfig.shortcut0=n
 ```
 
 </details>
