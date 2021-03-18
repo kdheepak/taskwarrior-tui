@@ -229,6 +229,42 @@ uda.taskwarrior-tui.keyconfig.previous-tab=[
 
 </details>
 
+#### Configure user defined shortcuts:
+
+<details>
+
+<summary> Click to expand! </summary>
+
+You can configure shortcuts to execute custom commands from your `taskwarrior`'s `taskrc` file (default: `~/.taskrc`). You have to map a shortcut to an executable file :
+
+```plaintext
+uda.taskwarrior-tui.shortcuts.1=~/local/bin/taskwarrior-tui-shortcut-1
+uda.taskwarrior-tui.shortcuts.2=~/local/bin/taskwarrior-tui-shortcut-2
+uda.taskwarrior-tui.shortcuts.3=~/local/bin/taskwarrior-tui-shortcut-3
+uda.taskwarrior-tui.shortcuts.4=~/local/bin/taskwarrior-tui-shortcut-4
+uda.taskwarrior-tui.shortcuts.5=~/local/bin/taskwarrior-tui-shortcut-5
+uda.taskwarrior-tui.shortcuts.6=~/local/bin/taskwarrior-tui-shortcut-6
+uda.taskwarrior-tui.shortcuts.7=~/local/bin/taskwarrior-tui-shortcut-7
+uda.taskwarrior-tui.shortcuts.8=~/local/bin/taskwarrior-tui-shortcut-8
+uda.taskwarrior-tui.shortcuts.9=~/local/bin/taskwarrior-tui-shortcut-9
+```
+PS1 : file can have any name, but MUST be executable.
+PS2 : 0 iz reserved for future use, see <https://github.com/kdheepak/taskwarrior-tui/pull/142>
+
+When you hit the shortcut, the script will be executed with the `selected task uuid` as a parameter :
+
+```plaintext
+~/local/bin/taskwarrior-tui-shortcut-1 $selected_task_uuid
+```
+
+For exemple, you can add the `next` tag to the currently selected task with the following script in `~/local/bin/taskwarrior-tui-shortcut-1` :
+
+```plaintext
+task $1 mod +next
+```
+
+</details>
+
 # Related
 
 For a similar effort, check out `vit`:
