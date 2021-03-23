@@ -8,6 +8,7 @@ use std::{
     fmt::Display,
     iter::{self, Iterator},
 };
+use tinyset::SetUsize;
 use tui::{
     buffer::Buffer,
     layout::{Constraint, Rect},
@@ -19,30 +20,68 @@ use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
 #[derive(Debug, Clone)]
+pub enum TableMode {
+    SingleSelection,
+    MultipleSelection,
+}
+
+#[derive(Clone)]
 pub struct TableState {
     offset: usize,
-    selected: Option<usize>,
+    current_selection: Option<usize>,
+    selected: SetUsize,
+    mode: TableMode,
 }
 
 impl Default for TableState {
     fn default() -> TableState {
         TableState {
             offset: 0,
-            selected: None,
+            current_selection: None,
+            selected: SetUsize::new(),
+            mode: TableMode::SingleSelection,
         }
     }
 }
 
 impl TableState {
+    pub fn mode(&self) -> TableMode {
+        self.mode.clone()
+    }
+
+    pub fn multiple_selection(&mut self) {
+        self.mode = TableMode::MultipleSelection;
+    }
+
+    pub fn single_selection(&mut self) {
+        self.mode = TableMode::SingleSelection;
+    }
+
     pub fn selected(&self) -> Option<usize> {
-        self.selected
+        self.current_selection
     }
 
     pub fn select(&mut self, index: Option<usize>) {
-        self.selected = index;
+        self.current_selection = index;
         if index.is_none() {
             self.offset = 0;
         }
+    }
+
+    pub fn toggle_mark(&mut self, index: Option<usize>) {
+        if let Some(i) = index {
+            if !self.selected.insert(i) {
+                self.selected.remove(i);
+            }
+        }
+    }
+
+    pub fn marked(&self) -> impl Iterator<Item = usize> + '_ {
+        self.selected.iter()
+    }
+
+    pub fn clear(&mut self) {
+        self.selected.drain().for_each(drop);
     }
 }
 
@@ -99,8 +138,10 @@ pub struct Table<'a, H, R> {
     header_gap: u16,
     /// Style used to render the selected row
     highlight_style: Style,
-    /// Symbol in front of the selected rom
+    /// Symbol in front of the selected row
     highlight_symbol: Option<&'a str>,
+    /// Symbol in front of the marked row
+    mark_symbol: Option<&'a str>,
     /// Data to display in each row
     rows: R,
 }
@@ -121,6 +162,7 @@ where
             header_gap: 1,
             highlight_style: Style::default(),
             highlight_symbol: None,
+            mark_symbol: None,
             rows: R::default(),
         }
     }
@@ -143,6 +185,7 @@ where
             header_gap: 1,
             highlight_style: Style::default(),
             highlight_symbol: None,
+            mark_symbol: None,
             rows,
         }
     }
@@ -304,12 +347,32 @@ where
         y += 1 + self.header_gap;
 
         // Use highlight_style only if something is selected
-        let (selected, highlight_style) = match state.selected {
-            Some(i) => (Some(i), self.highlight_style),
-            None => (None, self.style),
+        let (selected, highlight_style) = if state.selected().is_some() {
+            (state.selected(), self.highlight_style)
+        } else {
+            (None, self.style)
         };
-        let highlight_symbol = self.highlight_symbol.unwrap_or("");
-        let blank_symbol = iter::repeat(" ").take(highlight_symbol.width()).collect::<String>();
+
+        let highlight_symbol = match state.mode {
+            TableMode::MultipleSelection => {
+                let s = self.highlight_symbol.unwrap_or("• ").trim_end();
+                format!("[{}] ", s)
+            }
+            TableMode::SingleSelection => self.highlight_symbol.unwrap_or("").to_string(),
+        };
+
+        let mark_symbol = match state.mode {
+            TableMode::MultipleSelection => {
+                let s = self.mark_symbol.unwrap_or("x ").trim_end();
+                format!("[{}] ", s)
+            }
+            TableMode::SingleSelection => self.highlight_symbol.unwrap_or("").to_string(),
+        };
+
+        let blank_symbol = match state.mode {
+            TableMode::MultipleSelection => "[ ] ".to_string(),
+            TableMode::SingleSelection => iter::repeat(" ").take(highlight_symbol.width()).collect::<String>(),
+        };
 
         // Draw rows
         let default_style = Style::default();
@@ -317,11 +380,11 @@ where
             let remaining = (table_area.bottom() - y) as usize;
 
             // Make sure the table shows the selected item
-            state.offset = if let Some(selected) = selected {
-                if selected >= remaining + state.offset - 1 {
-                    selected + 1 - remaining
-                } else if selected < state.offset {
-                    selected
+            state.offset = if let Some(s) = selected {
+                if s >= remaining + state.offset - 1 {
+                    s + 1 - remaining
+                } else if s < state.offset {
+                    s
                 } else {
                     state.offset
                 }
@@ -330,11 +393,32 @@ where
             };
             for (i, row) in self.rows.skip(state.offset).take(remaining).enumerate() {
                 let (data, style, symbol) = match row {
-                    Row::Data(d) | Row::StyledData(d, _) if Some(i) == state.selected.map(|s| s - state.offset) => {
-                        (d, highlight_style, highlight_symbol)
+                    Row::Data(d) | Row::StyledData(d, _) if Some(i) == state.selected().map(|s| s - state.offset) => {
+                        match state.mode {
+                            TableMode::MultipleSelection => {
+                                if state.selected.contains(i) {
+                                    (d, highlight_style, mark_symbol.to_string())
+                                } else {
+                                    (d, highlight_style, blank_symbol.to_string())
+                                }
+                            }
+                            TableMode::SingleSelection => (d, highlight_style, highlight_symbol.to_string()),
+                        }
                     }
-                    Row::Data(d) => (d, default_style, blank_symbol.as_ref()),
-                    Row::StyledData(d, s) => (d, s, blank_symbol.as_ref()),
+                    Row::Data(d) => {
+                        if state.selected.contains(i) {
+                            (d, default_style, mark_symbol.to_string())
+                        } else {
+                            (d, default_style, blank_symbol.to_string())
+                        }
+                    }
+                    Row::StyledData(d, s) => {
+                        if state.selected.contains(i) {
+                            (d, s, mark_symbol.to_string())
+                        } else {
+                            (d, s, blank_symbol.to_string())
+                        }
+                    }
                 };
                 x = table_area.left();
                 for (c, (w, elt)) in solved_widths.iter().zip(data).enumerate() {
@@ -347,6 +431,10 @@ where
                             style,
                         );
                         if c == header_index {
+                            let symbol = match state.mode {
+                                TableMode::SingleSelection => &symbol,
+                                TableMode::MultipleSelection => &symbol,
+                            };
                             format!(
                                 "{symbol}{elt:>width$}",
                                 symbol = symbol,

@@ -4,7 +4,7 @@ use crate::config::Config;
 use crate::context::Context;
 use crate::help::Help;
 use crate::keyconfig::KeyConfig;
-use crate::table::{Row, Table, TableState};
+use crate::table::{Row, Table, TableMode, TableState};
 use crate::task_report::TaskReportTable;
 use crate::util::Key;
 use crate::util::{Event, Events};
@@ -320,10 +320,22 @@ impl TTApp {
             self.draw_task_details(f, split_task_layout[1]);
         }
         let selected = self.task_table_state.selected().unwrap_or_default();
-        let task_id = if tasks_len == 0 {
-            0
+        let task_ids = if tasks_len == 0 {
+            vec!["0".to_string()]
         } else {
-            self.tasks.lock().unwrap()[selected].id().unwrap_or_default()
+            match self.task_table_state.mode() {
+                TableMode::SingleSelection => vec![self.tasks.lock().unwrap()[selected]
+                    .id()
+                    .unwrap_or_default()
+                    .to_string()],
+                TableMode::MultipleSelection => {
+                    let mut tids = vec![];
+                    for s in self.task_table_state.marked() {
+                        tids.push(self.tasks.lock().unwrap()[s].id().unwrap_or_default().to_string());
+                    }
+                    tids
+                }
+            }
         };
         match self.mode {
             AppMode::TaskReport => self.draw_command(f, rects[1], self.filter.as_str(), "Filter Tasks"),
@@ -346,10 +358,7 @@ impl TTApp {
                     f,
                     rects[1],
                     self.command.as_str(),
-                    Span::styled(
-                        format!("Modify Task {}", task_id).as_str(),
-                        Style::default().add_modifier(Modifier::BOLD),
-                    ),
+                    Span::styled("Log Tasks", Style::default().add_modifier(Modifier::BOLD)),
                 );
             }
             AppMode::TaskSubprocess => {
@@ -360,32 +369,39 @@ impl TTApp {
                     f,
                     rects[1],
                     self.command.as_str(),
-                    Span::styled("Log Tasks", Style::default().add_modifier(Modifier::BOLD)),
+                    Span::styled("Shell Command", Style::default().add_modifier(Modifier::BOLD)),
                 );
             }
             AppMode::TaskModify => {
                 let position = self.get_position(&self.modify);
                 f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
+                let label = if task_ids.len() > 1 {
+                    format!("Modify Tasks {}", task_ids.join(","))
+                } else {
+                    format!("Modify Task {}", task_ids.join(","))
+                };
                 self.draw_command(
                     f,
                     rects[1],
                     self.modify.as_str(),
-                    Span::styled("Shell Command", Style::default().add_modifier(Modifier::BOLD)),
+                    Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
                 );
             }
             AppMode::TaskAnnotate => {
                 let position = self.get_position(&self.command);
                 f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
+                let label = if task_ids.len() > 1 {
+                    format!("Annotate Tasks {}", task_ids.join(","))
+                } else {
+                    format!("Annotate Task {}", task_ids.join(","))
+                };
                 self.draw_command(
                     f,
                     rects[1],
                     self.command.as_str(),
-                    Span::styled(
-                        format!("Annotate Task {}", task_id).as_str(),
-                        Style::default().add_modifier(Modifier::BOLD),
-                    ),
+                    Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
                 );
             }
             AppMode::TaskAdd => {
@@ -656,6 +672,9 @@ impl TTApp {
             if header == "ID" || header == "Name" {
                 // always give ID a couple of extra for indicator
                 widths[i] += self.config.uda_selection_indicator.as_str().graphemes(true).count();
+                if let TableMode::MultipleSelection = self.task_table_state.mode() {
+                    widths[i] += 2
+                };
             }
         }
 
@@ -1037,7 +1056,7 @@ impl TTApp {
             return Ok(());
         }
 
-        let shell = self.command.as_str().replace("'", "\\'");
+        let shell = self.command.as_str();
 
         match shlex::split(&shell) {
             Some(cmd) => {
@@ -1072,7 +1091,7 @@ impl TTApp {
 
         command.arg("log");
 
-        let shell = self.command.as_str().replace("'", "\\'");
+        let shell = self.command.as_str();
 
         match shlex::split(&shell) {
             Some(cmd) => {
@@ -1091,10 +1110,7 @@ impl TTApp {
                     )),
                 }
             }
-            None => Err(format!(
-                "Unable to run `task log`. Cannot shlex split `{}`",
-                shell.as_str()
-            )),
+            None => Err(format!("Unable to run `task log`. Cannot shlex split `{}`", shell)),
         }
     }
 
@@ -1102,16 +1118,26 @@ impl TTApp {
         if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
-        let selected = self.task_table_state.selected().unwrap_or_default();
-        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
-        let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
+        let selected = match self.task_table_state.mode() {
+            TableMode::SingleSelection => vec![self.task_table_state.selected().unwrap_or_default()],
+            TableMode::MultipleSelection => self.task_table_state.marked().collect::<Vec<usize>>(),
+        };
+
+        let mut task_uuids = vec![];
+
+        for s in selected {
+            let task_id = self.tasks.lock().unwrap()[s].id().unwrap_or_default();
+            let task_uuid = *self.tasks.lock().unwrap()[s].uuid();
+            task_uuids.push(task_uuid.to_string());
+        }
+
         let shell = &self.config.uda_shortcuts[s];
 
         if shell.is_empty() {
             return Err("Trying to run empty shortcut.".to_string());
         }
 
-        let shell = format!("{} {}", shell, task_uuid);
+        let shell = format!("{} {}", shell, task_uuids.join(" "));
         let shell = shellexpand::tilde(&shell).into_owned();
         match shlex::split(&shell) {
             Some(cmd) => {
@@ -1143,14 +1169,28 @@ impl TTApp {
         if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
-        let selected = self.task_table_state.selected().unwrap_or_default();
-        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
-        let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
-        let mut command = Command::new("task");
-        command.arg("rc.confirmation=off");
-        command.arg(format!("{}", task_uuid)).arg("modify");
 
-        let shell = self.modify.as_str().replace("'", "\\'");
+        let selected = match self.task_table_state.mode() {
+            TableMode::SingleSelection => vec![self.task_table_state.selected().unwrap_or_default()],
+            TableMode::MultipleSelection => self.task_table_state.marked().collect::<Vec<usize>>(),
+        };
+
+        let mut task_uuids = vec![];
+
+        for s in selected {
+            let task_id = self.tasks.lock().unwrap()[s].id().unwrap_or_default();
+            let task_uuid = *self.tasks.lock().unwrap()[s].uuid();
+            task_uuids.push(task_uuid.to_string());
+        }
+
+        let mut command = Command::new("task");
+        command.arg("rc.bulk=0");
+        command.arg("rc.confirmation=off");
+        command.arg("rc.dependency.confirmation=off");
+        command.arg("rc.recurrence.confirmation=off");
+        command.arg(task_uuids.join(" ")).arg("modify");
+
+        let shell = self.modify.as_str();
 
         match shlex::split(&shell) {
             Some(cmd) => {
@@ -1164,23 +1204,16 @@ impl TTApp {
                             self.modify.update("", 0);
                             Ok(())
                         } else {
-                            Err(format!(
-                                "Unable to modify task with uuid {}. Failed with status code {}",
-                                task_uuid,
-                                o.status.code().unwrap()
-                            ))
+                            Err(format!("Modify failed. {}", String::from_utf8_lossy(&o.stdout),))
                         }
                     }
                     Err(_) => Err(format!(
-                        "Cannot run `task {} modify {}`. Check documentation for more information",
-                        task_uuid, shell,
+                        "Cannot run `task {:?} modify {}`. Check documentation for more information",
+                        task_uuids, shell,
                     )),
                 }
             }
-            None => Err(format!(
-                "Unable to run `task {} modify`. Cannot shlex split `{}`",
-                task_uuid, shell,
-            )),
+            None => Err(format!("Cannot shlex split `{}`", shell,)),
         }
     }
 
@@ -1188,13 +1221,28 @@ impl TTApp {
         if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
-        let selected = self.task_table_state.selected().unwrap_or_default();
-        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
-        let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
-        let mut command = Command::new("task");
-        command.arg(format!("{}", task_uuid)).arg("annotate");
 
-        let shell = self.command.as_str().replace("'", "\\'");
+        let selected = match self.task_table_state.mode() {
+            TableMode::SingleSelection => vec![self.task_table_state.selected().unwrap_or_default()],
+            TableMode::MultipleSelection => self.task_table_state.marked().collect::<Vec<usize>>(),
+        };
+
+        let mut task_uuids = vec![];
+
+        for s in selected {
+            let task_id = self.tasks.lock().unwrap()[s].id().unwrap_or_default();
+            let task_uuid = *self.tasks.lock().unwrap()[s].uuid();
+            task_uuids.push(task_uuid.to_string());
+        }
+
+        let mut command = Command::new("task");
+        command.arg("rc.bulk=0");
+        command.arg("rc.confirmation=off");
+        command.arg("rc.dependency.confirmation=off");
+        command.arg("rc.recurrence.confirmation=off");
+        command.arg(task_uuids.join(" ")).arg("annotate");
+
+        let shell = self.command.as_str();
 
         match shlex::split(&shell) {
             Some(cmd) => {
@@ -1208,23 +1256,17 @@ impl TTApp {
                             self.command.update("", 0);
                             Ok(())
                         } else {
-                            Err(format!(
-                                "Unable to annotate task with uuid {}. Failed with status code {}",
-                                task_uuid,
-                                o.status.code().unwrap()
-                            ))
+                            Err(format!("Annotate failed. {}", String::from_utf8_lossy(&o.stdout),))
                         }
                     }
                     Err(_) => Err(format!(
                         "Cannot run `task {} annotate {}`. Check documentation for more information",
-                        task_uuid, shell
+                        task_uuids.join(" "),
+                        shell
                     )),
                 }
             }
-            None => Err(format!(
-                "Unable to run `task {} annotate`. Cannot shlex split `{}`",
-                task_uuid, shell
-            )),
+            None => Err(format!("Cannot shlex split `{}`", shell)),
         }
     }
 
@@ -1538,8 +1580,14 @@ impl TTApp {
     ) -> Result<(), Box<dyn Error>> {
         match self.mode {
             AppMode::TaskReport => {
-                if input == self.keyconfig.quit || input == Key::Ctrl('c') {
+                if input == Key::Esc {
+                    self.task_table_state.single_selection();
+                    self.task_table_state.clear();
+                } else if input == self.keyconfig.quit || input == Key::Ctrl('c') {
                     self.should_quit = true;
+                } else if input == self.keyconfig.select {
+                    self.task_table_state.multiple_selection();
+                    self.task_table_state.toggle_mark(self.task_table_state.selected());
                 } else if input == self.keyconfig.refresh {
                     self.update(true)?;
                 } else if input == self.keyconfig.go_to_bottom || input == Key::End {
@@ -1603,12 +1651,15 @@ impl TTApp {
                     }
                 } else if input == self.keyconfig.modify {
                     self.mode = AppMode::TaskModify;
-                    match self.task_current() {
-                        Some(t) => {
-                            let s = format!("{} ", t.description());
-                            self.modify.update(&s, s.as_str().len())
-                        }
-                        None => self.modify.update("", 0),
+                    match self.task_table_state.mode() {
+                        TableMode::SingleSelection => match self.task_current() {
+                            Some(t) => {
+                                let s = format!("{} ", t.description());
+                                self.modify.update(&s, s.as_str().len())
+                            }
+                            None => self.modify.update("", 0),
+                        },
+                        TableMode::MultipleSelection => self.modify.update("", 0),
                     }
                 } else if input == self.keyconfig.shell {
                     self.mode = AppMode::TaskSubprocess;
