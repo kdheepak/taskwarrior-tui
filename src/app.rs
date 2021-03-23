@@ -267,6 +267,17 @@ impl TTApp {
         tasks_with_styles
     }
 
+    pub fn get_position(&self, lb: &LineBuffer) -> usize {
+        let mut position = lb.as_str().graphemes(true).count();
+        for (i, (_i, g)) in lb.as_str().grapheme_indices(true).enumerate() {
+            if _i == lb.pos() {
+                position = i;
+                break;
+            }
+        }
+        position
+    }
+
     pub fn draw_task(&mut self, f: &mut Frame<impl Backend>) {
         let tasks_is_empty = self.tasks.lock().unwrap().is_empty();
         let tasks_len = self.tasks.lock().unwrap().len();
@@ -305,13 +316,7 @@ impl TTApp {
         match self.mode {
             AppMode::TaskReport => self.draw_command(f, rects[1], self.filter.as_str(), "Filter Tasks"),
             AppMode::TaskFilter => {
-                let mut position = self.filter.as_str().graphemes(true).count();
-                for (i, (_i, g)) in self.filter.as_str().grapheme_indices(true).enumerate() {
-                    if _i == self.filter.pos() {
-                        position = i;
-                        break;
-                    }
-                }
+                let position = self.get_position(&self.filter);
                 f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
                 self.draw_command(
@@ -321,34 +326,22 @@ impl TTApp {
                     Span::styled("Filter Tasks", Style::default().add_modifier(Modifier::BOLD)),
                 );
             }
-            AppMode::TaskModify => {
-                let mut position = self.modify.as_str().graphemes(true).count();
-                for (i, (_i, g)) in self.modify.as_str().grapheme_indices(true).enumerate() {
-                    if _i == self.modify.pos() {
-                        position = i;
-                        break;
-                    }
-                }
+            AppMode::TaskLog => {
+                let position = self.get_position(&self.command);
                 f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
                 self.draw_command(
                     f,
                     rects[1],
-                    self.modify.as_str(),
+                    self.command.as_str(),
                     Span::styled(
                         format!("Modify Task {}", task_id).as_str(),
                         Style::default().add_modifier(Modifier::BOLD),
                     ),
                 );
             }
-            AppMode::TaskLog => {
-                let mut position = self.command.as_str().graphemes(true).count();
-                for (i, (_i, g)) in self.command.as_str().grapheme_indices(true).enumerate() {
-                    if _i == self.command.pos() {
-                        position = i;
-                        break;
-                    }
-                }
+            AppMode::TaskSubprocess => {
+                let position = self.get_position(&self.command);
                 f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
                 self.draw_command(
@@ -358,31 +351,19 @@ impl TTApp {
                     Span::styled("Log Tasks", Style::default().add_modifier(Modifier::BOLD)),
                 );
             }
-            AppMode::TaskSubprocess => {
-                let mut position = self.command.as_str().graphemes(true).count();
-                for (i, (_i, g)) in self.command.as_str().grapheme_indices(true).enumerate() {
-                    if _i == self.command.pos() {
-                        position = i;
-                        break;
-                    }
-                }
+            AppMode::TaskModify => {
+                let position = self.get_position(&self.modify);
                 f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
                 self.draw_command(
                     f,
                     rects[1],
-                    self.command.as_str(),
+                    self.modify.as_str(),
                     Span::styled("Shell Command", Style::default().add_modifier(Modifier::BOLD)),
                 );
             }
             AppMode::TaskAnnotate => {
-                let mut position = self.command.as_str().graphemes(true).count();
-                for (i, (_i, g)) in self.command.as_str().grapheme_indices(true).enumerate() {
-                    if _i == self.command.pos() {
-                        position = i;
-                        break;
-                    }
-                }
+                let position = self.get_position(&self.command);
                 f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
                 self.draw_command(
@@ -396,13 +377,7 @@ impl TTApp {
                 );
             }
             AppMode::TaskAdd => {
-                let mut position = self.command.as_str().graphemes(true).count();
-                for (i, (_i, g)) in self.command.as_str().grapheme_indices(true).enumerate() {
-                    if _i == self.command.pos() {
-                        position = i;
-                        break;
-                    }
-                }
+                let position = self.get_position(&self.command);
                 f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
                 self.draw_command(
