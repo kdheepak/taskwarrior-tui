@@ -235,33 +235,39 @@ uda.taskwarrior-tui.keyconfig.previous-tab=[
 
 <summary> Click to expand! </summary>
 
-You can configure shortcuts to execute custom commands from your `taskwarrior`'s `taskrc` file (default: `~/.taskrc`). You have to map a shortcut to an executable file :
+You can configure shortcuts to execute custom commands from your `taskwarrior`'s `taskrc` file (default: `~/.taskrc`).
+You can do this by mapping a shortcut to an executable file:
 
 ```plaintext
-uda.taskwarrior-tui.shortcuts.1=~/.config/taskwarrior-tui/shortcut-scripts/toggle-next-tag.sh
+uda.taskwarrior-tui.shortcuts.1=~/.config/taskwarrior-tui/shortcut-scripts/add-personal-tag.sh
 uda.taskwarrior-tui.shortcuts.2=~/.config/taskwarrior-tui/shortcut-scripts/sync.sh
 ...
 ```
-PS1 : file can have any name in any location, but MUST be executable.
-PS2 : 0 iz reserved for future use, see <https://github.com/kdheepak/taskwarrior-tui/pull/142>
 
-When you hit the shortcut, the script will be executed with the `selected task uuid` as a parameter :
+The file can have any name in any location, but must be executable.
+By default, keys `1`-`9` are available to run shortcuts.
 
-```plaintext
-~/.config/taskwarrior-tui/shortcut-scripts/toggle-next-tag.sh $selected_task_uuid
+When you hit the shortcut, the script will be executed with the `selected_task_uuid` as an argument:
+
+```bash
+~/.config/taskwarrior-tui/shortcut-scripts/add-personal-tag.sh $selected_tasks_uuid
 ```
 
-For exemple, you can add the `next` tag to the currently selected task with the following script in `~/.config/taskwarrior-tui/shortcut-scripts/toggle-next-tag.sh` :
+For example, you can add the `personal` tag to the currently selected task with the following script in `~/.config/taskwarrior-tui/shortcut-scripts/add-personal-tag.sh` :
 
 ```plaintext
-task $1 mod +next
+task rc.bulk=0 rc.confirmation=off rc.dependency.confirmation=off rc.recurrence.confirmation=off "$@" modify +personal
 ```
 
-By default, shortcuts are linked to the `1-9` number row keys. They can be customized as any other keys through `uda.taskwarrior-tui.keyconfig.shortcut0=<key>`. For exemple :
+By default, shortcuts are linked to the `1-9` number row keys.
+They can be customized as any other keys through `uda.taskwarrior-tui.keyconfig.shortcut1=<key>`.
+For example:
 
 ```plaintext
-uda.taskwarrior-tui.keyconfig.shortcut0=n
+uda.taskwarrior-tui.keyconfig.shortcut1=n
 ```
+
+You can set up shortcuts to run `task sync` or any custom bash script that you'd like.
 
 </details>
 
