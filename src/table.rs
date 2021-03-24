@@ -3,12 +3,12 @@ use cassowary::{
     WeightedRelation::*,
     {Expression, Solver},
 };
+use std::collections::HashSet;
 use std::{
     collections::HashMap,
     fmt::Display,
     iter::{self, Iterator},
 };
-use tinyset::SetUsize;
 use tui::{
     buffer::Buffer,
     layout::{Constraint, Rect},
@@ -29,7 +29,7 @@ pub enum TableMode {
 pub struct TableState {
     offset: usize,
     current_selection: Option<usize>,
-    selected: SetUsize,
+    marked: HashSet<usize>,
     mode: TableMode,
 }
 
@@ -38,7 +38,7 @@ impl Default for TableState {
         TableState {
             offset: 0,
             current_selection: None,
-            selected: SetUsize::new(),
+            marked: HashSet::new(),
             mode: TableMode::SingleSelection,
         }
     }
@@ -57,7 +57,7 @@ impl TableState {
         self.mode = TableMode::SingleSelection;
     }
 
-    pub fn selected(&self) -> Option<usize> {
+    pub fn current_selection(&self) -> Option<usize> {
         self.current_selection
     }
 
@@ -68,20 +68,32 @@ impl TableState {
         }
     }
 
+    pub fn mark(&mut self, index: Option<usize>) {
+        if let Some(i) = index {
+            self.marked.insert(i);
+        }
+    }
+
+    pub fn unmark(&mut self, index: Option<usize>) {
+        if let Some(i) = index {
+            self.marked.remove(&i);
+        }
+    }
+
     pub fn toggle_mark(&mut self, index: Option<usize>) {
         if let Some(i) = index {
-            if !self.selected.insert(i) {
-                self.selected.remove(i);
+            if !self.marked.insert(i) {
+                self.marked.remove(&i);
             }
         }
     }
 
-    pub fn marked(&self) -> impl Iterator<Item = usize> + '_ {
-        self.selected.iter()
+    pub fn marked(&self) -> std::collections::hash_set::Iter<usize> {
+        self.marked.iter()
     }
 
     pub fn clear(&mut self) {
-        self.selected.drain().for_each(drop);
+        self.marked.drain().for_each(drop);
     }
 }
 
@@ -347,8 +359,8 @@ where
         y += 1 + self.header_gap;
 
         // Use highlight_style only if something is selected
-        let (selected, highlight_style) = if state.selected().is_some() {
-            (state.selected(), self.highlight_style)
+        let (selected, highlight_style) = if state.current_selection().is_some() {
+            (state.current_selection(), self.highlight_style)
         } else {
             (None, self.style)
         };
@@ -393,10 +405,12 @@ where
             };
             for (i, row) in self.rows.skip(state.offset).take(remaining).enumerate() {
                 let (data, style, symbol) = match row {
-                    Row::Data(d) | Row::StyledData(d, _) if Some(i) == state.selected().map(|s| s - state.offset) => {
+                    Row::Data(d) | Row::StyledData(d, _)
+                        if Some(i) == state.current_selection().map(|s| s - state.offset) =>
+                    {
                         match state.mode {
                             TableMode::MultipleSelection => {
-                                if state.selected.contains(i) {
+                                if state.marked.contains(&i) {
                                     (d, highlight_style, mark_symbol.to_string())
                                 } else {
                                     (d, highlight_style, blank_symbol.to_string())
@@ -406,14 +420,14 @@ where
                         }
                     }
                     Row::Data(d) => {
-                        if state.selected.contains(i) {
+                        if state.marked.contains(&i) {
                             (d, default_style, mark_symbol.to_string())
                         } else {
                             (d, default_style, blank_symbol.to_string())
                         }
                     }
                     Row::StyledData(d, s) => {
-                        if state.selected.contains(i) {
+                        if state.marked.contains(&i) {
                             (d, s, mark_symbol.to_string())
                         } else {
                             (d, s, blank_symbol.to_string())
