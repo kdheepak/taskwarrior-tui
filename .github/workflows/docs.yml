@@ -1,0 +1,33 @@
+name: Deploy docs
+on:
+  push:
+    branches:
+      - master
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: "recursive"
+          fetch-depth: 0
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: '3.8'
+          architecture: 'x64'
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip     # install pip
+          python3 -m pip install mkdocs            # install mkdocs
+          python3 -m pip install mkdocs-material   # install material theme
+          python3 -m pip install pygments pymdown-extensions mkdocs-material-extensions termcolor mkdocs-material mkdocs-macros-plugin
+      - name: Build site
+        run: mkdocs build
+      - name: Github Pages Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          personal_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./site
+          force_orphan: true

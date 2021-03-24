@@ -1,0 +1,52 @@
+site_name: taskwarrior-tui - A terminal user interface for taskwarrior
+site_url: https://kdheepak.com/taskwarrior-tui
+site_author: Dheepak Krishnamurthy
+
+# Source code repository
+repo_name: kdheepak/taskwarrior-tui
+repo_url: https://github.com/kdheepak/taskwarrior-tui
+
+# Copyright
+copyright: Copyright &copy; 2021 Dheepak Krishnamurthy
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - footnotes
+  - pymdownx.highlight
+  - pymdownx.superfences
+
+# Plugins
+plugins:
+  - search
+
+# Theme
+theme:
+  name: material
+  favicon: assets/favicon.png
+  features:
+    - navigation.tabs
+  include_search_page: false
+  language: en
+  palette:
+    primary: deep blue
+  search_index_only: true
+
+# Customization
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/kdheepak
+
+# Page tree
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation:         installation.md
+    - Quick Start:          quick_start.md
+  - Configuration:
+    - Key configuration:    configuration/keys.md
+    - Color configuration:  configuration/colors.md
+    - Advanced:             configuration/advanced.md
+  # - Developer Guide:
+  #   - Guide:                developer/guide.md
