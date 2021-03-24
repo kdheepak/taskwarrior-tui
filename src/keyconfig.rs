@@ -19,6 +19,7 @@ pub struct KeyConfig {
     pub done: Key,
     pub start_stop: Key,
     pub select: Key,
+    pub select_all: Key,
     pub undo: Key,
     pub edit: Key,
     pub modify: Key,
@@ -59,6 +60,7 @@ impl Default for KeyConfig {
             done: Key::Char('d'),
             start_stop: Key::Char('s'),
             select: Key::Char('v'),
+            select_all: Key::Char('V'),
             undo: Key::Char('u'),
             edit: Key::Char('e'),
             modify: Key::Char('m'),
@@ -122,6 +124,9 @@ impl KeyConfig {
         self.select = self
             .get_config("uda.taskwarrior-tui.keyconfig.select")
             .unwrap_or(self.select);
+        self.select_all = self
+            .get_config("uda.taskwarrior-tui.keyconfig.select-all")
+            .unwrap_or(self.select_all);
         self.undo = self
             .get_config("uda.taskwarrior-tui.keyconfig.undo")
             .unwrap_or(self.undo);
@@ -170,6 +175,7 @@ impl KeyConfig {
             &self.delete,
             &self.done,
             &self.select,
+            &self.select_all,
             &self.start_stop,
             &self.undo,
             &self.edit,

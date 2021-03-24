@@ -1646,6 +1646,14 @@ impl TTApp {
         }
     }
 
+    pub fn toggle_mark_all(&mut self) {
+        for task in &*self.tasks.lock().unwrap() {
+            if !self.marked.insert(*task.uuid()) {
+                self.marked.remove(task.uuid());
+            }
+        }
+    }
+
     pub fn handle_input(
         &mut self,
         input: Key,
@@ -1662,6 +1670,9 @@ impl TTApp {
                 } else if input == self.keyconfig.select {
                     self.task_table_state.multiple_selection();
                     self.toggle_mark();
+                } else if input == self.keyconfig.select_all {
+                    self.task_table_state.multiple_selection();
+                    self.toggle_mark_all();
                 } else if input == self.keyconfig.refresh {
                     self.update(true)?;
                 } else if input == self.keyconfig.go_to_bottom || input == Key::End {
