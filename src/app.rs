@@ -1628,6 +1628,10 @@ impl TTApp {
                 } else if input == self.keyconfig.select {
                     self.task_table_state.multiple_selection();
                     self.toggle_mark();
+                    if self.marked.is_empty() {
+                        self.task_table_state.single_selection();
+                        self.task_table_state.clear();
+                    }
                 } else if input == self.keyconfig.refresh {
                     self.update(true)?;
                 } else if input == self.keyconfig.go_to_bottom || input == Key::End {
