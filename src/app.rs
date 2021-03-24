@@ -1079,7 +1079,7 @@ impl TTApp {
         Ok(())
     }
 
-    pub fn selected_task_uuids(&self) -> Vec<String> {
+    pub fn selected_task_uuids(&self) -> Vec<Uuid> {
         let selected = match self.task_table_state.mode() {
             TableMode::SingleSelection => vec![self.current_selection.unwrap_or_default()],
             TableMode::MultipleSelection => self.task_table_state.marked().cloned().collect::<Vec<usize>>(),
@@ -1090,7 +1090,7 @@ impl TTApp {
         for s in selected {
             let task_id = self.tasks.lock().unwrap()[s].id().unwrap_or_default();
             let task_uuid = *self.tasks.lock().unwrap()[s].uuid();
-            task_uuids.push(task_uuid.to_string());
+            task_uuids.push(task_uuid);
         }
 
         task_uuids
@@ -1172,7 +1172,15 @@ impl TTApp {
             return Err("Trying to run empty shortcut.".to_string());
         }
 
-        let shell = format!("{} {}", shell, task_uuids.join(" "));
+        let shell = format!(
+            "{} {}",
+            shell,
+            task_uuids
+                .iter()
+                .map(|u| u.to_string())
+                .collect::<Vec<String>>()
+                .join(" ")
+        );
         let shell = shellexpand::tilde(&shell).into_owned();
         match shlex::split(&shell) {
             Some(cmd) => {
@@ -1213,7 +1221,7 @@ impl TTApp {
         command.arg("rc.dependency.confirmation=off");
         command.arg("rc.recurrence.confirmation=off");
         for task_uuid in &task_uuids {
-            command.arg(task_uuid);
+            command.arg(task_uuid.to_string());
         }
         command.arg("modify");
 
@@ -1257,7 +1265,7 @@ impl TTApp {
         command.arg("rc.dependency.confirmation=off");
         command.arg("rc.recurrence.confirmation=off");
         for task_uuid in &task_uuids {
-            command.arg(task_uuid);
+            command.arg(task_uuid.to_string());
         }
         command.arg("annotate");
 
@@ -1280,7 +1288,11 @@ impl TTApp {
                     }
                     Err(_) => Err(format!(
                         "Cannot run `task {} annotate {}`. Check documentation for more information",
-                        task_uuids.join(" "),
+                        task_uuids
+                            .iter()
+                            .map(|u| u.to_string())
+                            .collect::<Vec<String>>()
+                            .join(" "),
                         shell
                     )),
                 }
@@ -1350,21 +1362,24 @@ impl TTApp {
         let selected = self.current_selection.unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
-        let mut command = "start";
-        for tag in TTApp::task_virtual_tags(task_uuid)?.split(' ') {
-            if tag == "ACTIVE" {
-                command = "stop"
+
+        let task_uuids = self.selected_task_uuids();
+
+        for task_uuid in &task_uuids {
+            let mut command = "start";
+            for tag in TTApp::task_virtual_tags(*task_uuid).unwrap().split(' ') {
+                if tag == "ACTIVE" {
+                    command = "stop"
+                }
+            }
+
+            let output = Command::new("task").arg(task_uuid.to_string()).arg(command).output();
+            if output.is_err() {
+                return Err(format!("Error running `task {}` for task `{}`.", command, task_uuid,));
             }
         }
 
-        let output = Command::new("task").arg(format!("{}", task_uuid)).arg(command).output();
-        match output {
-            Ok(_) => Ok(()),
-            Err(_) => Err(format!(
-                "Cannot run `task {}` for task `{}`. Check documentation for more information",
-                command, task_uuid,
-            )),
-        }
+        Ok(())
     }
 
     pub fn task_delete(&self) -> Result<(), String> {
@@ -1380,7 +1395,7 @@ impl TTApp {
             .arg("rc.dependency.confirmation=off")
             .arg("rc.recurrence.confirmation=off");
         for task_uuid in &task_uuids {
-            cmd.arg(task_uuid);
+            cmd.arg(task_uuid.to_string());
         }
         cmd.arg("delete");
         let output = cmd.output();
@@ -1388,7 +1403,11 @@ impl TTApp {
             Ok(_) => Ok(()),
             Err(_) => Err(format!(
                 "Cannot run `task delete` for tasks `{}`. Check documentation for more information",
-                task_uuids.join(" ")
+                task_uuids
+                    .iter()
+                    .map(|u| u.to_string())
+                    .collect::<Vec<String>>()
+                    .join(" ")
             )),
         }
     }
@@ -1404,7 +1423,7 @@ impl TTApp {
             .arg("rc.dependency.confirmation=off")
             .arg("rc.recurrence.confirmation=off");
         for task_uuid in &task_uuids {
-            cmd.arg(task_uuid);
+            cmd.arg(task_uuid.to_string());
         }
         cmd.arg("done");
         let output = cmd.output();
@@ -1412,7 +1431,11 @@ impl TTApp {
             Ok(_) => Ok(()),
             Err(_) => Err(format!(
                 "Cannot run `task done` for task `{}`. Check documentation for more information",
-                task_uuids.join(" "),
+                task_uuids
+                    .iter()
+                    .map(|u| u.to_string())
+                    .collect::<Vec<String>>()
+                    .join(" ")
             )),
         }
     }
