@@ -1665,6 +1665,7 @@ impl TTApp {
                 if input == Key::Esc {
                     self.task_table_state.single_selection();
                     self.task_table_state.clear();
+                    self.marked.clear();
                 } else if input == self.keyconfig.quit || input == Key::Ctrl('c') {
                     self.should_quit = true;
                 } else if input == self.keyconfig.select {
