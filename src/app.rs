@@ -306,7 +306,7 @@ impl TTApp {
     pub fn draw_task(&mut self, f: &mut Frame<impl Backend>) {
         let tasks_is_empty = self.tasks.lock().unwrap().is_empty();
         let tasks_len = self.tasks.lock().unwrap().len();
-        while !tasks_is_empty && self.task_table_state.current_selection().unwrap_or_default() >= tasks_len {
+        while !tasks_is_empty && self.current_selection.unwrap_or_default() >= tasks_len {
             self.task_report_previous();
         }
         let rects = Layout::default()
@@ -332,7 +332,7 @@ impl TTApp {
             self.draw_task_report(f, split_task_layout[0]);
             self.draw_task_details(f, split_task_layout[1]);
         }
-        let selected = self.task_table_state.current_selection().unwrap_or_default();
+        let selected = self.current_selection.unwrap_or_default();
         let task_ids = if tasks_len == 0 {
             vec!["0".to_string()]
         } else {
@@ -552,7 +552,7 @@ impl TTApp {
             );
             return;
         }
-        let selected = self.task_table_state.current_selection().unwrap_or_default();
+        let selected = self.current_selection.unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
 
@@ -740,7 +740,7 @@ impl TTApp {
                 break;
             }
         }
-        let selected = self.task_table_state.current_selection().unwrap_or_default();
+        let selected = self.current_selection.unwrap_or_default();
         let header = headers.iter();
         let mut rows = vec![];
         let mut highlight_style = Style::default();
@@ -1081,7 +1081,7 @@ impl TTApp {
 
     pub fn selected_task_uuids(&self) -> Vec<String> {
         let selected = match self.task_table_state.mode() {
-            TableMode::SingleSelection => vec![self.task_table_state.current_selection().unwrap_or_default()],
+            TableMode::SingleSelection => vec![self.current_selection.unwrap_or_default()],
             TableMode::MultipleSelection => self.task_table_state.marked().cloned().collect::<Vec<usize>>(),
         };
 
@@ -1163,18 +1163,8 @@ impl TTApp {
         if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
-        let selected = match self.task_table_state.mode() {
-            TableMode::SingleSelection => vec![self.task_table_state.current_selection().unwrap_or_default()],
-            TableMode::MultipleSelection => self.task_table_state.marked().cloned().collect::<Vec<usize>>(),
-        };
 
-        let mut task_uuids = vec![];
-
-        for s in selected {
-            let task_id = self.tasks.lock().unwrap()[s].id().unwrap_or_default();
-            let task_uuid = *self.tasks.lock().unwrap()[s].uuid();
-            task_uuids.push(task_uuid.to_string());
-        }
+        let task_uuids = self.selected_task_uuids();
 
         let shell = &self.config.uda_shortcuts[s];
 
@@ -1357,7 +1347,7 @@ impl TTApp {
         if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
-        let selected = self.task_table_state.current_selection().unwrap_or_default();
+        let selected = self.current_selection.unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
         let mut command = "start";
@@ -1480,7 +1470,7 @@ impl TTApp {
         if self.tasks.lock().unwrap().is_empty() {
             return None;
         }
-        let selected = self.task_table_state.current_selection().unwrap_or_default();
+        let selected = self.current_selection.unwrap_or_default();
         Some(self.tasks.lock().unwrap()[selected].clone())
     }
 
