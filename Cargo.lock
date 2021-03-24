@@ -808,7 +808,6 @@ dependencies = [
  "shellexpand",
  "shlex",
  "task-hookrs",
- "tinyset",
  "tui",
  "unicode-segmentation",
  "unicode-width",
@@ -841,16 +840,6 @@ checksum = "ca8a50ef2360fbd1eeb0ecd46795a87a19024eb4b53c5dc916ca1fd95fe62438"
 dependencies = [
  "libc",
  "winapi",
-]
-
-[[package]]
-name = "tinyset"
-version = "0.4.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "784f540960a63144d63992caf430ed87e39d920f2c474cb8ac586ff31fb861fc"
-dependencies = [
- "itertools",
- "rand",
 ]
 
 [[package]]

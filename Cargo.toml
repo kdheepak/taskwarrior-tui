@@ -36,7 +36,6 @@ rustyline = "7.1.0"
 uuid = { version = "0.8.1", features = ["serde", "v4"] }
 better-panic = "0.2.0"
 shellexpand = "2.1"
-tinyset = "0.4"
 
 [package.metadata.rpm]
 package = "taskwarrior-tui"
