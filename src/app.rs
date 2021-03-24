@@ -152,7 +152,8 @@ pub struct TTApp {
     pub tasks: Arc<Mutex<Vec<Task>>>,
     pub task_details: HashMap<Uuid, String>,
     pub marked: HashSet<Uuid>,
-    pub current_selection: Option<usize>,
+    // stores index of current task that is highlighted
+    pub current_selection: usize,
     pub task_report_table: TaskReportTable,
     pub calendar_year: i32,
     pub mode: AppMode,
@@ -180,7 +181,7 @@ impl TTApp {
             tasks: Arc::new(Mutex::new(vec![])),
             task_details: HashMap::new(),
             marked: HashSet::new(),
-            current_selection: Some(0),
+            current_selection: 0,
             current_context_filter: "".to_string(),
             current_context: "".to_string(),
             command: LineBuffer::with_capacity(MAX_LINE),
@@ -306,7 +307,7 @@ impl TTApp {
     pub fn draw_task(&mut self, f: &mut Frame<impl Backend>) {
         let tasks_is_empty = self.tasks.lock().unwrap().is_empty();
         let tasks_len = self.tasks.lock().unwrap().len();
-        while !tasks_is_empty && self.current_selection.unwrap_or_default() >= tasks_len {
+        while !tasks_is_empty && self.current_selection >= tasks_len {
             self.task_report_previous();
         }
         let rects = Layout::default()
@@ -332,7 +333,7 @@ impl TTApp {
             self.draw_task_report(f, split_task_layout[0]);
             self.draw_task_details(f, split_task_layout[1]);
         }
-        let selected = self.current_selection.unwrap_or_default();
+        let selected = self.current_selection;
         let task_ids = if tasks_len == 0 {
             vec!["0".to_string()]
         } else {
@@ -343,8 +344,10 @@ impl TTApp {
                     .to_string()],
                 TableMode::MultipleSelection => {
                     let mut tids = vec![];
-                    for s in self.task_table_state.marked().cloned() {
-                        tids.push(self.tasks.lock().unwrap()[s].id().unwrap_or_default().to_string());
+                    for uuid in self.marked.iter() {
+                        if let Some(t) = self.task_by_uuid(*uuid) {
+                            tids.push(t.id().unwrap_or_default().to_string());
+                        }
                     }
                     tids
                 }
@@ -552,7 +555,7 @@ impl TTApp {
             );
             return;
         }
-        let selected = self.current_selection.unwrap_or_default();
+        let selected = self.current_selection;
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
 
@@ -740,7 +743,7 @@ impl TTApp {
                 break;
             }
         }
-        let selected = self.current_selection.unwrap_or_default();
+        let selected = self.current_selection;
         let header = headers.iter();
         let mut rows = vec![];
         let mut highlight_style = Style::default();
@@ -832,7 +835,7 @@ impl TTApp {
     }
 
     pub fn update_task_table_state(&mut self) {
-        self.task_table_state.select(self.current_selection);
+        self.task_table_state.select(Some(self.current_selection));
 
         for uuid in self.marked.clone() {
             if self.task_by_uuid(uuid).is_none() {
@@ -891,99 +894,88 @@ impl TTApp {
         if self.tasks.lock().unwrap().is_empty() {
             return;
         }
-        self.current_selection = Some(0);
+        self.current_selection = 0;
     }
 
     pub fn task_report_bottom(&mut self) {
         if self.tasks.lock().unwrap().is_empty() {
             return;
         }
-        self.current_selection = Some(self.tasks.lock().unwrap().len() - 1);
+        self.current_selection = self.tasks.lock().unwrap().len() - 1;
     }
 
     pub fn task_report_next(&mut self) {
         if self.tasks.lock().unwrap().is_empty() {
             return;
         }
-        let i = match self.current_selection {
-            Some(i) => {
-                if i >= self.tasks.lock().unwrap().len() - 1 {
-                    if self.config.uda_task_report_looping {
-                        0
-                    } else {
-                        i
-                    }
+        let i = {
+            if self.current_selection >= self.tasks.lock().unwrap().len() - 1 {
+                if self.config.uda_task_report_looping {
+                    0
                 } else {
-                    i + 1
+                    self.current_selection
                 }
+            } else {
+                self.current_selection + 1
             }
-            None => 0,
         };
-        self.current_selection = Some(i);
+        self.current_selection = i;
     }
 
     pub fn task_report_previous(&mut self) {
         if self.tasks.lock().unwrap().is_empty() {
             return;
         }
-        let i = match self.current_selection {
-            Some(i) => {
-                if i == 0 {
-                    if self.config.uda_task_report_looping {
-                        self.tasks.lock().unwrap().len() - 1
-                    } else {
-                        0
-                    }
+        let i = {
+            if self.current_selection == 0 {
+                if self.config.uda_task_report_looping {
+                    self.tasks.lock().unwrap().len() - 1
                 } else {
-                    i - 1
+                    0
                 }
+            } else {
+                self.current_selection - 1
             }
-            None => 0,
         };
-        self.current_selection = Some(i);
+        self.current_selection = i;
     }
 
     pub fn task_report_next_page(&mut self) {
         if self.tasks.lock().unwrap().is_empty() {
             return;
         }
-        let i = match self.current_selection {
-            Some(i) => {
-                if i >= self.tasks.lock().unwrap().len() - 1 {
-                    if self.config.uda_task_report_looping {
-                        0
-                    } else {
-                        i
-                    }
+        let i = {
+            if self.current_selection >= self.tasks.lock().unwrap().len() - 1 {
+                if self.config.uda_task_report_looping {
+                    0
                 } else {
-                    i.checked_add(self.task_report_height as usize)
-                        .unwrap_or_else(|| self.tasks.lock().unwrap().len())
+                    self.current_selection
                 }
+            } else {
+                self.current_selection
+                    .checked_add(self.task_report_height as usize)
+                    .unwrap_or_else(|| self.tasks.lock().unwrap().len())
             }
-            None => 0,
         };
-        self.current_selection = Some(i);
+        self.current_selection = i;
     }
 
     pub fn task_report_previous_page(&mut self) {
         if self.tasks.lock().unwrap().is_empty() {
             return;
         }
-        let i = match self.current_selection {
-            Some(i) => {
-                if i == 0 {
-                    if self.config.uda_task_report_looping {
-                        self.tasks.lock().unwrap().len() - 1
-                    } else {
-                        0
-                    }
+        let i = {
+            if self.current_selection == 0 {
+                if self.config.uda_task_report_looping {
+                    self.tasks.lock().unwrap().len() - 1
                 } else {
-                    i.saturating_sub(self.task_report_height as usize)
+                    0
                 }
+            } else {
+                self.current_selection.saturating_sub(self.task_report_height as usize)
             }
-            None => 0,
         };
-        self.current_selection = Some(i);
+        self.current_selection = i;
     }
 
     pub fn export_contexts(&mut self) -> Result<(), Box<dyn Error>> {
@@ -1092,7 +1084,7 @@ impl TTApp {
 
     pub fn selected_task_uuids(&self) -> Vec<Uuid> {
         let selected = match self.task_table_state.mode() {
-            TableMode::SingleSelection => vec![self.current_selection.unwrap_or_default()],
+            TableMode::SingleSelection => vec![self.current_selection],
             TableMode::MultipleSelection => self.task_table_state.marked().cloned().collect::<Vec<usize>>(),
         };
 
@@ -1370,7 +1362,7 @@ impl TTApp {
         if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
-        let selected = self.current_selection.unwrap_or_default();
+        let selected = self.current_selection;
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
 
@@ -1504,7 +1496,7 @@ impl TTApp {
         if self.tasks.lock().unwrap().is_empty() {
             return None;
         }
-        let selected = self.current_selection.unwrap_or_default();
+        let selected = self.current_selection;
         Some(self.tasks.lock().unwrap()[selected].clone())
     }
 
@@ -1637,7 +1629,7 @@ impl TTApp {
     }
 
     pub fn toggle_mark(&mut self) {
-        let selected = self.current_selection.unwrap_or_default();
+        let selected = self.current_selection;
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
 
@@ -1663,8 +1655,6 @@ impl TTApp {
         match self.mode {
             AppMode::TaskReport => {
                 if input == Key::Esc {
-                    self.task_table_state.single_selection();
-                    self.task_table_state.clear();
                     self.marked.clear();
                 } else if input == self.keyconfig.quit || input == Key::Ctrl('c') {
                     self.should_quit = true;
