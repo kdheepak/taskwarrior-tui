@@ -28,6 +28,7 @@ jobs:
       - name: Build site
         run: mkdocs build
       - name: Github Pages Deploy
+        if: github.ref == 'refs/heads/master'
         uses: peaceiris/actions-gh-pages@v3
         with:
           personal_token: ${{ secrets.GITHUB_TOKEN }}
