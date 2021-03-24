@@ -23,7 +23,8 @@ jobs:
           python3 -m pip install mkdocs-material   # install material theme
           python3 -m pip install pygments pymdown-extensions mkdocs-material-extensions termcolor mkdocs-material mkdocs-macros-plugin
       - name: Copy README
-        run: cp README.md docs/index.md
+        run: |
+          cp README.md docs/index.md
       - name: Build site
         run: mkdocs build
       - name: Github Pages Deploy

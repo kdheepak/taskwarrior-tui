@@ -8,7 +8,7 @@ use tui::{
     widgets::{Block, BorderType, Borders, Clear, Paragraph, Widget},
 };
 
-const TEXT: &str = include_str!("../KEYBINDINGS.md");
+const TEXT: &str = include_str!("../docs/keybindings.md");
 
 pub struct Help {
     pub title: String,
