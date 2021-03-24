@@ -597,7 +597,7 @@ impl TTApp {
 
     fn task_by_index(&self, i: usize) -> Option<Task> {
         let tasks = &self.tasks.lock().unwrap();
-        if i > tasks.len() {
+        if i >= tasks.len() {
             None
         } else {
             Some(tasks[i].clone())
@@ -2094,11 +2094,11 @@ mod tests {
     #[test]
     fn test_taskwarrior_tui() {
         let app = TTApp::new().unwrap();
-        assert!(app.task_by_index(1).is_none());
+        assert!(app.task_by_index(0).is_none());
 
         let app = TTApp::new().unwrap();
         assert!(app
-            .task_by_uuid(Uuid::parse_str("0b11967d-9dae-4333-a137-c3b1e8a641d3").unwrap())
+            .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
             .is_none());
 
         test_draw_empty_task_report();
@@ -2106,11 +2106,11 @@ mod tests {
         setup();
 
         let app = TTApp::new().unwrap();
-        assert!(app.task_by_index(1).is_some());
+        assert!(app.task_by_index(0).is_some());
 
         let app = TTApp::new().unwrap();
         assert!(app
-            .task_by_uuid(Uuid::parse_str("0b11967d-9dae-4333-a137-c3b1e8a641d3").unwrap())
+            .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
             .is_some());
 
         test_draw_task_report();
@@ -2181,7 +2181,6 @@ mod tests {
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
 
-        app.context_next();
         app.context_select().unwrap();
 
         assert_eq!(app.tasks.lock().unwrap().len(), 26);
