@@ -2737,6 +2737,8 @@ mod tests {
 
         let mut expected = Buffer::with_lines(vec![
             "╭Help──────────────────────────────────╮",
+            "│# Default Keybindings                 │",
+            "│                                      │",
             "│Keybindings:                          │",
             "│                                      │",
             "│    Esc:                              │",
@@ -2745,8 +2747,6 @@ mod tests {
             "│                                      │",
             "│    [: Previous view                  │",
             "│                                      │",
-            "│                                      │",
-            "│Keybindings for task report:          │",
             "╰──────────────────────────────────────╯",
         ]);
 
