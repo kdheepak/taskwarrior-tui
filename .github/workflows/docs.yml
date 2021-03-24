@@ -1,8 +1,8 @@
 name: Docs
 on:
   push:
-    branches:
-      - master
+  pull_request:
+    types: [opened, synchronize]
 jobs:
   docs:
     runs-on: ubuntu-latest
@@ -34,3 +34,20 @@ jobs:
           publish_branch: gh-pages
           publish_dir: ./site
           force_orphan: true
+      - name: Deploy to Netlify
+        id: netlify
+        uses: nwtgck/actions-netlify@v1.1.13
+        with:
+          publish-dir: ./site
+          production-deploy: false
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          enable-commit-comment: false
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        timeout-minutes: 5
+      - name: Documentation Preview
+        uses: ProjectPythia/actions/comment-netlify-preview-in-pr@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-url: ${{ steps.netlify.outputs.deploy-url }}
