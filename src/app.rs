@@ -180,7 +180,7 @@ impl TTApp {
             tasks: Arc::new(Mutex::new(vec![])),
             task_details: HashMap::new(),
             marked: HashSet::new(),
-            current_selection: None,
+            current_selection: Some(0),
             current_context_filter: "".to_string(),
             current_context: "".to_string(),
             command: LineBuffer::with_capacity(MAX_LINE),
@@ -834,7 +834,18 @@ impl TTApp {
     pub fn update_task_table_state(&mut self) {
         self.task_table_state.select(self.current_selection);
 
+        for uuid in self.marked.clone() {
+            if self.task_by_uuid(uuid).is_none() {
+                self.marked.remove(&uuid);
+            }
+        }
+
+        if self.marked.is_empty() {
+            self.task_table_state.single_selection();
+        }
+
         self.task_table_state.clear();
+
         for uuid in &self.marked {
             self.task_table_state.mark(self.task_index_by_uuid(*uuid))
         }
@@ -1651,10 +1662,6 @@ impl TTApp {
                 } else if input == self.keyconfig.select {
                     self.task_table_state.multiple_selection();
                     self.toggle_mark();
-                    if self.marked.is_empty() {
-                        self.task_table_state.single_selection();
-                        self.task_table_state.clear();
-                    }
                 } else if input == self.keyconfig.refresh {
                     self.update(true)?;
                 } else if input == self.keyconfig.go_to_bottom || input == Key::End {

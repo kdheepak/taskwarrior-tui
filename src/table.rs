@@ -37,7 +37,7 @@ impl Default for TableState {
     fn default() -> TableState {
         TableState {
             offset: 0,
-            current_selection: None,
+            current_selection: Some(0),
             marked: HashSet::new(),
             mode: TableMode::SingleSelection,
         }
