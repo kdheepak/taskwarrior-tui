@@ -242,6 +242,15 @@ impl TTApp {
         }
     }
 
+    pub fn draw_debug(&mut self, f: &mut Frame<impl Backend>) {
+        let area = centered_rect(50, 50, f.size());
+        f.render_widget(Clear, area);
+        let t = format!("{:?}", self.marked);
+        let p = Paragraph::new(Text::from(t))
+            .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded));
+        f.render_widget(p, area);
+    }
+
     pub fn draw_calendar(&mut self, f: &mut Frame<impl Backend>) {
         let dates_with_styles = self.get_dates_with_styles();
         let rects = Layout::default()
@@ -819,7 +828,6 @@ impl TTApp {
             self.export_contexts()?;
             self.update_tags();
         }
-        self.update_task_table_state();
         Ok(())
     }
 
@@ -1934,6 +1942,7 @@ impl TTApp {
                 }
             }
         }
+        self.update_task_table_state();
         Ok(())
     }
 }

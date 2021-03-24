@@ -410,7 +410,7 @@ where
                     {
                         match state.mode {
                             TableMode::MultipleSelection => {
-                                if state.marked.contains(&i) {
+                                if state.marked.contains(&(i + state.offset)) {
                                     (d, highlight_style, mark_symbol.to_string())
                                 } else {
                                     (d, highlight_style, blank_symbol.to_string())
@@ -420,14 +420,14 @@ where
                         }
                     }
                     Row::Data(d) => {
-                        if state.marked.contains(&i) {
+                        if state.marked.contains(&(i + state.offset)) {
                             (d, default_style, mark_symbol.to_string())
                         } else {
                             (d, default_style, blank_symbol.to_string())
                         }
                     }
                     Row::StyledData(d, s) => {
-                        if state.marked.contains(&i) {
+                        if state.marked.contains(&(i + state.offset)) {
                             (d, s, mark_symbol.to_string())
                         } else {
                             (d, s, blank_symbol.to_string())
