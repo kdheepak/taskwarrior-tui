@@ -1222,7 +1222,10 @@ impl TTApp {
         command.arg("rc.confirmation=off");
         command.arg("rc.dependency.confirmation=off");
         command.arg("rc.recurrence.confirmation=off");
-        command.arg(task_uuids.join(" ")).arg("modify");
+        for task_uuid in &task_uuids {
+            command.arg(task_uuid);
+        }
+        command.arg("modify");
 
         let shell = self.modify.as_str();
 
@@ -1263,7 +1266,10 @@ impl TTApp {
         command.arg("rc.confirmation=off");
         command.arg("rc.dependency.confirmation=off");
         command.arg("rc.recurrence.confirmation=off");
-        command.arg(task_uuids.join(" ")).arg("annotate");
+        for task_uuid in &task_uuids {
+            command.arg(task_uuid);
+        }
+        command.arg("annotate");
 
         let shell = self.command.as_str();
 
@@ -1378,14 +1384,16 @@ impl TTApp {
 
         let task_uuids = self.selected_task_uuids();
 
-        let output = Command::new("task")
-            .arg("rc.bulk=0")
+        let mut cmd = Command::new("task");
+        cmd.arg("rc.bulk=0")
             .arg("rc.confirmation=off")
             .arg("rc.dependency.confirmation=off")
-            .arg("rc.recurrence.confirmation=off")
-            .arg(task_uuids.join(" "))
-            .arg("delete")
-            .output();
+            .arg("rc.recurrence.confirmation=off");
+        for task_uuid in &task_uuids {
+            cmd.arg(task_uuid);
+        }
+        cmd.arg("delete");
+        let output = cmd.output();
         match output {
             Ok(_) => Ok(()),
             Err(_) => Err(format!(
@@ -1400,19 +1408,21 @@ impl TTApp {
             return Ok(());
         }
         let task_uuids = self.selected_task_uuids();
-        let output = Command::new("task")
-            .arg("rc.bulk=0")
+        let mut cmd = Command::new("task");
+        cmd.arg("rc.bulk=0")
             .arg("rc.confirmation=off")
             .arg("rc.dependency.confirmation=off")
-            .arg("rc.recurrence.confirmation=off")
-            .arg(task_uuids.join(" "))
-            .arg("done")
-            .output();
+            .arg("rc.recurrence.confirmation=off");
+        for task_uuid in &task_uuids {
+            cmd.arg(task_uuid);
+        }
+        cmd.arg("done");
+        let output = cmd.output();
         match output {
             Ok(_) => Ok(()),
             Err(_) => Err(format!(
                 "Cannot run `task done` for task `{}`. Check documentation for more information",
-                task_uuids.join(" ")
+                task_uuids.join(" "),
             )),
         }
     }
