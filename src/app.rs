@@ -694,9 +694,9 @@ impl TTApp {
             if header == "ID" || header == "Name" {
                 // always give ID a couple of extra for indicator
                 widths[i] += self.config.uda_selection_indicator.as_str().graphemes(true).count();
-                if let TableMode::MultipleSelection = self.task_table_state.mode() {
-                    widths[i] += 2
-                };
+                // if let TableMode::MultipleSelection = self.task_table_state.mode() {
+                //     widths[i] += 2
+                // };
             }
         }
 

@@ -367,22 +367,22 @@ where
 
         let highlight_symbol = match state.mode {
             TableMode::MultipleSelection => {
-                let s = self.highlight_symbol.unwrap_or("• ").trim_end();
-                format!("[{}] ", s)
+                let s = self.highlight_symbol.unwrap_or("•").trim_end();
+                format!("{} ", s)
             }
             TableMode::SingleSelection => self.highlight_symbol.unwrap_or("").to_string(),
         };
 
         let mark_symbol = match state.mode {
             TableMode::MultipleSelection => {
-                let s = self.mark_symbol.unwrap_or("✓ ").trim_end();
-                format!("[{}] ", s)
+                let s = self.mark_symbol.unwrap_or("☑").trim_end();
+                format!("{} ", s)
             }
             TableMode::SingleSelection => self.highlight_symbol.unwrap_or("").to_string(),
         };
 
         let blank_symbol = match state.mode {
-            TableMode::MultipleSelection => "[ ] ".to_string(),
+            TableMode::MultipleSelection => "☐ ".to_string(),
             TableMode::SingleSelection => iter::repeat(" ").take(highlight_symbol.width()).collect::<String>(),
         };
 
