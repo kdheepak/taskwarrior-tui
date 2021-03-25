@@ -375,7 +375,7 @@ where
 
         let mark_symbol = match state.mode {
             TableMode::MultipleSelection => {
-                let s = self.mark_symbol.unwrap_or("x ").trim_end();
+                let s = self.mark_symbol.unwrap_or("✓ ").trim_end();
                 format!("[{}] ", s)
             }
             TableMode::SingleSelection => self.highlight_symbol.unwrap_or("").to_string(),
