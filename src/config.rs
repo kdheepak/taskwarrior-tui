@@ -45,6 +45,8 @@ pub struct Config {
     pub uda_task_report_show_info: bool,
     pub uda_task_report_looping: bool,
     pub uda_selection_indicator: String,
+    pub uda_mark_indicator: String,
+    pub uda_unmark_indicator: String,
     pub uda_selection_bold: bool,
     pub uda_selection_italic: bool,
     pub uda_selection_dim: bool,
@@ -70,6 +72,8 @@ impl Config {
             uda_task_report_show_info: Self::get_uda_task_report_show_info(),
             uda_task_report_looping: Self::get_uda_task_report_looping(),
             uda_selection_indicator: Self::get_uda_selection_indicator(),
+            uda_mark_indicator: Self::get_uda_mark_indicator(),
+            uda_unmark_indicator: Self::get_uda_unmark_indicator(),
             uda_selection_bold: Self::get_uda_selection_bold(),
             uda_selection_italic: Self::get_uda_selection_italic(),
             uda_selection_dim: Self::get_uda_selection_dim(),
@@ -330,6 +334,24 @@ impl Config {
         let indicator = Self::get_config("uda.taskwarrior-tui.selection.indicator");
         if indicator.is_empty() {
             "• ".to_string()
+        } else {
+            format!("{} ", indicator)
+        }
+    }
+
+    fn get_uda_mark_indicator() -> String {
+        let indicator = Self::get_config("uda.taskwarrior-tui.mark.indicator");
+        if indicator.is_empty() {
+            "☑ ".to_string()
+        } else {
+            format!("{} ", indicator)
+        }
+    }
+
+    fn get_uda_unmark_indicator() -> String {
+        let indicator = Self::get_config("uda.taskwarrior-tui.unmark.indicator");
+        if indicator.is_empty() {
+            "☐ ".to_string()
         } else {
             format!("{} ", indicator)
         }

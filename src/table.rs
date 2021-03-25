@@ -154,6 +154,8 @@ pub struct Table<'a, H, R> {
     highlight_symbol: Option<&'a str>,
     /// Symbol in front of the marked row
     mark_symbol: Option<&'a str>,
+    /// Symbol in front of the unmarked row
+    unmark_symbol: Option<&'a str>,
     /// Data to display in each row
     rows: R,
 }
@@ -175,6 +177,7 @@ where
             highlight_style: Style::default(),
             highlight_symbol: None,
             mark_symbol: None,
+            unmark_symbol: None,
             rows: R::default(),
         }
     }
@@ -198,6 +201,7 @@ where
             highlight_style: Style::default(),
             highlight_symbol: None,
             mark_symbol: None,
+            unmark_symbol: None,
             rows,
         }
     }
@@ -242,6 +246,16 @@ where
 
     pub fn style(mut self, style: Style) -> Table<'a, H, R> {
         self.style = style;
+        self
+    }
+
+    pub fn mark_symbol(mut self, mark_symbol: &'a str) -> Table<'a, H, R> {
+        self.mark_symbol = Some(mark_symbol);
+        self
+    }
+
+    pub fn unmark_symbol(mut self, unmark_symbol: &'a str) -> Table<'a, H, R> {
+        self.unmark_symbol = Some(unmark_symbol);
         self
     }
 
@@ -382,7 +396,10 @@ where
         };
 
         let blank_symbol = match state.mode {
-            TableMode::MultipleSelection => "☐ ".to_string(),
+            TableMode::MultipleSelection => {
+                let s = self.unmark_symbol.unwrap_or("☐").trim_end();
+                format!("{} ", s)
+            }
             TableMode::SingleSelection => iter::repeat(" ").take(highlight_symbol.width()).collect::<String>(),
         };
 

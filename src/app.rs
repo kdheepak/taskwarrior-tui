@@ -798,6 +798,8 @@ impl TTApp {
             )
             .highlight_style(highlight_style)
             .highlight_symbol(&self.config.uda_selection_indicator)
+            .mark_symbol(&self.config.uda_mark_indicator)
+            .unmark_symbol(&self.config.uda_unmark_indicator)
             .widths(&constraints);
 
         f.render_stateful_widget(t, rect, &mut self.task_table_state);
