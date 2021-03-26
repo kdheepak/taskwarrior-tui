@@ -254,14 +254,14 @@ impl TaskReportTable {
             },
             "description.count" => {
                 let c = match task.annotations() {
-                    Some(a) => format!("[{}]", a.iter().count()),
+                    Some(a) => format!("[{}]", a.len()),
                     None => format!(""),
                 };
                 format!("{} {}", task.description().to_string(), c)
             }
             "description.truncated_count" => {
                 let c = match task.annotations() {
-                    Some(a) => format!(" [{}]", a.iter().count()),
+                    Some(a) => format!(" [{}]", a.len()),
                     None => format!(""),
                 };
                 let mut d = task.description().to_string();

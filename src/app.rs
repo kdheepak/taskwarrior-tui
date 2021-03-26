@@ -155,6 +155,7 @@ pub struct TTApp {
     pub config: Config,
     pub task_report_show_info: bool,
     pub task_report_height: u16,
+    pub task_details_scroll: u16,
     pub help_popup: Help,
     pub contexts: Vec<Context>,
     pub last_export: Option<SystemTime>,
@@ -179,6 +180,7 @@ impl TTApp {
             error: "".to_string(),
             mode: AppMode::TaskReport,
             task_report_height: 0,
+            task_details_scroll: 0,
             task_report_show_info: c.uda_task_report_show_info,
             config: c,
             task_report_table: TaskReportTable::new()?,
@@ -517,14 +519,25 @@ impl TTApp {
             .output();
         if let Ok(output) = output {
             let data = String::from_utf8_lossy(&output.stdout);
-            let p = Paragraph::new(Text::from(&data[..])).block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_type(BorderType::Rounded)
-                    .title(format!("Task {}", task_id)),
-            );
+            self.task_details_scroll = std::cmp::min(data.lines().count() as u16, self.task_details_scroll);
+            let p = Paragraph::new(Text::from(&data[..]))
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_type(BorderType::Rounded)
+                        .title(format!("Task {}", task_id)),
+                )
+                .scroll((self.task_details_scroll, 0));
             f.render_widget(p, rect);
         }
+    }
+
+    fn task_details_scroll_down(&mut self) {
+        self.task_details_scroll = self.task_details_scroll.saturating_sub(1);
+    }
+
+    fn task_details_scroll_up(&mut self) {
+        self.task_details_scroll = self.task_details_scroll.saturating_add(1);
     }
 
     fn task_by_index(&self, i: usize) -> Option<Task> {
@@ -1514,6 +1527,10 @@ impl TTApp {
                     self.task_report_next_page();
                 } else if input == Key::PageUp || input == self.keyconfig.page_up {
                     self.task_report_previous_page();
+                } else if input == Key::Ctrl('e') {
+                    self.task_details_scroll_up();
+                } else if input == Key::Ctrl('y') {
+                    self.task_details_scroll_down();
                 } else if input == self.keyconfig.done {
                     match self.task_done() {
                         Ok(_) => self.update(true)?,
