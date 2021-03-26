@@ -35,7 +35,6 @@ impl Default for Help {
 impl Widget for &Help {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let text: Vec<Spans> = TEXT.lines().map(|line| Spans::from(format!("{}\n", line))).collect();
-
         Paragraph::new(text)
             .block(
                 Block::default()

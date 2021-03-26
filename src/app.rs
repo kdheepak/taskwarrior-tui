@@ -412,9 +412,13 @@ impl TTApp {
         }
     }
 
-    fn draw_help_popup(&self, f: &mut Frame<impl Backend>, percent_x: u16, percent_y: u16) {
+    fn draw_help_popup(&mut self, f: &mut Frame<impl Backend>, percent_x: u16, percent_y: u16) {
         let area = centered_rect(percent_x, percent_y, f.size());
         f.render_widget(Clear, area);
+        self.help_popup.scroll = std::cmp::min(
+            self.help_popup.scroll,
+            (self.help_popup.text_height as u16).saturating_sub(area.height),
+        );
         f.render_widget(&self.help_popup, area);
     }
 
@@ -519,7 +523,10 @@ impl TTApp {
             .output();
         if let Ok(output) = output {
             let data = String::from_utf8_lossy(&output.stdout);
-            self.task_details_scroll = std::cmp::min(data.lines().count() as u16, self.task_details_scroll);
+            self.task_details_scroll = std::cmp::min(
+                (data.lines().count() as u16).saturating_sub(rect.height),
+                self.task_details_scroll,
+            );
             let p = Paragraph::new(Text::from(&data[..]))
                 .block(
                     Block::default()
