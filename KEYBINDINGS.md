@@ -45,6 +45,10 @@ Keybindings for task report:
 
     A: task {selected} annotate {string} - Annotate current task
 
+    Ctrl-e: scroll down task details     - Scroll task details view down one line
+
+    Ctrl-y: scroll up task details       - Scroll task details view up one line
+
     !: {string}                          - Custom shell command
 
     1-9: {string}                        - Run user defined shortcuts
@@ -52,7 +56,6 @@ Keybindings for task report:
     c: context switcher menu             - Open context switcher menu
 
     ?: help                              - Help menu
-
 
 Keybindings for context switcher:
 
