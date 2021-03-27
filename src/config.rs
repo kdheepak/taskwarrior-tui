@@ -394,7 +394,7 @@ mod tests {
     use super::*;
     #[test]
     fn test_uda_configuration() {
-        assert_eq!(Some(""), Config::get_config("uda.taskwarrior-tui.unmark.indicator"));
+        assert_eq!(None, Config::get_config("uda.taskwarrior-tui.unmark.indicator"));
     }
 
     #[test]
