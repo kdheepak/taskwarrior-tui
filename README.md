@@ -20,15 +20,17 @@ A Terminal User Interface for [Taskwarrior](https://taskwarrior.org/).
 
 Unless otherwise specified, you will need to install `taskwarrior` first. See <https://taskwarrior.org/download/> for more information.
 
-**Manual** ( _Recommended_ ) [![](https://img.shields.io/github/v/tag/kdheepak/taskwarrior-tui)](https://github.com/kdheepak/taskwarrior-tui/releases/latest) [![](https://img.shields.io/github/downloads/kdheepak/taskwarrior-tui/total)](https://github.com/kdheepak/taskwarrior-tui/releases/latest)
+**Manual** [![](https://img.shields.io/github/v/tag/kdheepak/taskwarrior-tui)](https://github.com/kdheepak/taskwarrior-tui/releases/latest) [![](https://img.shields.io/github/downloads/kdheepak/taskwarrior-tui/total)](https://github.com/kdheepak/taskwarrior-tui/releases/latest)
 
 1. Download the tar.gz file for your OS from [the latest release](https://github.com/kdheepak/taskwarrior-tui/releases/latest).
 2. Unzip the tar.gz file
 3. Run with `./taskwarrior-tui`.
 
-See <https://kdheepak.com/taskwarrior-tui/installation/> for more information.
+See <https://kdheepak.com/taskwarrior-tui/installation/> on instructions for using package managers for various platforms.
 
 ### Configuration
 
-`taskwarrior-tui` uses `taskrc` for various configuration options.
-See <https://kdheepak.com/taskwarrior-tui/configuration/keys> or <https://kdheepak.com/taskwarrior-tui/configuration/colors> for more information.
+`taskwarrior-tui` uses `taskrc` for various configuration options. See the documentation for more information:
+
+- <https://kdheepak.com/taskwarrior-tui/configuration/keys>
+- <https://kdheepak.com/taskwarrior-tui/configuration/colors>
