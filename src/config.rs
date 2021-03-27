@@ -340,7 +340,7 @@ impl Config {
     fn get_uda_mark_indicator() -> String {
         let indicator = Self::get_config("uda.taskwarrior-tui.mark.indicator");
         match indicator {
-            None => "☑ ".to_string(),
+            None => "✔ ".to_string(),
             Some(indicator) => format!("{} ", indicator),
         }
     }
@@ -348,7 +348,7 @@ impl Config {
     fn get_uda_unmark_indicator() -> String {
         let indicator = Self::get_config("uda.taskwarrior-tui.unmark.indicator");
         match indicator {
-            None => "☐ ".to_string(),
+            None => "  ".to_string(),
             Some(indicator) => format!("{} ", indicator),
         }
     }
