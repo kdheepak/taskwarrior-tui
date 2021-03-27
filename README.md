@@ -26,7 +26,7 @@ Unless otherwise specified, you will need to install `taskwarrior` first. See <h
 2. Unzip the tar.gz file
 3. Run with `./taskwarrior-tui`.
 
-See <https://kdheepak.com/taskwarrior-tui/installation/> on instructions for using package managers for various platforms.
+See <https://kdheepak.com/taskwarrior-tui/installation/> on instructions for using package managers on various platforms.
 
 ### Configuration
 
