@@ -10,6 +10,7 @@ use crate::util::Key;
 use crate::util::{Event, Events};
 
 use std::cmp::Ordering;
+use std::collections::HashMap;
 use std::convert::TryInto;
 use std::error::Error;
 use std::fs;
@@ -149,6 +150,7 @@ pub struct TTApp {
     pub modify: LineBuffer,
     pub error: String,
     pub tasks: Arc<Mutex<Vec<Task>>>,
+    pub task_details: HashMap<Uuid, String>,
     pub task_report_table: TaskReportTable,
     pub calendar_year: i32,
     pub mode: AppMode,
@@ -160,6 +162,8 @@ pub struct TTApp {
     pub contexts: Vec<Context>,
     pub last_export: Option<SystemTime>,
     pub keyconfig: KeyConfig,
+    pub terminal_width: u16,
+    pub terminal_height: u16,
 }
 
 impl TTApp {
@@ -172,6 +176,7 @@ impl TTApp {
             task_table_state: TableState::default(),
             context_table_state: TableState::default(),
             tasks: Arc::new(Mutex::new(vec![])),
+            task_details: HashMap::new(),
             current_context_filter: "".to_string(),
             current_context: "".to_string(),
             command: LineBuffer::with_capacity(MAX_LINE),
@@ -189,6 +194,8 @@ impl TTApp {
             contexts: vec![],
             last_export: None,
             keyconfig: kc,
+            terminal_width: 0,
+            terminal_height: 0,
         };
         for c in app.config.filter.chars() {
             app.filter.insert(c, 1);
@@ -213,6 +220,9 @@ impl TTApp {
     }
 
     pub fn draw(&mut self, f: &mut Frame<impl Backend>) {
+        let rect = f.size();
+        self.terminal_width = rect.width;
+        self.terminal_height = rect.height;
         match self.mode {
             AppMode::TaskReport
             | AppMode::TaskFilter
@@ -516,27 +526,36 @@ impl TTApp {
         let selected = self.task_table_state.selected().unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
-        let output = Command::new("task")
-            .arg("rc.color=off")
-            .arg(format!("rc.defaultwidth={}", f.size().width - 2))
-            .arg(format!("{}", task_uuid))
-            .output();
-        if let Ok(output) = output {
-            let data = String::from_utf8_lossy(&output.stdout);
-            self.task_details_scroll = std::cmp::min(
-                (data.lines().count() as u16).saturating_sub(rect.height),
-                self.task_details_scroll,
-            );
-            let p = Paragraph::new(Text::from(&data[..]))
-                .block(
-                    Block::default()
-                        .borders(Borders::ALL)
-                        .border_type(BorderType::Rounded)
-                        .title(format!("Task {}", task_id)),
-                )
-                .scroll((self.task_details_scroll, 0));
-            f.render_widget(p, rect);
+
+        if !self.task_details.contains_key(&task_uuid) {
+            let output = Command::new("task")
+                .arg("rc.color=off")
+                .arg(format!("rc.defaultwidth={}", self.terminal_width - 2))
+                .arg(format!("{}", task_uuid))
+                .output();
+            let data = if let Ok(output) = output {
+                String::from_utf8_lossy(&output.stdout).to_string()
+            } else {
+                "".to_string()
+            };
+            let entry = self.task_details.entry(task_uuid).or_insert_with(|| "".to_string());
+            *entry = data;
         }
+        let data = self.task_details[&task_uuid].clone();
+
+        self.task_details_scroll = std::cmp::min(
+            (data.lines().count() as u16).saturating_sub(rect.height),
+            self.task_details_scroll,
+        );
+        let p = Paragraph::new(Text::from(&data[..]))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .title(format!("Task {}", task_id)),
+            )
+            .scroll((self.task_details_scroll, 0));
+        f.render_widget(p, rect);
     }
 
     fn task_details_scroll_down(&mut self) {
@@ -1009,6 +1028,7 @@ impl TTApp {
             *(self.tasks.lock().unwrap()) = imported;
             self.tasks.lock().unwrap().sort_by(cmp);
         }
+
         Ok(())
     }
 
