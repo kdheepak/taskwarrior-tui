@@ -3,6 +3,7 @@ use cassowary::{
     WeightedRelation::*,
     {Expression, Solver},
 };
+use std::collections::HashSet;
 use std::{
     collections::HashMap,
     fmt::Display,
@@ -19,30 +20,80 @@ use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
 #[derive(Debug, Clone)]
+pub enum TableMode {
+    SingleSelection,
+    MultipleSelection,
+}
+
+#[derive(Clone)]
 pub struct TableState {
     offset: usize,
-    selected: Option<usize>,
+    current_selection: Option<usize>,
+    marked: HashSet<usize>,
+    mode: TableMode,
 }
 
 impl Default for TableState {
     fn default() -> TableState {
         TableState {
             offset: 0,
-            selected: None,
+            current_selection: Some(0),
+            marked: HashSet::new(),
+            mode: TableMode::SingleSelection,
         }
     }
 }
 
 impl TableState {
-    pub fn selected(&self) -> Option<usize> {
-        self.selected
+    pub fn mode(&self) -> TableMode {
+        self.mode.clone()
+    }
+
+    pub fn multiple_selection(&mut self) {
+        self.mode = TableMode::MultipleSelection;
+    }
+
+    pub fn single_selection(&mut self) {
+        self.mode = TableMode::SingleSelection;
+    }
+
+    pub fn current_selection(&self) -> Option<usize> {
+        self.current_selection
     }
 
     pub fn select(&mut self, index: Option<usize>) {
-        self.selected = index;
+        self.current_selection = index;
         if index.is_none() {
             self.offset = 0;
         }
+    }
+
+    pub fn mark(&mut self, index: Option<usize>) {
+        if let Some(i) = index {
+            self.marked.insert(i);
+        }
+    }
+
+    pub fn unmark(&mut self, index: Option<usize>) {
+        if let Some(i) = index {
+            self.marked.remove(&i);
+        }
+    }
+
+    pub fn toggle_mark(&mut self, index: Option<usize>) {
+        if let Some(i) = index {
+            if !self.marked.insert(i) {
+                self.marked.remove(&i);
+            }
+        }
+    }
+
+    pub fn marked(&self) -> std::collections::hash_set::Iter<usize> {
+        self.marked.iter()
+    }
+
+    pub fn clear(&mut self) {
+        self.marked.drain().for_each(drop);
     }
 }
 
@@ -99,8 +150,12 @@ pub struct Table<'a, H, R> {
     header_gap: u16,
     /// Style used to render the selected row
     highlight_style: Style,
-    /// Symbol in front of the selected rom
+    /// Symbol in front of the selected row
     highlight_symbol: Option<&'a str>,
+    /// Symbol in front of the marked row
+    mark_symbol: Option<&'a str>,
+    /// Symbol in front of the unmarked row
+    unmark_symbol: Option<&'a str>,
     /// Data to display in each row
     rows: R,
 }
@@ -121,6 +176,8 @@ where
             header_gap: 1,
             highlight_style: Style::default(),
             highlight_symbol: None,
+            mark_symbol: None,
+            unmark_symbol: None,
             rows: R::default(),
         }
     }
@@ -143,6 +200,8 @@ where
             header_gap: 1,
             highlight_style: Style::default(),
             highlight_symbol: None,
+            mark_symbol: None,
+            unmark_symbol: None,
             rows,
         }
     }
@@ -187,6 +246,16 @@ where
 
     pub fn style(mut self, style: Style) -> Table<'a, H, R> {
         self.style = style;
+        self
+    }
+
+    pub fn mark_symbol(mut self, mark_symbol: &'a str) -> Table<'a, H, R> {
+        self.mark_symbol = Some(mark_symbol);
+        self
+    }
+
+    pub fn unmark_symbol(mut self, unmark_symbol: &'a str) -> Table<'a, H, R> {
+        self.unmark_symbol = Some(unmark_symbol);
         self
     }
 
@@ -304,12 +373,35 @@ where
         y += 1 + self.header_gap;
 
         // Use highlight_style only if something is selected
-        let (selected, highlight_style) = match state.selected {
-            Some(i) => (Some(i), self.highlight_style),
-            None => (None, self.style),
+        let (selected, highlight_style) = if state.current_selection().is_some() {
+            (state.current_selection(), self.highlight_style)
+        } else {
+            (None, self.style)
         };
-        let highlight_symbol = self.highlight_symbol.unwrap_or("");
-        let blank_symbol = iter::repeat(" ").take(highlight_symbol.width()).collect::<String>();
+
+        let highlight_symbol = match state.mode {
+            TableMode::MultipleSelection => {
+                let s = self.highlight_symbol.unwrap_or("•").trim_end();
+                format!("{} ", s)
+            }
+            TableMode::SingleSelection => self.highlight_symbol.unwrap_or("").to_string(),
+        };
+
+        let mark_symbol = match state.mode {
+            TableMode::MultipleSelection => {
+                let s = self.mark_symbol.unwrap_or("☑").trim_end();
+                format!("{} ", s)
+            }
+            TableMode::SingleSelection => self.highlight_symbol.unwrap_or("").to_string(),
+        };
+
+        let blank_symbol = match state.mode {
+            TableMode::MultipleSelection => {
+                let s = self.unmark_symbol.unwrap_or("☐").trim_end();
+                format!("{} ", s)
+            }
+            TableMode::SingleSelection => iter::repeat(" ").take(highlight_symbol.width()).collect::<String>(),
+        };
 
         // Draw rows
         let default_style = Style::default();
@@ -317,11 +409,11 @@ where
             let remaining = (table_area.bottom() - y) as usize;
 
             // Make sure the table shows the selected item
-            state.offset = if let Some(selected) = selected {
-                if selected >= remaining + state.offset - 1 {
-                    selected + 1 - remaining
-                } else if selected < state.offset {
-                    selected
+            state.offset = if let Some(s) = selected {
+                if s >= remaining + state.offset - 1 {
+                    s + 1 - remaining
+                } else if s < state.offset {
+                    s
                 } else {
                     state.offset
                 }
@@ -330,11 +422,34 @@ where
             };
             for (i, row) in self.rows.skip(state.offset).take(remaining).enumerate() {
                 let (data, style, symbol) = match row {
-                    Row::Data(d) | Row::StyledData(d, _) if Some(i) == state.selected.map(|s| s - state.offset) => {
-                        (d, highlight_style, highlight_symbol)
+                    Row::Data(d) | Row::StyledData(d, _)
+                        if Some(i) == state.current_selection().map(|s| s - state.offset) =>
+                    {
+                        match state.mode {
+                            TableMode::MultipleSelection => {
+                                if state.marked.contains(&(i + state.offset)) {
+                                    (d, highlight_style, mark_symbol.to_string())
+                                } else {
+                                    (d, highlight_style, blank_symbol.to_string())
+                                }
+                            }
+                            TableMode::SingleSelection => (d, highlight_style, highlight_symbol.to_string()),
+                        }
                     }
-                    Row::Data(d) => (d, default_style, blank_symbol.as_ref()),
-                    Row::StyledData(d, s) => (d, s, blank_symbol.as_ref()),
+                    Row::Data(d) => {
+                        if state.marked.contains(&(i + state.offset)) {
+                            (d, default_style, mark_symbol.to_string())
+                        } else {
+                            (d, default_style, blank_symbol.to_string())
+                        }
+                    }
+                    Row::StyledData(d, s) => {
+                        if state.marked.contains(&(i + state.offset)) {
+                            (d, s, mark_symbol.to_string())
+                        } else {
+                            (d, s, blank_symbol.to_string())
+                        }
+                    }
                 };
                 x = table_area.left();
                 for (c, (w, elt)) in solved_widths.iter().zip(data).enumerate() {
@@ -347,6 +462,10 @@ where
                             style,
                         );
                         if c == header_index {
+                            let symbol = match state.mode {
+                                TableMode::SingleSelection => &symbol,
+                                TableMode::MultipleSelection => &symbol,
+                            };
                             format!(
                                 "{symbol}{elt:>width$}",
                                 symbol = symbol,

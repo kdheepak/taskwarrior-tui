@@ -4,13 +4,13 @@ use crate::config::Config;
 use crate::context::Context;
 use crate::help::Help;
 use crate::keyconfig::KeyConfig;
-use crate::table::{Row, Table, TableState};
+use crate::table::{Row, Table, TableMode, TableState};
 use crate::task_report::TaskReportTable;
 use crate::util::Key;
 use crate::util::{Event, Events};
 
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::error::Error;
 use std::fs;
@@ -139,7 +139,7 @@ pub enum AppMode {
     Calendar,
 }
 
-pub struct TTApp {
+pub struct TaskwarriorTuiApp {
     pub should_quit: bool,
     pub task_table_state: TableState,
     pub context_table_state: TableState,
@@ -151,6 +151,9 @@ pub struct TTApp {
     pub error: String,
     pub tasks: Arc<Mutex<Vec<Task>>>,
     pub task_details: HashMap<Uuid, String>,
+    pub marked: HashSet<Uuid>,
+    // stores index of current task that is highlighted
+    pub current_selection: usize,
     pub task_report_table: TaskReportTable,
     pub calendar_year: i32,
     pub mode: AppMode,
@@ -166,7 +169,7 @@ pub struct TTApp {
     pub terminal_height: u16,
 }
 
-impl TTApp {
+impl TaskwarriorTuiApp {
     pub fn new() -> Result<Self, Box<dyn Error>> {
         let c = Config::default()?;
         let mut kc = KeyConfig::default();
@@ -177,6 +180,8 @@ impl TTApp {
             context_table_state: TableState::default(),
             tasks: Arc::new(Mutex::new(vec![])),
             task_details: HashMap::new(),
+            marked: HashSet::new(),
+            current_selection: 0,
             current_context_filter: "".to_string(),
             current_context: "".to_string(),
             command: LineBuffer::with_capacity(MAX_LINE),
@@ -238,6 +243,15 @@ impl TTApp {
         }
     }
 
+    pub fn draw_debug(&mut self, f: &mut Frame<impl Backend>) {
+        let area = centered_rect(50, 50, f.size());
+        f.render_widget(Clear, area);
+        let t = format!("{:?}", self.marked);
+        let p = Paragraph::new(Text::from(t))
+            .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded));
+        f.render_widget(p, area);
+    }
+
     pub fn draw_calendar(&mut self, f: &mut Frame<impl Backend>) {
         let dates_with_styles = self.get_dates_with_styles();
         let rects = Layout::default()
@@ -293,7 +307,7 @@ impl TTApp {
     pub fn draw_task(&mut self, f: &mut Frame<impl Backend>) {
         let tasks_is_empty = self.tasks.lock().unwrap().is_empty();
         let tasks_len = self.tasks.lock().unwrap().len();
-        while !tasks_is_empty && self.task_table_state.selected().unwrap_or_default() >= tasks_len {
+        while !tasks_is_empty && self.current_selection >= tasks_len {
             self.task_report_previous();
         }
         let rects = Layout::default()
@@ -319,11 +333,25 @@ impl TTApp {
             self.draw_task_report(f, split_task_layout[0]);
             self.draw_task_details(f, split_task_layout[1]);
         }
-        let selected = self.task_table_state.selected().unwrap_or_default();
-        let task_id = if tasks_len == 0 {
-            0
+        let selected = self.current_selection;
+        let task_ids = if tasks_len == 0 {
+            vec!["0".to_string()]
         } else {
-            self.tasks.lock().unwrap()[selected].id().unwrap_or_default()
+            match self.task_table_state.mode() {
+                TableMode::SingleSelection => vec![self.tasks.lock().unwrap()[selected]
+                    .id()
+                    .unwrap_or_default()
+                    .to_string()],
+                TableMode::MultipleSelection => {
+                    let mut tids = vec![];
+                    for uuid in self.marked.iter() {
+                        if let Some(t) = self.task_by_uuid(*uuid) {
+                            tids.push(t.id().unwrap_or_default().to_string());
+                        }
+                    }
+                    tids
+                }
+            }
         };
         match self.mode {
             AppMode::TaskReport => self.draw_command(f, rects[1], self.filter.as_str(), "Filter Tasks"),
@@ -346,10 +374,7 @@ impl TTApp {
                     f,
                     rects[1],
                     self.command.as_str(),
-                    Span::styled(
-                        format!("Modify Task {}", task_id).as_str(),
-                        Style::default().add_modifier(Modifier::BOLD),
-                    ),
+                    Span::styled("Log Tasks", Style::default().add_modifier(Modifier::BOLD)),
                 );
             }
             AppMode::TaskSubprocess => {
@@ -360,32 +385,39 @@ impl TTApp {
                     f,
                     rects[1],
                     self.command.as_str(),
-                    Span::styled("Log Tasks", Style::default().add_modifier(Modifier::BOLD)),
+                    Span::styled("Shell Command", Style::default().add_modifier(Modifier::BOLD)),
                 );
             }
             AppMode::TaskModify => {
                 let position = self.get_position(&self.modify);
                 f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
+                let label = if task_ids.len() > 1 {
+                    format!("Modify Tasks {}", task_ids.join(","))
+                } else {
+                    format!("Modify Task {}", task_ids.join(","))
+                };
                 self.draw_command(
                     f,
                     rects[1],
                     self.modify.as_str(),
-                    Span::styled("Shell Command", Style::default().add_modifier(Modifier::BOLD)),
+                    Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
                 );
             }
             AppMode::TaskAnnotate => {
                 let position = self.get_position(&self.command);
                 f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
                 f.render_widget(Clear, rects[1]);
+                let label = if task_ids.len() > 1 {
+                    format!("Annotate Tasks {}", task_ids.join(","))
+                } else {
+                    format!("Annotate Task {}", task_ids.join(","))
+                };
                 self.draw_command(
                     f,
                     rects[1],
                     self.command.as_str(),
-                    Span::styled(
-                        format!("Annotate Task {}", task_id).as_str(),
-                        Style::default().add_modifier(Modifier::BOLD),
-                    ),
+                    Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
                 );
             }
             AppMode::TaskAdd => {
@@ -453,7 +485,7 @@ impl TTApp {
         let maximum_column_width = area.width;
         let widths = self.calculate_widths(&contexts, &headers, maximum_column_width);
 
-        let selected = self.context_table_state.selected().unwrap_or_default();
+        let selected = self.context_table_state.current_selection().unwrap_or_default();
         let header = headers.iter();
         let mut rows = vec![];
         let mut highlight_style = Style::default();
@@ -463,7 +495,7 @@ impl TTApp {
                 style = self.config.uda_style_context_active;
             }
             rows.push(Row::StyledData(context.iter(), style));
-            if i == self.context_table_state.selected().unwrap_or_default() {
+            if i == self.context_table_state.current_selection().unwrap_or_default() {
                 highlight_style = style;
             }
         }
@@ -523,7 +555,7 @@ impl TTApp {
             );
             return;
         }
-        let selected = self.task_table_state.selected().unwrap_or_default();
+        let selected = self.current_selection;
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
 
@@ -568,7 +600,7 @@ impl TTApp {
 
     fn task_by_index(&self, i: usize) -> Option<Task> {
         let tasks = &self.tasks.lock().unwrap();
-        if i > tasks.len() {
+        if i >= tasks.len() {
             None
         } else {
             Some(tasks[i].clone())
@@ -585,6 +617,12 @@ impl TTApp {
         let tasks = &self.tasks.lock().unwrap();
         let m = tasks.iter().find(|t| t.id().unwrap() == id);
         m.cloned()
+    }
+
+    fn task_index_by_uuid(&self, uuid: Uuid) -> Option<usize> {
+        let tasks = &self.tasks.lock().unwrap();
+        let m = tasks.iter().position(|t| *t.uuid() == uuid);
+        m
     }
 
     fn style_for_task(&self, task: &Task) -> Style {
@@ -656,6 +694,9 @@ impl TTApp {
             if header == "ID" || header == "Name" {
                 // always give ID a couple of extra for indicator
                 widths[i] += self.config.uda_selection_indicator.as_str().graphemes(true).count();
+                // if let TableMode::MultipleSelection = self.task_table_state.mode() {
+                //     widths[i] += 2
+                // };
             }
         }
 
@@ -702,7 +743,7 @@ impl TTApp {
                 break;
             }
         }
-        let selected = self.task_table_state.selected().unwrap_or_default();
+        let selected = self.current_selection;
         let header = headers.iter();
         let mut rows = vec![];
         let mut highlight_style = Style::default();
@@ -757,6 +798,8 @@ impl TTApp {
             )
             .highlight_style(highlight_style)
             .highlight_symbol(&self.config.uda_selection_indicator)
+            .mark_symbol(&self.config.uda_mark_indicator)
+            .unmark_symbol(&self.config.uda_unmark_indicator)
             .widths(&constraints);
 
         f.render_stateful_widget(t, rect, &mut self.task_table_state);
@@ -793,8 +836,28 @@ impl TTApp {
         Ok(())
     }
 
+    pub fn update_task_table_state(&mut self) {
+        self.task_table_state.select(Some(self.current_selection));
+
+        for uuid in self.marked.clone() {
+            if self.task_by_uuid(uuid).is_none() {
+                self.marked.remove(&uuid);
+            }
+        }
+
+        if self.marked.is_empty() {
+            self.task_table_state.single_selection();
+        }
+
+        self.task_table_state.clear();
+
+        for uuid in &self.marked {
+            self.task_table_state.mark(self.task_index_by_uuid(*uuid))
+        }
+    }
+
     pub fn context_next(&mut self) {
-        let i = match self.context_table_state.selected() {
+        let i = match self.context_table_state.current_selection() {
             Some(i) => {
                 if i >= self.contexts.len() - 1 {
                     0
@@ -808,7 +871,7 @@ impl TTApp {
     }
 
     pub fn context_previous(&mut self) {
-        let i = match self.context_table_state.selected() {
+        let i = match self.context_table_state.current_selection() {
             Some(i) => {
                 if i == 0 {
                     self.contexts.len() - 1
@@ -822,7 +885,7 @@ impl TTApp {
     }
 
     pub fn context_select(&mut self) -> Result<(), String> {
-        let i = self.context_table_state.selected().unwrap();
+        let i = self.context_table_state.current_selection().unwrap();
         let mut command = Command::new("task");
         command.arg("context").arg(&self.contexts[i].name);
         let output = command.output();
@@ -833,99 +896,88 @@ impl TTApp {
         if self.tasks.lock().unwrap().is_empty() {
             return;
         }
-        self.task_table_state.select(Some(0));
+        self.current_selection = 0;
     }
 
     pub fn task_report_bottom(&mut self) {
         if self.tasks.lock().unwrap().is_empty() {
             return;
         }
-        self.task_table_state.select(Some(self.tasks.lock().unwrap().len() - 1));
+        self.current_selection = self.tasks.lock().unwrap().len() - 1;
     }
 
     pub fn task_report_next(&mut self) {
         if self.tasks.lock().unwrap().is_empty() {
             return;
         }
-        let i = match self.task_table_state.selected() {
-            Some(i) => {
-                if i >= self.tasks.lock().unwrap().len() - 1 {
-                    if self.config.uda_task_report_looping {
-                        0
-                    } else {
-                        i
-                    }
+        let i = {
+            if self.current_selection >= self.tasks.lock().unwrap().len() - 1 {
+                if self.config.uda_task_report_looping {
+                    0
                 } else {
-                    i + 1
+                    self.current_selection
                 }
+            } else {
+                self.current_selection + 1
             }
-            None => 0,
         };
-        self.task_table_state.select(Some(i));
+        self.current_selection = i;
     }
 
     pub fn task_report_previous(&mut self) {
         if self.tasks.lock().unwrap().is_empty() {
             return;
         }
-        let i = match self.task_table_state.selected() {
-            Some(i) => {
-                if i == 0 {
-                    if self.config.uda_task_report_looping {
-                        self.tasks.lock().unwrap().len() - 1
-                    } else {
-                        0
-                    }
+        let i = {
+            if self.current_selection == 0 {
+                if self.config.uda_task_report_looping {
+                    self.tasks.lock().unwrap().len() - 1
                 } else {
-                    i - 1
+                    0
                 }
+            } else {
+                self.current_selection - 1
             }
-            None => 0,
         };
-        self.task_table_state.select(Some(i));
+        self.current_selection = i;
     }
 
     pub fn task_report_next_page(&mut self) {
         if self.tasks.lock().unwrap().is_empty() {
             return;
         }
-        let i = match self.task_table_state.selected() {
-            Some(i) => {
-                if i >= self.tasks.lock().unwrap().len() - 1 {
-                    if self.config.uda_task_report_looping {
-                        0
-                    } else {
-                        i
-                    }
+        let i = {
+            if self.current_selection >= self.tasks.lock().unwrap().len() - 1 {
+                if self.config.uda_task_report_looping {
+                    0
                 } else {
-                    i.checked_add(self.task_report_height as usize)
-                        .unwrap_or_else(|| self.tasks.lock().unwrap().len())
+                    self.current_selection
                 }
+            } else {
+                self.current_selection
+                    .checked_add(self.task_report_height as usize)
+                    .unwrap_or_else(|| self.tasks.lock().unwrap().len())
             }
-            None => 0,
         };
-        self.task_table_state.select(Some(i));
+        self.current_selection = i;
     }
 
     pub fn task_report_previous_page(&mut self) {
         if self.tasks.lock().unwrap().is_empty() {
             return;
         }
-        let i = match self.task_table_state.selected() {
-            Some(i) => {
-                if i == 0 {
-                    if self.config.uda_task_report_looping {
-                        self.tasks.lock().unwrap().len() - 1
-                    } else {
-                        0
-                    }
+        let i = {
+            if self.current_selection == 0 {
+                if self.config.uda_task_report_looping {
+                    self.tasks.lock().unwrap().len() - 1
                 } else {
-                    i.saturating_sub(self.task_report_height as usize)
+                    0
                 }
+            } else {
+                self.current_selection.saturating_sub(self.task_report_height as usize)
             }
-            None => 0,
         };
-        self.task_table_state.select(Some(i));
+        self.current_selection = i;
     }
 
     pub fn export_contexts(&mut self) -> Result<(), Box<dyn Error>> {
@@ -1032,12 +1084,29 @@ impl TTApp {
         Ok(())
     }
 
+    pub fn selected_task_uuids(&self) -> Vec<Uuid> {
+        let selected = match self.task_table_state.mode() {
+            TableMode::SingleSelection => vec![self.current_selection],
+            TableMode::MultipleSelection => self.task_table_state.marked().cloned().collect::<Vec<usize>>(),
+        };
+
+        let mut task_uuids = vec![];
+
+        for s in selected {
+            let task_id = self.tasks.lock().unwrap()[s].id().unwrap_or_default();
+            let task_uuid = *self.tasks.lock().unwrap()[s].uuid();
+            task_uuids.push(task_uuid);
+        }
+
+        task_uuids
+    }
+
     pub fn task_subprocess(&mut self) -> Result<(), String> {
         if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
 
-        let shell = self.command.as_str().replace("'", "\\'");
+        let shell = self.command.as_str();
 
         match shlex::split(&shell) {
             Some(cmd) => {
@@ -1072,7 +1141,7 @@ impl TTApp {
 
         command.arg("log");
 
-        let shell = self.command.as_str().replace("'", "\\'");
+        let shell = self.command.as_str();
 
         match shlex::split(&shell) {
             Some(cmd) => {
@@ -1091,10 +1160,7 @@ impl TTApp {
                     )),
                 }
             }
-            None => Err(format!(
-                "Unable to run `task log`. Cannot shlex split `{}`",
-                shell.as_str()
-            )),
+            None => Err(format!("Unable to run `task log`. Cannot shlex split `{}`", shell)),
         }
     }
 
@@ -1102,16 +1168,24 @@ impl TTApp {
         if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
-        let selected = self.task_table_state.selected().unwrap_or_default();
-        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
-        let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
+
+        let task_uuids = self.selected_task_uuids();
+
         let shell = &self.config.uda_shortcuts[s];
 
         if shell.is_empty() {
             return Err("Trying to run empty shortcut.".to_string());
         }
 
-        let shell = format!("{} {}", shell, task_uuid);
+        let shell = format!(
+            "{} {}",
+            shell,
+            task_uuids
+                .iter()
+                .map(|u| u.to_string())
+                .collect::<Vec<String>>()
+                .join(" ")
+        );
         let shell = shellexpand::tilde(&shell).into_owned();
         match shlex::split(&shell) {
             Some(cmd) => {
@@ -1143,14 +1217,20 @@ impl TTApp {
         if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
-        let selected = self.task_table_state.selected().unwrap_or_default();
-        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
-        let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
-        let mut command = Command::new("task");
-        command.arg("rc.confirmation=off");
-        command.arg(format!("{}", task_uuid)).arg("modify");
 
-        let shell = self.modify.as_str().replace("'", "\\'");
+        let task_uuids = self.selected_task_uuids();
+
+        let mut command = Command::new("task");
+        command.arg("rc.bulk=0");
+        command.arg("rc.confirmation=off");
+        command.arg("rc.dependency.confirmation=off");
+        command.arg("rc.recurrence.confirmation=off");
+        for task_uuid in &task_uuids {
+            command.arg(task_uuid.to_string());
+        }
+        command.arg("modify");
+
+        let shell = self.modify.as_str();
 
         match shlex::split(&shell) {
             Some(cmd) => {
@@ -1164,23 +1244,16 @@ impl TTApp {
                             self.modify.update("", 0);
                             Ok(())
                         } else {
-                            Err(format!(
-                                "Unable to modify task with uuid {}. Failed with status code {}",
-                                task_uuid,
-                                o.status.code().unwrap()
-                            ))
+                            Err(format!("Modify failed. {}", String::from_utf8_lossy(&o.stdout),))
                         }
                     }
                     Err(_) => Err(format!(
-                        "Cannot run `task {} modify {}`. Check documentation for more information",
-                        task_uuid, shell,
+                        "Cannot run `task {:?} modify {}`. Check documentation for more information",
+                        task_uuids, shell,
                     )),
                 }
             }
-            None => Err(format!(
-                "Unable to run `task {} modify`. Cannot shlex split `{}`",
-                task_uuid, shell,
-            )),
+            None => Err(format!("Cannot shlex split `{}`", shell,)),
         }
     }
 
@@ -1188,13 +1261,20 @@ impl TTApp {
         if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
-        let selected = self.task_table_state.selected().unwrap_or_default();
-        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
-        let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
-        let mut command = Command::new("task");
-        command.arg(format!("{}", task_uuid)).arg("annotate");
 
-        let shell = self.command.as_str().replace("'", "\\'");
+        let task_uuids = self.selected_task_uuids();
+
+        let mut command = Command::new("task");
+        command.arg("rc.bulk=0");
+        command.arg("rc.confirmation=off");
+        command.arg("rc.dependency.confirmation=off");
+        command.arg("rc.recurrence.confirmation=off");
+        for task_uuid in &task_uuids {
+            command.arg(task_uuid.to_string());
+        }
+        command.arg("annotate");
+
+        let shell = self.command.as_str();
 
         match shlex::split(&shell) {
             Some(cmd) => {
@@ -1208,23 +1288,21 @@ impl TTApp {
                             self.command.update("", 0);
                             Ok(())
                         } else {
-                            Err(format!(
-                                "Unable to annotate task with uuid {}. Failed with status code {}",
-                                task_uuid,
-                                o.status.code().unwrap()
-                            ))
+                            Err(format!("Annotate failed. {}", String::from_utf8_lossy(&o.stdout),))
                         }
                     }
                     Err(_) => Err(format!(
                         "Cannot run `task {} annotate {}`. Check documentation for more information",
-                        task_uuid, shell
+                        task_uuids
+                            .iter()
+                            .map(|u| u.to_string())
+                            .collect::<Vec<String>>()
+                            .join(" "),
+                        shell
                     )),
                 }
             }
-            None => Err(format!(
-                "Unable to run `task {} annotate`. Cannot shlex split `{}`",
-                task_uuid, shell
-            )),
+            None => Err(format!("Cannot shlex split `{}`", shell)),
         }
     }
 
@@ -1286,44 +1364,55 @@ impl TTApp {
         if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
-        let selected = self.task_table_state.selected().unwrap_or_default();
+        let selected = self.current_selection;
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
-        let mut command = "start";
-        for tag in TTApp::task_virtual_tags(task_uuid)?.split(' ') {
-            if tag == "ACTIVE" {
-                command = "stop"
+
+        let task_uuids = self.selected_task_uuids();
+
+        for task_uuid in &task_uuids {
+            let mut command = "start";
+            for tag in TaskwarriorTuiApp::task_virtual_tags(*task_uuid).unwrap().split(' ') {
+                if tag == "ACTIVE" {
+                    command = "stop"
+                }
+            }
+
+            let output = Command::new("task").arg(task_uuid.to_string()).arg(command).output();
+            if output.is_err() {
+                return Err(format!("Error running `task {}` for task `{}`.", command, task_uuid,));
             }
         }
 
-        let output = Command::new("task").arg(format!("{}", task_uuid)).arg(command).output();
-        match output {
-            Ok(_) => Ok(()),
-            Err(_) => Err(format!(
-                "Cannot run `task {}` for task `{}`. Check documentation for more information",
-                command, task_uuid,
-            )),
-        }
+        Ok(())
     }
 
     pub fn task_delete(&self) -> Result<(), String> {
         if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
-        let selected = self.task_table_state.selected().unwrap_or_default();
-        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
-        let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
 
-        let output = Command::new("task")
+        let task_uuids = self.selected_task_uuids();
+
+        let mut cmd = Command::new("task");
+        cmd.arg("rc.bulk=0")
             .arg("rc.confirmation=off")
-            .arg(format!("{}", task_uuid))
-            .arg("delete")
-            .output();
+            .arg("rc.dependency.confirmation=off")
+            .arg("rc.recurrence.confirmation=off");
+        for task_uuid in &task_uuids {
+            cmd.arg(task_uuid.to_string());
+        }
+        cmd.arg("delete");
+        let output = cmd.output();
         match output {
             Ok(_) => Ok(()),
             Err(_) => Err(format!(
-                "Cannot run `task delete` for task `{}`. Check documentation for more information",
-                task_uuid
+                "Cannot run `task delete` for tasks `{}`. Check documentation for more information",
+                task_uuids
+                    .iter()
+                    .map(|u| u.to_string())
+                    .collect::<Vec<String>>()
+                    .join(" ")
             )),
         }
     }
@@ -1332,15 +1421,26 @@ impl TTApp {
         if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
-        let selected = self.task_table_state.selected().unwrap_or_default();
-        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
-        let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
-        let output = Command::new("task").arg(format!("{}", task_uuid)).arg("done").output();
+        let task_uuids = self.selected_task_uuids();
+        let mut cmd = Command::new("task");
+        cmd.arg("rc.bulk=0")
+            .arg("rc.confirmation=off")
+            .arg("rc.dependency.confirmation=off")
+            .arg("rc.recurrence.confirmation=off");
+        for task_uuid in &task_uuids {
+            cmd.arg(task_uuid.to_string());
+        }
+        cmd.arg("done");
+        let output = cmd.output();
         match output {
             Ok(_) => Ok(()),
             Err(_) => Err(format!(
                 "Cannot run `task done` for task `{}`. Check documentation for more information",
-                task_uuid
+                task_uuids
+                    .iter()
+                    .map(|u| u.to_string())
+                    .collect::<Vec<String>>()
+                    .join(" ")
             )),
         }
     }
@@ -1361,7 +1461,7 @@ impl TTApp {
         if self.tasks.lock().unwrap().is_empty() {
             return Ok(());
         }
-        let selected = self.task_table_state.selected().unwrap_or_default();
+        let selected = self.task_table_state.current_selection().unwrap_or_default();
         let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
         let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
         let r = Command::new("task").arg(format!("{}", task_uuid)).arg("edit").spawn();
@@ -1398,7 +1498,7 @@ impl TTApp {
         if self.tasks.lock().unwrap().is_empty() {
             return None;
         }
-        let selected = self.task_table_state.selected().unwrap_or_default();
+        let selected = self.current_selection;
         Some(self.tasks.lock().unwrap()[selected].clone())
     }
 
@@ -1530,6 +1630,24 @@ impl TTApp {
         }
     }
 
+    pub fn toggle_mark(&mut self) {
+        let selected = self.current_selection;
+        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
+        let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
+
+        if !self.marked.insert(task_uuid) {
+            self.marked.remove(&task_uuid);
+        }
+    }
+
+    pub fn toggle_mark_all(&mut self) {
+        for task in &*self.tasks.lock().unwrap() {
+            if !self.marked.insert(*task.uuid()) {
+                self.marked.remove(task.uuid());
+            }
+        }
+    }
+
     pub fn handle_input(
         &mut self,
         input: Key,
@@ -1538,8 +1656,16 @@ impl TTApp {
     ) -> Result<(), Box<dyn Error>> {
         match self.mode {
             AppMode::TaskReport => {
-                if input == self.keyconfig.quit || input == Key::Ctrl('c') {
+                if input == Key::Esc {
+                    self.marked.clear();
+                } else if input == self.keyconfig.quit || input == Key::Ctrl('c') {
                     self.should_quit = true;
+                } else if input == self.keyconfig.select {
+                    self.task_table_state.multiple_selection();
+                    self.toggle_mark();
+                } else if input == self.keyconfig.select_all {
+                    self.task_table_state.multiple_selection();
+                    self.toggle_mark_all();
                 } else if input == self.keyconfig.refresh {
                     self.update(true)?;
                 } else if input == self.keyconfig.go_to_bottom || input == Key::End {
@@ -1603,12 +1729,15 @@ impl TTApp {
                     }
                 } else if input == self.keyconfig.modify {
                     self.mode = AppMode::TaskModify;
-                    match self.task_current() {
-                        Some(t) => {
-                            let s = format!("{} ", t.description());
-                            self.modify.update(&s, s.as_str().len())
-                        }
-                        None => self.modify.update("", 0),
+                    match self.task_table_state.mode() {
+                        TableMode::SingleSelection => match self.task_current() {
+                            Some(t) => {
+                                let s = format!("{} ", t.description());
+                                self.modify.update(&s, s.as_str().len())
+                            }
+                            None => self.modify.update("", 0),
+                        },
+                        TableMode::MultipleSelection => self.modify.update("", 0),
                     }
                 } else if input == self.keyconfig.shell {
                     self.mode = AppMode::TaskSubprocess;
@@ -1851,6 +1980,7 @@ impl TTApp {
                 }
             }
         }
+        self.update_task_table_state();
         Ok(())
     }
 }
@@ -1956,24 +2086,24 @@ mod tests {
 
     #[test]
     fn test_taskwarrior_tui() {
-        let app = TTApp::new().unwrap();
-        assert!(app.task_by_index(1).is_none());
+        let app = TaskwarriorTuiApp::new().unwrap();
+        assert!(app.task_by_index(0).is_none());
 
-        let app = TTApp::new().unwrap();
+        let app = TaskwarriorTuiApp::new().unwrap();
         assert!(app
-            .task_by_uuid(Uuid::parse_str("0b11967d-9dae-4333-a137-c3b1e8a641d3").unwrap())
+            .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
             .is_none());
 
         test_draw_empty_task_report();
 
         setup();
 
-        let app = TTApp::new().unwrap();
-        assert!(app.task_by_index(1).is_some());
+        let app = TaskwarriorTuiApp::new().unwrap();
+        assert!(app.task_by_index(0).is_some());
 
-        let app = TTApp::new().unwrap();
+        let app = TaskwarriorTuiApp::new().unwrap();
         assert!(app
-            .task_by_uuid(Uuid::parse_str("0b11967d-9dae-4333-a137-c3b1e8a641d3").unwrap())
+            .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
             .is_some());
 
         test_draw_task_report();
@@ -1988,7 +2118,7 @@ mod tests {
 
     fn test_task_tags() {
         // testing tags
-        let app = TTApp::new().unwrap();
+        let app = TaskwarriorTuiApp::new().unwrap();
         let task = app.task_by_id(1).unwrap();
 
         let tags = vec!["PENDING".to_string(), "PRIORITY".to_string()];
@@ -1997,7 +2127,7 @@ mod tests {
             assert!(task.tags().unwrap().contains(&tag));
         }
 
-        let app = TTApp::new().unwrap();
+        let app = TaskwarriorTuiApp::new().unwrap();
         let task = app.task_by_id(11).unwrap();
         let tags = vec!["finance", "UNBLOCKED", "PENDING", "TAGGED", "UDA"]
             .iter()
@@ -2009,7 +2139,7 @@ mod tests {
     }
 
     fn test_task_style() {
-        let app = TTApp::new().unwrap();
+        let app = TaskwarriorTuiApp::new().unwrap();
         let task = app.task_by_id(1).unwrap();
         for r in vec![
             "active",
@@ -2039,21 +2169,20 @@ mod tests {
     }
 
     fn test_task_context() {
-        let mut app = TTApp::new().unwrap();
+        let mut app = TaskwarriorTuiApp::new().unwrap();
 
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
 
-        app.context_next();
         app.context_select().unwrap();
 
         assert_eq!(app.tasks.lock().unwrap().len(), 26);
         assert_eq!(app.current_context_filter, "");
 
-        assert_eq!(app.context_table_state.selected(), Some(0));
+        assert_eq!(app.context_table_state.current_selection(), Some(0));
         app.context_next();
         app.context_select().unwrap();
-        assert_eq!(app.context_table_state.selected(), Some(1));
+        assert_eq!(app.context_table_state.current_selection(), Some(1));
 
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
@@ -2061,10 +2190,10 @@ mod tests {
         assert_eq!(app.tasks.lock().unwrap().len(), 1);
         assert_eq!(app.current_context_filter, "+finance -private");
 
-        assert_eq!(app.context_table_state.selected(), Some(1));
+        assert_eq!(app.context_table_state.current_selection(), Some(1));
         app.context_previous();
         app.context_select().unwrap();
-        assert_eq!(app.context_table_state.selected(), Some(0));
+        assert_eq!(app.context_table_state.current_selection(), Some(0));
 
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
@@ -2076,7 +2205,7 @@ mod tests {
     fn test_task_tomorrow() {
         let total_tasks: u64 = 26;
 
-        let mut app = TTApp::new().unwrap();
+        let mut app = TaskwarriorTuiApp::new().unwrap();
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
@@ -2139,7 +2268,7 @@ mod tests {
             .output()
             .unwrap();
 
-        let mut app = TTApp::new().unwrap();
+        let mut app = TaskwarriorTuiApp::new().unwrap();
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
@@ -2149,7 +2278,7 @@ mod tests {
     fn test_task_earlier_today() {
         let total_tasks: u64 = 26;
 
-        let mut app = TTApp::new().unwrap();
+        let mut app = TaskwarriorTuiApp::new().unwrap();
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
@@ -2201,7 +2330,7 @@ mod tests {
             .output()
             .unwrap();
 
-        let mut app = TTApp::new().unwrap();
+        let mut app = TaskwarriorTuiApp::new().unwrap();
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
@@ -2213,7 +2342,7 @@ mod tests {
 
         let total_tasks: u64 = 26;
 
-        let mut app = TTApp::new().unwrap();
+        let mut app = TaskwarriorTuiApp::new().unwrap();
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
@@ -2272,7 +2401,7 @@ mod tests {
             .output()
             .unwrap();
 
-        let mut app = TTApp::new().unwrap();
+        let mut app = TaskwarriorTuiApp::new().unwrap();
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
@@ -2281,7 +2410,7 @@ mod tests {
 
     fn test_draw_empty_task_report() {
         let test_case = |expected: &Buffer| {
-            let mut app = TTApp::new().unwrap();
+            let mut app = TaskwarriorTuiApp::new().unwrap();
 
             app.task_report_next();
             app.context_next();
@@ -2347,7 +2476,7 @@ mod tests {
 
     fn test_draw_task_report() {
         let test_case = |expected: &Buffer| {
-            let mut app = TTApp::new().unwrap();
+            let mut app = TaskwarriorTuiApp::new().unwrap();
 
             app.task_report_next();
             app.context_next();
@@ -2504,7 +2633,7 @@ mod tests {
     #[test]
     fn test_draw_calendar() {
         let test_case = |expected: &Buffer| {
-            let mut app = TTApp::new().unwrap();
+            let mut app = TaskwarriorTuiApp::new().unwrap();
 
             app.task_report_next();
             app.context_next();
@@ -2589,7 +2718,7 @@ mod tests {
     #[test]
     fn test_draw_help_popup() {
         let test_case = |expected: &Buffer| {
-            let mut app = TTApp::new().unwrap();
+            let mut app = TaskwarriorTuiApp::new().unwrap();
 
             app.mode = AppMode::TaskHelpPopup;
             app.task_report_next();
@@ -2610,6 +2739,8 @@ mod tests {
 
         let mut expected = Buffer::with_lines(vec![
             "╭Help──────────────────────────────────╮",
+            "│# Default Keybindings                 │",
+            "│                                      │",
             "│Keybindings:                          │",
             "│                                      │",
             "│    Esc:                              │",
@@ -2618,8 +2749,6 @@ mod tests {
             "│                                      │",
             "│    [: Previous view                  │",
             "│                                      │",
-            "│                                      │",
-            "│Keybindings for task report:          │",
             "╰──────────────────────────────────────╯",
         ]);
 
@@ -2635,7 +2764,7 @@ mod tests {
 
     fn test_draw_context_menu() {
         let test_case = |expected: &Buffer| {
-            let mut app = TTApp::new().unwrap();
+            let mut app = TaskwarriorTuiApp::new().unwrap();
 
             app.mode = AppMode::TaskContextMenu;
             app.task_report_next();

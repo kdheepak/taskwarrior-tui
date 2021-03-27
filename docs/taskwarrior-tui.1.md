@@ -91,6 +91,12 @@ Keybindings for task report:
 `u`
 : task undo                         - Undo
 
+`v`
+: {toggle mark on selected}         - Toggle mark on selected
+
+`V`
+: {toggle marks on all tasks}       - Toggle marks on tasks in current filter report
+
 `x`
 : task delete {selected}            - Delete
 

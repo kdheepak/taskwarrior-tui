@@ -45,6 +45,8 @@ pub struct Config {
     pub uda_task_report_show_info: bool,
     pub uda_task_report_looping: bool,
     pub uda_selection_indicator: String,
+    pub uda_mark_indicator: String,
+    pub uda_unmark_indicator: String,
     pub uda_selection_bold: bool,
     pub uda_selection_italic: bool,
     pub uda_selection_dim: bool,
@@ -70,6 +72,8 @@ impl Config {
             uda_task_report_show_info: Self::get_uda_task_report_show_info(),
             uda_task_report_looping: Self::get_uda_task_report_looping(),
             uda_selection_indicator: Self::get_uda_selection_indicator(),
+            uda_mark_indicator: Self::get_uda_mark_indicator(),
+            uda_unmark_indicator: Self::get_uda_unmark_indicator(),
             uda_selection_bold: Self::get_uda_selection_bold(),
             uda_selection_italic: Self::get_uda_selection_italic(),
             uda_selection_dim: Self::get_uda_selection_dim(),
@@ -89,7 +93,7 @@ impl Config {
         let mut v = vec![];
         for s in 0..=9 {
             let c = format!("uda.taskwarrior-tui.shortcuts.{}", s);
-            let s = Self::get_config(&c);
+            let s = Self::get_config(&c).unwrap_or_default();
             v.push(s);
         }
         v
@@ -97,12 +101,8 @@ impl Config {
 
     fn get_uda_style(config: &str) -> Option<Style> {
         let c = format!("uda.taskwarrior-tui.style.{}", config);
-        let s = Self::get_config(&c);
-        if s.is_empty() {
-            None
-        } else {
-            Some(Self::get_tcolor(&s))
-        }
+        let s = Self::get_config(&c)?;
+        Some(Self::get_tcolor(&s))
     }
 
     fn get_color_collection() -> Result<HashMap<String, Style>, Box<dyn Error>> {
@@ -273,7 +273,7 @@ impl Config {
         }
     }
 
-    fn get_config(config: &str) -> String {
+    fn get_config(config: &str) -> Option<String> {
         let output = Command::new("task")
             .arg("rc.color=off")
             .arg("show")
@@ -285,82 +285,105 @@ impl Config {
 
         for line in data.split('\n') {
             if line.starts_with(config) {
-                return line.trim_start_matches(config).trim_start().trim_end().to_string();
-            } else if line.starts_with(&config.replace('-', "_")) {
-                return line
-                    .trim_start_matches(&config.replace('-', "_"))
-                    .trim_start()
-                    .trim_end()
-                    .to_string();
+                return Some(line.trim_start_matches(config).trim_start().trim_end().to_string());
+            }
+            let config = &config.replace('-', "_");
+            if line.starts_with(config) {
+                return Some(line.trim_start_matches(config).trim_start().trim_end().to_string());
             }
         }
-        "".to_string()
+        None
     }
 
     fn get_due() -> usize {
-        Self::get_config("due").parse::<usize>().unwrap_or(7)
+        Self::get_config("due")
+            .unwrap_or_default()
+            .parse::<usize>()
+            .unwrap_or(7)
     }
 
     fn get_rule_precedence_color() -> Vec<String> {
-        let data = Self::get_config("rule.precedence.color");
+        let data = Self::get_config("rule.precedence.color").unwrap();
         data.split(',').map(|s| s.to_string()).collect::<Vec<_>>()
     }
 
     fn get_filter() -> String {
-        Self::get_config("report.next.filter")
+        Self::get_config("report.next.filter").unwrap()
     }
 
     fn get_data_location() -> String {
-        Self::get_config("data.location")
+        Self::get_config("data.location").unwrap()
     }
 
     fn get_uda_task_report_show_info() -> bool {
         Self::get_config("uda.taskwarrior-tui.task-report.show-info")
+            .unwrap_or_default()
             .get_bool()
             .unwrap_or(true)
     }
 
     fn get_uda_task_report_looping() -> bool {
         Self::get_config("uda.taskwarrior-tui.task-report.looping")
+            .unwrap_or_default()
             .get_bool()
             .unwrap_or(true)
     }
 
     fn get_uda_selection_indicator() -> String {
         let indicator = Self::get_config("uda.taskwarrior-tui.selection.indicator");
-        if indicator.is_empty() {
-            "• ".to_string()
-        } else {
-            format!("{} ", indicator)
+        match indicator {
+            None => "• ".to_string(),
+            Some(indicator) => format!("{} ", indicator),
+        }
+    }
+
+    fn get_uda_mark_indicator() -> String {
+        let indicator = Self::get_config("uda.taskwarrior-tui.mark.indicator");
+        match indicator {
+            None => "✔ ".to_string(),
+            Some(indicator) => format!("{} ", indicator),
+        }
+    }
+
+    fn get_uda_unmark_indicator() -> String {
+        let indicator = Self::get_config("uda.taskwarrior-tui.unmark.indicator");
+        match indicator {
+            None => "  ".to_string(),
+            Some(indicator) => format!("{} ", indicator),
         }
     }
 
     fn get_uda_selection_bold() -> bool {
         Self::get_config("uda.taskwarrior-tui.selection.bold")
+            .unwrap_or_default()
             .get_bool()
             .unwrap_or(true)
     }
 
     fn get_uda_selection_italic() -> bool {
         Self::get_config("uda.taskwarrior-tui.selection.italic")
+            .unwrap_or_default()
             .get_bool()
             .unwrap_or(false)
     }
 
     fn get_uda_selection_dim() -> bool {
         Self::get_config("uda.taskwarrior-tui.selection.dim")
+            .unwrap_or_default()
             .get_bool()
             .unwrap_or(false)
     }
 
     fn get_uda_selection_blink() -> bool {
         Self::get_config("uda.taskwarrior-tui.selection.blink")
+            .unwrap_or_default()
             .get_bool()
             .unwrap_or(false)
     }
 
     fn get_uda_months_per_row() -> usize {
         Self::get_config("uda.taskwarrior-tui.calendar.months-per-row")
+            .unwrap_or_default()
             .parse::<usize>()
             .unwrap_or(4)
     }
@@ -369,6 +392,11 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn test_uda_configuration() {
+        assert_eq!(None, Config::get_config("uda.taskwarrior-tui.unmark.indicator"));
+    }
+
     #[test]
     fn test_colors() {
         let tc = Config::default();

@@ -21,7 +21,7 @@ use std::panic;
 use std::time::Duration;
 
 use crate::util::Key;
-use app::{AppMode, TTApp};
+use app::{AppMode, TaskwarriorTuiApp};
 
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
@@ -76,12 +76,9 @@ fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
         tick_rate: Duration::from_millis(250),
     });
 
-    let maybeapp = TTApp::new();
+    let maybeapp = TaskwarriorTuiApp::new();
     match maybeapp {
         Ok(mut app) => {
-            app.task_report_next();
-            app.context_next();
-
             loop {
                 terminal.draw(|mut frame| app.draw(&mut frame)).unwrap();
 

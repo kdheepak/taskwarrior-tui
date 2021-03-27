@@ -1,3 +1,5 @@
+# Default Keybindings
+
 Keybindings:
 
     Esc:                                 - Exit current action
@@ -39,7 +41,11 @@ Keybindings for task report:
 
     u: task undo                         - Undo
 
-    x: task delete {selected}            - Delete
+    v: {toggle mark on selected}         - Toggle mark on selected
+
+    V: {toggle marks on all tasks}       - Toggle marks on tasks in current filter report
+
+    x: task {selected} delete            - Delete
 
     z: toggle task info                  - Toggle task info view
 
@@ -62,6 +68,8 @@ Keybindings for context switcher:
     j: {selected+=1}                     - Move forward a context
 
     k: {selected-=1}                     - Move back a context
+
+    Enter: task context {selected}       - Select highlighted context
 
 
 Keybindings for calendar:
