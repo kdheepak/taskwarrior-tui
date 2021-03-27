@@ -284,6 +284,9 @@ impl Config {
         let data = String::from_utf8_lossy(&output.stdout);
 
         for line in data.split('\n') {
+            if line.starts_with(config) {
+                return Some(line.trim_start_matches(config).trim_start().trim_end().to_string());
+            }
             let config = &config.replace('-', "_");
             if line.starts_with(config) {
                 return Some(line.trim_start_matches(config).trim_start().trim_end().to_string());
@@ -389,6 +392,11 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn test_uda_configuration() {
+        assert_eq!(Some(""), Config::get_config("uda.taskwarrior-tui.unmark.indicator"));
+    }
+
     #[test]
     fn test_colors() {
         let tc = Config::default();
