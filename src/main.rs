@@ -13,6 +13,7 @@ mod task_report;
 mod util;
 
 use crate::util::{destruct_terminal, setup_terminal, Event, EventConfig, Events};
+use anyhow::Result;
 use clap::{App, Arg};
 use std::env;
 use std::error::Error;
@@ -26,7 +27,7 @@ use app::{AppMode, TaskwarriorTuiApp};
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<()> {
     better_panic::install();
     let matches = App::new(APP_NAME)
         .version(APP_VERSION)
@@ -62,7 +63,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 }
 
-fn tui_main(_config: &str) -> Result<(), Box<dyn Error>> {
+fn tui_main(_config: &str) -> Result<()> {
     // Terminal initialization
     let mut terminal = setup_terminal();
 

@@ -1,3 +1,4 @@
+use anyhow::Result;
 use chrono::{Datelike, Local, NaiveDate, NaiveDateTime, TimeZone};
 use itertools::join;
 use std::error::Error;
@@ -42,7 +43,7 @@ pub struct TaskReportTable {
 }
 
 impl TaskReportTable {
-    pub fn new() -> Result<Self, Box<dyn Error>> {
+    pub fn new() -> Result<Self> {
         let virtual_tags = vec![
             "PROJECT",
             "BLOCKED",
@@ -89,7 +90,7 @@ impl TaskReportTable {
         Ok(task_report_table)
     }
 
-    pub fn export_headers(&mut self) -> Result<(), Box<dyn Error>> {
+    pub fn export_headers(&mut self) -> Result<()> {
         self.columns = vec![];
         self.labels = vec![];
 

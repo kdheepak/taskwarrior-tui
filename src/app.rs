@@ -12,11 +12,9 @@ use crate::util::{Event, Events};
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
-use std::error::Error;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
-use std::result::Result;
 use std::time::SystemTime;
 
 use task_hookrs::date::Date;
@@ -29,6 +27,8 @@ use unicode_segmentation::Graphemes;
 use unicode_segmentation::UnicodeSegmentation;
 
 use chrono::{Datelike, Local, NaiveDate, NaiveDateTime, TimeZone};
+
+use anyhow::Result;
 
 use std::sync::{Arc, Mutex};
 use std::{sync::mpsc, thread, time::Duration};
@@ -170,7 +170,7 @@ pub struct TaskwarriorTuiApp {
 }
 
 impl TaskwarriorTuiApp {
-    pub fn new() -> Result<Self, Box<dyn Error>> {
+    pub fn new() -> Result<Self> {
         let c = Config::default()?;
         let mut kc = KeyConfig::default();
         kc.update()?;
@@ -210,7 +210,7 @@ impl TaskwarriorTuiApp {
         Ok(app)
     }
 
-    pub fn get_context(&mut self) -> Result<(), Box<dyn Error>> {
+    pub fn get_context(&mut self) -> Result<()> {
         let output = Command::new("task").arg("_get").arg("rc.context").output()?;
         self.current_context = String::from_utf8_lossy(&output.stdout).to_string();
         self.current_context = self.current_context.strip_suffix('\n').unwrap_or("").to_string();
@@ -825,7 +825,7 @@ impl TaskwarriorTuiApp {
         (tasks, headers)
     }
 
-    pub fn update(&mut self, force: bool) -> Result<(), Box<dyn Error>> {
+    pub fn update(&mut self, force: bool) -> Result<()> {
         if force || self.tasks_changed_since(self.last_export)? {
             self.last_export = Some(std::time::SystemTime::now());
             self.task_report_table.export_headers()?;
@@ -980,7 +980,7 @@ impl TaskwarriorTuiApp {
         self.current_selection = i;
     }
 
-    pub fn export_contexts(&mut self) -> Result<(), Box<dyn Error>> {
+    pub fn export_contexts(&mut self) -> Result<()> {
         let output = Command::new("task").arg("context").output()?;
         let data = String::from_utf8_lossy(&output.stdout);
 
@@ -1014,7 +1014,7 @@ impl TaskwarriorTuiApp {
         Ok(())
     }
 
-    fn get_task_files_max_mtime(&self) -> Result<SystemTime, Box<dyn Error>> {
+    fn get_task_files_max_mtime(&self) -> Result<SystemTime> {
         let data_dir = shellexpand::tilde(&self.config.data_location).into_owned();
         let mut mtimes = Vec::new();
         for fname in &["backlog.data", "completed.data", "pending.data"] {
@@ -1025,7 +1025,7 @@ impl TaskwarriorTuiApp {
         Ok(*mtimes.iter().max().unwrap())
     }
 
-    pub fn tasks_changed_since(&mut self, prev: Option<SystemTime>) -> Result<bool, Box<dyn Error>> {
+    pub fn tasks_changed_since(&mut self, prev: Option<SystemTime>) -> Result<bool> {
         if let Some(prev) = prev {
             match self.get_task_files_max_mtime() {
                 Ok(mtime) => {
@@ -1047,7 +1047,7 @@ impl TaskwarriorTuiApp {
         }
     }
 
-    pub fn export_tasks(&mut self) -> Result<(), Box<dyn Error>> {
+    pub fn export_tasks(&mut self) -> Result<()> {
         let mut task = Command::new("task");
 
         task.arg("rc.json.array=on");
@@ -1076,9 +1076,10 @@ impl TaskwarriorTuiApp {
         let data = String::from_utf8_lossy(&output.stdout);
         let error = String::from_utf8_lossy(&output.stderr);
         if !error.contains("The expression could not be evaluated.") {
-            let imported = import(data.as_bytes())?;
-            *(self.tasks.lock().unwrap()) = imported;
-            self.tasks.lock().unwrap().sort_by(cmp);
+            if let Ok(imported) = import(data.as_bytes()) {
+                *(self.tasks.lock().unwrap()) = imported;
+                self.tasks.lock().unwrap().sort_by(cmp);
+            }
         }
 
         Ok(())
@@ -1653,7 +1654,7 @@ impl TaskwarriorTuiApp {
         input: Key,
         terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
         events: &Events,
-    ) -> Result<(), Box<dyn Error>> {
+    ) -> Result<()> {
         match self.mode {
             AppMode::TaskReport => {
                 if input == Key::Esc {
