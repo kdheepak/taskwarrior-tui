@@ -1,4 +1,6 @@
 use crate::util::Key;
+use anyhow::anyhow;
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::error::Error;
@@ -89,7 +91,7 @@ impl Default for KeyConfig {
 }
 
 impl KeyConfig {
-    pub fn update(&mut self) -> Result<(), Box<dyn Error>> {
+    pub fn update(&mut self) -> Result<()> {
         self.quit = self
             .get_config("uda.taskwarrior-tui.keyconfig.quit")
             .unwrap_or(self.quit);
@@ -162,7 +164,7 @@ impl KeyConfig {
         self.check()
     }
 
-    pub fn check(&self) -> Result<(), Box<dyn Error>> {
+    pub fn check(&self) -> Result<()> {
         let mut elements = vec![
             &self.quit,
             &self.refresh,
@@ -196,7 +198,7 @@ impl KeyConfig {
         if l == elements.len() {
             Ok(())
         } else {
-            Err("Duplicate keys found in key config".into())
+            Err(anyhow!("Duplicate keys found in key config"))
         }
     }
 

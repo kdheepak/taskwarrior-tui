@@ -1,3 +1,4 @@
+use anyhow::Result;
 use std::collections::HashMap;
 use std::error::Error;
 use std::process::Command;
@@ -58,7 +59,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn default() -> Result<Self, Box<dyn Error>> {
+    pub fn default() -> Result<Self> {
         let bool_collection = Self::get_bool_collection();
         Ok(Self {
             enabled: true,
@@ -105,7 +106,7 @@ impl Config {
         Some(Self::get_tcolor(&s))
     }
 
-    fn get_color_collection() -> Result<HashMap<String, Style>, Box<dyn Error>> {
+    fn get_color_collection() -> Result<HashMap<String, Style>> {
         let mut color_collection = HashMap::new();
         let output = Command::new("task").arg("rc.color=off").arg("show").output()?;
 
