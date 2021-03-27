@@ -12,9 +12,11 @@ A Terminal User Interface for [Taskwarrior](https://taskwarrior.org/).
 
 ![](https://user-images.githubusercontent.com/1813121/97066323-acd41500-1571-11eb-90c2-d74faa21e1ad.png)
 
-See <https://kdheepak.com/taskwarrior-tui> for documentation.
+### Documentation
 
-# Installation
+<https://kdheepak.com/taskwarrior-tui>
+
+### Installation
 
 Unless otherwise specified, you will need to install `taskwarrior` first. See <https://taskwarrior.org/download/> for more information.
 
@@ -25,3 +27,8 @@ Unless otherwise specified, you will need to install `taskwarrior` first. See <h
 3. Run with `./taskwarrior-tui`.
 
 See <https://kdheepak.com/taskwarrior-tui/installation/> for more information.
+
+### Configuration
+
+`taskwarrior-tui` uses `taskrc` for various configuration options.
+See <https://kdheepak.com/taskwarrior-tui/configuration/keys> or <https://kdheepak.com/taskwarrior-tui/configuration/colors> for more information.
