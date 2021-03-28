@@ -284,9 +284,16 @@ impl Config {
             .unwrap();
 
         if !output.status.success() {
+            let output = Command::new("task")
+                .arg("diagnostics")
+                .output()
+                .context("Unable to run `task diagnostics`.")
+                .unwrap();
             panic!(
-                "Unable to run `task show {}`. Please check your configuration or open a issue on github.",
-                config
+                "Unable to run `task show {}`.\n{}\n{}\nPlease check your configuration or open a issue on github.",
+                config,
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr),
             );
         }
 
