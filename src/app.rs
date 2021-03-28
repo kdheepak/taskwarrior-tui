@@ -30,7 +30,6 @@ use chrono::{Datelike, Local, NaiveDate, NaiveDateTime, TimeZone};
 
 use anyhow::Result;
 
-use std::sync::{Arc, Mutex};
 use std::{sync::mpsc, thread, time::Duration};
 use tui::{
     backend::Backend,
@@ -149,7 +148,7 @@ pub struct TaskwarriorTuiApp {
     pub filter: LineBuffer,
     pub modify: LineBuffer,
     pub error: String,
-    pub tasks: Arc<Mutex<Vec<Task>>>,
+    pub tasks: Vec<Task>,
     pub task_details: HashMap<Uuid, String>,
     pub marked: HashSet<Uuid>,
     // stores index of current task that is highlighted
@@ -178,7 +177,7 @@ impl TaskwarriorTuiApp {
             should_quit: false,
             task_table_state: TableState::default(),
             context_table_state: TableState::default(),
-            tasks: Arc::new(Mutex::new(vec![])),
+            tasks: vec![],
             task_details: HashMap::new(),
             marked: HashSet::new(),
             current_selection: 0,
@@ -280,11 +279,11 @@ impl TaskwarriorTuiApp {
     pub fn get_dates_with_styles(&self) -> Vec<(NaiveDate, Style)> {
         let mut tasks_with_styles = vec![];
 
-        let tasks_is_empty = self.tasks.lock().unwrap().is_empty();
-        let tasks_len = self.tasks.lock().unwrap().len();
+        let tasks_is_empty = self.tasks.is_empty();
+        let tasks_len = self.tasks.len();
 
         if !tasks_is_empty {
-            let tasks = &self.tasks.lock().unwrap();
+            let tasks = &self.tasks;
             let tasks_with_due_dates = tasks.iter().filter(|t| t.due().is_some());
 
             tasks_with_styles
@@ -305,8 +304,8 @@ impl TaskwarriorTuiApp {
     }
 
     pub fn draw_task(&mut self, f: &mut Frame<impl Backend>) {
-        let tasks_is_empty = self.tasks.lock().unwrap().is_empty();
-        let tasks_len = self.tasks.lock().unwrap().len();
+        let tasks_is_empty = self.tasks.is_empty();
+        let tasks_len = self.tasks.len();
         while !tasks_is_empty && self.current_selection >= tasks_len {
             self.task_report_previous();
         }
@@ -338,10 +337,7 @@ impl TaskwarriorTuiApp {
             vec!["0".to_string()]
         } else {
             match self.task_table_state.mode() {
-                TableMode::SingleSelection => vec![self.tasks.lock().unwrap()[selected]
-                    .id()
-                    .unwrap_or_default()
-                    .to_string()],
+                TableMode::SingleSelection => vec![self.tasks[selected].id().unwrap_or_default().to_string()],
                 TableMode::MultipleSelection => {
                     let mut tids = vec![];
                     for uuid in self.marked.iter() {
@@ -545,7 +541,7 @@ impl TaskwarriorTuiApp {
     }
 
     fn draw_task_details(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
-        if self.tasks.lock().unwrap().is_empty() {
+        if self.tasks.is_empty() {
             f.render_widget(
                 Block::default()
                     .borders(Borders::ALL)
@@ -556,8 +552,8 @@ impl TaskwarriorTuiApp {
             return;
         }
         let selected = self.current_selection;
-        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
-        let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
+        let task_id = self.tasks[selected].id().unwrap_or_default();
+        let task_uuid = *self.tasks[selected].uuid();
 
         if !self.task_details.contains_key(&task_uuid) {
             let output = Command::new("task")
@@ -599,7 +595,7 @@ impl TaskwarriorTuiApp {
     }
 
     fn task_by_index(&self, i: usize) -> Option<Task> {
-        let tasks = &self.tasks.lock().unwrap();
+        let tasks = &self.tasks;
         if i >= tasks.len() {
             None
         } else {
@@ -608,19 +604,19 @@ impl TaskwarriorTuiApp {
     }
 
     fn task_by_uuid(&self, uuid: Uuid) -> Option<Task> {
-        let tasks = &self.tasks.lock().unwrap();
+        let tasks = &self.tasks;
         let m = tasks.iter().find(|t| *t.uuid() == uuid);
         m.cloned()
     }
 
     fn task_by_id(&self, id: u64) -> Option<Task> {
-        let tasks = &self.tasks.lock().unwrap();
+        let tasks = &self.tasks;
         let m = tasks.iter().find(|t| t.id().unwrap() == id);
         m.cloned()
     }
 
     fn task_index_by_uuid(&self, uuid: Uuid) -> Option<usize> {
-        let tasks = &self.tasks.lock().unwrap();
+        let tasks = &self.tasks;
         let m = tasks.iter().position(|t| *t.uuid() == uuid);
         m
     }
@@ -748,7 +744,7 @@ impl TaskwarriorTuiApp {
         let mut rows = vec![];
         let mut highlight_style = Style::default();
         for (i, task) in tasks.iter().enumerate() {
-            let style = self.style_for_task(&self.tasks.lock().unwrap()[i]);
+            let style = self.style_for_task(&self.tasks[i]);
             if i == selected {
                 highlight_style = style;
                 if self.config.uda_selection_bold {
@@ -816,12 +812,8 @@ impl TaskwarriorTuiApp {
     }
 
     pub fn get_task_report(&mut self) -> (Vec<Vec<String>>, Vec<String>) {
-        let alltasks = &*(self.tasks.lock().unwrap());
-
-        self.task_report_table.generate_table(alltasks);
-
+        self.task_report_table.generate_table(&self.tasks);
         let (tasks, headers) = self.task_report_table.simplify_table();
-
         (tasks, headers)
     }
 
@@ -893,25 +885,25 @@ impl TaskwarriorTuiApp {
     }
 
     pub fn task_report_top(&mut self) {
-        if self.tasks.lock().unwrap().is_empty() {
+        if self.tasks.is_empty() {
             return;
         }
         self.current_selection = 0;
     }
 
     pub fn task_report_bottom(&mut self) {
-        if self.tasks.lock().unwrap().is_empty() {
+        if self.tasks.is_empty() {
             return;
         }
-        self.current_selection = self.tasks.lock().unwrap().len() - 1;
+        self.current_selection = self.tasks.len() - 1;
     }
 
     pub fn task_report_next(&mut self) {
-        if self.tasks.lock().unwrap().is_empty() {
+        if self.tasks.is_empty() {
             return;
         }
         let i = {
-            if self.current_selection >= self.tasks.lock().unwrap().len() - 1 {
+            if self.current_selection >= self.tasks.len() - 1 {
                 if self.config.uda_task_report_looping {
                     0
                 } else {
@@ -925,13 +917,13 @@ impl TaskwarriorTuiApp {
     }
 
     pub fn task_report_previous(&mut self) {
-        if self.tasks.lock().unwrap().is_empty() {
+        if self.tasks.is_empty() {
             return;
         }
         let i = {
             if self.current_selection == 0 {
                 if self.config.uda_task_report_looping {
-                    self.tasks.lock().unwrap().len() - 1
+                    self.tasks.len() - 1
                 } else {
                     0
                 }
@@ -943,11 +935,11 @@ impl TaskwarriorTuiApp {
     }
 
     pub fn task_report_next_page(&mut self) {
-        if self.tasks.lock().unwrap().is_empty() {
+        if self.tasks.is_empty() {
             return;
         }
         let i = {
-            if self.current_selection >= self.tasks.lock().unwrap().len() - 1 {
+            if self.current_selection >= self.tasks.len() - 1 {
                 if self.config.uda_task_report_looping {
                     0
                 } else {
@@ -956,20 +948,20 @@ impl TaskwarriorTuiApp {
             } else {
                 self.current_selection
                     .checked_add(self.task_report_height as usize)
-                    .unwrap_or_else(|| self.tasks.lock().unwrap().len())
+                    .unwrap_or_else(|| self.tasks.len())
             }
         };
         self.current_selection = i;
     }
 
     pub fn task_report_previous_page(&mut self) {
-        if self.tasks.lock().unwrap().is_empty() {
+        if self.tasks.is_empty() {
             return;
         }
         let i = {
             if self.current_selection == 0 {
                 if self.config.uda_task_report_looping {
-                    self.tasks.lock().unwrap().len() - 1
+                    self.tasks.len() - 1
                 } else {
                     0
                 }
@@ -1077,8 +1069,8 @@ impl TaskwarriorTuiApp {
         let error = String::from_utf8_lossy(&output.stderr);
         if !error.contains("The expression could not be evaluated.") {
             if let Ok(imported) = import(data.as_bytes()) {
-                *(self.tasks.lock().unwrap()) = imported;
-                self.tasks.lock().unwrap().sort_by(cmp);
+                self.tasks = imported;
+                self.tasks.sort_by(cmp);
             }
         }
 
@@ -1094,8 +1086,8 @@ impl TaskwarriorTuiApp {
         let mut task_uuids = vec![];
 
         for s in selected {
-            let task_id = self.tasks.lock().unwrap()[s].id().unwrap_or_default();
-            let task_uuid = *self.tasks.lock().unwrap()[s].uuid();
+            let task_id = self.tasks[s].id().unwrap_or_default();
+            let task_uuid = *self.tasks[s].uuid();
             task_uuids.push(task_uuid);
         }
 
@@ -1103,7 +1095,7 @@ impl TaskwarriorTuiApp {
     }
 
     pub fn task_subprocess(&mut self) -> Result<(), String> {
-        if self.tasks.lock().unwrap().is_empty() {
+        if self.tasks.is_empty() {
             return Ok(());
         }
 
@@ -1134,7 +1126,7 @@ impl TaskwarriorTuiApp {
     }
 
     pub fn task_log(&mut self) -> Result<(), String> {
-        if self.tasks.lock().unwrap().is_empty() {
+        if self.tasks.is_empty() {
             return Ok(());
         }
 
@@ -1166,7 +1158,7 @@ impl TaskwarriorTuiApp {
     }
 
     pub fn task_shortcut(&mut self, s: usize) -> Result<(), String> {
-        if self.tasks.lock().unwrap().is_empty() {
+        if self.tasks.is_empty() {
             return Ok(());
         }
 
@@ -1215,7 +1207,7 @@ impl TaskwarriorTuiApp {
     }
 
     pub fn task_modify(&mut self) -> Result<(), String> {
-        if self.tasks.lock().unwrap().is_empty() {
+        if self.tasks.is_empty() {
             return Ok(());
         }
 
@@ -1259,7 +1251,7 @@ impl TaskwarriorTuiApp {
     }
 
     pub fn task_annotate(&mut self) -> Result<(), String> {
-        if self.tasks.lock().unwrap().is_empty() {
+        if self.tasks.is_empty() {
             return Ok(());
         }
 
@@ -1362,12 +1354,12 @@ impl TaskwarriorTuiApp {
     }
 
     pub fn task_start_stop(&mut self) -> Result<(), String> {
-        if self.tasks.lock().unwrap().is_empty() {
+        if self.tasks.is_empty() {
             return Ok(());
         }
         let selected = self.current_selection;
-        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
-        let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
+        let task_id = self.tasks[selected].id().unwrap_or_default();
+        let task_uuid = *self.tasks[selected].uuid();
 
         let task_uuids = self.selected_task_uuids();
 
@@ -1389,7 +1381,7 @@ impl TaskwarriorTuiApp {
     }
 
     pub fn task_delete(&self) -> Result<(), String> {
-        if self.tasks.lock().unwrap().is_empty() {
+        if self.tasks.is_empty() {
             return Ok(());
         }
 
@@ -1419,7 +1411,7 @@ impl TaskwarriorTuiApp {
     }
 
     pub fn task_done(&mut self) -> Result<(), String> {
-        if self.tasks.lock().unwrap().is_empty() {
+        if self.tasks.is_empty() {
             return Ok(());
         }
         let task_uuids = self.selected_task_uuids();
@@ -1447,7 +1439,7 @@ impl TaskwarriorTuiApp {
     }
 
     pub fn task_undo(&self) -> Result<(), String> {
-        if self.tasks.lock().unwrap().is_empty() {
+        if self.tasks.is_empty() {
             return Ok(());
         }
         let output = Command::new("task").arg("rc.confirmation=off").arg("undo").output();
@@ -1459,12 +1451,12 @@ impl TaskwarriorTuiApp {
     }
 
     pub fn task_edit(&self) -> Result<(), String> {
-        if self.tasks.lock().unwrap().is_empty() {
+        if self.tasks.is_empty() {
             return Ok(());
         }
         let selected = self.task_table_state.current_selection().unwrap_or_default();
-        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
-        let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
+        let task_id = self.tasks[selected].id().unwrap_or_default();
+        let task_uuid = *self.tasks[selected].uuid();
         let r = Command::new("task").arg(format!("{}", task_uuid)).arg("edit").spawn();
 
         match r {
@@ -1496,15 +1488,15 @@ impl TaskwarriorTuiApp {
     }
 
     pub fn task_current(&self) -> Option<Task> {
-        if self.tasks.lock().unwrap().is_empty() {
+        if self.tasks.is_empty() {
             return None;
         }
         let selected = self.current_selection;
-        Some(self.tasks.lock().unwrap()[selected].clone())
+        Some(self.tasks[selected].clone())
     }
 
     pub fn update_tags(&mut self) {
-        let tasks = &mut *self.tasks.lock().unwrap();
+        let tasks = &mut self.tasks;
 
         // dependency scan
         for l_i in 0..tasks.len() {
@@ -1556,13 +1548,8 @@ impl TaskwarriorTuiApp {
             if task.annotations().is_some() {
                 add_tag(&mut task, "ANNOTATED".to_string());
             }
-            if task.tags().is_some()
-                && task
-                    .tags()
-                    .unwrap()
-                    .iter()
-                    .any(|s| !self.task_report_table.virtual_tags.contains(s))
-            {
+            let virtual_tags = self.task_report_table.virtual_tags.clone();
+            if task.tags().is_some() && task.tags().unwrap().iter().any(|s| !virtual_tags.contains(s)) {
                 add_tag(&mut task, "TAGGED".to_string());
             }
             if !task.uda().is_empty() {
@@ -1633,8 +1620,8 @@ impl TaskwarriorTuiApp {
 
     pub fn toggle_mark(&mut self) {
         let selected = self.current_selection;
-        let task_id = self.tasks.lock().unwrap()[selected].id().unwrap_or_default();
-        let task_uuid = *self.tasks.lock().unwrap()[selected].uuid();
+        let task_id = self.tasks[selected].id().unwrap_or_default();
+        let task_uuid = *self.tasks[selected].uuid();
 
         if !self.marked.insert(task_uuid) {
             self.marked.remove(&task_uuid);
@@ -1642,7 +1629,7 @@ impl TaskwarriorTuiApp {
     }
 
     pub fn toggle_mark_all(&mut self) {
-        for task in &*self.tasks.lock().unwrap() {
+        for task in &self.tasks {
             if !self.marked.insert(*task.uuid()) {
                 self.marked.remove(task.uuid());
             }
@@ -2177,7 +2164,7 @@ mod tests {
 
         app.context_select().unwrap();
 
-        assert_eq!(app.tasks.lock().unwrap().len(), 26);
+        assert_eq!(app.tasks.len(), 26);
         assert_eq!(app.current_context_filter, "");
 
         assert_eq!(app.context_table_state.current_selection(), Some(0));
@@ -2188,7 +2175,7 @@ mod tests {
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
 
-        assert_eq!(app.tasks.lock().unwrap().len(), 1);
+        assert_eq!(app.tasks.len(), 1);
         assert_eq!(app.current_context_filter, "+finance -private");
 
         assert_eq!(app.context_table_state.current_selection(), Some(1));
@@ -2199,7 +2186,7 @@ mod tests {
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
 
-        assert_eq!(app.tasks.lock().unwrap().len(), 26);
+        assert_eq!(app.tasks.len(), 26);
         assert_eq!(app.current_context_filter, "");
     }
 
@@ -2209,7 +2196,7 @@ mod tests {
         let mut app = TaskwarriorTuiApp::new().unwrap();
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
-        assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
+        assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
 
         let now = Local::now();
@@ -2245,7 +2232,7 @@ mod tests {
 
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
-        assert_eq!(app.tasks.lock().unwrap().len(), (total_tasks + 1) as usize);
+        assert_eq!(app.tasks.len(), (total_tasks + 1) as usize);
         assert_eq!(app.current_context_filter, "");
 
         let task = app.task_by_id(task_id).unwrap();
@@ -2272,7 +2259,7 @@ mod tests {
         let mut app = TaskwarriorTuiApp::new().unwrap();
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
-        assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
+        assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
     }
 
@@ -2282,7 +2269,7 @@ mod tests {
         let mut app = TaskwarriorTuiApp::new().unwrap();
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
-        assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
+        assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
 
         let now = Local::now();
@@ -2306,7 +2293,7 @@ mod tests {
 
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
-        assert_eq!(app.tasks.lock().unwrap().len(), (total_tasks + 1) as usize);
+        assert_eq!(app.tasks.len(), (total_tasks + 1) as usize);
         assert_eq!(app.current_context_filter, "");
 
         let task = app.task_by_id(task_id).unwrap();
@@ -2334,7 +2321,7 @@ mod tests {
         let mut app = TaskwarriorTuiApp::new().unwrap();
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
-        assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
+        assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
     }
 
@@ -2346,7 +2333,7 @@ mod tests {
         let mut app = TaskwarriorTuiApp::new().unwrap();
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
-        assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
+        assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
 
         let now = Local::now();
@@ -2378,7 +2365,7 @@ mod tests {
 
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
-        assert_eq!(app.tasks.lock().unwrap().len(), (total_tasks + 1) as usize);
+        assert_eq!(app.tasks.len(), (total_tasks + 1) as usize);
         assert_eq!(app.current_context_filter, "");
 
         let task = app.task_by_id(task_id).unwrap();
@@ -2405,7 +2392,7 @@ mod tests {
         let mut app = TaskwarriorTuiApp::new().unwrap();
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
-        assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
+        assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
     }
 
@@ -2420,7 +2407,7 @@ mod tests {
 
             assert!(app.get_context().is_ok());
             assert!(app.update(true).is_ok());
-            assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
+            assert_eq!(app.tasks.len(), total_tasks as usize);
             assert_eq!(app.current_context_filter, "");
 
             let now = Local::now();
@@ -2486,7 +2473,7 @@ mod tests {
 
             assert!(app.get_context().is_ok());
             assert!(app.update(true).is_ok());
-            assert_eq!(app.tasks.lock().unwrap().len(), total_tasks as usize);
+            assert_eq!(app.tasks.len(), total_tasks as usize);
             assert_eq!(app.current_context_filter, "");
 
             let now = Local::now();
