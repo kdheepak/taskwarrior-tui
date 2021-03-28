@@ -21,6 +21,10 @@ use std::io::Write;
 use std::panic;
 use std::time::Duration;
 
+use async_std::task;
+use futures::join;
+use futures::stream::{FuturesUnordered, StreamExt};
+
 use crate::util::Key;
 use app::{AppMode, TaskwarriorTuiApp};
 
@@ -44,26 +48,10 @@ fn main() -> Result<()> {
         .get_matches();
 
     let config = matches.value_of("config").unwrap_or("~/.taskrc");
-    let r = tui_main(config);
-    match r {
-        Ok(_) => std::process::exit(0),
-        Err(error) => {
-            if error.to_string().to_lowercase().contains("no such file or directory") {
-                eprintln!(
-                    "[taskwarrior-tui error]: Unable to find executable `task`: {}. Check that taskwarrior is installed correctly and try again.", error
-                );
-            } else {
-                eprintln!(
-                    "[taskwarrior-tui error]: {}. Please report as a github issue on https://github.com/kdheepak/taskwarrior-tui",
-                    error
-                );
-            }
-            std::process::exit(1);
-        }
-    }
+    task::block_on(tui_main(config))
 }
 
-fn tui_main(_config: &str) -> Result<()> {
+async fn tui_main(_config: &str) -> Result<()> {
     // Terminal initialization
     let mut terminal = setup_terminal();
 
@@ -82,18 +70,17 @@ fn tui_main(_config: &str) -> Result<()> {
         Ok(mut app) => {
             loop {
                 terminal.draw(|mut frame| app.draw(&mut frame)).unwrap();
-
                 // Handle input
-                match events.next()? {
+                match events.next().await? {
                     Event::Input(input) => {
-                        let r = app.handle_input(input, &mut terminal, &events);
+                        let r = app.handle_input(input, &mut terminal, &events).await;
                         if r.is_err() {
                             destruct_terminal();
                             return r;
                         }
                     }
                     Event::Tick => {
-                        let r = app.update(false);
+                        let r = app.update(false).await;
                         if r.is_err() {
                             destruct_terminal();
                             return r;

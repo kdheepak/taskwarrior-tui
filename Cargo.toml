@@ -31,12 +31,15 @@ chrono = "0.4"
 unicode-width = "0.1"
 unicode-segmentation = "1.6"
 tui = { version = "0.12", optional = true, default-features = false }
-crossterm = { version = "0.17", optional = true, default-features = false }
+crossterm = { version = "0.17", optional = true, default-features = false, features = ["event-stream"] }
 rustyline = "7.1.0"
 uuid = { version = "0.8.1", features = ["serde", "v4"] }
 better-panic = "0.2.0"
 shellexpand = "2.1"
 anyhow = "1"
+async-std = { version = "1", features = ["attributes", "unstable"] }
+futures = "0.3"
+futures-timer = "3.0"
 
 [package.metadata.rpm]
 package = "taskwarrior-tui"

@@ -30,6 +30,9 @@ use chrono::{Datelike, Local, NaiveDate, NaiveDateTime, TimeZone};
 
 use anyhow::Result;
 
+use async_std::task;
+
+use std::sync::{Arc, Mutex};
 use std::{sync::mpsc, thread, time::Duration};
 use tui::{
     backend::Backend,
@@ -205,7 +208,7 @@ impl TaskwarriorTuiApp {
             app.filter.insert(c, 1);
         }
         app.get_context()?;
-        app.update(true)?;
+        task::block_on(app.update(true))?;
         Ok(app)
     }
 
@@ -817,12 +820,12 @@ impl TaskwarriorTuiApp {
         (tasks, headers)
     }
 
-    pub fn update(&mut self, force: bool) -> Result<()> {
+    pub async fn update(&mut self, force: bool) -> Result<()> {
         if force || self.tasks_changed_since(self.last_export)? {
             self.last_export = Some(std::time::SystemTime::now());
             self.task_report_table.export_headers()?;
-            let _ = self.export_tasks();
-            self.export_contexts()?;
+            let _ = self.export_tasks().await;
+            self.export_contexts().await?;
             self.update_tags();
             self.task_details.clear();
         }
@@ -973,8 +976,8 @@ impl TaskwarriorTuiApp {
         self.current_selection = i;
     }
 
-    pub fn export_contexts(&mut self) -> Result<()> {
-        let output = Command::new("task").arg("context").output()?;
+    pub async fn export_contexts(&mut self) -> Result<()> {
+        let output = async_std::process::Command::new("task").arg("context").output().await?;
         let data = String::from_utf8_lossy(&output.stdout);
 
         self.contexts = vec![];
@@ -1040,8 +1043,8 @@ impl TaskwarriorTuiApp {
         }
     }
 
-    pub fn export_tasks(&mut self) -> Result<()> {
-        let mut task = Command::new("task");
+    pub async fn export_tasks(&mut self) -> Result<()> {
+        let mut task = async_std::process::Command::new("task");
 
         task.arg("rc.json.array=on");
         task.arg("rc.confirmation=off");
@@ -1065,7 +1068,7 @@ impl TaskwarriorTuiApp {
             }
         }
 
-        let output = task.output()?;
+        let output = task.output().await?;
         let data = String::from_utf8_lossy(&output.stdout);
         let error = String::from_utf8_lossy(&output.stderr);
         if !error.contains("The expression could not be evaluated.") {
@@ -1637,7 +1640,7 @@ impl TaskwarriorTuiApp {
         }
     }
 
-    pub fn handle_input(
+    pub async fn handle_input(
         &mut self,
         input: Key,
         terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
@@ -1656,7 +1659,7 @@ impl TaskwarriorTuiApp {
                     self.task_table_state.multiple_selection();
                     self.toggle_mark_all();
                 } else if input == self.keyconfig.refresh {
-                    self.update(true)?;
+                    self.update(true).await?;
                 } else if input == self.keyconfig.go_to_bottom || input == Key::End {
                     self.task_report_bottom();
                 } else if input == self.keyconfig.go_to_top || input == Key::Home {
@@ -1675,7 +1678,7 @@ impl TaskwarriorTuiApp {
                     self.task_details_scroll_down();
                 } else if input == self.keyconfig.done {
                     match self.task_done() {
-                        Ok(_) => self.update(true)?,
+                        Ok(_) => self.update(true).await?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
                             self.error = e;
@@ -1683,7 +1686,7 @@ impl TaskwarriorTuiApp {
                     }
                 } else if input == self.keyconfig.delete {
                     match self.task_delete() {
-                        Ok(_) => self.update(true)?,
+                        Ok(_) => self.update(true).await?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
                             self.error = e;
@@ -1691,7 +1694,7 @@ impl TaskwarriorTuiApp {
                     }
                 } else if input == self.keyconfig.start_stop {
                     match self.task_start_stop() {
-                        Ok(_) => self.update(true)?,
+                        Ok(_) => self.update(true).await?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
                             self.error = e;
@@ -1699,7 +1702,7 @@ impl TaskwarriorTuiApp {
                     }
                 } else if input == self.keyconfig.undo {
                     match self.task_undo() {
-                        Ok(_) => self.update(true)?,
+                        Ok(_) => self.update(true).await?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
                             self.error = e;
@@ -1710,7 +1713,7 @@ impl TaskwarriorTuiApp {
                     let r = self.task_edit();
                     events.resume_key_capture(terminal);
                     match r {
-                        Ok(_) => self.update(true)?,
+                        Ok(_) => self.update(true).await?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
                             self.error = e;
@@ -1742,7 +1745,7 @@ impl TaskwarriorTuiApp {
                     self.mode = AppMode::TaskFilter;
                 } else if input == self.keyconfig.shortcut1 {
                     match self.task_shortcut(1) {
-                        Ok(_) => self.update(true)?,
+                        Ok(_) => self.update(true).await?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
                             self.error = e;
@@ -1750,7 +1753,7 @@ impl TaskwarriorTuiApp {
                     }
                 } else if input == self.keyconfig.shortcut2 {
                     match self.task_shortcut(2) {
-                        Ok(_) => self.update(true)?,
+                        Ok(_) => self.update(true).await?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
                             self.error = e;
@@ -1758,7 +1761,7 @@ impl TaskwarriorTuiApp {
                     }
                 } else if input == self.keyconfig.shortcut3 {
                     match self.task_shortcut(3) {
-                        Ok(_) => self.update(true)?,
+                        Ok(_) => self.update(true).await?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
                             self.error = e;
@@ -1766,7 +1769,7 @@ impl TaskwarriorTuiApp {
                     }
                 } else if input == self.keyconfig.shortcut4 {
                     match self.task_shortcut(4) {
-                        Ok(_) => self.update(true)?,
+                        Ok(_) => self.update(true).await?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
                             self.error = e;
@@ -1774,7 +1777,7 @@ impl TaskwarriorTuiApp {
                     }
                 } else if input == self.keyconfig.shortcut5 {
                     match self.task_shortcut(5) {
-                        Ok(_) => self.update(true)?,
+                        Ok(_) => self.update(true).await?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
                             self.error = e;
@@ -1782,7 +1785,7 @@ impl TaskwarriorTuiApp {
                     }
                 } else if input == self.keyconfig.shortcut6 {
                     match self.task_shortcut(6) {
-                        Ok(_) => self.update(true)?,
+                        Ok(_) => self.update(true).await?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
                             self.error = e;
@@ -1790,7 +1793,7 @@ impl TaskwarriorTuiApp {
                     }
                 } else if input == self.keyconfig.shortcut7 {
                     match self.task_shortcut(7) {
-                        Ok(_) => self.update(true)?,
+                        Ok(_) => self.update(true).await?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
                             self.error = e;
@@ -1798,7 +1801,7 @@ impl TaskwarriorTuiApp {
                     }
                 } else if input == self.keyconfig.shortcut8 {
                     match self.task_shortcut(8) {
-                        Ok(_) => self.update(true)?,
+                        Ok(_) => self.update(true).await?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
                             self.error = e;
@@ -1806,7 +1809,7 @@ impl TaskwarriorTuiApp {
                     }
                 } else if input == self.keyconfig.shortcut9 {
                     match self.task_shortcut(9) {
-                        Ok(_) => self.update(true)?,
+                        Ok(_) => self.update(true).await?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
                             self.error = e;
@@ -1831,7 +1834,7 @@ impl TaskwarriorTuiApp {
                     match self.context_select() {
                         Ok(_) => {
                             self.get_context()?;
-                            self.update(true)?;
+                            self.update(true).await?;
                         }
                         Err(e) => {
                             self.mode = AppMode::TaskError;
@@ -1857,7 +1860,7 @@ impl TaskwarriorTuiApp {
                 Key::Char('\n') => match self.task_modify() {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
-                        self.update(true)?;
+                        self.update(true).await?;
                     }
                     Err(e) => {
                         self.mode = AppMode::TaskError;
@@ -1874,7 +1877,7 @@ impl TaskwarriorTuiApp {
                 Key::Char('\n') => match self.task_subprocess() {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
-                        self.update(true)?;
+                        self.update(true).await?;
                     }
                     Err(e) => {
                         self.mode = AppMode::TaskError;
@@ -1891,7 +1894,7 @@ impl TaskwarriorTuiApp {
                 Key::Char('\n') => match self.task_log() {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
-                        self.update(true)?;
+                        self.update(true).await?;
                     }
                     Err(e) => {
                         self.mode = AppMode::TaskError;
@@ -1908,7 +1911,7 @@ impl TaskwarriorTuiApp {
                 Key::Char('\n') => match self.task_annotate() {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
-                        self.update(true)?;
+                        self.update(true).await?;
                     }
                     Err(e) => {
                         self.mode = AppMode::TaskError;
@@ -1925,7 +1928,7 @@ impl TaskwarriorTuiApp {
                 Key::Char('\n') => match self.task_add() {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
-                        self.update(true)?;
+                        self.update(true).await?;
                     }
                     Err(e) => {
                         self.mode = AppMode::TaskError;
@@ -1941,11 +1944,11 @@ impl TaskwarriorTuiApp {
             AppMode::TaskFilter => match input {
                 Key::Char('\n') | Key::Esc => {
                     self.mode = AppMode::TaskReport;
-                    self.update(true)?;
+                    self.update(true).await?;
                 }
                 _ => {
                     handle_movement(&mut self.filter, input);
-                    // TODO: call self.update(true) here for instant filter updates
+                    self.update(true).await?;
                 }
             },
             AppMode::TaskError => self.mode = AppMode::TaskReport,
