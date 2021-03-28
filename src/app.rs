@@ -2164,7 +2164,7 @@ mod tests {
         let mut app = TaskwarriorTuiApp::new().unwrap();
 
         assert!(app.get_context().is_ok());
-        assert!(app.update(true).is_ok());
+        assert!(task::block_on(app.update(true)).is_ok());
 
         app.context_select().unwrap();
 
@@ -2177,7 +2177,7 @@ mod tests {
         assert_eq!(app.context_table_state.current_selection(), Some(1));
 
         assert!(app.get_context().is_ok());
-        assert!(app.update(true).is_ok());
+        assert!(task::block_on(app.update(true)).is_ok());
 
         assert_eq!(app.tasks.len(), 1);
         assert_eq!(app.current_context_filter, "+finance -private");
@@ -2188,7 +2188,7 @@ mod tests {
         assert_eq!(app.context_table_state.current_selection(), Some(0));
 
         assert!(app.get_context().is_ok());
-        assert!(app.update(true).is_ok());
+        assert!(task::block_on(app.update(true)).is_ok());
 
         assert_eq!(app.tasks.len(), 26);
         assert_eq!(app.current_context_filter, "");
@@ -2199,7 +2199,7 @@ mod tests {
 
         let mut app = TaskwarriorTuiApp::new().unwrap();
         assert!(app.get_context().is_ok());
-        assert!(app.update(true).is_ok());
+        assert!(task::block_on(app.update(true)).is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -2235,7 +2235,7 @@ mod tests {
         assert_eq!(task_id, total_tasks + 1);
 
         assert!(app.get_context().is_ok());
-        assert!(app.update(true).is_ok());
+        assert!(task::block_on(app.update(true)).is_ok());
         assert_eq!(app.tasks.len(), (total_tasks + 1) as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -2262,7 +2262,7 @@ mod tests {
 
         let mut app = TaskwarriorTuiApp::new().unwrap();
         assert!(app.get_context().is_ok());
-        assert!(app.update(true).is_ok());
+        assert!(task::block_on(app.update(true)).is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
     }
@@ -2272,7 +2272,7 @@ mod tests {
 
         let mut app = TaskwarriorTuiApp::new().unwrap();
         assert!(app.get_context().is_ok());
-        assert!(app.update(true).is_ok());
+        assert!(task::block_on(app.update(true)).is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -2296,7 +2296,7 @@ mod tests {
         assert_eq!(task_id, total_tasks + 1);
 
         assert!(app.get_context().is_ok());
-        assert!(app.update(true).is_ok());
+        assert!(task::block_on(app.update(true)).is_ok());
         assert_eq!(app.tasks.len(), (total_tasks + 1) as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -2324,7 +2324,7 @@ mod tests {
 
         let mut app = TaskwarriorTuiApp::new().unwrap();
         assert!(app.get_context().is_ok());
-        assert!(app.update(true).is_ok());
+        assert!(task::block_on(app.update(true)).is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
     }
@@ -2336,7 +2336,7 @@ mod tests {
 
         let mut app = TaskwarriorTuiApp::new().unwrap();
         assert!(app.get_context().is_ok());
-        assert!(app.update(true).is_ok());
+        assert!(task::block_on(app.update(true)).is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -2368,7 +2368,7 @@ mod tests {
         assert_eq!(task_id, total_tasks + 1);
 
         assert!(app.get_context().is_ok());
-        assert!(app.update(true).is_ok());
+        assert!(task::block_on(app.update(true)).is_ok());
         assert_eq!(app.tasks.len(), (total_tasks + 1) as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -2395,7 +2395,7 @@ mod tests {
 
         let mut app = TaskwarriorTuiApp::new().unwrap();
         assert!(app.get_context().is_ok());
-        assert!(app.update(true).is_ok());
+        assert!(task::block_on(app.update(true)).is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
     }
@@ -2410,14 +2410,14 @@ mod tests {
             let total_tasks: u64 = 0;
 
             assert!(app.get_context().is_ok());
-            assert!(app.update(true).is_ok());
+            assert!(task::block_on(app.update(true)).is_ok());
             assert_eq!(app.tasks.len(), total_tasks as usize);
             assert_eq!(app.current_context_filter, "");
 
             let now = Local::now();
             let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
 
-            app.update(true).unwrap();
+            task::block_on(app.update(true)).unwrap();
 
             let backend = TestBackend::new(50, 15);
             let mut terminal = Terminal::new(backend).unwrap();
@@ -2476,7 +2476,7 @@ mod tests {
             let total_tasks: u64 = 26;
 
             assert!(app.get_context().is_ok());
-            assert!(app.update(true).is_ok());
+            assert!(task::block_on(app.update(true)).is_ok());
             assert_eq!(app.tasks.len(), total_tasks as usize);
             assert_eq!(app.current_context_filter, "");
 
@@ -2521,7 +2521,7 @@ mod tests {
             app.task_report_previous_page();
             app.task_report_bottom();
             app.task_report_top();
-            app.update(true).unwrap();
+            task::block_on(app.update(true)).unwrap();
 
             let backend = TestBackend::new(50, 15);
             let mut terminal = Terminal::new(backend).unwrap();
@@ -2629,7 +2629,7 @@ mod tests {
 
             app.task_report_next();
             app.context_next();
-            app.update(true).unwrap();
+            task::block_on(app.update(true)).unwrap();
 
             app.calendar_year = 2020;
             app.mode = AppMode::Calendar;
@@ -2715,7 +2715,7 @@ mod tests {
             app.mode = AppMode::TaskHelpPopup;
             app.task_report_next();
             app.context_next();
-            app.update(true).unwrap();
+            task::block_on(app.update(true)).unwrap();
 
             let backend = TestBackend::new(40, 12);
             let mut terminal = Terminal::new(backend).unwrap();
@@ -2761,7 +2761,7 @@ mod tests {
             app.mode = AppMode::TaskContextMenu;
             app.task_report_next();
             app.context_next();
-            app.update(true).unwrap();
+            task::block_on(app.update(true)).unwrap();
 
             let backend = TestBackend::new(80, 10);
             let mut terminal = Terminal::new(backend).unwrap();
