@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::error::Error;
 use std::process::Command;
@@ -280,7 +280,8 @@ impl Config {
             .arg("show")
             .arg(config)
             .output()
-            .expect("Unable to run `task show`");
+            .with_context(|| format!("Unable to run `task show {}`", config))
+            .unwrap();
 
         let data = String::from_utf8_lossy(&output.stdout);
 
@@ -304,16 +305,22 @@ impl Config {
     }
 
     fn get_rule_precedence_color() -> Vec<String> {
-        let data = Self::get_config("rule.precedence.color").unwrap();
+        let data = Self::get_config("rule.precedence.color")
+            .context("Unable to parse `task show rule.precedence.color`")
+            .unwrap();
         data.split(',').map(|s| s.to_string()).collect::<Vec<_>>()
     }
 
     fn get_filter() -> String {
-        Self::get_config("report.next.filter").unwrap()
+        Self::get_config("report.next.filter")
+            .context("Unable to parse `task show report.next.filter`")
+            .unwrap()
     }
 
     fn get_data_location() -> String {
-        Self::get_config("data.location").unwrap()
+        Self::get_config("data.location")
+            .context("Unable to parse `task show data.location`")
+            .unwrap()
     }
 
     fn get_uda_task_report_show_info() -> bool {
