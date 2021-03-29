@@ -856,6 +856,9 @@ impl TaskwarriorTuiApp {
     }
 
     pub async fn update_task_details(&mut self) -> Result<()> {
+        if self.tasks.is_empty() {
+            return Ok(());
+        }
         let mut to_delete = vec![];
         for k in self.task_details.keys() {
             if !self.tasks.iter().map(|t| t.uuid()).any(|x| x == k) {
@@ -2177,46 +2180,50 @@ mod tests {
 
     #[test]
     fn test_debug() {
-        let mut app = TaskwarriorTuiApp::new().unwrap();
-        assert!(app.get_context().is_ok());
-        assert!(task::block_on(app.update(true)).is_ok());
+        task::block_on(async {
+            let mut app = TaskwarriorTuiApp::new().await.unwrap();
+            assert!(app.get_context().await.is_ok());
+            assert!(app.update(true).await.is_ok());
+        })
     }
 
     #[test]
     fn test_taskwarrior_tui() {
-        let app = TaskwarriorTuiApp::new().unwrap();
-        assert!(app.task_by_index(0).is_none());
+        task::block_on(async {
+            let app = TaskwarriorTuiApp::new().await.unwrap();
+            assert!(app.task_by_index(0).is_none());
 
-        let app = TaskwarriorTuiApp::new().unwrap();
-        assert!(app
-            .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
-            .is_none());
+            let app = TaskwarriorTuiApp::new().await.unwrap();
+            assert!(app
+                .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
+                .is_none());
 
-        test_draw_empty_task_report();
+            test_draw_empty_task_report().await;
 
-        setup();
+            setup();
 
-        let app = TaskwarriorTuiApp::new().unwrap();
-        assert!(app.task_by_index(0).is_some());
+            let app = TaskwarriorTuiApp::new().await.unwrap();
+            assert!(app.task_by_index(0).is_some());
 
-        let app = TaskwarriorTuiApp::new().unwrap();
-        assert!(app
-            .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
-            .is_some());
+            let app = TaskwarriorTuiApp::new().await.unwrap();
+            assert!(app
+                .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
+                .is_some());
 
-        test_draw_task_report();
-        test_task_tags();
-        test_task_style();
-        test_task_context();
-        test_task_tomorrow();
-        test_task_earlier_today();
-        test_task_later_today();
-        teardown();
+            test_draw_task_report().await;
+            test_task_tags().await;
+            test_task_style().await;
+            test_task_context().await;
+            test_task_tomorrow().await;
+            test_task_earlier_today().await;
+            test_task_later_today().await;
+            teardown();
+        })
     }
 
-    fn test_task_tags() {
+    async fn test_task_tags() {
         // testing tags
-        let app = TaskwarriorTuiApp::new().unwrap();
+        let app = TaskwarriorTuiApp::new().await.unwrap();
         let task = app.task_by_id(1).unwrap();
 
         let tags = vec!["PENDING".to_string(), "PRIORITY".to_string()];
@@ -2225,7 +2232,7 @@ mod tests {
             assert!(task.tags().unwrap().contains(&tag));
         }
 
-        let app = TaskwarriorTuiApp::new().unwrap();
+        let app = TaskwarriorTuiApp::new().await.unwrap();
         let task = app.task_by_id(11).unwrap();
         let tags = vec!["finance", "UNBLOCKED", "PENDING", "TAGGED", "UDA"]
             .iter()
@@ -2236,8 +2243,8 @@ mod tests {
         }
     }
 
-    fn test_task_style() {
-        let app = TaskwarriorTuiApp::new().unwrap();
+    async fn test_task_style() {
+        let app = TaskwarriorTuiApp::new().await.unwrap();
         let task = app.task_by_id(1).unwrap();
         for r in vec![
             "active",
@@ -2266,46 +2273,46 @@ mod tests {
         let style = app.style_for_task(&task);
     }
 
-    fn test_task_context() {
-        let mut app = TaskwarriorTuiApp::new().unwrap();
+    async fn test_task_context() {
+        let mut app = TaskwarriorTuiApp::new().await.unwrap();
 
-        assert!(app.get_context().is_ok());
-        assert!(task::block_on(app.update(true)).is_ok());
+        assert!(app.get_context().await.is_ok());
+        assert!(app.update(true).await.is_ok());
 
-        app.context_select().unwrap();
+        app.context_select().await.unwrap();
 
         assert_eq!(app.tasks.len(), 26);
         assert_eq!(app.current_context_filter, "");
 
         assert_eq!(app.context_table_state.current_selection(), Some(0));
         app.context_next();
-        app.context_select().unwrap();
+        app.context_select().await.unwrap();
         assert_eq!(app.context_table_state.current_selection(), Some(1));
 
-        assert!(app.get_context().is_ok());
-        assert!(task::block_on(app.update(true)).is_ok());
+        assert!(app.get_context().await.is_ok());
+        assert!(app.update(true).await.is_ok());
 
         assert_eq!(app.tasks.len(), 1);
         assert_eq!(app.current_context_filter, "+finance -private");
 
         assert_eq!(app.context_table_state.current_selection(), Some(1));
         app.context_previous();
-        app.context_select().unwrap();
+        app.context_select().await.unwrap();
         assert_eq!(app.context_table_state.current_selection(), Some(0));
 
-        assert!(app.get_context().is_ok());
-        assert!(task::block_on(app.update(true)).is_ok());
+        assert!(app.get_context().await.is_ok());
+        assert!(app.update(true).await.is_ok());
 
         assert_eq!(app.tasks.len(), 26);
         assert_eq!(app.current_context_filter, "");
     }
 
-    fn test_task_tomorrow() {
+    async fn test_task_tomorrow() {
         let total_tasks: u64 = 26;
 
-        let mut app = TaskwarriorTuiApp::new().unwrap();
-        assert!(app.get_context().is_ok());
-        assert!(task::block_on(app.update(true)).is_ok());
+        let mut app = TaskwarriorTuiApp::new().await.unwrap();
+        assert!(app.get_context().await.is_ok());
+        assert!(app.update(true).await.is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -2340,8 +2347,8 @@ mod tests {
         let task_id = caps["task_id"].parse::<u64>().unwrap();
         assert_eq!(task_id, total_tasks + 1);
 
-        assert!(app.get_context().is_ok());
-        assert!(task::block_on(app.update(true)).is_ok());
+        assert!(app.get_context().await.is_ok());
+        assert!(app.update(true).await.is_ok());
         assert_eq!(app.tasks.len(), (total_tasks + 1) as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -2366,19 +2373,19 @@ mod tests {
             .output()
             .unwrap();
 
-        let mut app = TaskwarriorTuiApp::new().unwrap();
-        assert!(app.get_context().is_ok());
-        assert!(task::block_on(app.update(true)).is_ok());
+        let mut app = TaskwarriorTuiApp::new().await.unwrap();
+        assert!(app.get_context().await.is_ok());
+        assert!(app.update(true).await.is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
     }
 
-    fn test_task_earlier_today() {
+    async fn test_task_earlier_today() {
         let total_tasks: u64 = 26;
 
-        let mut app = TaskwarriorTuiApp::new().unwrap();
-        assert!(app.get_context().is_ok());
-        assert!(task::block_on(app.update(true)).is_ok());
+        let mut app = TaskwarriorTuiApp::new().await.unwrap();
+        assert!(app.get_context().await.is_ok());
+        assert!(app.update(true).await.is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -2401,8 +2408,8 @@ mod tests {
         let task_id = caps["task_id"].parse::<u64>().unwrap();
         assert_eq!(task_id, total_tasks + 1);
 
-        assert!(app.get_context().is_ok());
-        assert!(task::block_on(app.update(true)).is_ok());
+        assert!(app.get_context().await.is_ok());
+        assert!(app.update(true).await.is_ok());
         assert_eq!(app.tasks.len(), (total_tasks + 1) as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -2428,21 +2435,21 @@ mod tests {
             .output()
             .unwrap();
 
-        let mut app = TaskwarriorTuiApp::new().unwrap();
-        assert!(app.get_context().is_ok());
-        assert!(task::block_on(app.update(true)).is_ok());
+        let mut app = TaskwarriorTuiApp::new().await.unwrap();
+        assert!(app.get_context().await.is_ok());
+        assert!(app.update(true).await.is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
     }
 
-    fn test_task_later_today() {
+    async fn test_task_later_today() {
         use chrono::Timelike;
 
         let total_tasks: u64 = 26;
 
-        let mut app = TaskwarriorTuiApp::new().unwrap();
-        assert!(app.get_context().is_ok());
-        assert!(task::block_on(app.update(true)).is_ok());
+        let mut app = TaskwarriorTuiApp::new().await.unwrap();
+        assert!(app.get_context().await.is_ok());
+        assert!(app.update(true).await.is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -2473,8 +2480,8 @@ mod tests {
         let task_id = caps["task_id"].parse::<u64>().unwrap();
         assert_eq!(task_id, total_tasks + 1);
 
-        assert!(app.get_context().is_ok());
-        assert!(task::block_on(app.update(true)).is_ok());
+        assert!(app.get_context().await.is_ok());
+        assert!(app.update(true).await.is_ok());
         assert_eq!(app.tasks.len(), (total_tasks + 1) as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -2499,32 +2506,32 @@ mod tests {
             .output()
             .unwrap();
 
-        let mut app = TaskwarriorTuiApp::new().unwrap();
-        assert!(app.get_context().is_ok());
-        assert!(task::block_on(app.update(true)).is_ok());
+        let mut app = TaskwarriorTuiApp::new().await.unwrap();
+        assert!(app.get_context().await.is_ok());
+        assert!(app.update(true).await.is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
     }
 
-    fn test_draw_empty_task_report() {
-        let test_case = |expected: &Buffer| {
-            let mut app = TaskwarriorTuiApp::new().unwrap();
+    async fn test_draw_empty_task_report() {
+        let mut app = TaskwarriorTuiApp::new().await.unwrap();
 
-            app.task_report_next();
-            app.context_next();
+        app.task_report_next();
+        app.context_next();
 
-            let total_tasks: u64 = 0;
+        let total_tasks: u64 = 0;
 
-            assert!(app.get_context().is_ok());
-            assert!(task::block_on(app.update(true)).is_ok());
-            assert_eq!(app.tasks.len(), total_tasks as usize);
-            assert_eq!(app.current_context_filter, "");
+        assert!(app.get_context().await.is_ok());
+        assert!(app.update(true).await.is_ok());
+        assert_eq!(app.tasks.len(), total_tasks as usize);
+        assert_eq!(app.current_context_filter, "");
 
-            let now = Local::now();
-            let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
+        let now = Local::now();
+        let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
 
-            task::block_on(app.update(true)).unwrap();
+        app.update(true).await.unwrap();
 
+        let mut test_case = |expected: &Buffer| {
             let backend = TestBackend::new(50, 15);
             let mut terminal = Terminal::new(backend).unwrap();
             terminal
@@ -2572,63 +2579,63 @@ mod tests {
         test_case(&expected);
     }
 
-    fn test_draw_task_report() {
-        let test_case = |expected: &Buffer| {
-            let mut app = TaskwarriorTuiApp::new().unwrap();
+    async fn test_draw_task_report() {
+        let mut app = TaskwarriorTuiApp::new().await.unwrap();
 
-            app.task_report_next();
-            app.context_next();
+        app.task_report_next();
+        app.context_next();
 
-            let total_tasks: u64 = 26;
+        let total_tasks: u64 = 26;
 
-            assert!(app.get_context().is_ok());
-            assert!(task::block_on(app.update(true)).is_ok());
-            assert_eq!(app.tasks.len(), total_tasks as usize);
-            assert_eq!(app.current_context_filter, "");
+        assert!(app.get_context().await.is_ok());
+        assert!(app.update(true).await.is_ok());
+        assert_eq!(app.tasks.len(), total_tasks as usize);
+        assert_eq!(app.current_context_filter, "");
 
-            let now = Local::now();
-            let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
+        let now = Local::now();
+        let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
 
-            let mut command = Command::new("task");
-            command.arg("add");
-            let message = "'new task 1 for testing draw' priority:U";
+        let mut command = Command::new("task");
+        command.arg("add");
+        let message = "'new task 1 for testing draw' priority:U";
 
-            let shell = message.replace("'", "\\'");
-            let cmd = shlex::split(&shell).unwrap();
-            for s in cmd {
-                command.arg(&s);
-            }
-            let output = command.output().unwrap();
-            let s = String::from_utf8_lossy(&output.stdout);
-            let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
-            let caps = re.captures(&s).unwrap();
-            let task_id = caps["task_id"].parse::<u64>().unwrap();
-            assert_eq!(task_id, total_tasks + 1);
+        let shell = message.replace("'", "\\'");
+        let cmd = shlex::split(&shell).unwrap();
+        for s in cmd {
+            command.arg(&s);
+        }
+        let output = command.output().unwrap();
+        let s = String::from_utf8_lossy(&output.stdout);
+        let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
+        let caps = re.captures(&s).unwrap();
+        let task_id = caps["task_id"].parse::<u64>().unwrap();
+        assert_eq!(task_id, total_tasks + 1);
 
-            let mut command = Command::new("task");
-            command.arg("add");
-            let message = "'new task 2 for testing draw' priority:U +none";
+        let mut command = Command::new("task");
+        command.arg("add");
+        let message = "'new task 2 for testing draw' priority:U +none";
 
-            let shell = message.replace("'", "\\'");
-            let cmd = shlex::split(&shell).unwrap();
-            for s in cmd {
-                command.arg(&s);
-            }
-            let output = command.output().unwrap();
-            let s = String::from_utf8_lossy(&output.stdout);
-            let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
-            let caps = re.captures(&s).unwrap();
-            let task_id = caps["task_id"].parse::<u64>().unwrap();
-            assert_eq!(task_id, total_tasks + 2);
+        let shell = message.replace("'", "\\'");
+        let cmd = shlex::split(&shell).unwrap();
+        for s in cmd {
+            command.arg(&s);
+        }
+        let output = command.output().unwrap();
+        let s = String::from_utf8_lossy(&output.stdout);
+        let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
+        let caps = re.captures(&s).unwrap();
+        let task_id = caps["task_id"].parse::<u64>().unwrap();
+        assert_eq!(task_id, total_tasks + 2);
 
-            app.task_report_next();
-            app.task_report_previous();
-            app.task_report_next_page();
-            app.task_report_previous_page();
-            app.task_report_bottom();
-            app.task_report_top();
-            task::block_on(app.update(true)).unwrap();
+        app.task_report_next();
+        app.task_report_previous();
+        app.task_report_next_page();
+        app.task_report_previous_page();
+        app.task_report_bottom();
+        app.task_report_top();
+        app.update(true).await.unwrap();
 
+        let mut test_case = |expected: &Buffer| {
             let backend = TestBackend::new(50, 15);
             let mut terminal = Terminal::new(backend).unwrap();
             app.task_report_show_info = !app.task_report_show_info;
@@ -2670,9 +2677,9 @@ mod tests {
             "╰────────────────────────────────────────────────╯",
             "╭Task 27─────────────────────────────────────────╮",
             "│                                                │",
-            "│Name        Value                               │",
-            "│----------- ------------------------------------│",
-            "│ID          27                                  │",
+            "│Name          Value                             │",
+            "│------------- ----------------------------------│",
+            "│ID            27                                │",
             "╰────────────────────────────────────────────────╯",
             "╭Filter Tasks────────────────────────────────────╮",
             "│status:pending -private                         │",
@@ -2730,16 +2737,16 @@ mod tests {
 
     #[test]
     fn test_draw_calendar() {
-        let test_case = |expected: &Buffer| {
-            let mut app = TaskwarriorTuiApp::new().unwrap();
+        let mut app = task::block_on(TaskwarriorTuiApp::new()).unwrap();
 
-            app.task_report_next();
-            app.context_next();
-            task::block_on(app.update(true)).unwrap();
+        app.task_report_next();
+        app.context_next();
+        task::block_on(app.update(true)).unwrap();
 
-            app.calendar_year = 2020;
-            app.mode = AppMode::Calendar;
+        app.calendar_year = 2020;
+        app.mode = AppMode::Calendar;
 
+        let mut test_case = |expected: &Buffer| {
             let backend = TestBackend::new(50, 15);
             let mut terminal = Terminal::new(backend).unwrap();
             terminal
@@ -2815,14 +2822,14 @@ mod tests {
 
     #[test]
     fn test_draw_help_popup() {
-        let test_case = |expected: &Buffer| {
-            let mut app = TaskwarriorTuiApp::new().unwrap();
+        let mut app = task::block_on(TaskwarriorTuiApp::new()).unwrap();
 
-            app.mode = AppMode::TaskHelpPopup;
-            app.task_report_next();
-            app.context_next();
-            task::block_on(app.update(true)).unwrap();
+        app.mode = AppMode::TaskHelpPopup;
+        app.task_report_next();
+        app.context_next();
+        task::block_on(app.update(true)).unwrap();
 
+        let mut test_case = |expected: &Buffer| {
             let backend = TestBackend::new(40, 12);
             let mut terminal = Terminal::new(backend).unwrap();
             terminal
@@ -2860,15 +2867,15 @@ mod tests {
         test_case(&expected);
     }
 
-    fn test_draw_context_menu() {
-        let test_case = |expected: &Buffer| {
-            let mut app = TaskwarriorTuiApp::new().unwrap();
+    async fn test_draw_context_menu() {
+        let mut app = TaskwarriorTuiApp::new().await.unwrap();
 
-            app.mode = AppMode::TaskContextMenu;
-            app.task_report_next();
-            app.context_next();
-            task::block_on(app.update(true)).unwrap();
+        app.mode = AppMode::TaskContextMenu;
+        app.task_report_next();
+        app.context_next();
+        app.update(true).await.unwrap();
 
+        let mut test_case = |expected: &Buffer| {
             let backend = TestBackend::new(80, 10);
             let mut terminal = Terminal::new(backend).unwrap();
             terminal

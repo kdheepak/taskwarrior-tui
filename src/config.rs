@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use async_std::task;
 use std::collections::HashMap;
 use std::error::Error;
 use std::process::Command;
@@ -466,7 +467,10 @@ mod tests {
     use super::*;
     #[test]
     fn test_uda_configuration() {
-        assert_eq!(None, Config::get_config("uda.taskwarrior-tui.unmark.indicator"));
+        assert_eq!(
+            None,
+            task::block_on(Config::get_config("uda.taskwarrior-tui.unmark.indicator"))
+        );
     }
 
     #[test]
