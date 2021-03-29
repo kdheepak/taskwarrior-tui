@@ -43,6 +43,7 @@ pub struct Config {
     pub print_empty_columns: bool,
     pub due: usize,
     pub rule_precedence_color: Vec<String>,
+    pub uda_task_detail_prefetch: usize,
     pub uda_task_report_show_info: bool,
     pub uda_task_report_looping: bool,
     pub uda_selection_indicator: String,
@@ -70,6 +71,7 @@ impl Config {
             data_location: Self::get_data_location(),
             due: Self::get_due(),
             rule_precedence_color: Self::get_rule_precedence_color(),
+            uda_task_detail_prefetch: Self::get_uda_task_detail_prefetch(),
             uda_task_report_show_info: Self::get_uda_task_report_show_info(),
             uda_task_report_looping: Self::get_uda_task_report_looping(),
             uda_selection_indicator: Self::get_uda_selection_indicator(),
@@ -335,6 +337,13 @@ impl Config {
         Self::get_config("data.location")
             .context("Unable to parse `task show data.location`.")
             .unwrap()
+    }
+
+    fn get_uda_task_detail_prefetch() -> usize {
+        Self::get_config("uda.taskwarrior-tui.task-report.task-detail-prefetch")
+            .unwrap_or_default()
+            .parse::<usize>()
+            .unwrap_or(10)
     }
 
     fn get_uda_task_report_show_info() -> bool {

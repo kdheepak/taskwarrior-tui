@@ -30,7 +30,11 @@ use chrono::{Datelike, Local, NaiveDate, NaiveDateTime, TimeZone};
 
 use anyhow::Result;
 
+use async_std::stream::StreamExt;
 use async_std::task;
+use futures::future::join_all;
+use futures::join;
+use futures::stream::FuturesOrdered;
 
 use std::sync::{Arc, Mutex};
 use std::{sync::mpsc, thread, time::Duration};
@@ -176,6 +180,7 @@ impl TaskwarriorTuiApp {
         let c = Config::default()?;
         let mut kc = KeyConfig::default();
         kc.update()?;
+        let (w, h) = crossterm::terminal::size()?;
         let mut app = Self {
             should_quit: false,
             task_table_state: TableState::default(),
@@ -201,8 +206,8 @@ impl TaskwarriorTuiApp {
             contexts: vec![],
             last_export: None,
             keyconfig: kc,
-            terminal_width: 0,
-            terminal_height: 0,
+            terminal_width: w,
+            terminal_height: h,
         };
         for c in app.config.filter.chars() {
             app.filter.insert(c, 1);
@@ -566,21 +571,10 @@ impl TaskwarriorTuiApp {
         let task_id = self.tasks[selected].id().unwrap_or_default();
         let task_uuid = *self.tasks[selected].uuid();
 
-        if !self.task_details.contains_key(&task_uuid) {
-            let output = Command::new("task")
-                .arg("rc.color=off")
-                .arg(format!("rc.defaultwidth={}", self.terminal_width - 2))
-                .arg(format!("{}", task_uuid))
-                .output();
-            let data = if let Ok(output) = output {
-                String::from_utf8_lossy(&output.stdout).to_string()
-            } else {
-                "".to_string()
-            };
-            let entry = self.task_details.entry(task_uuid).or_insert_with(|| "".to_string());
-            *entry = data;
-        }
-        let data = self.task_details[&task_uuid].clone();
+        let data = match self.task_details.get(&task_uuid) {
+            Some(s) => s.clone(),
+            None => "Loading task details...".to_string(),
+        };
 
         self.task_details_scroll = std::cmp::min(
             (data.lines().count() as u16).saturating_sub(rect.height),
@@ -836,6 +830,42 @@ impl TaskwarriorTuiApp {
             self.export_contexts().await?;
             self.update_tags();
             self.task_details.clear();
+        }
+        self.update_task_details().await?;
+        Ok(())
+    }
+
+    pub async fn update_task_details(&mut self) -> Result<()> {
+        let selected = self.current_selection;
+
+        let mut l = vec![];
+        for i in 0..self.config.uda_task_detail_prefetch {
+            l.push(std::cmp::min(selected + i, self.tasks.len() - 1));
+            l.push(selected.saturating_sub(i).saturating_sub(1));
+        }
+        let mut output_futs = FuturesOrdered::new();
+        for s in l.iter() {
+            let task_id = self.tasks[*s].id().unwrap_or_default();
+            let task_uuid = *self.tasks[*s].uuid();
+            if !self.task_details.contains_key(&task_uuid) {
+                let output_fut = async_std::process::Command::new("task")
+                    .arg("rc.color=off")
+                    .arg(format!("rc.defaultwidth={}", self.terminal_width - 2))
+                    .arg(format!("{}", task_uuid))
+                    .output();
+                output_futs.push(output_fut);
+            }
+        }
+
+        for s in l.iter() {
+            let task_id = self.tasks[*s].id().unwrap_or_default();
+            let task_uuid = *self.tasks[*s].uuid();
+            if let Some(output) = output_futs.next().await {
+                if let Ok(output) = output {
+                    let data = String::from_utf8_lossy(&output.stdout).to_string();
+                    self.task_details.insert(task_uuid, data);
+                };
+            }
         }
         Ok(())
     }
@@ -2082,6 +2112,13 @@ mod tests {
     fn teardown() {
         let cd = Path::new(env!("TASKDATA"));
         std::fs::remove_dir_all(cd).unwrap();
+    }
+
+    #[test]
+    fn test_debug() {
+        let mut app = TaskwarriorTuiApp::new().unwrap();
+        assert!(app.get_context().is_ok());
+        assert!(task::block_on(app.update(true)).is_ok());
     }
 
     #[test]
