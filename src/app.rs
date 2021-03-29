@@ -853,12 +853,10 @@ impl TaskwarriorTuiApp {
     }
 
     pub async fn update_task_details(&mut self) -> Result<()> {
-        let task_uuids = self.tasks.iter().map(|t| t.uuid()).collect::<Vec<_>>();
-
         let mut to_delete = vec![];
         for k in self.task_details.keys() {
-            if !task_uuids.contains(&k) {
-                to_delete.push(k.clone());
+            if !self.tasks.iter().map(|t| t.uuid()).any(|x| x == k) {
+                to_delete.push(*k);
             }
         }
 
