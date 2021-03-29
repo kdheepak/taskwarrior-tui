@@ -836,6 +836,10 @@ impl TaskwarriorTuiApp {
     }
 
     pub async fn update_task_details(&mut self) -> Result<()> {
+        if self.tasks.len() == 0 {
+            return Ok(());
+        }
+
         let selected = self.current_selection;
 
         let mut l = vec![];
