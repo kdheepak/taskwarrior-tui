@@ -839,22 +839,24 @@ impl TaskwarriorTuiApp {
     }
 
     pub async fn update_task_details(&mut self) -> Result<()> {
-        if self.tasks.is_empty() {
-            return Ok(());
-        }
-
         let selected = self.current_selection;
 
         let mut l = vec![selected];
 
         for s in 1..=self.config.uda_task_detail_prefetch {
-            l.insert(0, selected.saturating_sub(s));
+            l.insert(0, std::cmp::min(selected.saturating_sub(s), self.tasks.len() - 1));
             l.push(std::cmp::min(selected + s, self.tasks.len() - 1))
         }
 
         l.dedup();
         let mut output_futs = FuturesOrdered::new();
         for s in l.iter() {
+            if self.tasks.is_empty() {
+                return Ok(());
+            }
+            if s >= &self.tasks.len() {
+                break;
+            }
             let task_id = self.tasks[*s].id().unwrap_or_default();
             let task_uuid = *self.tasks[*s].uuid();
             if !self.task_details.contains_key(&task_uuid) {
@@ -868,6 +870,9 @@ impl TaskwarriorTuiApp {
         }
 
         for s in l.iter() {
+            if s >= &self.tasks.len() {
+                break;
+            }
             let task_id = self.tasks[*s].id().unwrap_or_default();
             let task_uuid = *self.tasks[*s].uuid();
             if !self.task_details.contains_key(&task_uuid) {
