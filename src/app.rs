@@ -147,6 +147,7 @@ pub enum AppMode {
 
 pub struct TaskwarriorTuiApp {
     pub should_quit: bool,
+    pub dirty: bool,
     pub task_table_state: TableState,
     pub context_table_state: TableState,
     pub current_context_filter: String,
@@ -183,6 +184,7 @@ impl TaskwarriorTuiApp {
         let (w, h) = crossterm::terminal::size()?;
         let mut app = Self {
             should_quit: false,
+            dirty: false,
             task_table_state: TableState::default(),
             context_table_state: TableState::default(),
             tasks: vec![],
@@ -828,13 +830,14 @@ impl TaskwarriorTuiApp {
     }
 
     pub async fn update(&mut self, force: bool) -> Result<()> {
-        if force || self.tasks_changed_since(self.last_export)? {
+        if force || self.dirty || self.tasks_changed_since(self.last_export)? {
             self.last_export = Some(std::time::SystemTime::now());
             self.task_report_table.export_headers()?;
             let _ = self.export_tasks().await;
             self.export_contexts().await?;
             self.update_tags();
             self.task_details.clear();
+            self.dirty = false;
         }
         self.update_task_details().await?;
         Ok(())
@@ -2044,7 +2047,7 @@ impl TaskwarriorTuiApp {
                 }
                 _ => {
                     handle_movement(&mut self.filter, input);
-                    self.update(false).await?;
+                    self.dirty = true;
                 }
             },
             AppMode::TaskError => self.mode = AppMode::TaskReport,
