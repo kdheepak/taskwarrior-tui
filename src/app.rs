@@ -2873,8 +2873,6 @@ mod tests {
         let mut app = task::block_on(TaskwarriorTuiApp::new()).unwrap();
 
         app.mode = AppMode::TaskContextMenu;
-        app.task_report_next();
-        app.context_next();
         task::block_on(app.update(true)).unwrap();
 
         let mut test_case = |expected: &Buffer| {
