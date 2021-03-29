@@ -840,7 +840,32 @@ impl TaskwarriorTuiApp {
         Ok(())
     }
 
+    pub async fn get_task_details(&mut self, task_uuid: Uuid) -> Result<()> {
+        let output = async_std::process::Command::new("task")
+            .arg("rc.color=off")
+            .arg(format!("rc.defaultwidth={}", self.terminal_width - 2))
+            .arg(format!("{}", task_uuid))
+            .output()
+            .await?;
+        let data = String::from_utf8_lossy(&output.stdout).to_string();
+        self.task_details.insert(task_uuid, data);
+        Ok(())
+    }
+
     pub async fn update_task_details(&mut self) -> Result<()> {
+        let task_uuids = self.tasks.iter().map(|t| t.uuid()).collect::<Vec<_>>();
+
+        let mut to_delete = vec![];
+        for k in self.task_details.keys() {
+            if !task_uuids.contains(&k) {
+                to_delete.push(k.clone());
+            }
+        }
+
+        for k in to_delete {
+            self.task_details.remove(&k);
+        }
+
         let selected = self.current_selection;
 
         let mut l = vec![selected];
@@ -1294,6 +1319,9 @@ impl TaskwarriorTuiApp {
                     Ok(o) => {
                         if o.status.success() {
                             self.modify.update("", 0);
+                            for task_uuid in &task_uuids {
+                                self.get_task_details(*task_uuid).await.unwrap();
+                            }
                             Ok(())
                         } else {
                             Err(format!("Modify failed. {}", String::from_utf8_lossy(&o.stdout),))
