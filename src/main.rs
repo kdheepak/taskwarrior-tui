@@ -21,6 +21,7 @@ use std::io::Write;
 use std::panic;
 use std::time::Duration;
 
+use async_std::sync::{Arc, Mutex};
 use async_std::task;
 use futures::join;
 use futures::stream::{FuturesUnordered, StreamExt};
@@ -53,7 +54,7 @@ fn main() -> Result<()> {
 
 async fn tui_main(_config: &str) -> Result<()> {
     // Terminal initialization
-    let mut terminal = setup_terminal();
+    let terminal = setup_terminal();
 
     panic::set_hook(Box::new(|panic_info| {
         destruct_terminal();
@@ -67,20 +68,31 @@ async fn tui_main(_config: &str) -> Result<()> {
 
     let maybeapp = TaskwarriorTuiApp::new().await;
     match maybeapp {
-        Ok(mut app) => {
+        Ok(app) => {
+            let app = Arc::new(Mutex::new(app));
+            let terminal = Arc::new(Mutex::new(terminal));
             loop {
-                app.render(&mut terminal).await?;
+                let handle = {
+                    let app = app.clone();
+                    let terminal = terminal.clone();
+                    task::spawn_local(async move {
+                        let mut t = terminal.lock().await;
+                        app.lock().await.render(&mut t).await
+                    })
+                };
                 // Handle input
                 match events.next().await? {
                     Event::Input(input) => {
-                        let r = app.handle_input(input, &mut terminal, &events).await;
+                        let mut t = terminal.lock().await;
+                        let r = app.lock().await.handle_input(input, &mut t, &events).await;
                         if r.is_err() {
                             destruct_terminal();
                             return r;
                         }
                     }
                     Event::Tick => {
-                        let r = app.update(false).await;
+                        let r = app.lock().await.update(false).await;
+                        handle.await?;
                         if r.is_err() {
                             destruct_terminal();
                             return r;
@@ -88,7 +100,7 @@ async fn tui_main(_config: &str) -> Result<()> {
                     }
                 }
 
-                if app.should_quit {
+                if app.lock().await.should_quit {
                     destruct_terminal();
                     break;
                 }

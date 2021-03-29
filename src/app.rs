@@ -874,6 +874,9 @@ impl TaskwarriorTuiApp {
         }
 
         let selected = self.current_selection;
+        if selected >= self.tasks.len() {
+            return Ok(());
+        }
         let current_task_uuid = *self.tasks[selected].uuid();
 
         let mut l = vec![selected];
