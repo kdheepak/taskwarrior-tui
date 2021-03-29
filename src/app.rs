@@ -839,7 +839,9 @@ impl TaskwarriorTuiApp {
             self.task_details.clear();
             self.dirty = false;
         }
-        self.update_task_details().await?;
+        if self.task_report_show_info {
+            self.update_task_details().await?;
+        }
         Ok(())
     }
 
