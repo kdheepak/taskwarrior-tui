@@ -824,6 +824,7 @@ impl TaskwarriorTuiApp {
             let _ = self.export_tasks();
             self.export_contexts()?;
             self.update_tags();
+            self.task_details.clear();
         }
         Ok(())
     }
