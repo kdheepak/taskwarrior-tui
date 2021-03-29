@@ -576,7 +576,7 @@ impl TaskwarriorTuiApp {
 
         let data = match self.task_details.get(&task_uuid) {
             Some(s) => s.clone(),
-            None => "Loading task details...".to_string(),
+            None => "Loading task details ...".to_string(),
         };
 
         self.task_details_scroll = std::cmp::min(
@@ -845,11 +845,14 @@ impl TaskwarriorTuiApp {
 
         let selected = self.current_selection;
 
-        let mut l = vec![];
-        for i in 0..self.config.uda_task_detail_prefetch {
-            l.push(std::cmp::min(selected + i, self.tasks.len() - 1));
-            l.push(selected.saturating_sub(i).saturating_sub(1));
+        let mut l = vec![selected];
+
+        for s in 1..=self.config.uda_task_detail_prefetch {
+            l.insert(0, selected.saturating_sub(s));
+            l.push(std::cmp::min(selected + s, self.tasks.len() - 1))
         }
+
+        l.dedup();
         let mut output_futs = FuturesOrdered::new();
         for s in l.iter() {
             let task_id = self.tasks[*s].id().unwrap_or_default();
@@ -867,9 +870,11 @@ impl TaskwarriorTuiApp {
         for s in l.iter() {
             let task_id = self.tasks[*s].id().unwrap_or_default();
             let task_uuid = *self.tasks[*s].uuid();
-            if let Some(Ok(output)) = output_futs.next().await {
-                let data = String::from_utf8_lossy(&output.stdout).to_string();
-                self.task_details.insert(task_uuid, data);
+            if !self.task_details.contains_key(&task_uuid) {
+                if let Some(Ok(output)) = output_futs.next().await {
+                    let data = String::from_utf8_lossy(&output.stdout).to_string();
+                    self.task_details.insert(task_uuid, data);
+                }
             }
         }
         Ok(())
