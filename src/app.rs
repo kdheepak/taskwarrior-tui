@@ -2192,36 +2192,34 @@ mod tests {
 
     #[test]
     fn test_taskwarrior_tui() {
-        task::block_on(async {
-            let app = TaskwarriorTuiApp::new().await.unwrap();
-            assert!(app.task_by_index(0).is_none());
+        let app = task::block_on(TaskwarriorTuiApp::new()).unwrap();
+        assert!(app.task_by_index(0).is_none());
 
-            let app = TaskwarriorTuiApp::new().await.unwrap();
-            assert!(app
-                .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
-                .is_none());
+        let app = task::block_on(TaskwarriorTuiApp::new()).unwrap();
+        assert!(app
+            .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
+            .is_none());
 
-            test_draw_empty_task_report().await;
+        task::block_on(test_draw_empty_task_report());
 
-            setup();
+        setup();
 
-            let app = TaskwarriorTuiApp::new().await.unwrap();
-            assert!(app.task_by_index(0).is_some());
+        let app = task::block_on(TaskwarriorTuiApp::new()).unwrap();
+        assert!(app.task_by_index(0).is_some());
 
-            let app = TaskwarriorTuiApp::new().await.unwrap();
-            assert!(app
-                .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
-                .is_some());
+        let app = task::block_on(TaskwarriorTuiApp::new()).unwrap();
+        assert!(app
+            .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
+            .is_some());
 
-            test_draw_task_report().await;
-            test_task_tags().await;
-            test_task_style().await;
-            test_task_context().await;
-            test_task_tomorrow().await;
-            test_task_earlier_today().await;
-            test_task_later_today().await;
-            teardown();
-        })
+        task::block_on(test_draw_task_report());
+        task::block_on(test_task_tags());
+        task::block_on(test_task_style());
+        task::block_on(test_task_context());
+        task::block_on(test_task_tomorrow());
+        task::block_on(test_task_earlier_today());
+        task::block_on(test_task_later_today());
+        teardown();
     }
 
     async fn test_task_tags() {
@@ -2870,13 +2868,14 @@ mod tests {
         test_case(&expected);
     }
 
-    async fn test_draw_context_menu() {
-        let mut app = TaskwarriorTuiApp::new().await.unwrap();
+    #[test]
+    fn test_draw_context_menu() {
+        let mut app = task::block_on(TaskwarriorTuiApp::new()).unwrap();
 
         app.mode = AppMode::TaskContextMenu;
         app.task_report_next();
         app.context_next();
-        app.update(true).await.unwrap();
+        task::block_on(app.update(true)).unwrap();
 
         let mut test_case = |expected: &Buffer| {
             let backend = TestBackend::new(80, 10);
