@@ -580,7 +580,9 @@ impl TaskwarriorTuiApp {
         };
 
         self.task_details_scroll = std::cmp::min(
-            (data.lines().count() as u16).saturating_sub(rect.height),
+            (data.lines().count() as u16)
+                .saturating_sub(rect.height)
+                .saturating_add(2),
             self.task_details_scroll,
         );
         let p = Paragraph::new(Text::from(&data[..]))
@@ -594,11 +596,11 @@ impl TaskwarriorTuiApp {
         f.render_widget(p, rect);
     }
 
-    fn task_details_scroll_down(&mut self) {
+    fn task_details_scroll_up(&mut self) {
         self.task_details_scroll = self.task_details_scroll.saturating_sub(1);
     }
 
-    fn task_details_scroll_up(&mut self) {
+    fn task_details_scroll_down(&mut self) {
         self.task_details_scroll = self.task_details_scroll.saturating_add(1);
     }
 
@@ -1741,9 +1743,9 @@ impl TaskwarriorTuiApp {
                 } else if input == Key::PageUp || input == self.keyconfig.page_up {
                     self.task_report_previous_page();
                 } else if input == Key::Ctrl('e') {
-                    self.task_details_scroll_up();
-                } else if input == Key::Ctrl('y') {
                     self.task_details_scroll_down();
+                } else if input == Key::Ctrl('y') {
+                    self.task_details_scroll_up();
                 } else if input == self.keyconfig.done {
                     match self.task_done().await {
                         Ok(_) => self.update(true).await?,
