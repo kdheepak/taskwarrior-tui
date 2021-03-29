@@ -69,7 +69,7 @@ async fn tui_main(_config: &str) -> Result<()> {
     match maybeapp {
         Ok(mut app) => {
             loop {
-                terminal.draw(|mut frame| app.draw(&mut frame)).unwrap();
+                app.render(&mut terminal).await?;
                 // Handle input
                 match events.next().await? {
                     Event::Input(input) => {

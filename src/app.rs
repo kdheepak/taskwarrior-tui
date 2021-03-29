@@ -226,6 +226,14 @@ impl TaskwarriorTuiApp {
         Ok(())
     }
 
+    pub async fn render<B>(&mut self, terminal: &mut Terminal<B>) -> Result<()>
+    where
+        B: Backend,
+    {
+        terminal.draw(|f| self.draw(f))?;
+        Ok(())
+    }
+
     pub fn draw(&mut self, f: &mut Frame<impl Backend>) {
         let rect = f.size();
         self.terminal_width = rect.width;
