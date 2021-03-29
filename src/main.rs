@@ -65,7 +65,7 @@ async fn tui_main(_config: &str) -> Result<()> {
         tick_rate: Duration::from_millis(250),
     });
 
-    let maybeapp = TaskwarriorTuiApp::new();
+    let maybeapp = TaskwarriorTuiApp::new().await;
     match maybeapp {
         Ok(mut app) => {
             loop {

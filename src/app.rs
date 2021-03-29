@@ -176,8 +176,8 @@ pub struct TaskwarriorTuiApp {
 }
 
 impl TaskwarriorTuiApp {
-    pub fn new() -> Result<Self> {
-        let c = Config::default()?;
+    pub async fn new() -> Result<Self> {
+        let c = Config::default().await?;
         let mut kc = KeyConfig::default();
         kc.update()?;
         let (w, h) = crossterm::terminal::size()?;
@@ -212,20 +212,25 @@ impl TaskwarriorTuiApp {
         for c in app.config.filter.chars() {
             app.filter.insert(c, 1);
         }
-        app.get_context()?;
-        task::block_on(app.update(true))?;
+        app.get_context().await?;
+        app.update(true).await?;
         Ok(app)
     }
 
-    pub fn get_context(&mut self) -> Result<()> {
-        let output = Command::new("task").arg("_get").arg("rc.context").output()?;
+    pub async fn get_context(&mut self) -> Result<()> {
+        let output = async_std::process::Command::new("task")
+            .arg("_get")
+            .arg("rc.context")
+            .output()
+            .await?;
         self.current_context = String::from_utf8_lossy(&output.stdout).to_string();
         self.current_context = self.current_context.strip_suffix('\n').unwrap_or("").to_string();
 
-        let output = Command::new("task")
+        let output = async_std::process::Command::new("task")
             .arg("_get")
             .arg(format!("rc.context.{}", self.current_context))
-            .output()?;
+            .output()
+            .await?;
         self.current_context_filter = String::from_utf8_lossy(&output.stdout).to_string();
         self.current_context_filter = self.current_context_filter.strip_suffix('\n').unwrap_or("").to_string();
         Ok(())
@@ -296,7 +301,6 @@ impl TaskwarriorTuiApp {
         let mut tasks_with_styles = vec![];
 
         let tasks_is_empty = self.tasks.is_empty();
-        let tasks_len = self.tasks.len();
 
         if !tasks_is_empty {
             let tasks = &self.tasks;
@@ -321,8 +325,7 @@ impl TaskwarriorTuiApp {
 
     pub fn draw_task(&mut self, f: &mut Frame<impl Backend>) {
         let tasks_is_empty = self.tasks.is_empty();
-        let tasks_len = self.tasks.len();
-        while !tasks_is_empty && self.current_selection >= tasks_len {
+        while !tasks_is_empty && self.current_selection >= self.tasks.len() {
             self.task_report_previous();
         }
         let rects = Layout::default()
@@ -349,7 +352,7 @@ impl TaskwarriorTuiApp {
             self.draw_task_details(f, split_task_layout[1]);
         }
         let selected = self.current_selection;
-        let task_ids = if tasks_len == 0 {
+        let task_ids = if self.tasks.is_empty() {
             vec!["0".to_string()]
         } else {
             match self.task_table_state.mode() {
@@ -836,7 +839,7 @@ impl TaskwarriorTuiApp {
     }
 
     pub async fn update_task_details(&mut self) -> Result<()> {
-        if self.tasks.len() == 0 {
+        if self.tasks.is_empty() {
             return Ok(());
         }
 
@@ -864,11 +867,9 @@ impl TaskwarriorTuiApp {
         for s in l.iter() {
             let task_id = self.tasks[*s].id().unwrap_or_default();
             let task_uuid = *self.tasks[*s].uuid();
-            if let Some(output) = output_futs.next().await {
-                if let Ok(output) = output {
-                    let data = String::from_utf8_lossy(&output.stdout).to_string();
-                    self.task_details.insert(task_uuid, data);
-                };
+            if let Some(Ok(output)) = output_futs.next().await {
+                let data = String::from_utf8_lossy(&output.stdout).to_string();
+                self.task_details.insert(task_uuid, data);
             }
         }
         Ok(())
@@ -922,11 +923,11 @@ impl TaskwarriorTuiApp {
         self.context_table_state.select(Some(i));
     }
 
-    pub fn context_select(&mut self) -> Result<(), String> {
+    pub async fn context_select(&mut self) -> Result<(), String> {
         let i = self.context_table_state.current_selection().unwrap();
-        let mut command = Command::new("task");
+        let mut command = async_std::process::Command::new("task");
         command.arg("context").arg(&self.contexts[i].name);
-        let output = command.output();
+        let output = command.output().await;
         Ok(())
     }
 
@@ -1140,7 +1141,7 @@ impl TaskwarriorTuiApp {
         task_uuids
     }
 
-    pub fn task_subprocess(&mut self) -> Result<(), String> {
+    pub async fn task_subprocess(&mut self) -> Result<(), String> {
         if self.tasks.is_empty() {
             return Ok(());
         }
@@ -1150,7 +1151,7 @@ impl TaskwarriorTuiApp {
         match shlex::split(&shell) {
             Some(cmd) => {
                 // first argument must be a binary
-                let mut command = Command::new(&cmd[0]);
+                let mut command = async_std::process::Command::new(&cmd[0]);
                 // remaining arguments are args
                 for (i, s) in cmd.iter().enumerate() {
                     if i == 0 {
@@ -1158,7 +1159,7 @@ impl TaskwarriorTuiApp {
                     }
                     command.arg(&s);
                 }
-                let output = command.output();
+                let output = command.output().await;
                 match output {
                     Ok(_) => {
                         self.command.update("", 0);
@@ -1171,12 +1172,12 @@ impl TaskwarriorTuiApp {
         }
     }
 
-    pub fn task_log(&mut self) -> Result<(), String> {
+    pub async fn task_log(&mut self) -> Result<(), String> {
         if self.tasks.is_empty() {
             return Ok(());
         }
 
-        let mut command = Command::new("task");
+        let mut command = async_std::process::Command::new("task");
 
         command.arg("log");
 
@@ -1187,7 +1188,7 @@ impl TaskwarriorTuiApp {
                 for s in cmd {
                     command.arg(&s);
                 }
-                let output = command.output();
+                let output = command.output().await;
                 match output {
                     Ok(_) => {
                         self.command.update("", 0);
@@ -1203,7 +1204,7 @@ impl TaskwarriorTuiApp {
         }
     }
 
-    pub fn task_shortcut(&mut self, s: usize) -> Result<(), String> {
+    pub async fn task_shortcut(&mut self, s: usize) -> Result<(), String> {
         if self.tasks.is_empty() {
             return Ok(());
         }
@@ -1228,11 +1229,11 @@ impl TaskwarriorTuiApp {
         let shell = shellexpand::tilde(&shell).into_owned();
         match shlex::split(&shell) {
             Some(cmd) => {
-                let mut command = Command::new(&cmd[0]);
+                let mut command = async_std::process::Command::new(&cmd[0]);
                 for s in cmd.iter().skip(1) {
                     command.arg(&s);
                 }
-                let output = command.output();
+                let output = command.output().await;
                 match output {
                     Ok(o) => {
                         if o.status.success() {
@@ -1252,14 +1253,14 @@ impl TaskwarriorTuiApp {
         }
     }
 
-    pub fn task_modify(&mut self) -> Result<(), String> {
+    pub async fn task_modify(&mut self) -> Result<(), String> {
         if self.tasks.is_empty() {
             return Ok(());
         }
 
         let task_uuids = self.selected_task_uuids();
 
-        let mut command = Command::new("task");
+        let mut command = async_std::process::Command::new("task");
         command.arg("rc.bulk=0");
         command.arg("rc.confirmation=off");
         command.arg("rc.dependency.confirmation=off");
@@ -1276,7 +1277,7 @@ impl TaskwarriorTuiApp {
                 for s in cmd {
                     command.arg(&s);
                 }
-                let output = command.output();
+                let output = command.output().await;
                 match output {
                     Ok(o) => {
                         if o.status.success() {
@@ -1296,14 +1297,14 @@ impl TaskwarriorTuiApp {
         }
     }
 
-    pub fn task_annotate(&mut self) -> Result<(), String> {
+    pub async fn task_annotate(&mut self) -> Result<(), String> {
         if self.tasks.is_empty() {
             return Ok(());
         }
 
         let task_uuids = self.selected_task_uuids();
 
-        let mut command = Command::new("task");
+        let mut command = async_std::process::Command::new("task");
         command.arg("rc.bulk=0");
         command.arg("rc.confirmation=off");
         command.arg("rc.dependency.confirmation=off");
@@ -1320,7 +1321,7 @@ impl TaskwarriorTuiApp {
                 for s in cmd {
                     command.arg(&s);
                 }
-                let output = command.output();
+                let output = command.output().await;
                 match output {
                     Ok(o) => {
                         if o.status.success() {
@@ -1345,8 +1346,8 @@ impl TaskwarriorTuiApp {
         }
     }
 
-    pub fn task_add(&mut self) -> Result<(), String> {
-        let mut command = Command::new("task");
+    pub async fn task_add(&mut self) -> Result<(), String> {
+        let mut command = async_std::process::Command::new("task");
         command.arg("add");
 
         let shell = self.command.as_str();
@@ -1356,7 +1357,7 @@ impl TaskwarriorTuiApp {
                 for s in cmd {
                     command.arg(&s);
                 }
-                let output = command.output();
+                let output = command.output().await;
                 match output {
                     Ok(_) => {
                         self.command.update("", 0);
@@ -1372,8 +1373,11 @@ impl TaskwarriorTuiApp {
         }
     }
 
-    pub fn task_virtual_tags(task_uuid: Uuid) -> Result<String, String> {
-        let output = Command::new("task").arg(format!("{}", task_uuid)).output();
+    pub async fn task_virtual_tags(task_uuid: Uuid) -> Result<String, String> {
+        let output = async_std::process::Command::new("task")
+            .arg(format!("{}", task_uuid))
+            .output()
+            .await;
 
         match output {
             Ok(output) => {
@@ -1399,7 +1403,7 @@ impl TaskwarriorTuiApp {
         }
     }
 
-    pub fn task_start_stop(&mut self) -> Result<(), String> {
+    pub async fn task_start_stop(&mut self) -> Result<(), String> {
         if self.tasks.is_empty() {
             return Ok(());
         }
@@ -1411,13 +1415,21 @@ impl TaskwarriorTuiApp {
 
         for task_uuid in &task_uuids {
             let mut command = "start";
-            for tag in TaskwarriorTuiApp::task_virtual_tags(*task_uuid).unwrap().split(' ') {
+            for tag in TaskwarriorTuiApp::task_virtual_tags(*task_uuid)
+                .await
+                .unwrap()
+                .split(' ')
+            {
                 if tag == "ACTIVE" {
                     command = "stop"
                 }
             }
 
-            let output = Command::new("task").arg(task_uuid.to_string()).arg(command).output();
+            let output = async_std::process::Command::new("task")
+                .arg(task_uuid.to_string())
+                .arg(command)
+                .output()
+                .await;
             if output.is_err() {
                 return Err(format!("Error running `task {}` for task `{}`.", command, task_uuid,));
             }
@@ -1426,14 +1438,14 @@ impl TaskwarriorTuiApp {
         Ok(())
     }
 
-    pub fn task_delete(&self) -> Result<(), String> {
+    pub async fn task_delete(&self) -> Result<(), String> {
         if self.tasks.is_empty() {
             return Ok(());
         }
 
         let task_uuids = self.selected_task_uuids();
 
-        let mut cmd = Command::new("task");
+        let mut cmd = async_std::process::Command::new("task");
         cmd.arg("rc.bulk=0")
             .arg("rc.confirmation=off")
             .arg("rc.dependency.confirmation=off")
@@ -1442,7 +1454,7 @@ impl TaskwarriorTuiApp {
             cmd.arg(task_uuid.to_string());
         }
         cmd.arg("delete");
-        let output = cmd.output();
+        let output = cmd.output().await;
         match output {
             Ok(_) => Ok(()),
             Err(_) => Err(format!(
@@ -1456,12 +1468,12 @@ impl TaskwarriorTuiApp {
         }
     }
 
-    pub fn task_done(&mut self) -> Result<(), String> {
+    pub async fn task_done(&mut self) -> Result<(), String> {
         if self.tasks.is_empty() {
             return Ok(());
         }
         let task_uuids = self.selected_task_uuids();
-        let mut cmd = Command::new("task");
+        let mut cmd = async_std::process::Command::new("task");
         cmd.arg("rc.bulk=0")
             .arg("rc.confirmation=off")
             .arg("rc.dependency.confirmation=off")
@@ -1470,7 +1482,7 @@ impl TaskwarriorTuiApp {
             cmd.arg(task_uuid.to_string());
         }
         cmd.arg("done");
-        let output = cmd.output();
+        let output = cmd.output().await;
         match output {
             Ok(_) => Ok(()),
             Err(_) => Err(format!(
@@ -1484,11 +1496,15 @@ impl TaskwarriorTuiApp {
         }
     }
 
-    pub fn task_undo(&self) -> Result<(), String> {
+    pub async fn task_undo(&self) -> Result<(), String> {
         if self.tasks.is_empty() {
             return Ok(());
         }
-        let output = Command::new("task").arg("rc.confirmation=off").arg("undo").output();
+        let output = async_std::process::Command::new("task")
+            .arg("rc.confirmation=off")
+            .arg("undo")
+            .output()
+            .await;
 
         match output {
             Ok(_) => Ok(()),
@@ -1719,7 +1735,7 @@ impl TaskwarriorTuiApp {
                 } else if input == Key::Ctrl('y') {
                     self.task_details_scroll_down();
                 } else if input == self.keyconfig.done {
-                    match self.task_done() {
+                    match self.task_done().await {
                         Ok(_) => self.update(true).await?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
@@ -1727,7 +1743,7 @@ impl TaskwarriorTuiApp {
                         }
                     }
                 } else if input == self.keyconfig.delete {
-                    match self.task_delete() {
+                    match self.task_delete().await {
                         Ok(_) => self.update(true).await?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
@@ -1735,7 +1751,7 @@ impl TaskwarriorTuiApp {
                         }
                     }
                 } else if input == self.keyconfig.start_stop {
-                    match self.task_start_stop() {
+                    match self.task_start_stop().await {
                         Ok(_) => self.update(true).await?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
@@ -1743,7 +1759,7 @@ impl TaskwarriorTuiApp {
                         }
                     }
                 } else if input == self.keyconfig.undo {
-                    match self.task_undo() {
+                    match self.task_undo().await {
                         Ok(_) => self.update(true).await?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
@@ -1786,7 +1802,7 @@ impl TaskwarriorTuiApp {
                 } else if input == self.keyconfig.filter {
                     self.mode = AppMode::TaskFilter;
                 } else if input == self.keyconfig.shortcut1 {
-                    match self.task_shortcut(1) {
+                    match self.task_shortcut(1).await {
                         Ok(_) => self.update(true).await?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
@@ -1794,7 +1810,7 @@ impl TaskwarriorTuiApp {
                         }
                     }
                 } else if input == self.keyconfig.shortcut2 {
-                    match self.task_shortcut(2) {
+                    match self.task_shortcut(2).await {
                         Ok(_) => self.update(true).await?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
@@ -1802,7 +1818,7 @@ impl TaskwarriorTuiApp {
                         }
                     }
                 } else if input == self.keyconfig.shortcut3 {
-                    match self.task_shortcut(3) {
+                    match self.task_shortcut(3).await {
                         Ok(_) => self.update(true).await?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
@@ -1810,7 +1826,7 @@ impl TaskwarriorTuiApp {
                         }
                     }
                 } else if input == self.keyconfig.shortcut4 {
-                    match self.task_shortcut(4) {
+                    match self.task_shortcut(4).await {
                         Ok(_) => self.update(true).await?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
@@ -1818,7 +1834,7 @@ impl TaskwarriorTuiApp {
                         }
                     }
                 } else if input == self.keyconfig.shortcut5 {
-                    match self.task_shortcut(5) {
+                    match self.task_shortcut(5).await {
                         Ok(_) => self.update(true).await?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
@@ -1826,7 +1842,7 @@ impl TaskwarriorTuiApp {
                         }
                     }
                 } else if input == self.keyconfig.shortcut6 {
-                    match self.task_shortcut(6) {
+                    match self.task_shortcut(6).await {
                         Ok(_) => self.update(true).await?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
@@ -1834,7 +1850,7 @@ impl TaskwarriorTuiApp {
                         }
                     }
                 } else if input == self.keyconfig.shortcut7 {
-                    match self.task_shortcut(7) {
+                    match self.task_shortcut(7).await {
                         Ok(_) => self.update(true).await?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
@@ -1842,7 +1858,7 @@ impl TaskwarriorTuiApp {
                         }
                     }
                 } else if input == self.keyconfig.shortcut8 {
-                    match self.task_shortcut(8) {
+                    match self.task_shortcut(8).await {
                         Ok(_) => self.update(true).await?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
@@ -1850,7 +1866,7 @@ impl TaskwarriorTuiApp {
                         }
                     }
                 } else if input == self.keyconfig.shortcut9 {
-                    match self.task_shortcut(9) {
+                    match self.task_shortcut(9).await {
                         Ok(_) => self.update(true).await?,
                         Err(e) => {
                             self.mode = AppMode::TaskError;
@@ -1873,9 +1889,9 @@ impl TaskwarriorTuiApp {
                 } else if input == Key::Up || input == self.keyconfig.up {
                     self.context_previous();
                 } else if input == Key::Char('\n') {
-                    match self.context_select() {
+                    match self.context_select().await {
                         Ok(_) => {
-                            self.get_context()?;
+                            self.get_context().await?;
                             self.update(true).await?;
                         }
                         Err(e) => {
@@ -1899,7 +1915,7 @@ impl TaskwarriorTuiApp {
                 }
             }
             AppMode::TaskModify => match input {
-                Key::Char('\n') => match self.task_modify() {
+                Key::Char('\n') => match self.task_modify().await {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
                         self.update(true).await?;
@@ -1916,7 +1932,7 @@ impl TaskwarriorTuiApp {
                 _ => handle_movement(&mut self.modify, input),
             },
             AppMode::TaskSubprocess => match input {
-                Key::Char('\n') => match self.task_subprocess() {
+                Key::Char('\n') => match self.task_subprocess().await {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
                         self.update(true).await?;
@@ -1933,7 +1949,7 @@ impl TaskwarriorTuiApp {
                 _ => handle_movement(&mut self.command, input),
             },
             AppMode::TaskLog => match input {
-                Key::Char('\n') => match self.task_log() {
+                Key::Char('\n') => match self.task_log().await {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
                         self.update(true).await?;
@@ -1950,7 +1966,7 @@ impl TaskwarriorTuiApp {
                 _ => handle_movement(&mut self.command, input),
             },
             AppMode::TaskAnnotate => match input {
-                Key::Char('\n') => match self.task_annotate() {
+                Key::Char('\n') => match self.task_annotate().await {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
                         self.update(true).await?;
@@ -1967,7 +1983,7 @@ impl TaskwarriorTuiApp {
                 _ => handle_movement(&mut self.command, input),
             },
             AppMode::TaskAdd => match input {
-                Key::Char('\n') => match self.task_add() {
+                Key::Char('\n') => match self.task_add().await {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
                         self.update(true).await?;
