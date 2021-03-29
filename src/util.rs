@@ -13,7 +13,7 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
-use async_std::channel::bounded;
+use async_std::channel::unbounded;
 use async_std::task;
 use futures::prelude::*;
 
@@ -78,7 +78,7 @@ impl Events {
         use crossterm::event::{KeyCode::*, KeyModifiers};
         let pause_stdin = Arc::new(AtomicBool::new(false));
         let tick_rate = config.tick_rate;
-        let (tx, rx) = bounded::<Event<Key>>(10);
+        let (tx, rx) = unbounded::<Event<Key>>();
         let ps = pause_stdin.clone();
         task::spawn(async move {
             let mut reader = EventStream::new();

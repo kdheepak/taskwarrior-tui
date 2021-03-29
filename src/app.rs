@@ -859,18 +859,20 @@ impl TaskwarriorTuiApp {
         if self.tasks.is_empty() {
             return Ok(());
         }
+
+        // remove task_details of tasks not in task report
         let mut to_delete = vec![];
         for k in self.task_details.keys() {
             if !self.tasks.iter().map(|t| t.uuid()).any(|x| x == k) {
                 to_delete.push(*k);
             }
         }
-
         for k in to_delete {
             self.task_details.remove(&k);
         }
 
         let selected = self.current_selection;
+        let current_task_uuid = *self.tasks[selected].uuid();
 
         let mut l = vec![selected];
 
@@ -880,6 +882,7 @@ impl TaskwarriorTuiApp {
         }
 
         l.dedup();
+
         let mut output_futs = FuturesOrdered::new();
         for s in l.iter() {
             if self.tasks.is_empty() {
@@ -888,9 +891,8 @@ impl TaskwarriorTuiApp {
             if s >= &self.tasks.len() {
                 break;
             }
-            let task_id = self.tasks[*s].id().unwrap_or_default();
             let task_uuid = *self.tasks[*s].uuid();
-            if !self.task_details.contains_key(&task_uuid) {
+            if !self.task_details.contains_key(&task_uuid) || task_uuid == current_task_uuid {
                 let output_fut = async_std::process::Command::new("task")
                     .arg("rc.color=off")
                     .arg(format!("rc.defaultwidth={}", self.terminal_width - 2))
@@ -906,7 +908,7 @@ impl TaskwarriorTuiApp {
             }
             let task_id = self.tasks[*s].id().unwrap_or_default();
             let task_uuid = *self.tasks[*s].uuid();
-            if !self.task_details.contains_key(&task_uuid) {
+            if !self.task_details.contains_key(&task_uuid) || task_uuid == current_task_uuid {
                 if let Some(Ok(output)) = output_futs.next().await {
                     let data = String::from_utf8_lossy(&output.stdout).to_string();
                     self.task_details.insert(task_uuid, data);
@@ -1174,7 +1176,6 @@ impl TaskwarriorTuiApp {
         let mut task_uuids = vec![];
 
         for s in selected {
-            let task_id = self.tasks[s].id().unwrap_or_default();
             let task_uuid = *self.tasks[s].uuid();
             task_uuids.push(task_uuid);
         }
@@ -1452,7 +1453,6 @@ impl TaskwarriorTuiApp {
             return Ok(());
         }
         let selected = self.current_selection;
-        let task_id = self.tasks[selected].id().unwrap_or_default();
         let task_uuid = *self.tasks[selected].uuid();
 
         let task_uuids = self.selected_task_uuids();
@@ -1561,7 +1561,6 @@ impl TaskwarriorTuiApp {
             return Ok(());
         }
         let selected = self.task_table_state.current_selection().unwrap_or_default();
-        let task_id = self.tasks[selected].id().unwrap_or_default();
         let task_uuid = *self.tasks[selected].uuid();
         let r = Command::new("task").arg(format!("{}", task_uuid)).arg("edit").spawn();
 
@@ -1726,7 +1725,6 @@ impl TaskwarriorTuiApp {
 
     pub fn toggle_mark(&mut self) {
         let selected = self.current_selection;
-        let task_id = self.tasks[selected].id().unwrap_or_default();
         let task_uuid = *self.tasks[selected].uuid();
 
         if !self.marked.insert(task_uuid) {
