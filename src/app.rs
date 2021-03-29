@@ -2044,7 +2044,7 @@ impl TaskwarriorTuiApp {
                 }
                 _ => {
                     handle_movement(&mut self.filter, input);
-                    self.update(true).await?;
+                    self.update(false).await?;
                 }
             },
             AppMode::TaskError => self.mode = AppMode::TaskReport,
