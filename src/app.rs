@@ -48,8 +48,7 @@ use tui::{
     widgets::{Block, BorderType, Borders, Clear, Paragraph},
 };
 
-use rustyline::error::ReadlineError;
-// use rustyline::line_buffer::LineBuffer;
+// use rustyline::line_buffer::{At, LineBuffer, Word};
 use crate::line_buffer::{At, LineBuffer, Word};
 
 use std::io;
