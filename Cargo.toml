@@ -49,3 +49,6 @@ buildflags = ["--release"]
 
 [package.metadata.rpm.targets]
 taskwarrior-tui = { path = "/usr/bin/taskwarrior-tui" }
+
+[profile.release]
+debug = true
