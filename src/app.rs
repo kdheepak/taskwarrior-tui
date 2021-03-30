@@ -48,10 +48,8 @@ use tui::{
 };
 
 use rustyline::error::ReadlineError;
-use rustyline::line_buffer::LineBuffer;
-use rustyline::At;
-use rustyline::Editor;
-use rustyline::Word;
+// use rustyline::line_buffer::LineBuffer;
+use crate::line_buffer::{LineBuffer, At, Word};
 
 use std::io;
 use tui::{backend::CrosstermBackend, Terminal};
