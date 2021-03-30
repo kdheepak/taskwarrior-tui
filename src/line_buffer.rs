@@ -198,15 +198,6 @@ impl LineBuffer {
         !self.can_growth && new_len > self.buf.capacity()
     }
 
-    #[cfg(test)]
-    pub(crate) fn init(line: &str, pos: usize, cl: Option<Rc<RefCell<dyn ChangeListener>>>) -> Self {
-        let mut lb = Self::with_capacity(MAX_LINE);
-        assert!(lb.insert_str(0, line));
-        lb.set_pos(pos);
-        lb.cl = cl;
-        lb
-    }
-
     /// Extracts a string slice containing the entire buffer.
     pub fn as_str(&self) -> &str {
         &self.buf
