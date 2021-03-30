@@ -63,7 +63,6 @@ pub enum CharSearch {
     BackwardAfter(char),
 }
 
-
 impl CharSearch {
     fn opposite(self) -> Self {
         match self {
@@ -117,12 +116,8 @@ impl Movement {
             Movement::BeginningOfLine => Movement::BeginningOfLine,
             Movement::ViFirstPrint => Movement::ViFirstPrint,
             Movement::EndOfLine => Movement::EndOfLine,
-            Movement::BackwardWord(previous, word) => {
-                Movement::BackwardWord(repeat_count(previous, new), word)
-            }
-            Movement::ForwardWord(previous, at, word) => {
-                Movement::ForwardWord(repeat_count(previous, new), at, word)
-            }
+            Movement::BackwardWord(previous, word) => Movement::BackwardWord(repeat_count(previous, new), word),
+            Movement::ForwardWord(previous, at, word) => Movement::ForwardWord(repeat_count(previous, new), at, word),
             Movement::ViCharSearch(previous, char_search) => {
                 Movement::ViCharSearch(repeat_count(previous, new), char_search)
             }
@@ -204,11 +199,7 @@ impl LineBuffer {
     }
 
     #[cfg(test)]
-    pub(crate) fn init(
-        line: &str,
-        pos: usize,
-        cl: Option<Rc<RefCell<dyn ChangeListener>>>,
-    ) -> Self {
+    pub(crate) fn init(line: &str, pos: usize, cl: Option<Rc<RefCell<dyn ChangeListener>>>) -> Self {
         let mut lb = Self::with_capacity(MAX_LINE);
         assert!(lb.insert_str(0, line));
         lb.set_pos(pos);
@@ -446,9 +437,7 @@ impl LineBuffer {
         match self.next_pos(n) {
             Some(pos) => {
                 let start = self.pos;
-                let chars = self
-                    .drain(start..pos, Direction::Forward)
-                    .collect::<String>();
+                let chars = self.drain(start..pos, Direction::Forward).collect::<String>();
                 Some(chars)
             }
             None => None,
@@ -672,9 +661,7 @@ impl LineBuffer {
                     dest_end = dest_start - 1;
                     dest_start = self.buf[..dest_end].rfind('\n').map(|n| n + 1).unwrap_or(0);
                 }
-                let gidx = self.buf[dest_start..dest_end]
-                    .grapheme_indices(true)
-                    .nth(column);
+                let gidx = self.buf[dest_start..dest_end].grapheme_indices(true).nth(column);
 
                 self.pos = gidx.map(|(idx, _)| dest_start + idx).unwrap_or(off); // if there's no enough columns
                 true
@@ -794,12 +781,7 @@ impl LineBuffer {
             CharSearch::BackwardAfter(c) => pos + c.len_utf8(),
             CharSearch::Forward(_) => shift + pos,
             CharSearch::ForwardBefore(_) => {
-                shift + pos
-                    - self.buf[..shift + pos]
-                        .chars()
-                        .next_back()
-                        .unwrap()
-                        .len_utf8()
+                shift + pos - self.buf[..shift + pos].chars().next_back().unwrap().len_utf8()
             }
         })
     }
@@ -879,9 +861,7 @@ impl LineBuffer {
                 if start == end {
                     return false;
                 }
-                let word = self
-                    .drain(start..end, Direction::default())
-                    .collect::<String>();
+                let word = self.drain(start..end, Direction::default()).collect::<String>();
                 let result = match a {
                     WordAction::Capitalize => {
                         let ch = (&word).graphemes(true).next().unwrap();
@@ -916,9 +896,7 @@ impl LineBuffer {
 
         let w1 = self.buf[w1_beg..w1_end].to_owned();
 
-        let w2 = self
-            .drain(w2_beg..w2_end, Direction::default())
-            .collect::<String>();
+        let w2 = self.drain(w2_beg..w2_end, Direction::default()).collect::<String>();
         self.insert_str(w2_beg, &w1);
 
         self.drain(w1_beg..w1_end, Direction::default());
@@ -1036,19 +1014,13 @@ impl LineBuffer {
                     _ => self.search_char_pos(cs, n),
                 };
                 search_result.map(|pos| match cs {
-                    CharSearch::Backward(_) | CharSearch::BackwardAfter(_) => {
-                        self.buf[pos..self.pos].to_owned()
-                    }
+                    CharSearch::Backward(_) | CharSearch::BackwardAfter(_) => self.buf[pos..self.pos].to_owned(),
                     CharSearch::ForwardBefore(_) => self.buf[self.pos..pos].to_owned(),
                     CharSearch::Forward(c) => self.buf[self.pos..pos + c.len_utf8()].to_owned(),
                 })
             }
-            Movement::BackwardChar(n) => self
-                .prev_pos(n)
-                .map(|pos| self.buf[pos..self.pos].to_owned()),
-            Movement::ForwardChar(n) => self
-                .next_pos(n)
-                .map(|pos| self.buf[self.pos..pos].to_owned()),
+            Movement::BackwardChar(n) => self.prev_pos(n).map(|pos| self.buf[pos..self.pos].to_owned()),
+            Movement::ForwardChar(n) => self.next_pos(n).map(|pos| self.buf[self.pos..pos].to_owned()),
             Movement::LineUp(n) => {
                 if let Some((start, end)) = self.n_lines_up(n) {
                     Some(self.buf[start..end].to_owned())
@@ -1069,8 +1041,7 @@ impl LineBuffer {
     /// Kill range specified by `mvt`.
     pub fn kill(&mut self, mvt: &Movement) -> bool {
         let notify = !matches!(*mvt, Movement::ForwardChar(_) | Movement::BackwardChar(_));
-        if notify {
-        }
+        if notify {}
         let killed = match *mvt {
             Movement::ForwardChar(n) => {
                 // Delete (forward) `n` characters at point.
@@ -1133,8 +1104,7 @@ impl LineBuffer {
                 self.kill_buffer()
             }
         };
-        if notify {
-        }
+        if notify {}
         killed
     }
 
@@ -1152,20 +1122,15 @@ impl LineBuffer {
             Movement::EndOfBuffer => Some((self.pos, self.buf.len())),
             Movement::WholeBuffer => Some((0, self.buf.len())),
             Movement::BeginningOfBuffer => Some((0, self.pos)),
-            Movement::BackwardWord(n, word_def) => self
-                .prev_word_pos(self.pos, word_def, n)
-                .map(|pos| (pos, self.pos)),
-            Movement::ForwardWord(n, at, word_def) => self
-                .next_word_pos(self.pos, at, word_def, n)
-                .map(|pos| (self.pos, pos)),
+            Movement::BackwardWord(n, word_def) => self.prev_word_pos(self.pos, word_def, n).map(|pos| (pos, self.pos)),
+            Movement::ForwardWord(n, at, word_def) => {
+                self.next_word_pos(self.pos, at, word_def, n).map(|pos| (self.pos, pos))
+            }
             Movement::LineUp(n) => self.n_lines_up(n),
             Movement::LineDown(n) => self.n_lines_down(n),
         };
         let (start, end) = pair.unwrap_or((self.pos, self.pos));
-        let start = self.buf[..start]
-            .rfind('\n')
-            .map(|pos| pos + 1)
-            .unwrap_or(0);
+        let start = self.buf[..start].rfind('\n').map(|pos| pos + 1).unwrap_or(0);
         let end = self.buf[end..]
             .rfind('\n')
             .map(|pos| end + pos)
@@ -1231,4 +1196,3 @@ fn is_vi_word_char(grapheme: &str) -> bool {
 fn is_other_char(grapheme: &str) -> bool {
     !(grapheme.chars().any(char::is_whitespace) || is_vi_word_char(grapheme))
 }
-

@@ -49,7 +49,7 @@ use tui::{
 
 use rustyline::error::ReadlineError;
 // use rustyline::line_buffer::LineBuffer;
-use crate::line_buffer::{LineBuffer, At, Word};
+use crate::line_buffer::{At, LineBuffer, Word};
 
 use std::io;
 use tui::{backend::CrosstermBackend, Terminal};

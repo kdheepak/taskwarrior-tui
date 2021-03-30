@@ -8,10 +8,10 @@ mod config;
 mod context;
 mod help;
 mod keyconfig;
+mod line_buffer;
 mod table;
 mod task_report;
 mod util;
-mod line_buffer;
 
 use crate::util::{destruct_terminal, setup_terminal, Event, EventConfig, Events};
 use anyhow::Result;
@@ -22,9 +22,9 @@ use std::io::Write;
 use std::panic;
 use std::time::Duration;
 
+use async_std::prelude::*;
 use async_std::sync::{Arc, Mutex};
 use async_std::task;
-use async_std::prelude::*;
 use futures::join;
 use futures::stream::{FuturesUnordered, StreamExt};
 
