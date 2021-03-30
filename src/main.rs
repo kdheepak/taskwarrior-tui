@@ -77,7 +77,7 @@ async fn tui_main(_config: &str) -> Result<()> {
                 let handle = {
                     let app = app.clone();
                     let terminal = terminal.clone();
-                    task::spawn(async move {
+                    task::spawn_local(async move {
                         let mut t = terminal.lock().await;
                         app.lock().await.render(&mut t).await
                     })

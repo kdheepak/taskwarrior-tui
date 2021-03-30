@@ -80,7 +80,7 @@ impl Events {
         let tick_rate = config.tick_rate;
         let (tx, rx) = unbounded::<Event<Key>>();
         let ps = pause_stdin.clone();
-        task::spawn(async move {
+        task::spawn_local(async move {
             let mut reader = EventStream::new();
 
             loop {
