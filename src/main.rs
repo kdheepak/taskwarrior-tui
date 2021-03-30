@@ -79,7 +79,7 @@ async fn tui_main(_config: &str) -> Result<()> {
                     let terminal = terminal.clone();
                     task::spawn_local(async move {
                         let mut t = terminal.lock().await;
-                        app.lock().await.render(&mut t).await
+                        app.lock().await.render(&mut t).await.unwrap();
                     })
                 };
                 // Handle input
@@ -94,7 +94,6 @@ async fn tui_main(_config: &str) -> Result<()> {
                     }
                     Event::Tick => {
                         let r = app.lock().await.update(false).await;
-                        handle.await?;
                         if r.is_err() {
                             destruct_terminal();
                             return r;
