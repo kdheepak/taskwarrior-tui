@@ -30,6 +30,7 @@ use chrono::{Datelike, Local, NaiveDate, NaiveDateTime, TimeZone};
 
 use anyhow::Result;
 
+use async_std::prelude::*;
 use async_std::stream::StreamExt;
 use async_std::task;
 use futures::future::join_all;
