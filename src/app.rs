@@ -350,44 +350,49 @@ impl TaskwarriorTuiApp {
             }
         };
         match self.mode {
-            AppMode::TaskReport => self.draw_command(f, rects[1], self.filter.as_str(), "Filter Tasks"),
+            AppMode::TaskReport => self.draw_command(
+                f,
+                rects[1],
+                self.filter.as_str(),
+                "Filter Tasks",
+                self.get_position(&self.filter),
+                false,
+            ),
             AppMode::TaskFilter => {
                 let position = self.get_position(&self.filter);
-                f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
-                f.render_widget(Clear, rects[1]);
                 self.draw_command(
                     f,
                     rects[1],
                     self.filter.as_str(),
                     Span::styled("Filter Tasks", Style::default().add_modifier(Modifier::BOLD)),
+                    position,
+                    true,
                 );
             }
             AppMode::TaskLog => {
                 let position = self.get_position(&self.command);
-                f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
-                f.render_widget(Clear, rects[1]);
                 self.draw_command(
                     f,
                     rects[1],
                     self.command.as_str(),
                     Span::styled("Log Tasks", Style::default().add_modifier(Modifier::BOLD)),
+                    position,
+                    true,
                 );
             }
             AppMode::TaskSubprocess => {
                 let position = self.get_position(&self.command);
-                f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
-                f.render_widget(Clear, rects[1]);
                 self.draw_command(
                     f,
                     rects[1],
                     self.command.as_str(),
                     Span::styled("Shell Command", Style::default().add_modifier(Modifier::BOLD)),
+                    position,
+                    true,
                 );
             }
             AppMode::TaskModify => {
                 let position = self.get_position(&self.modify);
-                f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
-                f.render_widget(Clear, rects[1]);
                 let label = if task_ids.len() > 1 {
                     format!("Modify Tasks {}", task_ids.join(","))
                 } else {
@@ -398,12 +403,12 @@ impl TaskwarriorTuiApp {
                     rects[1],
                     self.modify.as_str(),
                     Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
+                    position,
+                    true,
                 );
             }
             AppMode::TaskAnnotate => {
                 let position = self.get_position(&self.command);
-                f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
-                f.render_widget(Clear, rects[1]);
                 let label = if task_ids.len() > 1 {
                     format!("Annotate Tasks {}", task_ids.join(","))
                 } else {
@@ -414,34 +419,51 @@ impl TaskwarriorTuiApp {
                     rects[1],
                     self.command.as_str(),
                     Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
+                    position,
+                    true,
                 );
             }
             AppMode::TaskAdd => {
                 let position = self.get_position(&self.command);
-                f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
-                f.render_widget(Clear, rects[1]);
                 self.draw_command(
                     f,
                     rects[1],
                     self.command.as_str(),
                     Span::styled("Add Task", Style::default().add_modifier(Modifier::BOLD)),
+                    position,
+                    true,
                 );
             }
             AppMode::TaskError => {
-                f.render_widget(Clear, rects[1]);
                 self.draw_command(
                     f,
                     rects[1],
                     self.error.as_str(),
                     Span::styled("Error", Style::default().add_modifier(Modifier::BOLD)),
+                    0,
+                    false,
                 );
             }
             AppMode::TaskHelpPopup => {
-                self.draw_command(f, rects[1], self.filter.as_str(), "Filter Tasks");
+                self.draw_command(
+                    f,
+                    rects[1],
+                    self.filter.as_str(),
+                    "Filter Tasks",
+                    self.get_position(&self.filter),
+                    false,
+                );
                 self.draw_help_popup(f, 80, 90);
             }
             AppMode::TaskContextMenu => {
-                self.draw_command(f, rects[1], self.filter.as_str(), "Filter Tasks");
+                self.draw_command(
+                    f,
+                    rects[1],
+                    self.filter.as_str(),
+                    "Filter Tasks",
+                    self.get_position(&self.filter),
+                    false,
+                );
                 self.draw_context_menu(f, 80, 50);
             }
             _ => {
@@ -527,16 +549,32 @@ impl TaskwarriorTuiApp {
         f.render_stateful_widget(t, area, &mut self.context_table_state);
     }
 
-    fn draw_command<'a, T>(&self, f: &mut Frame<impl Backend>, rect: Rect, text: &str, title: T)
-    where
+    fn draw_command<'a, T>(
+        &self,
+        f: &mut Frame<impl Backend>,
+        rect: Rect,
+        text: &str,
+        title: T,
+        position: usize,
+        cursor: bool,
+    ) where
         T: Into<Spans<'a>>,
     {
-        let p = Paragraph::new(Text::from(text)).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
-                .title(title.into()),
-        );
+        f.render_widget(Clear, rect);
+        if cursor {
+            f.set_cursor(
+                std::cmp::min(rect.x + position as u16 + 1, rect.x + rect.width.saturating_sub(2)),
+                rect.y + 1,
+            );
+        }
+        let p = Paragraph::new(Text::from(text))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .title(title.into()),
+            )
+            .scroll((0, ((position + 3) as u16).saturating_sub(rect.width)));
         f.render_widget(p, rect);
     }
 
@@ -2095,6 +2133,7 @@ mod tests {
             .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
             .is_some());
 
+        // test_draw_task_report_with_extended_modify_command();
         test_draw_task_report();
         test_task_tags();
         test_task_style();
@@ -2458,6 +2497,113 @@ mod tests {
             expected
                 .get_mut(i, 0)
                 .set_style(Style::default().add_modifier(Modifier::DIM));
+        }
+
+        test_case(&expected);
+    }
+
+    fn test_draw_task_report_with_extended_modify_command() {
+        let test_case = |expected: &Buffer| {
+            let mut app = TaskwarriorTuiApp::new().unwrap();
+
+            app.task_report_next();
+            app.context_next();
+
+            let total_tasks: u64 = 26;
+
+            assert!(app.get_context().is_ok());
+            assert!(app.update(true).is_ok());
+            assert_eq!(app.tasks.len(), total_tasks as usize);
+            assert_eq!(app.current_context_filter, "");
+
+            let now = Local::now();
+            let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
+
+            app.update(true).unwrap();
+
+            let backend = TestBackend::new(50, 15);
+            let mut terminal = Terminal::new(backend).unwrap();
+            app.task_report_show_info = !app.task_report_show_info;
+            terminal
+                .draw(|f| {
+                    app.draw(f);
+                    app.draw(f);
+                })
+                .unwrap();
+            app.task_report_show_info = !app.task_report_show_info;
+            terminal
+                .draw(|f| {
+                    app.draw(f);
+                    app.draw(f);
+                })
+                .unwrap();
+
+            assert_eq!(terminal.backend().size().unwrap(), expected.area);
+            terminal.backend().assert_buffer(expected);
+        };
+
+        let mut expected = Buffer::with_lines(vec![
+            "╭Task|Calendar───────────────────────────────────╮",
+            "│  ID Age Deps P Projec Tag     Due Descrip Urg  │",
+            "│                                                │",
+            "│• 27 0s       U                    new ta… 15.00│",
+            "│  28 0s       U        none        new ta… 15.00│",
+            "╰────────────────────────────────────────────────╯",
+            "╭Task 27─────────────────────────────────────────╮",
+            "│                                                │",
+            "│Name        Value                               │",
+            "│----------- ------------------------------------│",
+            "│ID          27                                  │",
+            "╰────────────────────────────────────────────────╯",
+            "╭Filter Tasks────────────────────────────────────╮",
+            "│status:pending -private                         │",
+            "╰────────────────────────────────────────────────╯",
+        ]);
+
+        for i in 1..=4 {
+            // Task
+            expected
+                .get_mut(i, 0)
+                .set_style(Style::default().add_modifier(Modifier::BOLD));
+        }
+        for i in 6..=13 {
+            // Calendar
+            expected
+                .get_mut(i, 0)
+                .set_style(Style::default().add_modifier(Modifier::DIM));
+        }
+
+        for r in &[
+            1..=4,   // ID
+            6..=8,   // Age
+            10..=13, // Deps
+            15..=15, // P
+            17..=22, // Projec
+            24..=30, // Tag
+            32..=34, // Due
+            36..=42, // Descr
+            44..=48, // Urg
+        ] {
+            for i in r.clone().into_iter() {
+                expected
+                    .get_mut(i, 1)
+                    .set_style(Style::default().add_modifier(Modifier::UNDERLINED));
+            }
+        }
+
+        for i in 1..expected.area().width - 1 {
+            expected.get_mut(i, 3).set_style(
+                Style::default()
+                    .fg(Color::Indexed(1))
+                    .bg(Color::Reset)
+                    .add_modifier(Modifier::BOLD),
+            );
+        }
+
+        for i in 1..expected.area().width - 1 {
+            expected
+                .get_mut(i, 4)
+                .set_style(Style::default().fg(Color::Indexed(1)).bg(Color::Indexed(4)));
         }
 
         test_case(&expected);
