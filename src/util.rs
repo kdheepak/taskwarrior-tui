@@ -123,6 +123,8 @@ impl Events {
                                 },
                             };
                             tx.send(Event::Input(key)).await.unwrap();
+                            task::sleep(Duration::from_millis(1)).await;
+                            task::yield_now().await;
                         };
                     }
                 }
