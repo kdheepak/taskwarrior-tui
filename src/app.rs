@@ -50,6 +50,8 @@ use tui::{
 };
 
 use rustyline::error::ReadlineError;
+use rustyline::history::Direction as HistoryDirection;
+use rustyline::history::History;
 use rustyline::line_buffer::LineBuffer;
 use rustyline::At;
 use rustyline::Editor;
@@ -133,6 +135,7 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
         .split(popup_layout[1])[1]
 }
 
+#[derive(PartialEq)]
 pub enum AppMode {
     TaskReport,
     TaskFilter,
@@ -145,6 +148,63 @@ pub enum AppMode {
     TaskError,
     TaskContextMenu,
     Calendar,
+}
+
+pub struct HistoryContext {
+    history: History,
+    history_index: usize,
+}
+
+impl HistoryContext {
+    pub fn new() -> Self {
+        let history = History::new();
+        Self {
+            history,
+            history_index: 0,
+        }
+    }
+
+    pub fn history(&self) -> &History {
+        &self.history
+    }
+
+    pub fn history_index(&self) -> usize {
+        self.history_index
+    }
+
+    pub fn history_search(&mut self, buf: &str, dir: HistoryDirection) -> Option<String> {
+        if self.history.is_empty() {
+            return None;
+        }
+        if self.history_index == self.history.len().saturating_sub(1) && dir == HistoryDirection::Forward
+            || self.history_index == 0 && dir == HistoryDirection::Reverse
+        {
+            return Some(self.history.get(self.history_index).unwrap().clone());
+        }
+        let history_index = match dir {
+            HistoryDirection::Reverse => self.history_index - 1,
+            HistoryDirection::Forward => self.history_index + 1,
+        };
+        if let Some(history_index) = self.history.starts_with(buf, history_index, dir) {
+            self.history_index = history_index;
+            Some(self.history.get(history_index).unwrap().clone())
+        } else if buf.is_empty() {
+            self.history_index = history_index;
+            Some(self.history.get(history_index).unwrap().clone())
+        } else {
+            None
+        }
+    }
+
+    pub fn add(&mut self, buf: &str) {
+        if self.history.add(buf) {
+            self.history_index = self.history.len() - 1;
+        }
+    }
+
+    pub fn last(&mut self) {
+        self.history_index = self.history.len().saturating_sub(1);
+    }
 }
 
 pub struct TaskwarriorTuiApp {
@@ -176,6 +236,8 @@ pub struct TaskwarriorTuiApp {
     pub keyconfig: KeyConfig,
     pub terminal_width: u16,
     pub terminal_height: u16,
+    pub filter_history_context: HistoryContext,
+    pub command_history_context: HistoryContext,
 }
 
 impl TaskwarriorTuiApp {
@@ -212,12 +274,15 @@ impl TaskwarriorTuiApp {
             keyconfig: kc,
             terminal_width: w,
             terminal_height: h,
+            filter_history_context: HistoryContext::new(),
+            command_history_context: HistoryContext::new(),
         };
         for c in app.config.filter.chars() {
             app.filter.insert(c, 1);
         }
         app.get_context()?;
         app.update(true)?;
+        app.filter_history_context.add(app.filter.as_str());
         Ok(app)
     }
 
@@ -265,7 +330,12 @@ impl TaskwarriorTuiApp {
     pub fn draw_debug(&mut self, f: &mut Frame<impl Backend>) {
         let area = centered_rect(50, 50, f.size());
         f.render_widget(Clear, area);
-        let t = format!("{:?}", self.marked);
+        let t = format!(
+            "{}\n{}\n{:?}",
+            self.command.pos(),
+            self.command_history_context.history_index,
+            self.command_history_context.history.iter().collect::<Vec<_>>()
+        );
         let p = Paragraph::new(Text::from(t))
             .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded));
         f.render_widget(p, area);
@@ -1231,10 +1301,7 @@ impl TaskwarriorTuiApp {
                 }
                 let output = command.output();
                 match output {
-                    Ok(_) => {
-                        self.command.update("", 0);
-                        Ok(())
-                    }
+                    Ok(_) => Ok(()),
                     Err(_) => Err(format!("Shell command `{}` exited with non-zero output", shell,)),
                 }
             }
@@ -1260,10 +1327,7 @@ impl TaskwarriorTuiApp {
                 }
                 let output = command.output();
                 match output {
-                    Ok(_) => {
-                        self.command.update("", 0);
-                        Ok(())
-                    }
+                    Ok(_) => Ok(()),
                     Err(_) => Err(format!(
                         "Cannot run `task log {}`. Check documentation for more information",
                         shell
@@ -1351,7 +1415,6 @@ impl TaskwarriorTuiApp {
                 match output {
                     Ok(o) => {
                         if o.status.success() {
-                            self.modify.update("", 0);
                             Ok(())
                         } else {
                             Err(format!("Modify failed. {}", String::from_utf8_lossy(&o.stdout),))
@@ -1395,7 +1458,6 @@ impl TaskwarriorTuiApp {
                 match output {
                     Ok(o) => {
                         if o.status.success() {
-                            self.command.update("", 0);
                             Ok(())
                         } else {
                             Err(format!("Annotate failed. {}", String::from_utf8_lossy(&o.stdout),))
@@ -1429,10 +1491,7 @@ impl TaskwarriorTuiApp {
                 }
                 let output = command.output();
                 match output {
-                    Ok(_) => {
-                        self.command.update("", 0);
-                        Ok(())
-                    }
+                    Ok(_) => Ok(()),
                     Err(_) => Err(format!(
                         "Cannot run `task add {}`. Check documentation for more information",
                         shell
@@ -1995,6 +2054,8 @@ impl TaskwarriorTuiApp {
                 Key::Char('\n') => match self.task_modify() {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
+                        self.command_history_context.add(self.modify.as_str());
+                        self.modify.update("", 0);
                         self.update(true)?;
                     }
                     Err(e) => {
@@ -2002,16 +2063,40 @@ impl TaskwarriorTuiApp {
                         self.error = e;
                     }
                 },
+                Key::Up => {
+                    if let Some(s) = self
+                        .command_history_context
+                        .history_search(&self.modify.as_str()[..self.modify.pos()], HistoryDirection::Reverse)
+                    {
+                        let p = self.modify.pos();
+                        self.modify.update("", 0);
+                        self.modify.update(&s, p);
+                    }
+                }
+                Key::Down => {
+                    if let Some(s) = self
+                        .command_history_context
+                        .history_search(&self.modify.as_str()[..self.modify.pos()], HistoryDirection::Forward)
+                    {
+                        let p = self.modify.pos();
+                        self.modify.update("", 0);
+                        self.modify.update(&s, p);
+                    }
+                }
                 Key::Esc => {
                     self.modify.update("", 0);
                     self.mode = AppMode::TaskReport;
                 }
-                _ => handle_movement(&mut self.modify, input),
+                _ => {
+                    self.command_history_context.last();
+                    handle_movement(&mut self.modify, input);
+                }
             },
             AppMode::TaskSubprocess => match input {
                 Key::Char('\n') => match self.task_subprocess() {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
+                        self.command.update("", 0);
                         self.update(true)?;
                     }
                     Err(e) => {
@@ -2029,6 +2114,8 @@ impl TaskwarriorTuiApp {
                 Key::Char('\n') => match self.task_log() {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
+                        self.command_history_context.add(self.command.as_str());
+                        self.command.update("", 0);
                         self.update(true)?;
                     }
                     Err(e) => {
@@ -2036,16 +2123,40 @@ impl TaskwarriorTuiApp {
                         self.error = e;
                     }
                 },
+                Key::Up => {
+                    if let Some(s) = self
+                        .command_history_context
+                        .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Reverse)
+                    {
+                        let p = self.command.pos();
+                        self.command.update("", 0);
+                        self.command.update(&s, p);
+                    }
+                }
+                Key::Down => {
+                    if let Some(s) = self
+                        .command_history_context
+                        .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Forward)
+                    {
+                        let p = self.command.pos();
+                        self.command.update("", 0);
+                        self.command.update(&s, p);
+                    }
+                }
                 Key::Esc => {
                     self.command.update("", 0);
                     self.mode = AppMode::TaskReport;
                 }
-                _ => handle_movement(&mut self.command, input),
+                _ => {
+                    self.command_history_context.last();
+                    handle_movement(&mut self.command, input);
+                }
             },
             AppMode::TaskAnnotate => match input {
                 Key::Char('\n') => match self.task_annotate() {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
+                        self.command.update("", 0);
                         self.update(true)?;
                     }
                     Err(e) => {
@@ -2063,6 +2174,8 @@ impl TaskwarriorTuiApp {
                 Key::Char('\n') => match self.task_add() {
                     Ok(_) => {
                         self.mode = AppMode::TaskReport;
+                        self.command_history_context.add(self.command.as_str());
+                        self.command.update("", 0);
                         self.update(true)?;
                     }
                     Err(e) => {
@@ -2070,16 +2183,62 @@ impl TaskwarriorTuiApp {
                         self.error = e;
                     }
                 },
+                Key::Up => {
+                    if let Some(s) = self
+                        .command_history_context
+                        .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Reverse)
+                    {
+                        let p = self.command.pos();
+                        self.command.update("", 0);
+                        self.command.update(&s, p);
+                    }
+                }
+                Key::Down => {
+                    if let Some(s) = self
+                        .command_history_context
+                        .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Forward)
+                    {
+                        let p = self.command.pos();
+                        self.command.update("", 0);
+                        self.command.update(&s, p);
+                    }
+                }
                 Key::Esc => {
                     self.command.update("", 0);
                     self.mode = AppMode::TaskReport;
                 }
-                _ => handle_movement(&mut self.command, input),
+                _ => {
+                    self.command_history_context.last();
+                    handle_movement(&mut self.command, input);
+                }
             },
             AppMode::TaskFilter => match input {
                 Key::Char('\n') | Key::Esc => {
                     self.mode = AppMode::TaskReport;
+                    self.filter_history_context.add(self.filter.as_str());
                     self.update(true)?;
+                }
+                Key::Up => {
+                    if let Some(s) = self
+                        .filter_history_context
+                        .history_search(&self.filter.as_str()[..self.filter.pos()], HistoryDirection::Reverse)
+                    {
+                        let p = self.filter.pos();
+                        self.filter.update("", 0);
+                        self.filter.update(&s, p);
+                        self.dirty = true;
+                    }
+                }
+                Key::Down => {
+                    if let Some(s) = self
+                        .filter_history_context
+                        .history_search(&self.filter.as_str()[..self.filter.pos()], HistoryDirection::Forward)
+                    {
+                        let p = self.filter.pos();
+                        self.filter.update("", 0);
+                        self.filter.update(&s, p);
+                        self.dirty = true;
+                    }
                 }
                 _ => {
                     handle_movement(&mut self.filter, input);
