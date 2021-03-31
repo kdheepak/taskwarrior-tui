@@ -64,41 +64,29 @@ async fn tui_main(_config: &str) -> Result<()> {
         return Err(maybeapp.err().unwrap());
     }
 
-    let app = Arc::new(Mutex::new(maybeapp.unwrap()));
-    let terminal = Arc::new(Mutex::new(setup_terminal()));
+    let mut app = maybeapp.unwrap();
+    let mut terminal = setup_terminal();
 
-    {
-        let mut terminal = terminal.lock().await;
-        app.lock().await.render(&mut terminal).unwrap();
-    }
+    app.render(&mut terminal).unwrap();
 
     // Setup event handlers
     let events = Events::with_config(EventConfig {
-        tick_rate: Duration::from_millis(app.lock().await.config.uda_tick_rate),
+        tick_rate: Duration::from_millis(app.config.uda_tick_rate),
     });
 
     loop {
-        let handle = {
-            let app = app.clone();
-            let terminal = terminal.clone();
-            task::spawn_local(async move {
-                let mut terminal = terminal.lock().await;
-                app.lock().await.render(&mut terminal).unwrap();
-            })
-        };
+        app.render(&mut terminal).unwrap();
         // Handle input
         match events.next().await? {
             Event::Input(input) => {
-                if input == app.lock().await.keyconfig.edit {
-                    let mut t = terminal.lock().await;
-                    events.pause_key_capture(&mut t);
+                if input == app.keyconfig.edit {
+                    events.pause_key_capture(&mut terminal);
                 }
 
-                let r = app.lock().await.handle_input(input);
+                let r = app.handle_input(input);
 
-                if input == app.lock().await.keyconfig.edit {
-                    let mut t = terminal.lock().await;
-                    events.resume_key_capture(&mut t);
+                if input == app.keyconfig.edit {
+                    events.resume_key_capture(&mut terminal);
                 }
                 if r.is_err() {
                     destruct_terminal();
@@ -106,7 +94,7 @@ async fn tui_main(_config: &str) -> Result<()> {
                 }
             }
             Event::Tick => {
-                let r = app.lock().await.update(false);
+                let r = app.update(false);
                 if r.is_err() {
                     destruct_terminal();
                     return r;
@@ -114,7 +102,7 @@ async fn tui_main(_config: &str) -> Result<()> {
             }
         }
 
-        if app.lock().await.should_quit {
+        if app.should_quit {
             destruct_terminal();
             break;
         }
