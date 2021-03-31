@@ -1,10 +1,9 @@
+use itertools::Itertools;
 use std::{
     fs::{create_dir_all, write, File},
     io::{BufRead, BufReader, Error, Read},
     path::{Path, PathBuf},
 };
-use itertools::Itertools;
-
 
 #[derive(Clone)]
 pub struct Commands {
@@ -14,7 +13,12 @@ pub struct Commands {
 impl Commands {
     pub fn from_history(shell: &str, history: &[String]) -> Self {
         Self {
-            all: history.to_vec().into_iter().filter(|s| s.starts_with("task")).unique().collect(),
+            all: history
+                .to_vec()
+                .into_iter()
+                .filter(|s| s.starts_with("task"))
+                .unique()
+                .collect(),
         }
     }
 }
@@ -71,7 +75,6 @@ fn read_file(target: PathBuf) -> Result<Vec<String>, Error> {
     let reader = BufReader::new(file);
     reader.lines().collect::<Result<Vec<_>, _>>()
 }
-
 
 pub mod zsh {
     use super::*;

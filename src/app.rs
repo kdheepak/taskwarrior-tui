@@ -50,6 +50,8 @@ use tui::{
 };
 
 use rustyline::error::ReadlineError;
+use rustyline::history::Direction as HistoryDirection;
+use rustyline::history::History;
 use rustyline::line_buffer::LineBuffer;
 use rustyline::At;
 use rustyline::Editor;
@@ -147,6 +149,53 @@ pub enum AppMode {
     Calendar,
 }
 
+pub struct HistoryContext {
+    history: History,
+    history_index: usize,
+}
+
+impl HistoryContext {
+    pub fn new() -> Self {
+        let history = History::new();
+        Self {
+            history,
+            history_index: 0,
+        }
+    }
+
+    pub fn history(&self) -> &History {
+        &self.history
+    }
+
+    pub fn history_index(&self) -> usize {
+        self.history_index
+    }
+
+    pub fn history_search(&mut self, buf: &str, dir: HistoryDirection) -> Option<String> {
+        if self.history_index == self.history.len() && dir == HistoryDirection::Forward
+            || self.history_index == 0 && dir == HistoryDirection::Reverse
+            || self.history.is_empty()
+        {
+            return None;
+        }
+        let history_index = match dir {
+            HistoryDirection::Reverse => self.history_index - 1,
+            HistoryDirection::Forward => self.history_index + 1,
+        };
+        if let Some(history_index) = self.history.starts_with(buf, history_index, dir) {
+            self.history_index = history_index;
+            Some(self.history.get(history_index).unwrap().clone())
+        } else {
+            None
+        }
+    }
+
+    pub fn add(&mut self, buf: &str) {
+        self.history.add(buf);
+        self.history_index = self.history.len() - 1;
+    }
+}
+
 pub struct TaskwarriorTuiApp {
     pub should_quit: bool,
     pub dirty: bool,
@@ -176,6 +225,7 @@ pub struct TaskwarriorTuiApp {
     pub keyconfig: KeyConfig,
     pub terminal_width: u16,
     pub terminal_height: u16,
+    pub filter_history_context: HistoryContext,
 }
 
 impl TaskwarriorTuiApp {
@@ -212,12 +262,14 @@ impl TaskwarriorTuiApp {
             keyconfig: kc,
             terminal_width: w,
             terminal_height: h,
+            filter_history_context: HistoryContext::new(),
         };
         for c in app.config.filter.chars() {
             app.filter.insert(c, 1);
         }
         app.get_context()?;
         app.update(true)?;
+        app.filter_history_context.add(app.filter.as_str());
         Ok(app)
     }
 
@@ -265,7 +317,11 @@ impl TaskwarriorTuiApp {
     pub fn draw_debug(&mut self, f: &mut Frame<impl Backend>) {
         let area = centered_rect(50, 50, f.size());
         f.render_widget(Clear, area);
-        let t = format!("{:?}", self.marked);
+        let t = format!(
+            "{} {:?}",
+            self.filter.pos(),
+            self.filter_history_context.history.iter().collect::<Vec<_>>()
+        );
         let p = Paragraph::new(Text::from(t))
             .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded));
         f.render_widget(p, area);
@@ -2079,7 +2135,30 @@ impl TaskwarriorTuiApp {
             AppMode::TaskFilter => match input {
                 Key::Char('\n') | Key::Esc => {
                     self.mode = AppMode::TaskReport;
+                    self.filter_history_context.add(self.filter.as_str());
                     self.update(true)?;
+                }
+                Key::Up => {
+                    if let Some(s) = self
+                        .filter_history_context
+                        .history_search(&self.filter.as_str()[..self.filter.pos()], HistoryDirection::Reverse)
+                    {
+                        let p = self.filter.pos();
+                        self.filter.update("", 0);
+                        self.filter.update(&s, p);
+                        self.dirty = true;
+                    }
+                }
+                Key::Down => {
+                    if let Some(s) = self
+                        .filter_history_context
+                        .history_search(&self.filter.as_str()[..self.filter.pos()], HistoryDirection::Forward)
+                    {
+                        let p = self.filter.pos();
+                        self.filter.update("", 0);
+                        self.filter.update(&s, p);
+                        self.dirty = true;
+                    }
                 }
                 _ => {
                     handle_movement(&mut self.filter, input);
