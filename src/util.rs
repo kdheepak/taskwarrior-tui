@@ -68,26 +68,17 @@ pub fn destruct_terminal() {
 
 pub struct Events {
     pub rx: async_std::channel::Receiver<Event<Key>>,
-    pub pause_stdin: Arc<AtomicBool>,
 }
 
 impl Events {
     pub fn with_config(config: EventConfig) -> Events {
         use crossterm::event::{KeyCode::*, KeyModifiers};
-        let pause_stdin = Arc::new(AtomicBool::new(false));
         let tick_rate = config.tick_rate;
         let (tx, rx) = unbounded::<Event<Key>>();
-        let ps = pause_stdin.clone();
         task::spawn_local(async move {
             let mut reader = EventStream::new();
 
             loop {
-                if ps.load(Ordering::SeqCst) {
-                    task::sleep(Duration::from_millis(250)).await;
-                    task::yield_now().await;
-                    continue;
-                }
-
                 let mut delay = Delay::new(tick_rate).fuse();
                 let mut event = reader.next().fuse();
 
@@ -130,7 +121,7 @@ impl Events {
                 }
             }
         });
-        Events { rx, pause_stdin }
+        Events { rx }
     }
 
     /// Attempts to read an event.
@@ -139,33 +130,15 @@ impl Events {
         self.rx.recv().await
     }
 
-    pub async fn pause_event_loop(&self) {
-        self.pause_stdin.store(true, Ordering::SeqCst);
-        task::yield_now().await;
-        while !self.pause_stdin.load(Ordering::SeqCst) {
-            task::sleep(Duration::from_millis(50)).await;
-        }
-    }
-
-    pub async fn resume_event_loop(&self) {
-        self.pause_stdin.store(false, Ordering::SeqCst);
-        task::yield_now().await;
-        while self.pause_stdin.load(Ordering::SeqCst) {
-            task::sleep(Duration::from_millis(50)).await;
-        }
-    }
-
-    pub fn pause_key_capture(&self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
-        task::block_on(self.pause_event_loop());
+    pub fn leave_tui_mode(&self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
         disable_raw_mode().unwrap();
         execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture).unwrap();
         terminal.show_cursor().unwrap();
     }
 
-    pub fn resume_key_capture(&self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
+    pub fn enter_tui_mode(&self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
         execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture).unwrap();
         enable_raw_mode().unwrap();
-        task::block_on(self.resume_event_loop());
         terminal.resize(terminal.size().unwrap()).unwrap();
     }
 }
