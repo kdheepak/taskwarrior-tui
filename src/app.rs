@@ -1753,12 +1753,7 @@ impl TaskwarriorTuiApp {
         }
     }
 
-    pub fn handle_input(
-        &mut self,
-        input: Key,
-        terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
-        events: &Events,
-    ) -> Result<()> {
+    pub fn handle_input(&mut self, input: Key) -> Result<()> {
         match self.mode {
             AppMode::TaskReport => {
                 if input == Key::Esc {
@@ -1822,9 +1817,7 @@ impl TaskwarriorTuiApp {
                         }
                     }
                 } else if input == self.keyconfig.edit {
-                    events.pause_key_capture(terminal);
                     let r = self.task_edit();
-                    events.resume_key_capture(terminal);
                     match r {
                         Ok(_) => self.update(true)?,
                         Err(e) => {

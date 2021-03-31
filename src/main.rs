@@ -89,8 +89,17 @@ async fn tui_main(_config: &str) -> Result<()> {
         // Handle input
         match events.next().await? {
             Event::Input(input) => {
-                let mut t = terminal.lock().await;
-                let r = app.lock().await.handle_input(input, &mut t, &events);
+                if input == app.lock().await.keyconfig.edit {
+                    let mut t = terminal.lock().await;
+                    events.pause_key_capture(&mut t);
+                }
+
+                let r = app.lock().await.handle_input(input);
+
+                if input == app.lock().await.keyconfig.edit {
+                    let mut t = terminal.lock().await;
+                    events.resume_key_capture(&mut t);
+                }
                 if r.is_err() {
                     destruct_terminal();
                     return r;
