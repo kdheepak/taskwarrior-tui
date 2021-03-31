@@ -46,6 +46,7 @@ pub struct Config {
     pub due: usize,
     pub rule_precedence_color: Vec<String>,
     pub uda_tick_rate: u64,
+    pub uda_prefill_task_metadata: bool,
     pub uda_task_detail_prefetch: usize,
     pub uda_task_report_show_info: bool,
     pub uda_task_report_looping: bool,
@@ -76,6 +77,7 @@ impl Config {
         let due = Self::get_due();
         let rule_precedence_color = Self::get_rule_precedence_color();
         let uda_tick_rate = Self::get_uda_tick_rate();
+        let uda_prefill_task_metadata = Self::get_uda_prefill_task_metadata();
         let uda_task_detail_prefetch = Self::get_uda_task_detail_prefetch();
         let uda_task_report_show_info = Self::get_uda_task_report_show_info();
         let uda_task_report_looping = Self::get_uda_task_report_looping();
@@ -98,6 +100,7 @@ impl Config {
             due,
             rule_precedence_color,
             uda_tick_rate,
+            uda_prefill_task_metadata,
             uda_task_detail_prefetch,
             uda_task_report_show_info,
             uda_task_report_looping,
@@ -120,6 +123,7 @@ impl Config {
                 due,
                 rule_precedence_color,
                 uda_tick_rate,
+                uda_prefill_task_metadata,
                 uda_task_detail_prefetch,
                 uda_task_report_show_info,
                 uda_task_report_looping,
@@ -151,6 +155,7 @@ impl Config {
             due,
             rule_precedence_color,
             uda_tick_rate,
+            uda_prefill_task_metadata,
             uda_task_detail_prefetch,
             uda_task_report_show_info,
             uda_task_report_looping,
@@ -426,6 +431,14 @@ impl Config {
             .await
             .context("Unable to parse `task show data.location`.")
             .unwrap()
+    }
+
+    async fn get_uda_prefill_task_metadata() -> bool {
+        Self::get_config("uda.taskwarrior-tui.task-report.pre-fill-task-meta-data")
+            .await
+            .unwrap_or_default()
+            .get_bool()
+            .unwrap_or(false)
     }
 
     async fn get_uda_tick_rate() -> u64 {
