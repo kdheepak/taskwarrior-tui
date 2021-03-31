@@ -96,13 +96,13 @@ async fn tui_main(_config: &str) -> Result<()> {
         // Handle input
         match events.next().await? {
             Event::Input(input) => {
-                if input == app.keyconfig.edit {
+                if input == app.keyconfig.edit && app.mode == AppMode::TaskReport {
                     events.leave_tui_mode(&mut terminal);
                 }
 
                 let r = app.handle_input(input);
 
-                if input == app.keyconfig.edit {
+                if input == app.keyconfig.edit && app.mode == AppMode::TaskReport {
                     events.enter_tui_mode(&mut terminal);
                 }
                 if r.is_err() {
