@@ -30,7 +30,16 @@ use chrono::{Datelike, Local, NaiveDate, NaiveDateTime, TimeZone};
 
 use anyhow::Result;
 
-use std::{sync::mpsc, thread, time::Duration};
+use async_std::prelude::*;
+use async_std::stream::StreamExt;
+use async_std::task;
+use futures::future::join_all;
+use futures::join;
+use futures::stream::FuturesOrdered;
+
+use std::sync::{Arc, Mutex};
+
+use std::time::Duration;
 use tui::{
     backend::Backend,
     layout::{Alignment, Constraint, Direction, Layout, Margin, Rect},
@@ -140,6 +149,7 @@ pub enum AppMode {
 
 pub struct TaskwarriorTuiApp {
     pub should_quit: bool,
+    pub dirty: bool,
     pub task_table_state: TableState,
     pub context_table_state: TableState,
     pub current_context_filter: String,
@@ -173,8 +183,10 @@ impl TaskwarriorTuiApp {
         let c = Config::default()?;
         let mut kc = KeyConfig::default();
         kc.update()?;
+        let (w, h) = crossterm::terminal::size()?;
         let mut app = Self {
             should_quit: false,
+            dirty: true,
             task_table_state: TableState::default(),
             context_table_state: TableState::default(),
             tasks: vec![],
@@ -198,8 +210,8 @@ impl TaskwarriorTuiApp {
             contexts: vec![],
             last_export: None,
             keyconfig: kc,
-            terminal_width: 0,
-            terminal_height: 0,
+            terminal_width: w,
+            terminal_height: h,
         };
         for c in app.config.filter.chars() {
             app.filter.insert(c, 1);
@@ -220,6 +232,14 @@ impl TaskwarriorTuiApp {
             .output()?;
         self.current_context_filter = String::from_utf8_lossy(&output.stdout).to_string();
         self.current_context_filter = self.current_context_filter.strip_suffix('\n').unwrap_or("").to_string();
+        Ok(())
+    }
+
+    pub fn render<B>(&mut self, terminal: &mut Terminal<B>) -> Result<()>
+    where
+        B: Backend,
+    {
+        terminal.draw(|f| self.draw(f))?;
         Ok(())
     }
 
@@ -280,7 +300,6 @@ impl TaskwarriorTuiApp {
         let mut tasks_with_styles = vec![];
 
         let tasks_is_empty = self.tasks.is_empty();
-        let tasks_len = self.tasks.len();
 
         if !tasks_is_empty {
             let tasks = &self.tasks;
@@ -305,8 +324,7 @@ impl TaskwarriorTuiApp {
 
     pub fn draw_task(&mut self, f: &mut Frame<impl Backend>) {
         let tasks_is_empty = self.tasks.is_empty();
-        let tasks_len = self.tasks.len();
-        while !tasks_is_empty && self.current_selection >= tasks_len {
+        while !tasks_is_empty && self.current_selection >= self.tasks.len() {
             self.task_report_previous();
         }
         let rects = Layout::default()
@@ -333,7 +351,7 @@ impl TaskwarriorTuiApp {
             self.draw_task_details(f, split_task_layout[1]);
         }
         let selected = self.current_selection;
-        let task_ids = if tasks_len == 0 {
+        let task_ids = if self.tasks.is_empty() {
             vec!["0".to_string()]
         } else {
             match self.task_table_state.mode() {
@@ -593,24 +611,14 @@ impl TaskwarriorTuiApp {
         let task_id = self.tasks[selected].id().unwrap_or_default();
         let task_uuid = *self.tasks[selected].uuid();
 
-        if !self.task_details.contains_key(&task_uuid) {
-            let output = Command::new("task")
-                .arg("rc.color=off")
-                .arg(format!("rc.defaultwidth={}", self.terminal_width - 2))
-                .arg(format!("{}", task_uuid))
-                .output();
-            let data = if let Ok(output) = output {
-                String::from_utf8_lossy(&output.stdout).to_string()
-            } else {
-                "".to_string()
-            };
-            let entry = self.task_details.entry(task_uuid).or_insert_with(|| "".to_string());
-            *entry = data;
-        }
-        let data = self.task_details[&task_uuid].clone();
-
+        let data = match self.task_details.get(&task_uuid) {
+            Some(s) => s.clone(),
+            None => "Loading task details ...".to_string(),
+        };
         self.task_details_scroll = std::cmp::min(
-            (data.lines().count() as u16).saturating_sub(rect.height),
+            (data.lines().count() as u16)
+                .saturating_sub(rect.height)
+                .saturating_add(2),
             self.task_details_scroll,
         );
         let p = Paragraph::new(Text::from(&data[..]))
@@ -624,11 +632,11 @@ impl TaskwarriorTuiApp {
         f.render_widget(p, rect);
     }
 
-    fn task_details_scroll_down(&mut self) {
+    fn task_details_scroll_up(&mut self) {
         self.task_details_scroll = self.task_details_scroll.saturating_sub(1);
     }
 
-    fn task_details_scroll_up(&mut self) {
+    fn task_details_scroll_down(&mut self) {
         self.task_details_scroll = self.task_details_scroll.saturating_add(1);
     }
 
@@ -856,13 +864,83 @@ impl TaskwarriorTuiApp {
     }
 
     pub fn update(&mut self, force: bool) -> Result<()> {
-        if force || self.tasks_changed_since(self.last_export)? {
+        if force || self.dirty || self.tasks_changed_since(self.last_export)? {
             self.last_export = Some(std::time::SystemTime::now());
             self.task_report_table.export_headers()?;
             let _ = self.export_tasks();
             self.export_contexts()?;
             self.update_tags();
             self.task_details.clear();
+            self.dirty = false;
+        }
+        if self.task_report_show_info {
+            task::block_on(self.update_task_details())?;
+        }
+        Ok(())
+    }
+
+    pub async fn update_task_details(&mut self) -> Result<()> {
+        if self.tasks.is_empty() {
+            return Ok(());
+        }
+
+        // remove task_details of tasks not in task report
+        let mut to_delete = vec![];
+        for k in self.task_details.keys() {
+            if !self.tasks.iter().map(|t| t.uuid()).any(|x| x == k) {
+                to_delete.push(*k);
+            }
+        }
+        for k in to_delete {
+            self.task_details.remove(&k);
+        }
+
+        let selected = self.current_selection;
+        if selected >= self.tasks.len() {
+            return Ok(());
+        }
+        let current_task_uuid = *self.tasks[selected].uuid();
+
+        let mut l = vec![selected];
+
+        for s in 1..=self.config.uda_task_detail_prefetch {
+            l.insert(0, std::cmp::min(selected.saturating_sub(s), self.tasks.len() - 1));
+            l.push(std::cmp::min(selected + s, self.tasks.len() - 1))
+        }
+
+        l.dedup();
+
+        let mut output_futs = FuturesOrdered::new();
+        for s in l.iter() {
+            if self.tasks.is_empty() {
+                return Ok(());
+            }
+            if s >= &self.tasks.len() {
+                break;
+            }
+            let task_uuid = *self.tasks[*s].uuid();
+            if !self.task_details.contains_key(&task_uuid) || task_uuid == current_task_uuid {
+                let output_fut = async_std::process::Command::new("task")
+                    .arg("rc.color=off")
+                    .arg(format!("rc.defaultwidth={}", self.terminal_width - 2))
+                    .arg(format!("{}", task_uuid))
+                    .output();
+                output_futs.push(output_fut);
+            }
+        }
+
+        for s in l.iter() {
+            if s >= &self.tasks.len() {
+                break;
+            }
+            let task_id = self.tasks[*s].id().unwrap_or_default();
+            let task_uuid = *self.tasks[*s].uuid();
+            if !self.task_details.contains_key(&task_uuid) || task_uuid == current_task_uuid {
+                if let Some(Ok(output)) = output_futs.next().await {
+                    let data = String::from_utf8_lossy(&output.stdout).to_string();
+                    self.task_details.insert(task_uuid, data);
+                }
+            }
         }
         Ok(())
     }
@@ -1675,12 +1753,7 @@ impl TaskwarriorTuiApp {
         }
     }
 
-    pub fn handle_input(
-        &mut self,
-        input: Key,
-        terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
-        events: &Events,
-    ) -> Result<()> {
+    pub fn handle_input(&mut self, input: Key) -> Result<()> {
         match self.mode {
             AppMode::TaskReport => {
                 if input == Key::Esc {
@@ -1708,9 +1781,9 @@ impl TaskwarriorTuiApp {
                 } else if input == Key::PageUp || input == self.keyconfig.page_up {
                     self.task_report_previous_page();
                 } else if input == Key::Ctrl('e') {
-                    self.task_details_scroll_up();
-                } else if input == Key::Ctrl('y') {
                     self.task_details_scroll_down();
+                } else if input == Key::Ctrl('y') {
+                    self.task_details_scroll_up();
                 } else if input == self.keyconfig.done {
                     match self.task_done() {
                         Ok(_) => self.update(true)?,
@@ -1744,9 +1817,7 @@ impl TaskwarriorTuiApp {
                         }
                     }
                 } else if input == self.keyconfig.edit {
-                    events.pause_key_capture(terminal);
                     let r = self.task_edit();
-                    events.resume_key_capture(terminal);
                     match r {
                         Ok(_) => self.update(true)?,
                         Err(e) => {
@@ -1983,7 +2054,7 @@ impl TaskwarriorTuiApp {
                 }
                 _ => {
                     handle_movement(&mut self.filter, input);
-                    // TODO: call self.update(true) here for instant filter updates
+                    self.dirty = true;
                 }
             },
             AppMode::TaskError => self.mode = AppMode::TaskReport,
@@ -2113,7 +2184,11 @@ mod tests {
 
     #[test]
     fn test_taskwarrior_tui() {
-        let app = TaskwarriorTuiApp::new().unwrap();
+        let app = TaskwarriorTuiApp::new();
+        if app.is_err() {
+            return;
+        }
+        let app = app.unwrap();
         assert!(app.task_by_index(0).is_none());
 
         let app = TaskwarriorTuiApp::new().unwrap();
@@ -2122,6 +2197,9 @@ mod tests {
             .is_none());
 
         test_draw_empty_task_report();
+
+        test_draw_calendar();
+        test_draw_help_popup();
 
         setup();
 
@@ -2141,6 +2219,7 @@ mod tests {
         test_task_tomorrow();
         test_task_earlier_today();
         test_task_later_today();
+
         teardown();
     }
 
@@ -2766,9 +2845,9 @@ mod tests {
             "╰────────────────────────────────────────────────╯",
             "╭Task 27─────────────────────────────────────────╮",
             "│                                                │",
-            "│Name        Value                               │",
-            "│----------- ------------------------------------│",
-            "│ID          27                                  │",
+            "│Name          Value                             │",
+            "│------------- ----------------------------------│",
+            "│ID            27                                │",
             "╰────────────────────────────────────────────────╯",
             "╭Filter Tasks────────────────────────────────────╮",
             "│status:pending -private                         │",
@@ -2824,7 +2903,6 @@ mod tests {
         test_case(&expected);
     }
 
-    #[test]
     fn test_draw_calendar() {
         let test_case = |expected: &Buffer| {
             let mut app = TaskwarriorTuiApp::new().unwrap();
@@ -2909,7 +2987,6 @@ mod tests {
         test_case(&expected);
     }
 
-    #[test]
     fn test_draw_help_popup() {
         let test_case = |expected: &Buffer| {
             let mut app = TaskwarriorTuiApp::new().unwrap();

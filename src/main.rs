@@ -21,6 +21,11 @@ use std::io::Write;
 use std::panic;
 use std::time::Duration;
 
+use async_std::prelude::*;
+use async_std::sync::{Arc, Mutex};
+use async_std::task;
+use futures::stream::{FuturesUnordered, StreamExt};
+
 use crate::util::Key;
 use app::{AppMode, TaskwarriorTuiApp};
 
@@ -44,7 +49,7 @@ fn main() -> Result<()> {
         .get_matches();
 
     let config = matches.value_of("config").unwrap_or("~/.taskrc");
-    let r = tui_main(config);
+    let r = task::block_on(tui_main(config));
     match r {
         Ok(_) => std::process::exit(0),
         Err(error) => {
@@ -63,55 +68,60 @@ fn main() -> Result<()> {
     }
 }
 
-fn tui_main(_config: &str) -> Result<()> {
-    // Terminal initialization
-    let mut terminal = setup_terminal();
-
+async fn tui_main(_config: &str) -> Result<()> {
     panic::set_hook(Box::new(|panic_info| {
         destruct_terminal();
         better_panic::Settings::auto().create_panic_handler()(panic_info);
     }));
 
+    let maybeapp = TaskwarriorTuiApp::new();
+    if maybeapp.is_err() {
+        destruct_terminal();
+        return Err(maybeapp.err().unwrap());
+    }
+
+    let mut app = maybeapp.unwrap();
+    let mut terminal = setup_terminal();
+
+    app.render(&mut terminal).unwrap();
+
     // Setup event handlers
     let events = Events::with_config(EventConfig {
-        tick_rate: Duration::from_millis(250),
+        tick_rate: Duration::from_millis(app.config.uda_tick_rate),
     });
 
-    let maybeapp = TaskwarriorTuiApp::new();
-    match maybeapp {
-        Ok(mut app) => {
-            loop {
-                terminal.draw(|mut frame| app.draw(&mut frame)).unwrap();
-
-                // Handle input
-                match events.next()? {
-                    Event::Input(input) => {
-                        let r = app.handle_input(input, &mut terminal, &events);
-                        if r.is_err() {
-                            destruct_terminal();
-                            return r;
-                        }
-                    }
-                    Event::Tick => {
-                        let r = app.update(false);
-                        if r.is_err() {
-                            destruct_terminal();
-                            return r;
-                        }
-                    }
+    loop {
+        app.render(&mut terminal).unwrap();
+        // Handle input
+        match events.next().await? {
+            Event::Input(input) => {
+                if input == app.keyconfig.edit {
+                    events.leave_tui_mode(&mut terminal);
                 }
 
-                if app.should_quit {
+                let r = app.handle_input(input);
+
+                if input == app.keyconfig.edit {
+                    events.enter_tui_mode(&mut terminal);
+                }
+                if r.is_err() {
                     destruct_terminal();
-                    break;
+                    return r;
                 }
             }
-
-            Ok(())
+            Event::Tick => {
+                let r = app.update(false);
+                if r.is_err() {
+                    destruct_terminal();
+                    return r;
+                }
+            }
         }
-        Err(e) => {
+
+        if app.should_quit {
             destruct_terminal();
-            Err(e)
+            break;
         }
     }
+    Ok(())
 }
