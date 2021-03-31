@@ -1890,34 +1890,36 @@ impl TaskwarriorTuiApp {
                         TableMode::SingleSelection => match self.task_current() {
                             Some(t) => {
                                 let mut s = format!("{} ", t.description().replace("'", "\\'"));
-                                if t.tags().is_some() {
-                                    let virtual_tags = self.task_report_table.virtual_tags.clone();
-                                    for tag in t.tags().unwrap() {
-                                        if !virtual_tags.contains(tag) {
-                                            s = format!("{}+{} ", s, tag);
+                                if self.config.uda_prefill_task_metadata {
+                                    if t.tags().is_some() {
+                                        let virtual_tags = self.task_report_table.virtual_tags.clone();
+                                        for tag in t.tags().unwrap() {
+                                            if !virtual_tags.contains(tag) {
+                                                s = format!("{}+{} ", s, tag);
+                                            }
                                         }
                                     }
-                                }
-                                if t.project().is_some() {
-                                    s = format!("{}project:{} ", s, t.project().unwrap());
-                                }
-                                if t.priority().is_some() {
-                                    s = format!("{}priority:{} ", s, t.priority().unwrap());
-                                }
-                                if t.due().is_some() {
-                                    let date = t.due().unwrap();
-                                    let now = Local::now();
-                                    let date = TimeZone::from_utc_datetime(now.offset(), date);
-                                    s = format!(
-                                        "{}due:'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}' ",
-                                        s,
-                                        date.year(),
-                                        date.month(),
-                                        date.day(),
-                                        date.hour(),
-                                        date.minute(),
-                                        date.second(),
-                                    )
+                                    if t.project().is_some() {
+                                        s = format!("{}project:{} ", s, t.project().unwrap());
+                                    }
+                                    if t.priority().is_some() {
+                                        s = format!("{}priority:{} ", s, t.priority().unwrap());
+                                    }
+                                    if t.due().is_some() {
+                                        let date = t.due().unwrap();
+                                        let now = Local::now();
+                                        let date = TimeZone::from_utc_datetime(now.offset(), date);
+                                        s = format!(
+                                            "{}due:'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}' ",
+                                            s,
+                                            date.year(),
+                                            date.month(),
+                                            date.day(),
+                                            date.hour(),
+                                            date.minute(),
+                                            date.second(),
+                                        )
+                                    }
                                 }
                                 self.modify.update(&s, s.as_str().len())
                             }
