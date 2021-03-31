@@ -280,6 +280,7 @@ jobs:
     env:
       TASKRC: taskwarrior-testdata/.taskrc
       TASKDATA: taskwarrior-testdata/.task
+      RUST_BACKTRACE: 1
     steps:
       - uses: actions/checkout@v2
       - name: Install toolchain

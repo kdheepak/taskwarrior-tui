@@ -2191,7 +2191,11 @@ mod tests {
 
     #[test]
     fn test_taskwarrior_tui() {
-        let app = TaskwarriorTuiApp::new().unwrap();
+        let app = TaskwarriorTuiApp::new();
+        if app.is_err() {
+            return;
+        }
+        let app = app.unwrap();
         assert!(app.task_by_index(0).is_none());
 
         let app = TaskwarriorTuiApp::new().unwrap();
