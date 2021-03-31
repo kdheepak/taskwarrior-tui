@@ -21,6 +21,11 @@ use std::io::Write;
 use std::panic;
 use std::time::Duration;
 
+use async_std::prelude::*;
+use async_std::sync::{Arc, Mutex};
+use async_std::task;
+use futures::stream::{FuturesUnordered, StreamExt};
+
 use crate::util::Key;
 use app::{AppMode, TaskwarriorTuiApp};
 
@@ -44,28 +49,12 @@ fn main() -> Result<()> {
         .get_matches();
 
     let config = matches.value_of("config").unwrap_or("~/.taskrc");
-    let r = tui_main(config);
-    match r {
-        Ok(_) => std::process::exit(0),
-        Err(error) => {
-            if error.to_string().to_lowercase().contains("no such file or directory") {
-                eprintln!(
-                    "[taskwarrior-tui error]: Unable to find executable `task`: {}. Check that taskwarrior is installed correctly and try again.", error
-                );
-            } else {
-                eprintln!(
-                    "[taskwarrior-tui error]: {}. Please report as a github issue on https://github.com/kdheepak/taskwarrior-tui",
-                    error
-                );
-            }
-            std::process::exit(1);
-        }
-    }
+    task::block_on(tui_main(config))
 }
 
-fn tui_main(_config: &str) -> Result<()> {
+async fn tui_main(_config: &str) -> Result<()> {
     // Terminal initialization
-    let mut terminal = setup_terminal();
+    let terminal = setup_terminal();
 
     panic::set_hook(Box::new(|panic_info| {
         destruct_terminal();
@@ -79,21 +68,30 @@ fn tui_main(_config: &str) -> Result<()> {
 
     let maybeapp = TaskwarriorTuiApp::new();
     match maybeapp {
-        Ok(mut app) => {
+        Ok(app) => {
+            let app = Arc::new(Mutex::new(app));
+            let terminal = Arc::new(Mutex::new(terminal));
             loop {
-                terminal.draw(|mut frame| app.draw(&mut frame)).unwrap();
-
+                let handle = {
+                    let app = app.clone();
+                    let terminal = terminal.clone();
+                    task::spawn_local(async move {
+                        let mut t = terminal.lock().await;
+                        app.lock().await.render(&mut t).unwrap();
+                    })
+                };
                 // Handle input
-                match events.next()? {
+                match events.next().await? {
                     Event::Input(input) => {
-                        let r = app.handle_input(input, &mut terminal, &events);
+                        let mut t = terminal.lock().await;
+                        let r = app.lock().await.handle_input(input, &mut t, &events);
                         if r.is_err() {
                             destruct_terminal();
                             return r;
                         }
                     }
                     Event::Tick => {
-                        let r = app.update(false);
+                        let r = app.lock().await.update(false);
                         if r.is_err() {
                             destruct_terminal();
                             return r;
@@ -101,7 +99,7 @@ fn tui_main(_config: &str) -> Result<()> {
                     }
                 }
 
-                if app.should_quit {
+                if app.lock().await.should_quit {
                     destruct_terminal();
                     break;
                 }
