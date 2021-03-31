@@ -53,63 +53,62 @@ fn main() -> Result<()> {
 }
 
 async fn tui_main(_config: &str) -> Result<()> {
-    // Terminal initialization
-    let terminal = setup_terminal();
-
     panic::set_hook(Box::new(|panic_info| {
         destruct_terminal();
         better_panic::Settings::auto().create_panic_handler()(panic_info);
     }));
 
+    let maybeapp = TaskwarriorTuiApp::new();
+    if maybeapp.is_err() {
+        destruct_terminal();
+        return Err(maybeapp.err().unwrap());
+    }
+
+    let app = Arc::new(Mutex::new(maybeapp.unwrap()));
+    let terminal = Arc::new(Mutex::new(setup_terminal()));
+
+    {
+        let mut terminal = terminal.lock().await;
+        app.lock().await.render(&mut terminal).unwrap();
+    }
+
     // Setup event handlers
     let events = Events::with_config(EventConfig {
-        tick_rate: Duration::from_millis(250),
+        tick_rate: Duration::from_millis(app.lock().await.config.uda_tick_rate),
     });
 
-    let maybeapp = TaskwarriorTuiApp::new();
-    match maybeapp {
-        Ok(app) => {
-            let app = Arc::new(Mutex::new(app));
-            let terminal = Arc::new(Mutex::new(terminal));
-            loop {
-                let handle = {
-                    let app = app.clone();
-                    let terminal = terminal.clone();
-                    task::spawn_local(async move {
-                        let mut t = terminal.lock().await;
-                        app.lock().await.render(&mut t).unwrap();
-                    })
-                };
-                // Handle input
-                match events.next().await? {
-                    Event::Input(input) => {
-                        let mut t = terminal.lock().await;
-                        let r = app.lock().await.handle_input(input, &mut t, &events);
-                        if r.is_err() {
-                            destruct_terminal();
-                            return r;
-                        }
-                    }
-                    Event::Tick => {
-                        let r = app.lock().await.update(false);
-                        if r.is_err() {
-                            destruct_terminal();
-                            return r;
-                        }
-                    }
-                }
-
-                if app.lock().await.should_quit {
+    loop {
+        let handle = {
+            let app = app.clone();
+            let terminal = terminal.clone();
+            task::spawn_local(async move {
+                let mut terminal = terminal.lock().await;
+                app.lock().await.render(&mut terminal).unwrap();
+            })
+        };
+        // Handle input
+        match events.next().await? {
+            Event::Input(input) => {
+                let mut t = terminal.lock().await;
+                let r = app.lock().await.handle_input(input, &mut t, &events);
+                if r.is_err() {
                     destruct_terminal();
-                    break;
+                    return r;
                 }
             }
-
-            Ok(())
+            Event::Tick => {
+                let r = app.lock().await.update(false);
+                if r.is_err() {
+                    destruct_terminal();
+                    return r;
+                }
+            }
         }
-        Err(e) => {
+
+        if app.lock().await.should_quit {
             destruct_terminal();
-            Err(e)
+            break;
         }
     }
+    Ok(())
 }

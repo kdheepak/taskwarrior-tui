@@ -88,7 +88,7 @@ impl Events {
                     continue;
                 }
 
-                let mut delay = Delay::new(Duration::from_millis(250)).fuse();
+                let mut delay = Delay::new(tick_rate).fuse();
                 let mut event = reader.next().fuse();
 
                 select! {

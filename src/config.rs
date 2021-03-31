@@ -45,6 +45,7 @@ pub struct Config {
     pub print_empty_columns: bool,
     pub due: usize,
     pub rule_precedence_color: Vec<String>,
+    pub uda_tick_rate: u64,
     pub uda_task_detail_prefetch: usize,
     pub uda_task_report_show_info: bool,
     pub uda_task_report_looping: bool,
@@ -74,6 +75,7 @@ impl Config {
         let data_location = Self::get_data_location();
         let due = Self::get_due();
         let rule_precedence_color = Self::get_rule_precedence_color();
+        let uda_tick_rate = Self::get_uda_tick_rate();
         let uda_task_detail_prefetch = Self::get_uda_task_detail_prefetch();
         let uda_task_report_show_info = Self::get_uda_task_report_show_info();
         let uda_task_report_looping = Self::get_uda_task_report_looping();
@@ -95,6 +97,7 @@ impl Config {
             data_location,
             due,
             rule_precedence_color,
+            uda_tick_rate,
             uda_task_detail_prefetch,
             uda_task_report_show_info,
             uda_task_report_looping,
@@ -116,6 +119,7 @@ impl Config {
                 data_location,
                 due,
                 rule_precedence_color,
+                uda_tick_rate,
                 uda_task_detail_prefetch,
                 uda_task_report_show_info,
                 uda_task_report_looping,
@@ -146,6 +150,7 @@ impl Config {
             print_empty_columns,
             due,
             rule_precedence_color,
+            uda_tick_rate,
             uda_task_detail_prefetch,
             uda_task_report_show_info,
             uda_task_report_looping,
@@ -421,6 +426,14 @@ impl Config {
             .await
             .context("Unable to parse `task show data.location`.")
             .unwrap()
+    }
+
+    async fn get_uda_tick_rate() -> u64 {
+        Self::get_config("uda.taskwarrior-tui.tick-rate")
+            .await
+            .unwrap_or_default()
+            .parse::<u64>()
+            .unwrap_or(250)
     }
 
     async fn get_uda_task_detail_prefetch() -> usize {
