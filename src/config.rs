@@ -538,7 +538,6 @@ mod tests {
 
     #[test]
     fn test_colors() {
-        let tc = Config::default();
         let c = Config::get_tcolor("red on blue");
         assert_eq!(c.fg.unwrap(), Color::Indexed(1));
         assert_eq!(c.bg.unwrap(), Color::Indexed(4));
