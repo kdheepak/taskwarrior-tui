@@ -40,7 +40,6 @@ anyhow = "1"
 async-std = { version = "1", features = ["attributes", "unstable"] }
 futures = "0.3"
 futures-timer = "3.0"
-dirs = "2.0.2"
 
 [package.metadata.rpm]
 package = "taskwarrior-tui"
