@@ -350,44 +350,49 @@ impl TaskwarriorTuiApp {
             }
         };
         match self.mode {
-            AppMode::TaskReport => self.draw_command(f, rects[1], self.filter.as_str(), "Filter Tasks"),
+            AppMode::TaskReport => self.draw_command(
+                f,
+                rects[1],
+                self.filter.as_str(),
+                "Filter Tasks",
+                self.get_position(&self.filter),
+                false,
+            ),
             AppMode::TaskFilter => {
                 let position = self.get_position(&self.filter);
-                f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
-                f.render_widget(Clear, rects[1]);
                 self.draw_command(
                     f,
                     rects[1],
                     self.filter.as_str(),
                     Span::styled("Filter Tasks", Style::default().add_modifier(Modifier::BOLD)),
+                    position,
+                    true,
                 );
             }
             AppMode::TaskLog => {
                 let position = self.get_position(&self.command);
-                f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
-                f.render_widget(Clear, rects[1]);
                 self.draw_command(
                     f,
                     rects[1],
                     self.command.as_str(),
                     Span::styled("Log Tasks", Style::default().add_modifier(Modifier::BOLD)),
+                    position,
+                    true,
                 );
             }
             AppMode::TaskSubprocess => {
                 let position = self.get_position(&self.command);
-                f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
-                f.render_widget(Clear, rects[1]);
                 self.draw_command(
                     f,
                     rects[1],
                     self.command.as_str(),
                     Span::styled("Shell Command", Style::default().add_modifier(Modifier::BOLD)),
+                    position,
+                    true,
                 );
             }
             AppMode::TaskModify => {
                 let position = self.get_position(&self.modify);
-                f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
-                f.render_widget(Clear, rects[1]);
                 let label = if task_ids.len() > 1 {
                     format!("Modify Tasks {}", task_ids.join(","))
                 } else {
@@ -398,12 +403,12 @@ impl TaskwarriorTuiApp {
                     rects[1],
                     self.modify.as_str(),
                     Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
+                    position,
+                    true,
                 );
             }
             AppMode::TaskAnnotate => {
                 let position = self.get_position(&self.command);
-                f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
-                f.render_widget(Clear, rects[1]);
                 let label = if task_ids.len() > 1 {
                     format!("Annotate Tasks {}", task_ids.join(","))
                 } else {
@@ -414,34 +419,51 @@ impl TaskwarriorTuiApp {
                     rects[1],
                     self.command.as_str(),
                     Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
+                    position,
+                    true,
                 );
             }
             AppMode::TaskAdd => {
                 let position = self.get_position(&self.command);
-                f.set_cursor(rects[1].x + position as u16 + 1, rects[1].y + 1);
-                f.render_widget(Clear, rects[1]);
                 self.draw_command(
                     f,
                     rects[1],
                     self.command.as_str(),
                     Span::styled("Add Task", Style::default().add_modifier(Modifier::BOLD)),
+                    position,
+                    true,
                 );
             }
             AppMode::TaskError => {
-                f.render_widget(Clear, rects[1]);
                 self.draw_command(
                     f,
                     rects[1],
                     self.error.as_str(),
                     Span::styled("Error", Style::default().add_modifier(Modifier::BOLD)),
+                    0,
+                    false,
                 );
             }
             AppMode::TaskHelpPopup => {
-                self.draw_command(f, rects[1], self.filter.as_str(), "Filter Tasks");
+                self.draw_command(
+                    f,
+                    rects[1],
+                    self.filter.as_str(),
+                    "Filter Tasks",
+                    self.get_position(&self.filter),
+                    false,
+                );
                 self.draw_help_popup(f, 80, 90);
             }
             AppMode::TaskContextMenu => {
-                self.draw_command(f, rects[1], self.filter.as_str(), "Filter Tasks");
+                self.draw_command(
+                    f,
+                    rects[1],
+                    self.filter.as_str(),
+                    "Filter Tasks",
+                    self.get_position(&self.filter),
+                    false,
+                );
                 self.draw_context_menu(f, 80, 50);
             }
             _ => {
@@ -527,16 +549,32 @@ impl TaskwarriorTuiApp {
         f.render_stateful_widget(t, area, &mut self.context_table_state);
     }
 
-    fn draw_command<'a, T>(&self, f: &mut Frame<impl Backend>, rect: Rect, text: &str, title: T)
-    where
+    fn draw_command<'a, T>(
+        &self,
+        f: &mut Frame<impl Backend>,
+        rect: Rect,
+        text: &str,
+        title: T,
+        position: usize,
+        cursor: bool,
+    ) where
         T: Into<Spans<'a>>,
     {
-        let p = Paragraph::new(Text::from(text)).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
-                .title(title.into()),
-        );
+        f.render_widget(Clear, rect);
+        if cursor {
+            f.set_cursor(
+                std::cmp::min(rect.x + position as u16 + 1, rect.x + rect.width.saturating_sub(2)),
+                rect.y + 1,
+            );
+        }
+        let p = Paragraph::new(Text::from(text))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .title(title.into()),
+            )
+            .scroll((0, ((position + 3) as u16).saturating_sub(rect.width)));
         f.render_widget(p, rect);
     }
 
@@ -2095,6 +2133,7 @@ mod tests {
             .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
             .is_some());
 
+        test_draw_task_report_with_extended_modify_command();
         test_draw_task_report();
         test_task_tags();
         test_task_style();
@@ -2461,6 +2500,172 @@ mod tests {
         }
 
         test_case(&expected);
+    }
+
+    fn test_draw_task_report_with_extended_modify_command() {
+        let test_case = |expected1: &Buffer, expected2: &Buffer| {
+            let mut app = TaskwarriorTuiApp::new().unwrap();
+
+            let total_tasks: u64 = 26;
+
+            assert!(app.get_context().is_ok());
+            assert!(app.update(true).is_ok());
+            assert_eq!(app.tasks.len(), total_tasks as usize);
+            assert_eq!(app.current_context_filter, "");
+
+            let now = Local::now();
+            let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
+
+            app.mode = AppMode::TaskModify;
+            match app.task_table_state.mode() {
+                TableMode::SingleSelection => match app.task_current() {
+                    Some(t) => {
+                        let s = format!("{} ", t.description());
+                        app.modify.update(&s, s.as_str().len())
+                    }
+                    None => app.modify.update("", 0),
+                },
+                TableMode::MultipleSelection => app.modify.update("", 0),
+            }
+
+            app.update(true).unwrap();
+
+            let backend = TestBackend::new(25, 3);
+            let mut terminal = Terminal::new(backend).unwrap();
+            terminal
+                .draw(|f| {
+                    let rects = Layout::default()
+                        .direction(Direction::Vertical)
+                        .constraints([Constraint::Min(0), Constraint::Length(3)].as_ref())
+                        .split(f.size());
+
+                    let position = app.get_position(&app.modify);
+                    f.set_cursor(
+                        std::cmp::min(
+                            rects[1].x + position as u16 + 1,
+                            rects[1].x + rects[1].width.saturating_sub(2),
+                        ),
+                        rects[1].y + 1,
+                    );
+                    f.render_widget(Clear, rects[1]);
+                    let selected = app.current_selection;
+                    let task_ids = if app.tasks.is_empty() {
+                        vec!["0".to_string()]
+                    } else {
+                        match app.task_table_state.mode() {
+                            TableMode::SingleSelection => {
+                                vec![app.tasks[selected].id().unwrap_or_default().to_string()]
+                            }
+                            TableMode::MultipleSelection => {
+                                let mut tids = vec![];
+                                for uuid in app.marked.iter() {
+                                    if let Some(t) = app.task_by_uuid(*uuid) {
+                                        tids.push(t.id().unwrap_or_default().to_string());
+                                    }
+                                }
+                                tids
+                            }
+                        }
+                    };
+                    let label = if task_ids.len() > 1 {
+                        format!("Modify Tasks {}", task_ids.join(","))
+                    } else {
+                        format!("Modify Task {}", task_ids.join(","))
+                    };
+                    app.draw_command(
+                        f,
+                        rects[1],
+                        app.modify.as_str(),
+                        Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
+                        position,
+                        true,
+                    );
+                })
+                .unwrap();
+
+            assert_eq!(terminal.backend().size().unwrap(), expected1.area);
+            terminal.backend().assert_buffer(expected1);
+
+            app.modify.move_home();
+
+            terminal
+                .draw(|f| {
+                    let rects = Layout::default()
+                        .direction(Direction::Vertical)
+                        .constraints([Constraint::Min(0), Constraint::Length(3)].as_ref())
+                        .split(f.size());
+
+                    let position = app.get_position(&app.modify);
+                    f.set_cursor(
+                        std::cmp::min(
+                            rects[1].x + position as u16 + 1,
+                            rects[1].x + rects[1].width.saturating_sub(2),
+                        ),
+                        rects[1].y + 1,
+                    );
+                    f.render_widget(Clear, rects[1]);
+                    let selected = app.current_selection;
+                    let task_ids = if app.tasks.is_empty() {
+                        vec!["0".to_string()]
+                    } else {
+                        match app.task_table_state.mode() {
+                            TableMode::SingleSelection => {
+                                vec![app.tasks[selected].id().unwrap_or_default().to_string()]
+                            }
+                            TableMode::MultipleSelection => {
+                                let mut tids = vec![];
+                                for uuid in app.marked.iter() {
+                                    if let Some(t) = app.task_by_uuid(*uuid) {
+                                        tids.push(t.id().unwrap_or_default().to_string());
+                                    }
+                                }
+                                tids
+                            }
+                        }
+                    };
+                    let label = if task_ids.len() > 1 {
+                        format!("Modify Tasks {}", task_ids.join(","))
+                    } else {
+                        format!("Modify Task {}", task_ids.join(","))
+                    };
+                    app.draw_command(
+                        f,
+                        rects[1],
+                        app.modify.as_str(),
+                        Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
+                        position,
+                        true,
+                    );
+                })
+                .unwrap();
+
+            assert_eq!(terminal.backend().size().unwrap(), expected2.area);
+            terminal.backend().assert_buffer(expected2);
+        };
+
+        let mut expected1 = Buffer::with_lines(vec![
+            "╭Modify Task 10─────────╮",
+            "│based on your .taskrc  │",
+            "╰───────────────────────╯",
+        ]);
+
+        let mut expected2 = Buffer::with_lines(vec![
+            "╭Modify Task 10─────────╮",
+            "│Support color for tasks│",
+            "╰───────────────────────╯",
+        ]);
+
+        for i in 1..=14 {
+            // Task
+            expected1
+                .get_mut(i, 0)
+                .set_style(Style::default().add_modifier(Modifier::BOLD));
+            expected2
+                .get_mut(i, 0)
+                .set_style(Style::default().add_modifier(Modifier::BOLD));
+        }
+
+        test_case(&expected1, &expected2);
     }
 
     fn test_draw_task_report() {
