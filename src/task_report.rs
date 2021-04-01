@@ -43,7 +43,7 @@ pub struct TaskReportTable {
 }
 
 impl TaskReportTable {
-    pub fn new() -> Result<Self> {
+    pub fn new(data: &str) -> Result<Self> {
         let virtual_tags = vec![
             "PROJECT",
             "BLOCKED",
@@ -86,16 +86,21 @@ impl TaskReportTable {
             virtual_tags: virtual_tags.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
             description_width: 100,
         };
-        task_report_table.export_headers()?;
+        task_report_table.export_headers(Some(data))?;
         Ok(task_report_table)
     }
 
-    pub fn export_headers(&mut self) -> Result<()> {
+    pub fn export_headers(&mut self, data: Option<&str>) -> Result<()> {
         self.columns = vec![];
         self.labels = vec![];
 
-        let output = Command::new("task").arg("show").arg("report.next.columns").output()?;
-        let data = String::from_utf8_lossy(&output.stdout);
+        let data = match data {
+            Some(s) => s.to_string(),
+            None => {
+                let output = Command::new("task").arg("show").arg("report.next.columns").output()?;
+                String::from_utf8_lossy(&output.stdout).into_owned()
+            }
+        };
 
         for line in data.split('\n') {
             if line.starts_with("report.next.columns") {

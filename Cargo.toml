@@ -18,29 +18,30 @@ default = ["crossterm-backend"]
 crossterm-backend = ["tui/crossterm", "crossterm"]
 
 [dependencies]
-regex = "1"
-itertools = "0.9"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-clap = "2.33"
-cassowary = "0.3.0"
-task-hookrs = { git = "https://github.com/matthiasbeyer/task-hookrs" }
-rand = "0.7"
-shlex = "0.1"
-chrono = "0.4"
-unicode-width = "0.1"
-unicode-segmentation = "1.6"
-tui = { version = "0.12", optional = true, default-features = false }
-crossterm = { version = "0.17", optional = true, default-features = false, features = ["event-stream"] }
-rustyline = "8"
-uuid = { version = "0.8.1", features = ["serde", "v4"] }
-better-panic = "0.2.0"
-shellexpand = "2.1"
 anyhow = "1"
 async-std = { version = "1", features = ["attributes", "unstable"] }
+better-panic = "0.2.0"
+cassowary = "0.3.0"
+chrono = "0.4"
+clap = "2.33"
+crossterm = { version = "0.17", optional = true, default-features = false, features = ["event-stream"] }
+dirs = "2.0.2"
 futures = "0.3"
 futures-timer = "3.0"
-dirs = "2.0.2"
+itertools = "0.9"
+lazy_static = "1.4.0"
+rand = "0.7"
+regex = "1"
+rustyline = "8"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+shellexpand = "2.1"
+shlex = "0.1"
+task-hookrs = { git = "https://github.com/matthiasbeyer/task-hookrs" }
+tui = { version = "0.12", optional = true, default-features = false }
+unicode-segmentation = "1.6"
+unicode-width = "0.1"
+uuid = { version = "0.8.1", features = ["serde", "v4"] }
 
 [package.metadata.rpm]
 package = "taskwarrior-tui"

@@ -32,14 +32,15 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use chrono::{Datelike, Local, NaiveDate, NaiveDateTime, TimeZone, Timelike};
 
+use anyhow::Context as AnyhowContext;
 use anyhow::Result;
 
 use async_std::prelude::*;
 use async_std::stream::StreamExt;
 use async_std::task;
 use futures::future::join_all;
-use futures::join;
 use futures::stream::FuturesOrdered;
+use futures::{join, try_join};
 
 use std::sync::{Arc, Mutex};
 
@@ -66,7 +67,15 @@ use tui::{backend::CrosstermBackend, Terminal};
 
 use regex::Regex;
 
+use lazy_static::lazy_static;
+
+use std::time::Instant;
+
 const MAX_LINE: usize = 4096;
+
+lazy_static! {
+    static ref START_TIME: Instant = Instant::now();
+}
 
 pub fn cmp(t1: &Task, t2: &Task) -> Ordering {
     let urgency1 = match t1.urgency() {
@@ -189,10 +198,31 @@ pub struct TaskwarriorTuiApp {
 
 impl TaskwarriorTuiApp {
     pub fn new() -> Result<Self> {
-        let c = Config::default()?;
-        let mut kc = KeyConfig::default();
-        kc.update()?;
+        let output = std::process::Command::new("task")
+            .arg("rc.color=off")
+            .arg("show")
+            .output()
+            .context("Unable to run `task show`.")
+            .unwrap();
+
+        if !output.status.success() {
+            let output = Command::new("task")
+                .arg("diagnostics")
+                .output()
+                .context("Unable to run `task diagnostics`.")
+                .unwrap();
+            panic!(
+                "Unable to run `task show`.\n{}\n{}\nPlease check your configuration or open a issue on github.",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr),
+            );
+        }
+
+        let data = String::from_utf8_lossy(&output.stdout);
+        let (c, kc) = task::block_on(async { try_join!(Config::new(&data), KeyConfig::new(&data)) })?;
+
         let (w, h) = crossterm::terminal::size()?;
+
         let mut app = Self {
             should_quit: false,
             dirty: true,
@@ -213,7 +243,7 @@ impl TaskwarriorTuiApp {
             task_details_scroll: 0,
             task_report_show_info: c.uda_task_report_show_info,
             config: c,
-            task_report_table: TaskReportTable::new()?,
+            task_report_table: TaskReportTable::new(&data)?,
             calendar_year: Local::today().year(),
             help_popup: Help::new(),
             contexts: vec![],
@@ -224,6 +254,7 @@ impl TaskwarriorTuiApp {
             filter_history_context: HistoryContext::new("filter.history"),
             command_history_context: HistoryContext::new("command.history"),
         };
+
         for c in app.config.filter.chars() {
             app.filter.insert(c, 1);
         }
@@ -874,7 +905,7 @@ impl TaskwarriorTuiApp {
     pub fn update(&mut self, force: bool) -> Result<()> {
         if force || self.dirty || self.tasks_changed_since(self.last_export)? {
             self.last_export = Some(std::time::SystemTime::now());
-            self.task_report_table.export_headers()?;
+            self.task_report_table.export_headers(None)?;
             let _ = self.export_tasks();
             self.export_contexts()?;
             self.update_tags();
@@ -2321,6 +2352,14 @@ mod tests {
     fn teardown() {
         let cd = Path::new(env!("TASKDATA"));
         std::fs::remove_dir_all(cd).unwrap();
+    }
+
+    #[test]
+    fn test_taskwarrior_timing() {
+        let app = TaskwarriorTuiApp::new();
+        if app.is_err() {
+            return;
+        }
     }
 
     #[test]
