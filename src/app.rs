@@ -357,7 +357,7 @@ impl TaskwarriorTuiApp {
             .year(self.calendar_year)
             .date_style(dates_with_styles)
             .months_per_row(self.config.uda_calendar_months_per_row);
-        c.title_background_color = self.config.uda_style_calendar_title.bg.unwrap_or(Color::Black);
+        c.title_background_color = self.config.uda_style_calendar_title.bg.unwrap_or(Color::Reset);
         f.render_widget(c, rects[0]);
     }
 
