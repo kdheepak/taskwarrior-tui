@@ -325,17 +325,13 @@ impl TaskwarriorTuiApp {
             | AppMode::TaskModify => self.draw_task(f),
             AppMode::Calendar => self.draw_calendar(f),
         }
+        self.draw_debug(f);
     }
 
     pub fn draw_debug(&mut self, f: &mut Frame<impl Backend>) {
         let area = centered_rect(50, 50, f.size());
         f.render_widget(Clear, area);
-        let t = format!(
-            "{}\n{}\n{:?}",
-            self.command.pos(),
-            self.command_history_context.history_index,
-            self.command_history_context.history.iter().collect::<Vec<_>>()
-        );
+        let t = format!("{}", self.current_selection,);
         let p = Paragraph::new(Text::from(t))
             .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded));
         f.render_widget(p, area);
@@ -936,8 +932,9 @@ impl TaskwarriorTuiApp {
             self.update_tags();
             self.task_details.clear();
             self.dirty = false;
-            self.cursor_fix();
         }
+        self.cursor_fix();
+        self.update_task_table_state();
         if self.task_report_show_info {
             task::block_on(self.update_task_details())?;
         }
@@ -1631,7 +1628,7 @@ impl TaskwarriorTuiApp {
         if self.tasks.is_empty() {
             return Ok(());
         }
-        let selected = self.task_table_state.current_selection().unwrap_or_default();
+        let selected = self.current_selection;
         let task_id = self.tasks[selected].id().unwrap_or_default();
         let task_uuid = *self.tasks[selected].uuid();
         let r = Command::new("task").arg(format!("{}", task_uuid)).arg("edit").spawn();
@@ -2269,7 +2266,6 @@ impl TaskwarriorTuiApp {
                 }
             }
         }
-        self.update_task_table_state();
         Ok(())
     }
 }
