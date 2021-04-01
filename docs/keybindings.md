@@ -63,6 +63,39 @@ Keybindings for task report:
 
     ?: help                              - Help menu
 
+Keybindings for filter / command prompt:
+
+    Ctrl + f | Right: move forward       - Move forward one character
+
+    Ctrl + b | Left: move backward       - Move backward one character
+
+    Ctrl + h | Backspace: backspace      - Delete one character back
+
+    Ctrl + d | Delete: delete            - Delete one character forward
+
+    Ctrl + a | Home: home                - Go to the beginning of line
+
+    Ctrl + e | End: end                  - Go to the end of line
+
+    Ctrl + k: delete to end              - Delete to the end of line
+
+    Ctrl + u: delete to beginning        - Delete to the beginning of line
+
+    Ctrl + w: delete previous word       - Delete previous word
+
+    Alt + d: delete next word            - Delete next word
+
+    Alt + b: move to previous word       - Move to previous word
+
+    Alt + f: move to next word           - Move to next word
+
+    Alt + t: transpose words             - Transpose words
+
+    Up: scroll history                   - Go backward in history matching from beginning of line to cursor
+
+    Down: scroll history                 - Go forward in history matching from beginning of line to cursor
+
+
 Keybindings for context switcher:
 
     j: {selected+=1}                     - Move forward a context
