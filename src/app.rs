@@ -325,7 +325,6 @@ impl TaskwarriorTuiApp {
             | AppMode::TaskModify => self.draw_task(f),
             AppMode::Calendar => self.draw_calendar(f),
         }
-        self.draw_debug(f);
     }
 
     pub fn draw_debug(&mut self, f: &mut Frame<impl Backend>) {
