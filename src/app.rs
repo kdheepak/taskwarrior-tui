@@ -2265,6 +2265,7 @@ impl TaskwarriorTuiApp {
                 }
             }
         }
+        self.update_task_table_state();
         Ok(())
     }
 }
