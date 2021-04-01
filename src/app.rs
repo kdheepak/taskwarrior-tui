@@ -17,7 +17,6 @@ use std::path::Path;
 
 use std::io::Read;
 use std::io::Write;
-use xdg::BaseDirectories;
 
 use std::process::Command;
 use std::time::SystemTime;
@@ -222,17 +221,17 @@ impl TaskwarriorTuiApp {
             keyconfig: kc,
             terminal_width: w,
             terminal_height: h,
-            filter_history_context: HistoryContext::new(),
-            command_history_context: HistoryContext::new(),
+            filter_history_context: HistoryContext::new("filter.history"),
+            command_history_context: HistoryContext::new("command.history"),
         };
         for c in app.config.filter.chars() {
             app.filter.insert(c, 1);
         }
         app.get_context()?;
         app.update(true)?;
-        app.filter_history_context.load("filter.history")?;
+        app.filter_history_context.load()?;
         app.filter_history_context.add(app.filter.as_str());
-        app.command_history_context.load("command.history")?;
+        app.command_history_context.load()?;
         Ok(app)
     }
 
@@ -892,8 +891,8 @@ impl TaskwarriorTuiApp {
     }
 
     pub fn save_history(&mut self) -> Result<()> {
-        self.filter_history_context.write("filter.history")?;
-        self.command_history_context.write("command.history")?;
+        self.filter_history_context.write()?;
+        self.command_history_context.write()?;
         Ok(())
     }
 
