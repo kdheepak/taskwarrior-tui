@@ -12,7 +12,7 @@ A Terminal User Interface for [Taskwarrior](https://taskwarrior.org/).
 
 ![](https://user-images.githubusercontent.com/1813121/113252474-21c61c00-9281-11eb-8292-bf6a3553251e.png)
 
-Video showcase of features here: <https://youtu.be/0ZdkfNrIAcw>
+Showcase of features: <https://youtu.be/0ZdkfNrIAcw>
 
 ![](https://user-images.githubusercontent.com/1813121/113251568-bdef2380-927f-11eb-8cb6-5d95b00eee53.gif)
 
