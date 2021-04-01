@@ -14,6 +14,11 @@ use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::fs;
 use std::path::Path;
+
+use std::io::Read;
+use std::io::Write;
+use xdg::BaseDirectories;
+
 use std::process::Command;
 use std::time::SystemTime;
 
@@ -49,13 +54,13 @@ use tui::{
     widgets::{Block, BorderType, Borders, Clear, Paragraph},
 };
 
-use rustyline::error::ReadlineError;
 use rustyline::history::Direction as HistoryDirection;
-use rustyline::history::History;
 use rustyline::line_buffer::LineBuffer;
 use rustyline::At;
 use rustyline::Editor;
 use rustyline::Word;
+
+use crate::history::HistoryContext;
 
 use std::io;
 use tui::{backend::CrosstermBackend, Terminal};
@@ -150,63 +155,6 @@ pub enum AppMode {
     Calendar,
 }
 
-pub struct HistoryContext {
-    history: History,
-    history_index: usize,
-}
-
-impl HistoryContext {
-    pub fn new() -> Self {
-        let history = History::new();
-        Self {
-            history,
-            history_index: 0,
-        }
-    }
-
-    pub fn history(&self) -> &History {
-        &self.history
-    }
-
-    pub fn history_index(&self) -> usize {
-        self.history_index
-    }
-
-    pub fn history_search(&mut self, buf: &str, dir: HistoryDirection) -> Option<String> {
-        if self.history.is_empty() {
-            return None;
-        }
-        if self.history_index == self.history.len().saturating_sub(1) && dir == HistoryDirection::Forward
-            || self.history_index == 0 && dir == HistoryDirection::Reverse
-        {
-            return Some(self.history.get(self.history_index).unwrap().clone());
-        }
-        let history_index = match dir {
-            HistoryDirection::Reverse => self.history_index - 1,
-            HistoryDirection::Forward => self.history_index + 1,
-        };
-        if let Some(history_index) = self.history.starts_with(buf, history_index, dir) {
-            self.history_index = history_index;
-            Some(self.history.get(history_index).unwrap().clone())
-        } else if buf.is_empty() {
-            self.history_index = history_index;
-            Some(self.history.get(history_index).unwrap().clone())
-        } else {
-            None
-        }
-    }
-
-    pub fn add(&mut self, buf: &str) {
-        if self.history.add(buf) {
-            self.history_index = self.history.len() - 1;
-        }
-    }
-
-    pub fn last(&mut self) {
-        self.history_index = self.history.len().saturating_sub(1);
-    }
-}
-
 pub struct TaskwarriorTuiApp {
     pub should_quit: bool,
     pub dirty: bool,
@@ -282,7 +230,9 @@ impl TaskwarriorTuiApp {
         }
         app.get_context()?;
         app.update(true)?;
+        app.filter_history_context.load("filter.history")?;
         app.filter_history_context.add(app.filter.as_str());
+        app.command_history_context.load("command.history")?;
         Ok(app)
     }
 
@@ -931,12 +881,19 @@ impl TaskwarriorTuiApp {
             self.update_tags();
             self.task_details.clear();
             self.dirty = false;
+            self.save_history()?;
         }
         self.cursor_fix();
         self.update_task_table_state();
         if self.task_report_show_info {
             task::block_on(self.update_task_details())?;
         }
+        Ok(())
+    }
+
+    pub fn save_history(&mut self) -> Result<()> {
+        self.filter_history_context.write("filter.history")?;
+        self.command_history_context.write("command.history")?;
         Ok(())
     }
 
@@ -2351,8 +2308,6 @@ mod tests {
     }
 
     fn setup() {
-        use std::io::Read;
-        use std::io::Write;
         use std::process::Stdio;
         let mut f = File::open(Path::new(env!("TASKDATA")).parent().unwrap().join("export.json")).unwrap();
         let mut s = String::new();
