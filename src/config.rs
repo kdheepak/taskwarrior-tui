@@ -420,10 +420,11 @@ impl Config {
     }
 
     async fn get_filter() -> String {
-        Self::get_config("report.next.filter")
+        let filter = Self::get_config("report.next.filter")
             .await
             .context("Unable to parse `task show report.next.filter`.")
-            .unwrap()
+            .unwrap();
+        format!("{} ", filter)
     }
 
     async fn get_data_location() -> String {
