@@ -369,9 +369,7 @@ impl TaskwarriorTuiApp {
     pub fn get_dates_with_styles(&self) -> Vec<(NaiveDate, Style)> {
         let mut tasks_with_styles = vec![];
 
-        let tasks_is_empty = self.tasks.is_empty();
-
-        if !tasks_is_empty {
+        if !self.tasks.is_empty() {
             let tasks = &self.tasks;
             let tasks_with_due_dates = tasks.iter().filter(|t| t.due().is_some());
 
@@ -393,10 +391,6 @@ impl TaskwarriorTuiApp {
     }
 
     pub fn draw_task(&mut self, f: &mut Frame<impl Backend>) {
-        let tasks_is_empty = self.tasks.is_empty();
-        while !tasks_is_empty && self.current_selection >= self.tasks.len() {
-            self.task_report_previous();
-        }
         let rects = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Min(0), Constraint::Length(3)].as_ref())
@@ -942,11 +936,18 @@ impl TaskwarriorTuiApp {
             self.update_tags();
             self.task_details.clear();
             self.dirty = false;
+            self.cursor_fix();
         }
         if self.task_report_show_info {
             task::block_on(self.update_task_details())?;
         }
         Ok(())
+    }
+
+    pub fn cursor_fix(&mut self) {
+        while !self.tasks.is_empty() && self.current_selection >= self.tasks.len() {
+            self.task_report_previous();
+        }
     }
 
     pub async fn update_task_details(&mut self) -> Result<()> {
