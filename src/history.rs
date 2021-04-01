@@ -1,46 +1,57 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use rustyline::error::ReadlineError;
 use rustyline::history::Direction;
 use rustyline::history::History;
 use std::fs::File;
-use xdg::BaseDirectories;
+use std::path::{Path, PathBuf};
+
+#[cfg(target_os = "macos")]
+use std::env;
 
 pub struct HistoryContext {
     history: History,
     history_index: usize,
+    config_path: PathBuf,
 }
 
 impl HistoryContext {
-    pub fn new() -> Self {
+    pub fn new(filename: &str) -> Self {
         let history = History::new();
+
+        #[cfg(target_os = "macos")]
+        let config_dir_op = env::var_os("XDG_CONFIG_HOME")
+            .map(PathBuf::from)
+            .filter(|p| p.is_absolute())
+            .or_else(|| dirs::home_dir().map(|d| d.join(".config")));
+
+        #[cfg(not(target_os = "macos"))]
+        let config_dir_op = dirs::config_dir();
+
+        let config_path = config_dir_op.map(|d| d.join("taskwarrior-tui")).unwrap();
+
+        std::fs::create_dir_all(&config_path).unwrap();
+
+        let config_path = config_path.join(filename);
+
         Self {
             history,
             history_index: 0,
+            config_path,
         }
     }
 
-    pub fn load(&mut self, filename: &str) -> Result<()> {
-        let d = BaseDirectories::with_prefix("taskwarrior-tui")?;
-        if let Some(path) = d.find_config_file(filename) {
-            self.history.load(&path)?;
-            Ok(())
+    pub fn load(&mut self) -> Result<()> {
+        if self.config_path.exists() {
+            self.history.load(&self.config_path)?;
         } else {
-            let path = d.place_config_file(filename)?;
-            self.history.save(&path)?;
-            Ok(())
+            self.history.save(&self.config_path)?;
         }
+        Ok(())
     }
 
-    pub fn write(&mut self, filename: &str) -> Result<()> {
-        let d = BaseDirectories::with_prefix("taskwarrior-tui")?;
-        if let Some(path) = d.find_config_file(filename) {
-            self.history.save(&path)?;
-            Ok(())
-        } else {
-            let path = d.place_config_file(filename)?;
-            self.history.save(&path)?;
-            Ok(())
-        }
+    pub fn write(&mut self) -> Result<()> {
+        self.history.save(&self.config_path)?;
+        Ok(())
     }
 
     pub fn history(&self) -> &History {

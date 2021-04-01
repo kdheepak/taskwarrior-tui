@@ -33,7 +33,7 @@ use app::{AppMode, TaskwarriorTuiApp};
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
 
-fn main() -> Result<()> {
+fn main() {
     better_panic::install();
     let matches = App::new(APP_NAME)
         .version(APP_VERSION)
@@ -50,23 +50,9 @@ fn main() -> Result<()> {
         .get_matches();
 
     let config = matches.value_of("config").unwrap_or("~/.taskrc");
-    let r = task::block_on(tui_main(config));
-    match r {
-        Ok(_) => std::process::exit(0),
-        Err(error) => {
-            if error.to_string().to_lowercase().contains("no such file or directory") {
-                eprintln!(
-                    "[taskwarrior-tui error]: Unable to find executable `task`: {}. Check that taskwarrior is installed correctly and try again.", error
-                );
-            } else {
-                eprintln!(
-                    "[taskwarrior-tui error]: {}. Please report as a github issue on https://github.com/kdheepak/taskwarrior-tui",
-                    error
-                );
-            }
-            std::process::exit(1);
-        }
-    }
+    task::block_on(tui_main(config)).expect(
+        "[taskwarrior-tui error].  Please report as a github issue on https://github.com/kdheepak/taskwarrior-tui",
+    );
 }
 
 async fn tui_main(_config: &str) -> Result<()> {
