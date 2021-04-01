@@ -10,8 +10,9 @@
 
 A Terminal User Interface for [Taskwarrior](https://taskwarrior.org/).
 
-[![](https://user-images.githubusercontent.com/1813121/97066323-acd41500-1571-11eb-90c2-d74faa21e1ad.png)](https://youtu.be/0ZdkfNrIAcw)
+[![](https://user-images.githubusercontent.com/1813121/113251568-bdef2380-927f-11eb-8cb6-5d95b00eee53.gif)](https://youtu.be/0ZdkfNrIAcw)
 
+Video showcase of features here: <https://youtu.be/0ZdkfNrIAcw>
 
 ### Documentation
 
