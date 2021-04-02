@@ -1,4 +1,5 @@
 use crate::calendar::Calendar;
+use crate::completion::CompletionList;
 use crate::config;
 use crate::config::Config;
 use crate::context::Context;
@@ -49,7 +50,7 @@ use tui::{
     style::{Color, Modifier, Style},
     terminal::Frame,
     text::{Span, Spans, Text},
-    widgets::{Block, BorderType, Borders, Clear, Paragraph},
+    widgets::{Block, BorderType, Borders, Clear, List, ListItem, Paragraph},
 };
 
 use rustyline::history::Direction as HistoryDirection;
@@ -192,6 +193,8 @@ pub struct TaskwarriorTuiApp {
     pub terminal_height: u16,
     pub filter_history_context: HistoryContext,
     pub command_history_context: HistoryContext,
+    pub completion_list: CompletionList,
+    pub show_completion_pane: bool,
 }
 
 impl TaskwarriorTuiApp {
@@ -252,6 +255,8 @@ impl TaskwarriorTuiApp {
             terminal_height: h,
             filter_history_context: HistoryContext::new("filter.history"),
             command_history_context: HistoryContext::new("command.history"),
+            completion_list: CompletionList::with_items(vec!["hello".to_string(), "word".to_string()]),
+            show_completion_pane: true,
         };
 
         for c in app.config.filter.chars() {
@@ -405,6 +410,9 @@ impl TaskwarriorTuiApp {
                 }
             }
         };
+        if self.show_completion_pane {
+            self.draw_completion_pop_up(f, rects[1], 0);
+        }
         match self.mode {
             AppMode::TaskReport => self.draw_command(
                 f,
@@ -416,6 +424,7 @@ impl TaskwarriorTuiApp {
             ),
             AppMode::TaskFilter => {
                 let position = self.get_position(&self.filter);
+
                 self.draw_command(
                     f,
                     rects[1],
@@ -603,6 +612,36 @@ impl TaskwarriorTuiApp {
             .widths(&constraints);
 
         f.render_stateful_widget(t, area, &mut self.context_table_state);
+    }
+
+    fn draw_completion_pop_up(&mut self, f: &mut Frame<impl Backend>, rect: Rect, cursor_position: usize) {
+        // Iterate through all elements in the `items` app and append some debug text to it.
+        let items: Vec<ListItem> = self
+            .completion_list
+            .items
+            .iter()
+            .map(|i| {
+                let lines = vec![Spans::from(i.clone())];
+                ListItem::new(lines).style(Style::default().fg(Color::Black))
+            })
+            .collect();
+
+        // Create a List from all list items and highlight the currently selected one
+        let items = List::new(items)
+            .block(Block::default().borders(Borders::NONE).title(""))
+            .style(Style::default().bg(Color::Rgb(223, 223, 223)));
+
+        let area = f.size();
+        let mut rect = rect.clone();
+        rect.y = rect
+            .y
+            .saturating_sub(self.completion_list.items.len() as u16)
+            .saturating_sub(5);
+        rect.height = self.completion_list.items.len() as u16 + 5;
+        rect.width = std::cmp::min(area.width / 4, 20);
+        // We can now render the item list
+        f.render_widget(Clear, rect);
+        f.render_stateful_widget(items, rect, &mut self.completion_list.state);
     }
 
     fn draw_command<'a, T>(

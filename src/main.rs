@@ -4,6 +4,7 @@
 
 mod app;
 mod calendar;
+mod completion;
 mod config;
 mod context;
 mod event;
