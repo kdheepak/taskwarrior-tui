@@ -1,11 +1,12 @@
 use crate::util::Key;
-use anyhow::anyhow;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
+use async_std::process::Command;
+use async_std::task;
+use futures::join;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::error::Error;
 use std::hash::Hash;
-use std::process::Command;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct KeyConfig {
@@ -91,76 +92,119 @@ impl Default for KeyConfig {
 }
 
 impl KeyConfig {
-    pub fn update(&mut self) -> Result<()> {
-        self.quit = self
-            .get_config("uda.taskwarrior-tui.keyconfig.quit")
-            .unwrap_or(self.quit);
-        self.refresh = self
-            .get_config("uda.taskwarrior-tui.keyconfig.refresh")
-            .unwrap_or(self.refresh);
-        self.go_to_bottom = self
-            .get_config("uda.taskwarrior-tui.keyconfig.go-to-bottom")
-            .unwrap_or(self.go_to_bottom);
-        self.go_to_top = self
-            .get_config("uda.taskwarrior-tui.keyconfig.go-to-top")
-            .unwrap_or(self.go_to_top);
-        self.down = self
-            .get_config("uda.taskwarrior-tui.keyconfig.down")
-            .unwrap_or(self.down);
-        self.up = self.get_config("uda.taskwarrior-tui.keyconfig.up").unwrap_or(self.up);
-        self.page_down = self
-            .get_config("uda.taskwarrior-tui.keyconfig.page-down")
-            .unwrap_or(self.page_down);
-        self.page_up = self
-            .get_config("uda.taskwarrior-tui.keyconfig.page-up")
-            .unwrap_or(self.page_up);
-        self.delete = self
-            .get_config("uda.taskwarrior-tui.keyconfig.delete")
-            .unwrap_or(self.delete);
-        self.done = self
-            .get_config("uda.taskwarrior-tui.keyconfig.done")
-            .unwrap_or(self.done);
-        self.start_stop = self
-            .get_config("uda.taskwarrior-tui.keyconfig.start-stop")
-            .unwrap_or(self.start_stop);
-        self.select = self
-            .get_config("uda.taskwarrior-tui.keyconfig.select")
-            .unwrap_or(self.select);
-        self.select_all = self
-            .get_config("uda.taskwarrior-tui.keyconfig.select-all")
-            .unwrap_or(self.select_all);
-        self.undo = self
-            .get_config("uda.taskwarrior-tui.keyconfig.undo")
-            .unwrap_or(self.undo);
-        self.edit = self
-            .get_config("uda.taskwarrior-tui.keyconfig.edit")
-            .unwrap_or(self.edit);
-        self.modify = self
-            .get_config("uda.taskwarrior-tui.keyconfig.modify")
-            .unwrap_or(self.modify);
-        self.shell = self
-            .get_config("uda.taskwarrior-tui.keyconfig.shell")
-            .unwrap_or(self.shell);
-        self.log = self.get_config("uda.taskwarrior-tui.keyconfig.log").unwrap_or(self.log);
-        self.add = self.get_config("uda.taskwarrior-tui.keyconfig.add").unwrap_or(self.add);
-        self.annotate = self
-            .get_config("uda.taskwarrior-tui.keyconfig.annotate")
-            .unwrap_or(self.annotate);
-        self.filter = self
-            .get_config("uda.taskwarrior-tui.keyconfig.filter")
-            .unwrap_or(self.filter);
-        self.zoom = self
-            .get_config("uda.taskwarrior-tui.keyconfig.zoom")
-            .unwrap_or(self.zoom);
-        self.context_menu = self
-            .get_config("uda.taskwarrior-tui.keyconfig.context-menu")
-            .unwrap_or(self.context_menu);
-        self.next_tab = self
-            .get_config("uda.taskwarrior-tui.keyconfig.next-tab")
-            .unwrap_or(self.next_tab);
-        self.previous_tab = self
-            .get_config("uda.taskwarrior-tui.keyconfig.previous-tab")
-            .unwrap_or(self.previous_tab);
+    pub async fn new(data: &str) -> Result<Self> {
+        let mut kc = Self::default();
+        kc.update(data).await?;
+        Ok(kc)
+    }
+
+    pub async fn update(&mut self, data: &str) -> Result<()> {
+        let quit = self.get_config("uda.taskwarrior-tui.keyconfig.quit", data);
+        let refresh = self.get_config("uda.taskwarrior-tui.keyconfig.refresh", data);
+        let go_to_bottom = self.get_config("uda.taskwarrior-tui.keyconfig.go-to-bottom", data);
+        let go_to_top = self.get_config("uda.taskwarrior-tui.keyconfig.go-to-top", data);
+        let down = self.get_config("uda.taskwarrior-tui.keyconfig.down", data);
+        let up = self.get_config("uda.taskwarrior-tui.keyconfig.up", data);
+        let page_down = self.get_config("uda.taskwarrior-tui.keyconfig.page-down", data);
+        let page_up = self.get_config("uda.taskwarrior-tui.keyconfig.page-up", data);
+        let delete = self.get_config("uda.taskwarrior-tui.keyconfig.delete", data);
+        let done = self.get_config("uda.taskwarrior-tui.keyconfig.done", data);
+        let start_stop = self.get_config("uda.taskwarrior-tui.keyconfig.start-stop", data);
+        let select = self.get_config("uda.taskwarrior-tui.keyconfig.select", data);
+        let select_all = self.get_config("uda.taskwarrior-tui.keyconfig.select-all", data);
+        let undo = self.get_config("uda.taskwarrior-tui.keyconfig.undo", data);
+        let edit = self.get_config("uda.taskwarrior-tui.keyconfig.edit", data);
+        let modify = self.get_config("uda.taskwarrior-tui.keyconfig.modify", data);
+        let shell = self.get_config("uda.taskwarrior-tui.keyconfig.shell", data);
+        let log = self.get_config("uda.taskwarrior-tui.keyconfig.log", data);
+        let add = self.get_config("uda.taskwarrior-tui.keyconfig.add", data);
+        let annotate = self.get_config("uda.taskwarrior-tui.keyconfig.annotate", data);
+        let filter = self.get_config("uda.taskwarrior-tui.keyconfig.filter", data);
+        let zoom = self.get_config("uda.taskwarrior-tui.keyconfig.zoom", data);
+        let context_menu = self.get_config("uda.taskwarrior-tui.keyconfig.context-menu", data);
+        let next_tab = self.get_config("uda.taskwarrior-tui.keyconfig.next-tab", data);
+        let previous_tab = self.get_config("uda.taskwarrior-tui.keyconfig.previous-tab", data);
+
+        let (
+            quit,
+            refresh,
+            go_to_bottom,
+            go_to_top,
+            down,
+            up,
+            page_down,
+            page_up,
+            delete,
+            done,
+            start_stop,
+            select,
+            select_all,
+            undo,
+            edit,
+            modify,
+            shell,
+            log,
+            add,
+            annotate,
+            filter,
+            zoom,
+            context_menu,
+            next_tab,
+            previous_tab,
+        ) = join!(
+            quit,
+            refresh,
+            go_to_bottom,
+            go_to_top,
+            down,
+            up,
+            page_down,
+            page_up,
+            delete,
+            done,
+            start_stop,
+            select,
+            select_all,
+            undo,
+            edit,
+            modify,
+            shell,
+            log,
+            add,
+            annotate,
+            filter,
+            zoom,
+            context_menu,
+            next_tab,
+            previous_tab,
+        );
+
+        self.quit = quit.unwrap_or(self.quit);
+        self.refresh = refresh.unwrap_or(self.refresh);
+        self.go_to_bottom = go_to_bottom.unwrap_or(self.go_to_bottom);
+        self.go_to_top = go_to_top.unwrap_or(self.go_to_top);
+        self.down = down.unwrap_or(self.down);
+        self.up = up.unwrap_or(self.up);
+        self.page_down = page_down.unwrap_or(self.page_down);
+        self.page_up = page_up.unwrap_or(self.page_up);
+        self.delete = delete.unwrap_or(self.delete);
+        self.done = done.unwrap_or(self.done);
+        self.start_stop = start_stop.unwrap_or(self.start_stop);
+        self.select = select.unwrap_or(self.select);
+        self.select_all = select_all.unwrap_or(self.select_all);
+        self.undo = undo.unwrap_or(self.undo);
+        self.edit = edit.unwrap_or(self.edit);
+        self.modify = modify.unwrap_or(self.modify);
+        self.shell = shell.unwrap_or(self.shell);
+        self.log = log.unwrap_or(self.log);
+        self.add = add.unwrap_or(self.add);
+        self.annotate = annotate.unwrap_or(self.annotate);
+        self.filter = filter.unwrap_or(self.filter);
+        self.zoom = zoom.unwrap_or(self.zoom);
+        self.context_menu = context_menu.unwrap_or(self.context_menu);
+        self.next_tab = next_tab.unwrap_or(self.next_tab);
+        self.previous_tab = previous_tab.unwrap_or(self.previous_tab);
+
         self.check()
     }
 
@@ -202,16 +246,7 @@ impl KeyConfig {
         }
     }
 
-    fn get_config(&mut self, config: &str) -> Option<Key> {
-        let output = Command::new("task")
-            .arg("rc.color=off")
-            .arg("show")
-            .arg(config)
-            .output()
-            .expect("Unable to run `task show`");
-
-        let data = String::from_utf8_lossy(&output.stdout);
-
+    async fn get_config(&self, config: &str, data: &str) -> Option<Key> {
         for line in data.split('\n') {
             if line.starts_with(config) {
                 let line = line.trim_start_matches(config).trim_start().trim_end().to_string();

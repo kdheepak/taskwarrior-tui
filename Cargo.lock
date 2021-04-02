@@ -1384,6 +1384,7 @@ dependencies = [
  "futures",
  "futures-timer",
  "itertools",
+ "lazy_static",
  "rand",
  "regex",
  "rustyline",
