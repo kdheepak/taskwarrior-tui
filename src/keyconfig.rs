@@ -1,3 +1,4 @@
+#![allow(clippy::eval_order_dependence)]
 use crate::util::Key;
 use anyhow::{anyhow, Result};
 use async_std::process::Command;

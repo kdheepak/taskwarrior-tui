@@ -1,3 +1,4 @@
+#![allow(clippy::eval_order_dependence)]
 use anyhow::{Context, Result};
 use async_std::process::Command;
 use async_std::task;
