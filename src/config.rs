@@ -1,8 +1,5 @@
 #![allow(clippy::eval_order_dependence)]
 use anyhow::{Context, Result};
-use async_std::process::Command;
-use async_std::task;
-use futures::join;
 use std::collections::HashMap;
 use std::error::Error;
 use std::str;
@@ -94,54 +91,6 @@ impl Config {
         let uda_style_context_active = Self::get_uda_style("context.active", data);
         let uda_shortcuts = Self::get_uda_shortcuts(data);
 
-        let (
-            color,
-            filter,
-            data_location,
-            due,
-            rule_precedence_color,
-            uda_tick_rate,
-            uda_prefill_task_metadata,
-            uda_task_detail_prefetch,
-            uda_task_report_show_info,
-            uda_task_report_looping,
-            uda_selection_indicator,
-            uda_mark_indicator,
-            uda_unmark_indicator,
-            uda_selection_bold,
-            uda_selection_italic,
-            uda_selection_dim,
-            uda_selection_blink,
-            uda_calendar_months_per_row,
-            uda_style_calendar_title,
-            uda_style_context_active,
-            uda_shortcuts,
-        ) = task::block_on(async {
-            (
-                color.await,
-                filter.await,
-                data_location.await,
-                due.await,
-                rule_precedence_color.await,
-                uda_tick_rate.await,
-                uda_prefill_task_metadata.await,
-                uda_task_detail_prefetch.await,
-                uda_task_report_show_info.await,
-                uda_task_report_looping.await,
-                uda_selection_indicator.await,
-                uda_mark_indicator.await,
-                uda_unmark_indicator.await,
-                uda_selection_bold.await,
-                uda_selection_italic.await,
-                uda_selection_dim.await,
-                uda_selection_blink.await,
-                uda_calendar_months_per_row.await,
-                uda_style_calendar_title.await,
-                uda_style_context_active.await,
-                uda_shortcuts.await,
-            )
-        });
-
         let color = color?;
         let uda_style_calendar_title = uda_style_calendar_title.unwrap_or_default();
         let uda_style_context_active = uda_style_context_active.unwrap_or_default();
@@ -178,23 +127,23 @@ impl Config {
         HashMap::new()
     }
 
-    async fn get_uda_shortcuts(data: &str) -> Vec<String> {
+    fn get_uda_shortcuts(data: &str) -> Vec<String> {
         let mut v = vec![];
         for s in 0..=9 {
             let c = format!("uda.taskwarrior-tui.shortcuts.{}", s);
-            let s = Self::get_config(&c, data).await.unwrap_or_default();
+            let s = Self::get_config(&c, data).unwrap_or_default();
             v.push(s);
         }
         v
     }
 
-    async fn get_uda_style(config: &str, data: &str) -> Option<Style> {
+    fn get_uda_style(config: &str, data: &str) -> Option<Style> {
         let c = format!("uda.taskwarrior-tui.style.{}", config);
-        let s = Self::get_config(&c, data).await?;
+        let s = Self::get_config(&c, data)?;
         Some(Self::get_tcolor(&s))
     }
 
-    async fn get_color_collection(data: &str) -> Result<HashMap<String, Style>> {
+    fn get_color_collection(data: &str) -> Result<HashMap<String, Style>> {
         let mut color_collection = HashMap::new();
         for line in data.split('\n') {
             if line.starts_with("color.") {
@@ -359,7 +308,7 @@ impl Config {
         }
     }
 
-    async fn get_config(config: &str, data: &str) -> Option<String> {
+    fn get_config(config: &str, data: &str) -> Option<String> {
         for line in data.split('\n') {
             if line.starts_with(config) {
                 return Some(line.trim_start_matches(config).trim_start().trim_end().to_string());
@@ -372,136 +321,122 @@ impl Config {
         None
     }
 
-    async fn get_due(data: &str) -> usize {
+    fn get_due(data: &str) -> usize {
         Self::get_config("due", data)
-            .await
             .unwrap_or_default()
             .parse::<usize>()
             .unwrap_or(7)
     }
 
-    async fn get_rule_precedence_color(data: &str) -> Vec<String> {
+    fn get_rule_precedence_color(data: &str) -> Vec<String> {
         let data = Self::get_config("rule.precedence.color", data)
-            .await
             .context("Unable to parse `task show rule.precedence.color`.")
             .unwrap();
         data.split(',').map(|s| s.to_string()).collect::<Vec<_>>()
     }
 
-    async fn get_filter(data: &str) -> String {
+    fn get_filter(data: &str) -> String {
         let filter = Self::get_config("report.next.filter", data)
-            .await
             .context("Unable to parse `task show report.next.filter`.")
             .unwrap();
         format!("{} ", filter)
     }
 
-    async fn get_data_location(data: &str) -> String {
+    fn get_data_location(data: &str) -> String {
         Self::get_config("data.location", data)
-            .await
             .context("Unable to parse `task show data.location`.")
             .unwrap()
     }
 
-    async fn get_uda_prefill_task_metadata(data: &str) -> bool {
+    fn get_uda_prefill_task_metadata(data: &str) -> bool {
         Self::get_config("uda.taskwarrior-tui.task-report.pre-fill-task-meta-data", data)
-            .await
             .unwrap_or_default()
             .get_bool()
             .unwrap_or(false)
     }
 
-    async fn get_uda_tick_rate(data: &str) -> u64 {
+    fn get_uda_tick_rate(data: &str) -> u64 {
         Self::get_config("uda.taskwarrior-tui.tick-rate", data)
-            .await
             .unwrap_or_default()
             .parse::<u64>()
             .unwrap_or(250)
     }
 
-    async fn get_uda_task_detail_prefetch(data: &str) -> usize {
+    fn get_uda_task_detail_prefetch(data: &str) -> usize {
         Self::get_config("uda.taskwarrior-tui.task-report.task-detail-prefetch", data)
-            .await
             .unwrap_or_default()
             .parse::<usize>()
             .unwrap_or(10)
     }
 
-    async fn get_uda_task_report_show_info(data: &str) -> bool {
+    fn get_uda_task_report_show_info(data: &str) -> bool {
         Self::get_config("uda.taskwarrior-tui.task-report.show-info", data)
-            .await
             .unwrap_or_default()
             .get_bool()
             .unwrap_or(true)
     }
 
-    async fn get_uda_task_report_looping(data: &str) -> bool {
+    fn get_uda_task_report_looping(data: &str) -> bool {
         Self::get_config("uda.taskwarrior-tui.task-report.looping", data)
-            .await
             .unwrap_or_default()
             .get_bool()
             .unwrap_or(true)
     }
 
-    async fn get_uda_selection_indicator(data: &str) -> String {
-        let indicator = Self::get_config("uda.taskwarrior-tui.selection.indicator", data).await;
+    fn get_uda_selection_indicator(data: &str) -> String {
+        let indicator = Self::get_config("uda.taskwarrior-tui.selection.indicator", data);
         match indicator {
             None => "• ".to_string(),
             Some(indicator) => format!("{} ", indicator),
         }
     }
 
-    async fn get_uda_mark_indicator(data: &str) -> String {
-        let indicator = Self::get_config("uda.taskwarrior-tui.mark.indicator", data).await;
+    fn get_uda_mark_indicator(data: &str) -> String {
+        let indicator = Self::get_config("uda.taskwarrior-tui.mark.indicator", data);
         match indicator {
             None => "✔ ".to_string(),
             Some(indicator) => format!("{} ", indicator),
         }
     }
 
-    async fn get_uda_unmark_indicator(data: &str) -> String {
-        let indicator = Self::get_config("uda.taskwarrior-tui.unmark.indicator", data).await;
+    fn get_uda_unmark_indicator(data: &str) -> String {
+        let indicator = Self::get_config("uda.taskwarrior-tui.unmark.indicator", data);
         match indicator {
             None => "  ".to_string(),
             Some(indicator) => format!("{} ", indicator),
         }
     }
 
-    async fn get_uda_selection_bold(data: &str) -> bool {
+    fn get_uda_selection_bold(data: &str) -> bool {
         Self::get_config("uda.taskwarrior-tui.selection.bold", data)
-            .await
             .unwrap_or_default()
             .get_bool()
             .unwrap_or(true)
     }
 
-    async fn get_uda_selection_italic(data: &str) -> bool {
+    fn get_uda_selection_italic(data: &str) -> bool {
         Self::get_config("uda.taskwarrior-tui.selection.italic", data)
-            .await
             .unwrap_or_default()
             .get_bool()
             .unwrap_or(false)
     }
 
-    async fn get_uda_selection_dim(data: &str) -> bool {
+    fn get_uda_selection_dim(data: &str) -> bool {
         Self::get_config("uda.taskwarrior-tui.selection.dim", data)
-            .await
             .unwrap_or_default()
             .get_bool()
             .unwrap_or(false)
     }
 
-    async fn get_uda_selection_blink(data: &str) -> bool {
+    fn get_uda_selection_blink(data: &str) -> bool {
         Self::get_config("uda.taskwarrior-tui.selection.blink", data)
-            .await
             .unwrap_or_default()
             .get_bool()
             .unwrap_or(false)
     }
 
-    async fn get_uda_months_per_row(data: &str) -> usize {
+    fn get_uda_months_per_row(data: &str) -> usize {
         Self::get_config("uda.taskwarrior-tui.calendar.months-per-row", data)
-            .await
             .unwrap_or_default()
             .parse::<usize>()
             .unwrap_or(4)

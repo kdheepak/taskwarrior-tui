@@ -1,8 +1,6 @@
 #![allow(clippy::eval_order_dependence)]
 use crate::util::Key;
 use anyhow::{anyhow, Result};
-use async_std::process::Command;
-use async_std::task;
 use futures::join;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -126,62 +124,6 @@ impl KeyConfig {
         let next_tab = self.get_config("uda.taskwarrior-tui.keyconfig.next-tab", data);
         let previous_tab = self.get_config("uda.taskwarrior-tui.keyconfig.previous-tab", data);
 
-        let (
-            quit,
-            refresh,
-            go_to_bottom,
-            go_to_top,
-            down,
-            up,
-            page_down,
-            page_up,
-            delete,
-            done,
-            start_stop,
-            select,
-            select_all,
-            undo,
-            edit,
-            modify,
-            shell,
-            log,
-            add,
-            annotate,
-            filter,
-            zoom,
-            context_menu,
-            next_tab,
-            previous_tab,
-        ) = task::block_on(async {
-            (
-                quit.await,
-                refresh.await,
-                go_to_bottom.await,
-                go_to_top.await,
-                down.await,
-                up.await,
-                page_down.await,
-                page_up.await,
-                delete.await,
-                done.await,
-                start_stop.await,
-                select.await,
-                select_all.await,
-                undo.await,
-                edit.await,
-                modify.await,
-                shell.await,
-                log.await,
-                add.await,
-                annotate.await,
-                filter.await,
-                zoom.await,
-                context_menu.await,
-                next_tab.await,
-                previous_tab.await,
-            )
-        });
-
         self.quit = quit.unwrap_or(self.quit);
         self.refresh = refresh.unwrap_or(self.refresh);
         self.go_to_bottom = go_to_bottom.unwrap_or(self.go_to_bottom);
@@ -249,7 +191,7 @@ impl KeyConfig {
         }
     }
 
-    async fn get_config(&self, config: &str, data: &str) -> Option<Key> {
+    fn get_config(&self, config: &str, data: &str) -> Option<Key> {
         for line in data.split('\n') {
             if line.starts_with(config) {
                 let line = line.trim_start_matches(config).trim_start().trim_end().to_string();
