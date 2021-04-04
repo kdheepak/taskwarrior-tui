@@ -3132,23 +3132,23 @@ mod tests {
         }
 
         for i in 3..=22 {
-            expected.get_mut(i, 4).set_style(Style::default().bg(Color::Black));
+            expected.get_mut(i, 4).set_style(Style::default().bg(Color::Reset));
         }
 
         for i in 25..=44 {
-            expected.get_mut(i, 4).set_style(Style::default().bg(Color::Black));
+            expected.get_mut(i, 4).set_style(Style::default().bg(Color::Reset));
         }
 
         for i in 3..=22 {
             expected
                 .get_mut(i, 5)
-                .set_style(Style::default().bg(Color::Black).add_modifier(Modifier::UNDERLINED));
+                .set_style(Style::default().bg(Color::Reset).add_modifier(Modifier::UNDERLINED));
         }
 
         for i in 25..=44 {
             expected
                 .get_mut(i, 5)
-                .set_style(Style::default().bg(Color::Black).add_modifier(Modifier::UNDERLINED));
+                .set_style(Style::default().bg(Color::Reset).add_modifier(Modifier::UNDERLINED));
         }
 
         test_case(&expected);
