@@ -91,7 +91,6 @@ impl Config {
         let uda_style_context_active = Self::get_uda_style("context.active", data);
         let uda_shortcuts = Self::get_uda_shortcuts(data);
 
-        let color = color?;
         let uda_style_calendar_title = uda_style_calendar_title.unwrap_or_default();
         let uda_style_context_active = uda_style_context_active.unwrap_or_default();
 
@@ -143,7 +142,7 @@ impl Config {
         Some(Self::get_tcolor(&s))
     }
 
-    fn get_color_collection(data: &str) -> Result<HashMap<String, Style>> {
+    fn get_color_collection(data: &str) -> HashMap<String, Style> {
         let mut color_collection = HashMap::new();
         for line in data.split('\n') {
             if line.starts_with("color.") {
@@ -152,14 +151,12 @@ impl Config {
                 let line = i.collect::<Vec<_>>().join(" ");
                 let line = line.trim_start_matches(' ');
                 let tcolor = Self::get_tcolor(&line);
-                match attribute {
-                    Some(attr) => color_collection.insert(attr.to_string(), tcolor),
-                    None => None,
+                if let Some(attr) = attribute {
+                    color_collection.insert(attr.to_string(), tcolor);
                 };
             }
         }
-
-        Ok(color_collection)
+        color_collection
     }
 
     pub fn get_tcolor(line: &str) -> Style {
