@@ -1,7 +1,6 @@
+#![allow(clippy::eval_order_dependence)]
 use crate::util::Key;
 use anyhow::{anyhow, Result};
-use async_std::process::Command;
-use async_std::task;
 use futures::join;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -92,13 +91,13 @@ impl Default for KeyConfig {
 }
 
 impl KeyConfig {
-    pub async fn new(data: &str) -> Result<Self> {
+    pub fn new(data: &str) -> Result<Self> {
         let mut kc = Self::default();
-        kc.update(data).await?;
+        kc.update(data)?;
         Ok(kc)
     }
 
-    pub async fn update(&mut self, data: &str) -> Result<()> {
+    pub fn update(&mut self, data: &str) -> Result<()> {
         let quit = self.get_config("uda.taskwarrior-tui.keyconfig.quit", data);
         let refresh = self.get_config("uda.taskwarrior-tui.keyconfig.refresh", data);
         let go_to_bottom = self.get_config("uda.taskwarrior-tui.keyconfig.go-to-bottom", data);
@@ -124,60 +123,6 @@ impl KeyConfig {
         let context_menu = self.get_config("uda.taskwarrior-tui.keyconfig.context-menu", data);
         let next_tab = self.get_config("uda.taskwarrior-tui.keyconfig.next-tab", data);
         let previous_tab = self.get_config("uda.taskwarrior-tui.keyconfig.previous-tab", data);
-
-        let (
-            quit,
-            refresh,
-            go_to_bottom,
-            go_to_top,
-            down,
-            up,
-            page_down,
-            page_up,
-            delete,
-            done,
-            start_stop,
-            select,
-            select_all,
-            undo,
-            edit,
-            modify,
-            shell,
-            log,
-            add,
-            annotate,
-            filter,
-            zoom,
-            context_menu,
-            next_tab,
-            previous_tab,
-        ) = join!(
-            quit,
-            refresh,
-            go_to_bottom,
-            go_to_top,
-            down,
-            up,
-            page_down,
-            page_up,
-            delete,
-            done,
-            start_stop,
-            select,
-            select_all,
-            undo,
-            edit,
-            modify,
-            shell,
-            log,
-            add,
-            annotate,
-            filter,
-            zoom,
-            context_menu,
-            next_tab,
-            previous_tab,
-        );
 
         self.quit = quit.unwrap_or(self.quit);
         self.refresh = refresh.unwrap_or(self.refresh);
@@ -246,7 +191,7 @@ impl KeyConfig {
         }
     }
 
-    async fn get_config(&self, config: &str, data: &str) -> Option<Key> {
+    fn get_config(&self, config: &str, data: &str) -> Option<Key> {
         for line in data.split('\n') {
             if line.starts_with(config) {
                 let line = line.trim_start_matches(config).trim_start().trim_end().to_string();

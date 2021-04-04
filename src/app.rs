@@ -219,7 +219,8 @@ impl TaskwarriorTuiApp {
         }
 
         let data = String::from_utf8_lossy(&output.stdout);
-        let (c, kc) = task::block_on(async { try_join!(Config::new(&data), KeyConfig::new(&data)) })?;
+        let c = Config::new(&data)?;
+        let kc = KeyConfig::new(&data)?;
 
         let (w, h) = crossterm::terminal::size()?;
 
@@ -2355,17 +2356,9 @@ mod tests {
     }
 
     #[test]
-    fn test_taskwarrior_timing() {
-        let app = TaskwarriorTuiApp::new();
-        if app.is_err() {
-            return;
-        }
-    }
-
-    #[test]
     fn test_taskwarrior_tui() {
         let app = TaskwarriorTuiApp::new();
-        if app.is_err() {
+        if let Err(_) = app {
             return;
         }
         let app = app.unwrap();
@@ -3143,23 +3136,23 @@ mod tests {
         }
 
         for i in 3..=22 {
-            expected.get_mut(i, 4).set_style(Style::default().bg(Color::Black));
+            expected.get_mut(i, 4).set_style(Style::default().bg(Color::Reset));
         }
 
         for i in 25..=44 {
-            expected.get_mut(i, 4).set_style(Style::default().bg(Color::Black));
+            expected.get_mut(i, 4).set_style(Style::default().bg(Color::Reset));
         }
 
         for i in 3..=22 {
             expected
                 .get_mut(i, 5)
-                .set_style(Style::default().bg(Color::Black).add_modifier(Modifier::UNDERLINED));
+                .set_style(Style::default().bg(Color::Reset).add_modifier(Modifier::UNDERLINED));
         }
 
         for i in 25..=44 {
             expected
                 .get_mut(i, 5)
-                .set_style(Style::default().bg(Color::Black).add_modifier(Modifier::UNDERLINED));
+                .set_style(Style::default().bg(Color::Reset).add_modifier(Modifier::UNDERLINED));
         }
 
         test_case(&expected);

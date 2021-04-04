@@ -23,7 +23,7 @@ jobs:
     env:
       TASKRC: taskwarrior-testdata/.taskrc
       TASKDATA: taskwarrior-testdata/.task
-      RUST_BACKTRACE: 1
+      RUST_BACKTRACE: full
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -36,6 +36,8 @@ jobs:
         with:
           repository: kdheepak/taskwarrior-testdata
           path: taskwarrior-testdata
+      - run: |
+          ulimit -a
       - run: |
           # prepare taskwarrior, initial setup
           task rc.confirmation=off || echo 0
