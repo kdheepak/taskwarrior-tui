@@ -92,13 +92,13 @@ impl Default for KeyConfig {
 }
 
 impl KeyConfig {
-    pub async fn new(data: &str) -> Result<Self> {
+    pub fn new(data: &str) -> Result<Self> {
         let mut kc = Self::default();
-        kc.update(data).await?;
+        kc.update(data)?;
         Ok(kc)
     }
 
-    pub async fn update(&mut self, data: &str) -> Result<()> {
+    pub fn update(&mut self, data: &str) -> Result<()> {
         let quit = self.get_config("uda.taskwarrior-tui.keyconfig.quit", data);
         let refresh = self.get_config("uda.taskwarrior-tui.keyconfig.refresh", data);
         let go_to_bottom = self.get_config("uda.taskwarrior-tui.keyconfig.go-to-bottom", data);
@@ -151,33 +151,35 @@ impl KeyConfig {
             context_menu,
             next_tab,
             previous_tab,
-        ) = join!(
-            quit,
-            refresh,
-            go_to_bottom,
-            go_to_top,
-            down,
-            up,
-            page_down,
-            page_up,
-            delete,
-            done,
-            start_stop,
-            select,
-            select_all,
-            undo,
-            edit,
-            modify,
-            shell,
-            log,
-            add,
-            annotate,
-            filter,
-            zoom,
-            context_menu,
-            next_tab,
-            previous_tab,
-        );
+        ) = task::block_on(async {
+            join!(
+                quit,
+                refresh,
+                go_to_bottom,
+                go_to_top,
+                down,
+                up,
+                page_down,
+                page_up,
+                delete,
+                done,
+                start_stop,
+                select,
+                select_all,
+                undo,
+                edit,
+                modify,
+                shell,
+                log,
+                add,
+                annotate,
+                filter,
+                zoom,
+                context_menu,
+                next_tab,
+                previous_tab,
+            )
+        });
 
         self.quit = quit.unwrap_or(self.quit);
         self.refresh = refresh.unwrap_or(self.refresh);

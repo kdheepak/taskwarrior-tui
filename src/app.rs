@@ -219,7 +219,8 @@ impl TaskwarriorTuiApp {
         }
 
         let data = String::from_utf8_lossy(&output.stdout);
-        let (c, kc) = task::block_on(async { try_join!(Config::new(&data), KeyConfig::new(&data)) })?;
+        let c = Config::new(&data)?;
+        let kc = KeyConfig::new(&data)?;
 
         let (w, h) = crossterm::terminal::size()?;
 

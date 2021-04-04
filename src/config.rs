@@ -64,7 +64,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub async fn new(data: &str) -> Result<Self> {
+    pub fn new(data: &str) -> Result<Self> {
         let bool_collection = Self::get_bool_collection();
 
         let enabled = true;
@@ -115,29 +115,31 @@ impl Config {
             uda_style_calendar_title,
             uda_style_context_active,
             uda_shortcuts,
-        ) = join!(
-            color,
-            filter,
-            data_location,
-            due,
-            rule_precedence_color,
-            uda_tick_rate,
-            uda_prefill_task_metadata,
-            uda_task_detail_prefetch,
-            uda_task_report_show_info,
-            uda_task_report_looping,
-            uda_selection_indicator,
-            uda_mark_indicator,
-            uda_unmark_indicator,
-            uda_selection_bold,
-            uda_selection_italic,
-            uda_selection_dim,
-            uda_selection_blink,
-            uda_calendar_months_per_row,
-            uda_style_calendar_title,
-            uda_style_context_active,
-            uda_shortcuts,
-        );
+        ) = task::block_on(async {
+            join!(
+                color,
+                filter,
+                data_location,
+                due,
+                rule_precedence_color,
+                uda_tick_rate,
+                uda_prefill_task_metadata,
+                uda_task_detail_prefetch,
+                uda_task_report_show_info,
+                uda_task_report_looping,
+                uda_selection_indicator,
+                uda_mark_indicator,
+                uda_unmark_indicator,
+                uda_selection_bold,
+                uda_selection_italic,
+                uda_selection_dim,
+                uda_selection_blink,
+                uda_calendar_months_per_row,
+                uda_style_calendar_title,
+                uda_style_context_active,
+                uda_shortcuts,
+            )
+        });
 
         let color = color?;
         let uda_style_calendar_title = uda_style_calendar_title.unwrap_or_default();
