@@ -1,8 +1,7 @@
 use crossterm::{
-    cursor,
     event::{self, DisableMouseCapture, EnableMouseCapture, EventStream},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use tui::{backend::CrosstermBackend, Terminal};
 
@@ -49,21 +48,6 @@ pub struct EventConfig {
 pub enum Event<I> {
     Input(I),
     Tick,
-}
-
-pub fn setup_terminal() -> Terminal<CrosstermBackend<io::Stdout>> {
-    enable_raw_mode().unwrap();
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen).unwrap();
-    execute!(stdout, Clear(ClearType::All)).unwrap();
-    let backend = CrosstermBackend::new(stdout);
-    Terminal::new(backend).unwrap()
-}
-
-pub fn destruct_terminal() {
-    disable_raw_mode().unwrap();
-    execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture).unwrap();
-    execute!(io::stdout(), cursor::Show).unwrap();
 }
 
 pub struct Events {

@@ -1,7 +1,6 @@
 #![allow(clippy::eval_order_dependence)]
-use crate::util::Key;
+use crate::event::Key;
 use anyhow::{anyhow, Result};
-use futures::join;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::error::Error;

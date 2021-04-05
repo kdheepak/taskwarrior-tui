@@ -6,19 +6,19 @@ mod app;
 mod calendar;
 mod config;
 mod context;
+mod event;
 mod help;
 mod history;
 mod keyconfig;
 mod table;
 mod task_report;
-mod util;
 
-use crate::util::{destruct_terminal, setup_terminal, Event, EventConfig, Events};
+use crate::event::{Event, EventConfig, Events, Key};
 use anyhow::Result;
 use clap::{App, Arg};
 use std::env;
 use std::error::Error;
-use std::io::Write;
+use std::io::{self, Write};
 use std::panic;
 use std::time::Duration;
 
@@ -27,11 +27,33 @@ use async_std::sync::{Arc, Mutex};
 use async_std::task;
 use futures::stream::{FuturesUnordered, StreamExt};
 
-use crate::util::Key;
+use crossterm::{
+    cursor,
+    event::{DisableMouseCapture, EnableMouseCapture, EventStream},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
+};
+use tui::{backend::CrosstermBackend, Terminal};
+
 use app::{AppMode, TaskwarriorTuiApp};
 
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
+
+pub fn setup_terminal() -> Terminal<CrosstermBackend<io::Stdout>> {
+    enable_raw_mode().unwrap();
+    let mut stdout = io::stdout();
+    execute!(stdout, EnterAlternateScreen).unwrap();
+    execute!(stdout, Clear(ClearType::All)).unwrap();
+    let backend = CrosstermBackend::new(stdout);
+    Terminal::new(backend).unwrap()
+}
+
+pub fn destruct_terminal() {
+    disable_raw_mode().unwrap();
+    execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture).unwrap();
+    execute!(io::stdout(), cursor::Show).unwrap();
+}
 
 fn main() {
     better_panic::install();

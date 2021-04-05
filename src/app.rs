@@ -2,12 +2,12 @@ use crate::calendar::Calendar;
 use crate::config;
 use crate::config::Config;
 use crate::context::Context;
+use crate::event::Key;
+use crate::event::{Event, Events};
 use crate::help::Help;
 use crate::keyconfig::KeyConfig;
 use crate::table::{Row, Table, TableMode, TableState};
 use crate::task_report::TaskReportTable;
-use crate::util::Key;
-use crate::util::{Event, Events};
 
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
@@ -38,9 +38,7 @@ use anyhow::Result;
 use async_std::prelude::*;
 use async_std::stream::StreamExt;
 use async_std::task;
-use futures::future::join_all;
 use futures::stream::FuturesOrdered;
-use futures::{join, try_join};
 
 use std::sync::{Arc, Mutex};
 
