@@ -119,6 +119,9 @@ Ctrl-y
 `1-9`
 : {string}                          - Run user defined shortcuts
 
+`:`
+: {task id}                         - Jump to task id
+
 `c`
 : context switcher menu             - Open context switcher menu
 
