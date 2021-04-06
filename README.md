@@ -18,6 +18,8 @@ Showcase of features: <https://youtu.be/0ZdkfNrIAcw>
 
 ![](https://user-images.githubusercontent.com/1813121/113252636-4e7a3380-9281-11eb-821d-874c86d11105.gif)
 
+![](https://user-images.githubusercontent.com/1813121/113711977-cfcb2f00-96a2-11eb-8b06-9fd17903561d.gif)
+
 ### Documentation
 
 <https://kdheepak.com/taskwarrior-tui>
