@@ -2502,6 +2502,22 @@ impl TaskwarriorTuiApp {
             }
             _ => {}
         }
+
+        match self.mode {
+            AppMode::TaskModify | AppMode::TaskAdd | AppMode::TaskLog => {
+                for s in vec![
+                    "+".to_string(),
+                    "project:".to_string(),
+                    "priority:".to_string(),
+                    "due:".to_string(),
+                ] {
+                    if !self.completion_list.items.contains(&s) {
+                        self.completion_list.items.push(s);
+                    }
+                }
+            }
+            _ => {}
+        }
     }
 }
 
