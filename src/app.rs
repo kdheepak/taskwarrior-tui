@@ -2181,7 +2181,9 @@ impl TaskwarriorTuiApp {
                     }
                 }
                 Key::Up => {
-                    if let Some(s) = self
+                    if self.show_completion_pane && !self.completion_list.items.is_empty() {
+                        self.completion_list.previous();
+                    } else if let Some(s) = self
                         .command_history_context
                         .history_search(&self.modify.as_str()[..self.modify.pos()], HistoryDirection::Reverse)
                     {
@@ -2191,7 +2193,9 @@ impl TaskwarriorTuiApp {
                     }
                 }
                 Key::Down => {
-                    if let Some(s) = self
+                    if self.show_completion_pane && !self.completion_list.items.is_empty() {
+                        self.completion_list.next();
+                    } else if let Some(s) = self
                         .command_history_context
                         .history_search(&self.modify.as_str()[..self.modify.pos()], HistoryDirection::Forward)
                     {
@@ -2273,7 +2277,9 @@ impl TaskwarriorTuiApp {
                     }
                 }
                 Key::Up => {
-                    if let Some(s) = self
+                    if self.show_completion_pane && !self.completion_list.items.is_empty() {
+                        self.completion_list.previous();
+                    } else if let Some(s) = self
                         .command_history_context
                         .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Reverse)
                     {
@@ -2283,7 +2289,9 @@ impl TaskwarriorTuiApp {
                     }
                 }
                 Key::Down => {
-                    if let Some(s) = self
+                    if self.show_completion_pane && !self.completion_list.items.is_empty() {
+                        self.completion_list.next();
+                    } else if let Some(s) = self
                         .command_history_context
                         .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Forward)
                     {
@@ -2383,7 +2391,9 @@ impl TaskwarriorTuiApp {
                     }
                 }
                 Key::Up => {
-                    if let Some(s) = self
+                    if self.show_completion_pane && !self.completion_list.items.is_empty() {
+                        self.completion_list.previous();
+                    } else if let Some(s) = self
                         .command_history_context
                         .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Reverse)
                     {
@@ -2393,7 +2403,9 @@ impl TaskwarriorTuiApp {
                     }
                 }
                 Key::Down => {
-                    if let Some(s) = self
+                    if self.show_completion_pane && !self.completion_list.items.is_empty() {
+                        self.completion_list.next();
+                    } else if let Some(s) = self
                         .command_history_context
                         .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Forward)
                     {
@@ -2436,7 +2448,9 @@ impl TaskwarriorTuiApp {
                     }
                 }
                 Key::Up => {
-                    if let Some(s) = self
+                    if self.show_completion_pane && !self.completion_list.items.is_empty() {
+                        self.completion_list.previous();
+                    } else if let Some(s) = self
                         .filter_history_context
                         .history_search(&self.filter.as_str()[..self.filter.pos()], HistoryDirection::Reverse)
                     {
@@ -2447,7 +2461,9 @@ impl TaskwarriorTuiApp {
                     }
                 }
                 Key::Down => {
-                    if let Some(s) = self
+                    if self.show_completion_pane && !self.completion_list.items.is_empty() {
+                        self.completion_list.previous();
+                    } else if let Some(s) = self
                         .filter_history_context
                         .history_search(&self.filter.as_str()[..self.filter.pos()], HistoryDirection::Forward)
                     {
