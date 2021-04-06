@@ -14,23 +14,23 @@ A Terminal User Interface for [Taskwarrior](https://taskwarrior.org/).
 
 Showcase of features: <https://youtu.be/0ZdkfNrIAcw>
 
-### User Interface
+**User Interface**
 
 ![](https://user-images.githubusercontent.com/1813121/113251568-bdef2380-927f-11eb-8cb6-5d95b00eee53.gif)
 
-### Multiple selection
+**Multiple selection**
 
 ![](https://user-images.githubusercontent.com/1813121/113252636-4e7a3380-9281-11eb-821d-874c86d11105.gif)
 
-### Tab completion
+**Tab completion**
 
 ![](https://user-images.githubusercontent.com/1813121/113711977-cfcb2f00-96a2-11eb-8b06-9fd17903561d.gif)
 
-## Documentation
+### Documentation
 
 <https://kdheepak.com/taskwarrior-tui>
 
-## Installation
+### Installation
 
 Unless otherwise specified, you will need to install `taskwarrior` first. See <https://taskwarrior.org/download/> for more information.
 
