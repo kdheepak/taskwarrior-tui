@@ -58,6 +58,7 @@ pub struct Config {
     pub uda_calendar_months_per_row: usize,
     pub uda_style_context_active: Style,
     pub uda_style_calendar_title: Style,
+    pub uda_style_report_completion_pane: Style,
     pub uda_shortcuts: Vec<String>,
 }
 
@@ -89,10 +90,12 @@ impl Config {
         let uda_calendar_months_per_row = Self::get_uda_months_per_row(data);
         let uda_style_calendar_title = Self::get_uda_style("calendar.title", data);
         let uda_style_context_active = Self::get_uda_style("context.active", data);
+        let uda_style_report_completion_pane = Self::get_uda_style("report.completion-pane", data);
         let uda_shortcuts = Self::get_uda_shortcuts(data);
-
         let uda_style_calendar_title = uda_style_calendar_title.unwrap_or_default();
         let uda_style_context_active = uda_style_context_active.unwrap_or_default();
+        let uda_style_report_completion_pane =
+            uda_style_report_completion_pane.unwrap_or_else(|| Style::default().bg(Color::Rgb(223, 223, 223)));
 
         Ok(Self {
             enabled,
@@ -118,6 +121,7 @@ impl Config {
             uda_calendar_months_per_row,
             uda_style_context_active,
             uda_style_calendar_title,
+            uda_style_report_completion_pane,
             uda_shortcuts,
         })
     }
