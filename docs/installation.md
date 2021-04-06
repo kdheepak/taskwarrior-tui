@@ -9,7 +9,7 @@ Unless otherwise specified, you will need to install `taskwarrior` first. See <h
 2. Unzip the tar.gz file
 3. Run with `./taskwarrior-tui`.
 
-**Install from source** [![](https://img.shields.io/badge/branch-master-red)](https://github.com/kdheepak/taskwarrior-tui)
+**Install from source** [![](https://img.shields.io/badge/branch-main-red)](https://github.com/kdheepak/taskwarrior-tui)
 
 ```bash
 git clone https://github.com/kdheepak/taskwarrior-tui.git
@@ -37,7 +37,7 @@ pacman -S taskwarrior-tui
 Or use your favorite [AUR helper](https://wiki.archlinux.org/index.php/AUR_helpers) to download the [git](https://aur.archlinux.org/packages/taskwarrior-tui-git/) package maintained by [**@loki7990**](https://github.com/loki7990). For example:
 
 ```bash
-yay -S taskwarrior-tui-git # build from source master
+yay -S taskwarrior-tui-git # build from source
 ```
 
 **Using [`snap`](https://snapcraft.io/)** [![](https://snapcraft.io/taskwarrior-tui/badge.svg)](https://snapcraft.io/taskwarrior-tui)
