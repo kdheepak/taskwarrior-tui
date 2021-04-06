@@ -644,8 +644,18 @@ impl TaskwarriorTuiApp {
         let area = f.size();
 
         let mut rect = rect;
-        rect.height = std::cmp::min(area.height / 4, self.completion_list.items.len() as u16 + 2);
-        rect.width = std::cmp::min(area.width / 4, 20);
+        rect.height = std::cmp::min(area.height / 2, self.completion_list.items.len() as u16 + 2);
+        rect.width = std::cmp::min(
+            area.width / 2,
+            self.completion_list
+                .items
+                .iter()
+                .map(|s| s.graphemes(true).count() + 4)
+                .max()
+                .unwrap_or(40)
+                .try_into()
+                .unwrap_or(area.width / 2),
+        );
         rect.y = rect.y.saturating_sub(rect.height);
         if cursor_position as u16 + rect.width >= area.width {
             rect.x = area.width - rect.width;
@@ -2442,7 +2452,7 @@ impl TaskwarriorTuiApp {
 
     pub fn update_completion_list(&mut self) {
         match self.mode {
-            AppMode::TaskFilter | AppMode::TaskAdd | AppMode::TaskLog => {
+            AppMode::TaskModify | AppMode::TaskFilter | AppMode::TaskAdd | AppMode::TaskLog => {
                 let virtual_tags = self.task_report_table.virtual_tags.clone();
                 self.completion_list.items.clear();
                 for task in self.tasks.iter() {
@@ -2463,25 +2473,29 @@ impl TaskwarriorTuiApp {
                         }
                     }
                 }
-            }
-            AppMode::TaskModify => {
-                let virtual_tags = self.task_report_table.virtual_tags.clone();
-                self.completion_list.items.clear();
                 for task in self.tasks.iter() {
-                    if let Some(tags) = task.tags() {
-                        for tag in tags {
-                            let t = format!("+{}", &tag);
-                            if !virtual_tags.contains(tag) && !self.completion_list.items.contains(&t) {
-                                self.completion_list.items.push(t);
-                            }
+                    if let Some(priority) = task.priority() {
+                        let p = format!("priority:{}", &priority);
+                        if !self.completion_list.items.contains(&p) {
+                            self.completion_list.items.push(p);
                         }
                     }
                 }
                 for task in self.tasks.iter() {
-                    if let Some(project) = task.project() {
-                        let p = format!("project:{}", &project);
-                        if !self.completion_list.items.contains(&p) {
-                            self.completion_list.items.push(p);
+                    if let Some(date) = task.due() {
+                        let now = Local::now();
+                        let date = TimeZone::from_utc_datetime(now.offset(), date);
+                        let s = format!(
+                            "due:'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}'",
+                            date.year(),
+                            date.month(),
+                            date.day(),
+                            date.hour(),
+                            date.minute(),
+                            date.second(),
+                        );
+                        if !self.completion_list.items.contains(&s) {
+                            self.completion_list.items.push(s);
                         }
                     }
                 }
