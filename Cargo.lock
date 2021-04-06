@@ -1210,6 +1210,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustyline-derive"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "db9dfbf470021de34cfaf6983067f460ea19164934a7c2d4b92eec0968eb95f1"
+dependencies = [
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "ryu"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1388,6 +1398,7 @@ dependencies = [
  "rand",
  "regex",
  "rustyline",
+ "rustyline-derive",
  "serde",
  "serde_json",
  "shellexpand",

@@ -58,6 +58,7 @@ use rustyline::line_buffer::LineBuffer;
 use rustyline::At;
 use rustyline::Editor;
 use rustyline::Word;
+use rustyline_derive::Helper;
 
 use crate::history::HistoryContext;
 
@@ -639,7 +640,6 @@ impl TaskwarriorTuiApp {
         // Iterate through all elements in the `items` app and append some debug text to it.
         let items: Vec<ListItem> = self
             .completion_list
-            .items
             .iter()
             .map(|i| {
                 let lines = vec![Spans::from(i.clone())];
@@ -657,14 +657,11 @@ impl TaskwarriorTuiApp {
         let area = f.size();
 
         let mut rect = rect;
-        rect.height = std::cmp::min(area.height / 2, self.completion_list.items.len() as u16 + 2);
+        rect.height = std::cmp::min(area.height / 2, self.completion_list.len() as u16 + 2);
         rect.width = std::cmp::min(
             area.width / 2,
             self.completion_list
-                .items
-                .iter()
-                .map(|s| s.graphemes(true).count() + 4)
-                .max()
+                .max_width()
                 .unwrap_or(40)
                 .try_into()
                 .unwrap_or(area.width / 2),
@@ -2144,12 +2141,9 @@ impl TaskwarriorTuiApp {
                 Key::Char('\n') => {
                     if self.show_completion_pane {
                         self.show_completion_pane = false;
-                        if let Some(i) = self.completion_list.state.selected() {
-                            if i < self.completion_list.items.len() {
-                                let m = self.modify.as_str();
-                                let s = format!("{}{}", m, &self.completion_list.items[i]);
-                                self.modify.update(&s, s.graphemes(true).count());
-                            }
+                        if let Some(s) = self.completion_list.selected() {
+                            let s = format!("{}{}", self.modify.as_str(), &s);
+                            self.modify.update(&s, s.graphemes(true).count());
                         }
                         self.completion_list.unselect();
                     } else {
@@ -2168,7 +2162,7 @@ impl TaskwarriorTuiApp {
                     }
                 }
                 Key::Tab => {
-                    if !self.completion_list.items.is_empty() {
+                    if !self.completion_list.is_empty() {
                         if !self.show_completion_pane {
                             self.show_completion_pane = true;
                         }
@@ -2176,12 +2170,12 @@ impl TaskwarriorTuiApp {
                     }
                 }
                 Key::BackTab => {
-                    if !self.completion_list.items.is_empty() {
+                    if !self.completion_list.is_empty() {
                         self.completion_list.previous();
                     }
                 }
                 Key::Up => {
-                    if self.show_completion_pane && !self.completion_list.items.is_empty() {
+                    if self.show_completion_pane && !self.completion_list.is_empty() {
                         self.completion_list.previous();
                     } else if let Some(s) = self
                         .command_history_context
@@ -2193,7 +2187,7 @@ impl TaskwarriorTuiApp {
                     }
                 }
                 Key::Down => {
-                    if self.show_completion_pane && !self.completion_list.items.is_empty() {
+                    if self.show_completion_pane && !self.completion_list.is_empty() {
                         self.completion_list.next();
                     } else if let Some(s) = self
                         .command_history_context
@@ -2241,11 +2235,9 @@ impl TaskwarriorTuiApp {
                 Key::Char('\n') => {
                     if self.show_completion_pane {
                         self.show_completion_pane = false;
-                        if let Some(i) = self.completion_list.state.selected() {
-                            if i < self.completion_list.items.len() {
-                                let s = format!("{}{}", self.command.as_str(), &self.completion_list.items[i]);
-                                self.command.update(&s, s.graphemes(true).count());
-                            }
+                        if let Some(s) = self.completion_list.selected() {
+                            let s = format!("{}{}", self.command.as_str(), s);
+                            self.command.update(&s, s.graphemes(true).count());
                         }
                         self.completion_list.unselect();
                     } else {
@@ -2264,7 +2256,7 @@ impl TaskwarriorTuiApp {
                     }
                 }
                 Key::Tab => {
-                    if !self.completion_list.items.is_empty() {
+                    if !self.completion_list.is_empty() {
                         if !self.show_completion_pane {
                             self.show_completion_pane = true;
                         }
@@ -2272,12 +2264,12 @@ impl TaskwarriorTuiApp {
                     }
                 }
                 Key::BackTab => {
-                    if !self.completion_list.items.is_empty() {
+                    if !self.completion_list.is_empty() {
                         self.completion_list.previous();
                     }
                 }
                 Key::Up => {
-                    if self.show_completion_pane && !self.completion_list.items.is_empty() {
+                    if self.show_completion_pane && !self.completion_list.is_empty() {
                         self.completion_list.previous();
                     } else if let Some(s) = self
                         .command_history_context
@@ -2289,7 +2281,7 @@ impl TaskwarriorTuiApp {
                     }
                 }
                 Key::Down => {
-                    if self.show_completion_pane && !self.completion_list.items.is_empty() {
+                    if self.show_completion_pane && !self.completion_list.is_empty() {
                         self.completion_list.next();
                     } else if let Some(s) = self
                         .command_history_context
@@ -2355,11 +2347,9 @@ impl TaskwarriorTuiApp {
                 Key::Char('\n') => {
                     if self.show_completion_pane {
                         self.show_completion_pane = false;
-                        if let Some(i) = self.completion_list.state.selected() {
-                            if i < self.completion_list.items.len() {
-                                let s = format!("{}{}", self.command.as_str(), &self.completion_list.items[i]);
-                                self.command.update(&s, s.graphemes(true).count());
-                            }
+                        if let Some(s) = self.completion_list.selected() {
+                            let s = format!("{}{}", self.command.as_str(), s);
+                            self.command.update(&s, s.graphemes(true).count());
                         }
                         self.completion_list.unselect();
                     } else {
@@ -2378,7 +2368,7 @@ impl TaskwarriorTuiApp {
                     }
                 }
                 Key::Tab => {
-                    if !self.completion_list.items.is_empty() {
+                    if !self.completion_list.is_empty() {
                         if !self.show_completion_pane {
                             self.show_completion_pane = true;
                         }
@@ -2386,12 +2376,12 @@ impl TaskwarriorTuiApp {
                     }
                 }
                 Key::BackTab => {
-                    if !self.completion_list.items.is_empty() {
+                    if !self.completion_list.is_empty() {
                         self.completion_list.previous();
                     }
                 }
                 Key::Up => {
-                    if self.show_completion_pane && !self.completion_list.items.is_empty() {
+                    if self.show_completion_pane && !self.completion_list.is_empty() {
                         self.completion_list.previous();
                     } else if let Some(s) = self
                         .command_history_context
@@ -2403,7 +2393,7 @@ impl TaskwarriorTuiApp {
                     }
                 }
                 Key::Down => {
-                    if self.show_completion_pane && !self.completion_list.items.is_empty() {
+                    if self.show_completion_pane && !self.completion_list.is_empty() {
                         self.completion_list.next();
                     } else if let Some(s) = self
                         .command_history_context
@@ -2433,11 +2423,9 @@ impl TaskwarriorTuiApp {
                 Key::Char('\n') => {
                     if self.show_completion_pane {
                         self.show_completion_pane = false;
-                        if let Some(i) = self.completion_list.state.selected() {
-                            if i < self.completion_list.items.len() {
-                                let s = format!("{}{}", self.filter.as_str(), &self.completion_list.items[i]);
-                                self.filter.update(&s, s.graphemes(true).count());
-                            }
+                        if let Some(s) = self.completion_list.selected() {
+                            let s = format!("{}{}", self.filter.as_str(), s);
+                            self.filter.update(&s, s.graphemes(true).count());
                         }
                         self.completion_list.unselect();
                         self.dirty = true;
@@ -2448,7 +2436,7 @@ impl TaskwarriorTuiApp {
                     }
                 }
                 Key::Up => {
-                    if self.show_completion_pane && !self.completion_list.items.is_empty() {
+                    if self.show_completion_pane && !self.completion_list.is_empty() {
                         self.completion_list.previous();
                     } else if let Some(s) = self
                         .filter_history_context
@@ -2461,7 +2449,7 @@ impl TaskwarriorTuiApp {
                     }
                 }
                 Key::Down => {
-                    if self.show_completion_pane && !self.completion_list.items.is_empty() {
+                    if self.show_completion_pane && !self.completion_list.is_empty() {
                         self.completion_list.previous();
                     } else if let Some(s) = self
                         .filter_history_context
@@ -2474,7 +2462,7 @@ impl TaskwarriorTuiApp {
                     }
                 }
                 Key::Tab => {
-                    if !self.completion_list.items.is_empty() {
+                    if !self.completion_list.is_empty() {
                         if !self.show_completion_pane {
                             self.show_completion_pane = true;
                         }
@@ -2482,7 +2470,7 @@ impl TaskwarriorTuiApp {
                     }
                 }
                 Key::BackTab => {
-                    if !self.completion_list.items.is_empty() {
+                    if !self.completion_list.is_empty() {
                         self.completion_list.previous();
                     }
                 }
@@ -2525,8 +2513,8 @@ impl TaskwarriorTuiApp {
                     if let Some(tags) = task.tags() {
                         for tag in tags {
                             let t = format!("+{}", &tag);
-                            if !virtual_tags.contains(tag) && !self.completion_list.items.contains(&t) {
-                                self.completion_list.items.push(t);
+                            if !virtual_tags.contains(tag) {
+                                self.completion_list.insert(t);
                             }
                         }
                     }
@@ -2534,17 +2522,13 @@ impl TaskwarriorTuiApp {
                 for task in self.tasks.iter() {
                     if let Some(project) = task.project() {
                         let p = format!("project:{}", &project);
-                        if !self.completion_list.items.contains(&p) {
-                            self.completion_list.items.push(p);
-                        }
+                        self.completion_list.insert(p);
                     }
                 }
                 for task in self.tasks.iter() {
                     if let Some(priority) = task.priority() {
                         let p = format!("priority:{}", &priority);
-                        if !self.completion_list.items.contains(&p) {
-                            self.completion_list.items.push(p);
-                        }
+                        self.completion_list.insert(p);
                     }
                 }
                 for task in self.tasks.iter() {
@@ -2560,9 +2544,7 @@ impl TaskwarriorTuiApp {
                             date.minute(),
                             date.second(),
                         );
-                        if !self.completion_list.items.contains(&s) {
-                            self.completion_list.items.push(s);
-                        }
+                        self.completion_list.insert(s);
                     }
                 }
             }
@@ -2577,9 +2559,7 @@ impl TaskwarriorTuiApp {
                     "priority:".to_string(),
                     "due:".to_string(),
                 ] {
-                    if !self.completion_list.items.contains(&s) {
-                        self.completion_list.items.push(s);
-                    }
+                    self.completion_list.insert(s);
                 }
             }
             _ => {}
