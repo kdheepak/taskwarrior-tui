@@ -37,6 +37,7 @@ pub enum Key {
     Ctrl(char),
     Null,
     Esc,
+    Tab,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -83,7 +84,7 @@ impl Events {
                                 End => Key::End,
                                 PageUp => Key::PageUp,
                                 PageDown => Key::PageDown,
-                                Tab => Key::Char('\t'),
+                                Tab => Key::Tab,
                                 BackTab => Key::BackTab,
                                 Delete => Key::Delete,
                                 Insert => Key::Insert,
