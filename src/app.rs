@@ -2146,7 +2146,8 @@ impl TaskwarriorTuiApp {
                         self.show_completion_pane = false;
                         if let Some(i) = self.completion_list.state.selected() {
                             if i < self.completion_list.items.len() {
-                                let s = format!("{}{}", self.modify.as_str(), &self.completion_list.items[i]);
+                                let m = self.modify.as_str();
+                                let s = format!("{}{}", m, &self.completion_list.items[i]);
                                 self.modify.update(&s, s.graphemes(true).count());
                             }
                         }
@@ -2186,7 +2187,7 @@ impl TaskwarriorTuiApp {
                     {
                         let p = self.modify.pos();
                         self.modify.update("", 0);
-                        self.modify.update(&s, p);
+                        self.modify.update(&s, std::cmp::min(s.graphemes(true).count(), p));
                     }
                 }
                 Key::Down => {
@@ -2196,12 +2197,13 @@ impl TaskwarriorTuiApp {
                     {
                         let p = self.modify.pos();
                         self.modify.update("", 0);
-                        self.modify.update(&s, p);
+                        self.modify.update(&s, std::cmp::min(s.graphemes(true).count(), p));
                     }
                 }
                 _ => {
                     self.command_history_context.last();
                     handle_movement(&mut self.modify, input);
+                    self.update_completion_list();
                 }
             },
             AppMode::TaskSubprocess => match input {
@@ -2277,7 +2279,7 @@ impl TaskwarriorTuiApp {
                     {
                         let p = self.command.pos();
                         self.command.update("", 0);
-                        self.command.update(&s, p);
+                        self.command.update(&s, std::cmp::min(s.graphemes(true).count(), p));
                     }
                 }
                 Key::Down => {
@@ -2287,7 +2289,7 @@ impl TaskwarriorTuiApp {
                     {
                         let p = self.command.pos();
                         self.command.update("", 0);
-                        self.command.update(&s, p);
+                        self.command.update(&s, std::cmp::min(s.graphemes(true).count(), p));
                     }
                 }
                 _ => {
@@ -2387,7 +2389,7 @@ impl TaskwarriorTuiApp {
                     {
                         let p = self.command.pos();
                         self.command.update("", 0);
-                        self.command.update(&s, p);
+                        self.command.update(&s, std::cmp::min(s.graphemes(true).count(), p));
                     }
                 }
                 Key::Down => {
@@ -2397,7 +2399,7 @@ impl TaskwarriorTuiApp {
                     {
                         let p = self.command.pos();
                         self.command.update("", 0);
-                        self.command.update(&s, p);
+                        self.command.update(&s, std::cmp::min(s.graphemes(true).count(), p));
                     }
                 }
                 _ => {
@@ -2451,7 +2453,7 @@ impl TaskwarriorTuiApp {
                     {
                         let p = self.filter.pos();
                         self.filter.update("", 0);
-                        self.filter.update(&s, p);
+                        self.filter.update(&s, std::cmp::min(p, s.graphemes(true).count()));
                         self.dirty = true;
                     }
                 }
@@ -2502,7 +2504,7 @@ impl TaskwarriorTuiApp {
         match self.mode {
             AppMode::TaskModify | AppMode::TaskFilter | AppMode::TaskAdd | AppMode::TaskLog => {
                 let virtual_tags = self.task_report_table.virtual_tags.clone();
-                self.completion_list.items.clear();
+                self.completion_list.clear();
                 for task in self.tasks.iter() {
                     if let Some(tags) = task.tags() {
                         for tag in tags {
