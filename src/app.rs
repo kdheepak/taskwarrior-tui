@@ -255,8 +255,8 @@ impl TaskwarriorTuiApp {
             terminal_height: h,
             filter_history_context: HistoryContext::new("filter.history"),
             command_history_context: HistoryContext::new("command.history"),
-            completion_list: CompletionList::with_items(vec!["hello".to_string(), "word".to_string()]),
-            show_completion_pane: true,
+            completion_list: CompletionList::with_items(vec![]),
+            show_completion_pane: false,
         };
 
         for c in app.config.filter.chars() {
@@ -410,9 +410,6 @@ impl TaskwarriorTuiApp {
                 }
             }
         };
-        if self.show_completion_pane {
-            self.draw_completion_pop_up(f, rects[1], 0);
-        }
         match self.mode {
             AppMode::TaskReport => self.draw_command(
                 f,
@@ -425,6 +422,9 @@ impl TaskwarriorTuiApp {
             AppMode::TaskFilter => {
                 let position = self.get_position(&self.filter);
 
+                if self.show_completion_pane {
+                    self.draw_completion_pop_up(f, rects[1], position);
+                }
                 self.draw_command(
                     f,
                     rects[1],
@@ -629,16 +629,22 @@ impl TaskwarriorTuiApp {
         // Create a List from all list items and highlight the currently selected one
         let items = List::new(items)
             .block(Block::default().borders(Borders::NONE).title(""))
-            .style(Style::default().bg(Color::Rgb(223, 223, 223)));
+            .style(Style::default().bg(Color::Rgb(223, 223, 223)))
+            .highlight_style(Style::default().add_modifier(Modifier::BOLD))
+            .highlight_symbol(&self.config.uda_selection_indicator);
 
         let area = f.size();
-        let mut rect = rect.clone();
-        rect.y = rect
-            .y
-            .saturating_sub(self.completion_list.items.len() as u16)
-            .saturating_sub(5);
-        rect.height = self.completion_list.items.len() as u16 + 5;
+
+        let mut rect = rect;
+        rect.height = std::cmp::min(area.height / 4, self.completion_list.items.len() as u16 + 5);
         rect.width = std::cmp::min(area.width / 4, 20);
+        rect.y = rect.y.saturating_sub(rect.height);
+        if cursor_position as u16 + rect.width >= area.width {
+            rect.x = area.width - rect.width;
+        } else {
+            rect.x = cursor_position as u16;
+        }
+
         // We can now render the item list
         f.render_widget(Clear, rect);
         f.render_stateful_widget(items, rect, &mut self.completion_list.state);
@@ -1961,6 +1967,7 @@ impl TaskwarriorTuiApp {
                     self.mode = AppMode::TaskHelpPopup;
                 } else if input == self.keyconfig.filter {
                     self.mode = AppMode::TaskFilter;
+                    self.update_completion_list();
                 } else if input == self.keyconfig.shortcut1 {
                     match self.task_shortcut(1) {
                         Ok(_) => self.update(true)?,
@@ -2237,10 +2244,32 @@ impl TaskwarriorTuiApp {
                 }
             },
             AppMode::TaskFilter => match input {
-                Key::Char('\n') | Key::Esc => {
-                    self.mode = AppMode::TaskReport;
-                    self.filter_history_context.add(self.filter.as_str());
-                    self.update(true)?;
+                Key::Esc => {
+                    if self.show_completion_pane {
+                        self.show_completion_pane = false;
+                        self.completion_list.unselect();
+                    } else {
+                        self.mode = AppMode::TaskReport;
+                        self.filter_history_context.add(self.filter.as_str());
+                        self.update(true)?;
+                    }
+                }
+                Key::Char('\n') => {
+                    if self.show_completion_pane {
+                        self.show_completion_pane = false;
+                        if let Some(i) = self.completion_list.state.selected() {
+                            if i < self.completion_list.items.len() {
+                                let s = format!("{}{}", self.filter.as_str(), &self.completion_list.items[i]);
+                                self.filter.update(&s, s.graphemes(true).count());
+                            }
+                        }
+                        self.completion_list.unselect();
+                        self.dirty = true;
+                    } else {
+                        self.mode = AppMode::TaskReport;
+                        self.filter_history_context.add(self.filter.as_str());
+                        self.update(true)?;
+                    }
                 }
                 Key::Up => {
                     if let Some(s) = self
@@ -2262,6 +2291,19 @@ impl TaskwarriorTuiApp {
                         self.filter.update("", 0);
                         self.filter.update(&s, p);
                         self.dirty = true;
+                    }
+                }
+                Key::Tab => {
+                    if !self.completion_list.items.is_empty() {
+                        if !self.show_completion_pane {
+                            self.show_completion_pane = true;
+                        }
+                        self.completion_list.next();
+                    }
+                }
+                Key::BackTab => {
+                    if !self.completion_list.items.is_empty() {
+                        self.completion_list.previous();
                     }
                 }
                 _ => {
@@ -2292,6 +2334,25 @@ impl TaskwarriorTuiApp {
         }
         self.update_task_table_state();
         Ok(())
+    }
+
+    pub fn update_completion_list(&mut self) {
+        match self.mode {
+            AppMode::TaskFilter => {
+                let virtual_tags = self.task_report_table.virtual_tags.clone();
+                self.completion_list.items.clear();
+                for task in self.tasks.iter() {
+                    if let Some(tags) = task.tags() {
+                        for tag in tags {
+                            if !virtual_tags.contains(tag) && !self.completion_list.items.contains(tag) {
+                                self.completion_list.items.push(format!("+{}", &tag));
+                            }
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
     }
 }
 
