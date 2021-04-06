@@ -34,7 +34,7 @@ use unicode_segmentation::UnicodeSegmentation;
 use chrono::{Datelike, Local, NaiveDate, NaiveDateTime, TimeZone, Timelike};
 
 use anyhow::Context as AnyhowContext;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 
 use async_std::prelude::*;
 use async_std::stream::StreamExt;
@@ -159,6 +159,7 @@ pub enum AppMode {
     TaskHelpPopup,
     TaskError,
     TaskContextMenu,
+    TaskJump,
     Calendar,
 }
 
@@ -298,6 +299,7 @@ impl TaskwarriorTuiApp {
         self.terminal_height = rect.height;
         match self.mode {
             AppMode::TaskReport
+            | AppMode::TaskJump
             | AppMode::TaskFilter
             | AppMode::TaskAdd
             | AppMode::TaskAnnotate
@@ -419,6 +421,17 @@ impl TaskwarriorTuiApp {
                 self.get_position(&self.filter),
                 false,
             ),
+            AppMode::TaskJump => {
+                let position = self.get_position(&self.command);
+                self.draw_command(
+                    f,
+                    rects[1],
+                    self.command.as_str(),
+                    Span::styled("Jump to Task", Style::default().add_modifier(Modifier::BOLD)),
+                    position,
+                    true,
+                );
+            }
             AppMode::TaskFilter => {
                 let position = self.get_position(&self.filter);
                 if self.show_completion_pane {
@@ -1205,6 +1218,20 @@ impl TaskwarriorTuiApp {
         self.current_selection = i;
     }
 
+    pub fn task_report_jump(&mut self) -> Result<()> {
+        if self.tasks.is_empty() {
+            return Ok(());
+        }
+        let i = self.command.as_str().parse::<usize>()?;
+        if let Some(task) = self.task_by_id(i as u64) {
+            let i = self.task_index_by_uuid(*task.uuid()).unwrap();
+            self.current_selection = i;
+            Ok(())
+        } else {
+            Err(anyhow!("Cannot locate task id {} in report", i))
+        }
+    }
+
     pub fn export_contexts(&mut self) -> Result<()> {
         let output = Command::new("task").arg("context").output()?;
         let data = String::from_utf8_lossy(&output.stdout);
@@ -1989,6 +2016,8 @@ impl TaskwarriorTuiApp {
                 } else if input == self.keyconfig.filter {
                     self.mode = AppMode::TaskFilter;
                     self.update_completion_list();
+                } else if input == Key::Char(':') {
+                    self.mode = AppMode::TaskJump;
                 } else if input == self.keyconfig.shortcut1 {
                     match self.task_shortcut(1) {
                         Ok(_) => self.update(true)?,
@@ -2276,6 +2305,25 @@ impl TaskwarriorTuiApp {
                     Err(e) => {
                         self.mode = AppMode::TaskError;
                         self.error = e;
+                    }
+                },
+                Key::Esc => {
+                    self.command.update("", 0);
+                    self.mode = AppMode::TaskReport;
+                }
+                _ => handle_movement(&mut self.command, input),
+            },
+            AppMode::TaskJump => match input {
+                Key::Char('\n') => match self.task_report_jump() {
+                    Ok(_) => {
+                        self.mode = AppMode::TaskReport;
+                        self.command.update("", 0);
+                        self.update(true)?;
+                    }
+                    Err(e) => {
+                        self.command.update("", 0);
+                        self.mode = AppMode::TaskError;
+                        self.error = e.to_string();
                     }
                 },
                 Key::Esc => {
