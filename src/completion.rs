@@ -58,4 +58,9 @@ impl CompletionList {
     pub fn unselect(&mut self) {
         self.state.select(None);
     }
+
+    pub fn clear(&mut self) {
+        self.items.clear();
+        self.state.select(None);
+    }
 }
