@@ -1187,16 +1187,19 @@ impl TaskwarriorTuiApp {
             return;
         }
         let i = {
-            if self.current_selection >= self.tasks.len() - 1 {
+            if self.current_selection == self.tasks.len() - 1 {
                 if self.config.uda_task_report_looping {
                     0
                 } else {
-                    self.current_selection
+                    self.tasks.len() - 1
                 }
             } else {
-                self.current_selection
-                    .checked_add(self.task_report_height as usize)
-                    .unwrap_or_else(|| self.tasks.len())
+                std::cmp::min(
+                    self.current_selection
+                        .checked_add(self.task_report_height as usize)
+                        .unwrap_or_else(|| self.tasks.len() - 1),
+                    self.tasks.len() - 1,
+                )
             }
         };
         self.current_selection = i;
