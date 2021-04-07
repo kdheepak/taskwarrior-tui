@@ -48,3 +48,14 @@ See <https://kdheepak.com/taskwarrior-tui/installation/> on instructions for usi
 
 - <https://kdheepak.com/taskwarrior-tui/configuration/keys>
 - <https://kdheepak.com/taskwarrior-tui/configuration/colors>
+
+## References / Resources
+
+- <https://github.com/GothenburgBitFactory/taskwarrior>
+- <https://github.com/GothenburgBitFactory/libshared>
+- <https://github.com/GothenburgBitFactory/timewarrior>
+- <https://github.com/fdehau/tui-rs>
+- <https://github.com/crossterm-rs/crossterm/>
+- <https://github.com/async-rs/async-std>
+- <https://github.com/kkawakam/rustyline>
+- <https://github.com/vit-project/vit>
