@@ -18,10 +18,7 @@ use rustyline_derive::Helper;
 use unicode_segmentation::Graphemes;
 use unicode_segmentation::UnicodeSegmentation;
 
-// find the beginning of the word in line which is currently under the cursor,
-// whose position is cursor_pos.
-//
-fn get_start_word_under_cursor(line: &str, cursor_pos: usize) -> usize {
+pub fn get_start_word_under_cursor(line: &str, cursor_pos: usize) -> usize {
     let mut chars = line[..cursor_pos].chars();
     let mut res = cursor_pos;
     while let Some(c) = chars.next_back() {
@@ -35,65 +32,79 @@ fn get_start_word_under_cursor(line: &str, cursor_pos: usize) -> usize {
 }
 
 pub struct TaskwarriorTuiCompletionHelper {
-    hints: Vec<String>,
+    candidates: Vec<String>,
+    completer: rustyline::completion::FilenameCompleter,
 }
 
 impl Completer for TaskwarriorTuiCompletionHelper {
-    type Candidate = String;
+    type Candidate = Pair;
 
-    fn complete(&self, line: &str, pos: usize, _ctx: &Context) -> rustyline::Result<(usize, Vec<Self::Candidate>)> {
-        let mut candidates: Vec<String> = self
-            .hints
+    fn complete(&self, word: &str, pos: usize, _ctx: &Context) -> rustyline::Result<(usize, Vec<Self::Candidate>)> {
+        let candidates: Vec<Pair> = self
+            .candidates
             .iter()
-            .filter_map(|hint| {
-                if pos > 0 && hint.starts_with(&line[..pos]) && !hint[pos..].contains(" ") {
-                    Some(hint[pos..].to_owned())
+            .filter_map(|candidate| {
+                if candidate.starts_with(&word[..pos]) {
+                    Some(Pair {
+                        display: candidate.clone(),
+                        replacement: candidate[pos..].to_string(),
+                    })
                 } else {
                     None
                 }
             })
             .collect();
-        candidates.sort();
         Ok((pos, candidates))
     }
 }
 
 pub struct CompletionList {
     pub state: ListState,
+    pub input: String,
+    pub pos: usize,
     pub helper: TaskwarriorTuiCompletionHelper,
 }
 
 impl CompletionList {
     pub fn new() -> CompletionList {
+        let completer = FilenameCompleter::new();
         CompletionList {
             state: ListState::default(),
-            helper: TaskwarriorTuiCompletionHelper { hints: vec![] },
+            input: String::new(),
+            pos: 0,
+            helper: TaskwarriorTuiCompletionHelper {
+                candidates: vec![],
+                completer,
+            },
         }
     }
 
     pub fn with_items(items: Vec<String>) -> CompletionList {
-        let mut hints = vec![];
+        let completer = FilenameCompleter::new();
+        let mut candidates = vec![];
         for i in items {
-            if !hints.contains(&i) {
-                hints.push(i);
+            if !candidates.contains(&i) {
+                candidates.push(i);
             }
         }
         CompletionList {
             state: ListState::default(),
-            helper: TaskwarriorTuiCompletionHelper { hints },
+            input: String::new(),
+            pos: 0,
+            helper: TaskwarriorTuiCompletionHelper { candidates, completer },
         }
     }
 
     pub fn insert(&mut self, item: String) {
-        if !self.helper.hints.contains(&item) {
-            self.helper.hints.push(item);
+        if !self.helper.candidates.contains(&item) {
+            self.helper.candidates.push(item);
         }
     }
 
     pub fn next(&mut self) {
         let i = match self.state.selected() {
             Some(i) => {
-                if i >= self.helper.hints.len() - 1 {
+                if i >= self.candidates().len() - 1 {
                     0
                 } else {
                     i + 1
@@ -108,7 +119,7 @@ impl CompletionList {
         let i = match self.state.selected() {
             Some(i) => {
                 if i == 0 {
-                    self.helper.hints.len() - 1
+                    self.candidates().len() - 1
                 } else {
                     i - 1
                 }
@@ -123,21 +134,25 @@ impl CompletionList {
     }
 
     pub fn clear(&mut self) {
-        self.helper.hints.clear();
+        self.helper.candidates.clear();
         self.state.select(None);
     }
 
     pub fn len(&self) -> usize {
-        self.helper.hints.iter().count()
+        self.candidates().iter().count()
     }
 
     pub fn max_width(&self) -> Option<usize> {
-        self.helper.hints.iter().map(|s| s.graphemes(true).count() + 4).max()
+        self.candidates()
+            .iter()
+            .map(|p| p.display.graphemes(true).count() + 4)
+            .max()
     }
 
     pub fn get(&self, i: usize) -> Option<String> {
-        if i < self.helper.hints.len() {
-            Some(self.helper.hints[i].clone())
+        let candidates = self.candidates();
+        if i < candidates.len() {
+            Some(candidates[i].replacement.clone())
         } else {
             None
         }
@@ -152,10 +167,40 @@ impl CompletionList {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.helper.hints.is_empty()
+        self.helper.candidates.is_empty()
     }
 
-    pub fn iter(&self) -> std::slice::Iter<String> {
-        self.helper.hints.iter()
+    pub fn candidates(&self) -> Vec<Pair> {
+        let hist = rustyline::history::History::new();
+        let ctx = rustyline::Context::new(&hist);
+        let (pos, candidates) = self.helper.complete(&self.input, self.pos, &ctx).unwrap();
+        candidates
+    }
+
+    pub fn input(&mut self, input: String) {
+        self.input = input;
+        self.pos = self.input.len();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_completion() {
+        let mut completion_list = CompletionList::new();
+
+        completion_list.insert("+test".to_string());
+        completion_list.insert("+shortcut".to_string());
+        completion_list.insert("project:color".to_string());
+        completion_list.insert("due:'2021-04-07T00:00:00'".to_string());
+
+        completion_list.input("due:".to_string());
+
+        for p in completion_list.candidates().iter() {
+            dbg!(format!("{:?}", p.display));
+            dbg!(format!("{:?}", p.replacement));
+        }
     }
 }

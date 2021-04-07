@@ -1,5 +1,5 @@
 use crate::calendar::Calendar;
-use crate::completion::CompletionList;
+use crate::completion::{get_start_word_under_cursor, CompletionList};
 use crate::config;
 use crate::config::Config;
 use crate::context::Context;
@@ -637,12 +637,17 @@ impl TaskwarriorTuiApp {
     }
 
     fn draw_completion_pop_up(&mut self, f: &mut Frame<impl Backend>, rect: Rect, cursor_position: usize) {
+        if self.completion_list.candidates().is_empty() {
+            self.show_completion_pane = false;
+            return;
+        }
         // Iterate through all elements in the `items` app and append some debug text to it.
         let items: Vec<ListItem> = self
             .completion_list
+            .candidates()
             .iter()
-            .map(|i| {
-                let lines = vec![Spans::from(i.clone())];
+            .map(|p| {
+                let lines = vec![Spans::from(p.display.clone())];
                 ListItem::new(lines).style(Style::default().fg(Color::Black))
             })
             .collect();
@@ -2201,7 +2206,7 @@ impl TaskwarriorTuiApp {
                 _ => {
                     self.command_history_context.last();
                     handle_movement(&mut self.modify, input);
-                    self.update_completion_list();
+                    self.update_input_for_completion();
                 }
             },
             AppMode::TaskSubprocess => match input {
@@ -2295,6 +2300,7 @@ impl TaskwarriorTuiApp {
                 _ => {
                     self.command_history_context.last();
                     handle_movement(&mut self.command, input);
+                    self.update_input_for_completion();
                 }
             },
             AppMode::TaskAnnotate => match input {
@@ -2407,6 +2413,7 @@ impl TaskwarriorTuiApp {
                 _ => {
                     self.command_history_context.last();
                     handle_movement(&mut self.command, input);
+                    self.update_input_for_completion();
                 }
             },
             AppMode::TaskFilter => match input {
@@ -2476,6 +2483,7 @@ impl TaskwarriorTuiApp {
                 }
                 _ => {
                     handle_movement(&mut self.filter, input);
+                    self.update_input_for_completion();
                     self.dirty = true;
                 }
             },
@@ -2561,6 +2569,27 @@ impl TaskwarriorTuiApp {
                 ] {
                     self.completion_list.insert(s);
                 }
+            }
+            _ => {}
+        }
+    }
+
+    pub fn update_input_for_completion(&mut self) {
+        match self.mode {
+            AppMode::TaskAdd | AppMode::TaskLog => {
+                let i = get_start_word_under_cursor(self.command.as_str(), self.command.pos());
+                let input = self.command.as_str()[i..self.command.pos()].to_string();
+                self.completion_list.input(input);
+            }
+            AppMode::TaskModify => {
+                let i = get_start_word_under_cursor(self.modify.as_str(), self.modify.pos());
+                let input = self.modify.as_str()[i..self.modify.pos()].to_string();
+                self.completion_list.input(input);
+            }
+            AppMode::TaskFilter => {
+                let i = get_start_word_under_cursor(self.filter.as_str(), self.filter.pos());
+                let input = self.filter.as_str()[i..self.filter.pos()].to_string();
+                self.completion_list.input(input);
             }
             _ => {}
         }
