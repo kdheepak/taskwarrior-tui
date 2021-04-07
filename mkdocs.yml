@@ -49,5 +49,5 @@ nav:
     - Key configuration:    configuration/keys.md
     - Color configuration:  configuration/colors.md
     - Advanced:             configuration/advanced.md
-  # - Developer Guide:
-  #   - Guide:                developer/guide.md
+  - Developer Guide:
+    - Guide:                developer/guide.md
