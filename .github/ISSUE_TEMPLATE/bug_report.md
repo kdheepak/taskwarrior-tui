@@ -14,6 +14,8 @@ assignees: ""
 
 **To Reproduce**
 
+- [ ] Reproducible using the test data located here: <https://github.com/kdheepak/taskwarrior-testdata/>
+
 Steps to reproduce the behavior:
 
 <!--
@@ -62,4 +64,7 @@ task --version
 
 **Additional context and information**
 
-<!-- Please provide detailed stacktraces, screenshot, etc here. If `taskwarrior-tui` crashes, you can set the RUST_BACKTRACE=1 for a detailed stacktrace. -->
+<!--
+Please provide detailed stacktraces, screenshot, etc here.
+If `taskwarrior-tui` crashes, you can set the RUST_BACKTRACE=1 for a detailed stacktrace.
+-->
