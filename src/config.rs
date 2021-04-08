@@ -48,6 +48,7 @@ pub struct Config {
     pub uda_task_detail_prefetch: usize,
     pub uda_task_report_show_info: bool,
     pub uda_task_report_looping: bool,
+    pub uda_task_report_jump_to_task_on_add: bool,
     pub uda_selection_indicator: String,
     pub uda_mark_indicator: String,
     pub uda_unmark_indicator: String,
@@ -80,6 +81,7 @@ impl Config {
         let uda_task_detail_prefetch = Self::get_uda_task_detail_prefetch(data);
         let uda_task_report_show_info = Self::get_uda_task_report_show_info(data);
         let uda_task_report_looping = Self::get_uda_task_report_looping(data);
+        let uda_task_report_jump_to_task_on_add = Self::get_uda_task_report_jump_to_task_on_add(data);
         let uda_selection_indicator = Self::get_uda_selection_indicator(data);
         let uda_mark_indicator = Self::get_uda_mark_indicator(data);
         let uda_unmark_indicator = Self::get_uda_unmark_indicator(data);
@@ -111,6 +113,7 @@ impl Config {
             uda_task_detail_prefetch,
             uda_task_report_show_info,
             uda_task_report_looping,
+            uda_task_report_jump_to_task_on_add,
             uda_selection_indicator,
             uda_mark_indicator,
             uda_unmark_indicator,
@@ -372,6 +375,13 @@ impl Config {
 
     fn get_uda_task_report_show_info(data: &str) -> bool {
         Self::get_config("uda.taskwarrior-tui.task-report.show-info", data)
+            .unwrap_or_default()
+            .get_bool()
+            .unwrap_or(true)
+    }
+
+    fn get_uda_task_report_jump_to_task_on_add(data: &str) -> bool {
+        Self::get_config("uda.taskwarrior-tui.task-report.jump-to-task-on-add", data)
             .unwrap_or_default()
             .get_bool()
             .unwrap_or(true)

@@ -1627,7 +1627,9 @@ impl TaskwarriorTuiApp {
                         let data = String::from_utf8_lossy(&output.stdout);
                         let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
                         let caps = re.captures(&data).unwrap();
-                        self.current_selection_id = Some(caps["task_id"].parse::<u64>().unwrap());
+                        if self.config.uda_task_report_jump_to_task_on_add {
+                            self.current_selection_id = Some(caps["task_id"].parse::<u64>().unwrap());
+                        }
                         Ok(())
                     }
                     Err(_) => Err(format!(
