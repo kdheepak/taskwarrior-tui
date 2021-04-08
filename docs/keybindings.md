@@ -43,7 +43,7 @@ Keybindings for task report:
 
     v: {toggle mark on selected}         - Toggle mark on selected
 
-    V: {toggle marks on all tasks}       - Toggle marks on tasks in current filter report
+    V: {toggle marks on all tasks}       - Toggle marks on all tasks in current filter report
 
     x: task {selected} delete            - Delete
 
