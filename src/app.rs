@@ -180,6 +180,8 @@ pub struct TaskwarriorTuiApp {
     pub marked: HashSet<Uuid>,
     // stores index of current task that is highlighted
     pub current_selection: usize,
+    pub current_selection_uuid: Option<Uuid>,
+    pub current_selection_id: Option<u64>,
     pub task_report_table: TaskReportTable,
     pub calendar_year: i32,
     pub mode: AppMode,
@@ -236,6 +238,8 @@ impl TaskwarriorTuiApp {
             task_details: HashMap::new(),
             marked: HashSet::new(),
             current_selection: 0,
+            current_selection_uuid: None,
+            current_selection_id: None,
             current_context_filter: "".to_string(),
             current_context: "".to_string(),
             command: LineBuffer::with_capacity(MAX_LINE),
@@ -777,6 +781,12 @@ impl TaskwarriorTuiApp {
         m.cloned()
     }
 
+    fn task_index_by_id(&self, id: u64) -> Option<usize> {
+        let tasks = &self.tasks;
+        let m = tasks.iter().position(|t| t.id().unwrap() == id);
+        m
+    }
+
     fn task_index_by_uuid(&self, uuid: Uuid) -> Option<usize> {
         let tasks = &self.tasks;
         let m = tasks.iter().position(|t| *t.uuid() == uuid);
@@ -995,7 +1005,28 @@ impl TaskwarriorTuiApp {
         if self.task_report_show_info {
             task::block_on(self.update_task_details())?;
         }
+        self.selection_fix();
         Ok(())
+    }
+
+    pub fn selection_fix(&mut self) {
+        if let (Some(t), Some(id)) = (self.task_current(), self.current_selection_id) {
+            if t.id() != Some(id) {
+                if let Some(i) = self.task_index_by_id(id) {
+                    self.current_selection = i;
+                    self.current_selection_id = None;
+                }
+            }
+        }
+
+        if let (Some(t), Some(uuid)) = (self.task_current(), self.current_selection_uuid) {
+            if t.uuid() != &uuid {
+                if let Some(i) = self.task_index_by_uuid(uuid) {
+                    self.current_selection = i;
+                    self.current_selection_uuid = None;
+                }
+            }
+        }
     }
 
     pub fn save_history(&mut self) -> Result<()> {
@@ -1439,7 +1470,7 @@ impl TaskwarriorTuiApp {
                 .join(" ")
         );
         let shell = shellexpand::tilde(&shell).into_owned();
-        match shlex::split(&shell) {
+        let r = match shlex::split(&shell) {
             Some(cmd) => {
                 let mut command = Command::new(&cmd[0]);
                 for s in cmd.iter().skip(1) {
@@ -1462,7 +1493,15 @@ impl TaskwarriorTuiApp {
                 }
             }
             None => Err(format!("Unable to run `{}`. Cannot shlex split `{}`", shell, shell)),
+        };
+
+        if task_uuids.len() == 1 {
+            if let Some(uuid) = task_uuids.get(0) {
+                self.current_selection_uuid = Some(*uuid);
+            }
         }
+
+        r
     }
 
     pub fn task_modify(&mut self) -> Result<(), String> {
@@ -1484,7 +1523,7 @@ impl TaskwarriorTuiApp {
 
         let shell = self.modify.as_str();
 
-        match shlex::split(&shell) {
+        let r = match shlex::split(&shell) {
             Some(cmd) => {
                 for s in cmd {
                     command.arg(&s);
@@ -1505,7 +1544,15 @@ impl TaskwarriorTuiApp {
                 }
             }
             None => Err(format!("Cannot shlex split `{}`", shell,)),
+        };
+
+        if task_uuids.len() == 1 {
+            if let Some(uuid) = task_uuids.get(0) {
+                self.current_selection_uuid = Some(*uuid);
+            }
         }
+
+        r
     }
 
     pub fn task_annotate(&mut self) -> Result<(), String> {
@@ -1527,7 +1574,7 @@ impl TaskwarriorTuiApp {
 
         let shell = self.command.as_str();
 
-        match shlex::split(&shell) {
+        let r = match shlex::split(&shell) {
             Some(cmd) => {
                 for s in cmd {
                     command.arg(&s);
@@ -1553,7 +1600,14 @@ impl TaskwarriorTuiApp {
                 }
             }
             None => Err(format!("Cannot shlex split `{}`", shell)),
+        };
+
+        if task_uuids.len() == 1 {
+            if let Some(uuid) = task_uuids.get(0) {
+                self.current_selection_uuid = Some(*uuid);
+            }
         }
+        r
     }
 
     pub fn task_add(&mut self) -> Result<(), String> {
@@ -1569,7 +1623,15 @@ impl TaskwarriorTuiApp {
                 }
                 let output = command.output();
                 match output {
-                    Ok(_) => Ok(()),
+                    Ok(output) => {
+                        let data = String::from_utf8_lossy(&output.stdout);
+                        let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
+                        let caps = re.captures(&data).unwrap();
+                        if self.config.uda_task_report_jump_to_task_on_add {
+                            self.current_selection_id = Some(caps["task_id"].parse::<u64>().unwrap());
+                        }
+                        Ok(())
+                    }
                     Err(_) => Err(format!(
                         "Cannot run `task add {}`. Check documentation for more information",
                         shell
@@ -1611,9 +1673,6 @@ impl TaskwarriorTuiApp {
         if self.tasks.is_empty() {
             return Ok(());
         }
-        let selected = self.current_selection;
-        let task_id = self.tasks[selected].id().unwrap_or_default();
-        let task_uuid = *self.tasks[selected].uuid();
 
         let task_uuids = self.selected_task_uuids();
 
@@ -1631,10 +1690,16 @@ impl TaskwarriorTuiApp {
             }
         }
 
+        if task_uuids.len() == 1 {
+            if let Some(uuid) = task_uuids.get(0) {
+                self.current_selection_uuid = Some(*uuid);
+            }
+        }
+
         Ok(())
     }
 
-    pub fn task_delete(&self) -> Result<(), String> {
+    pub fn task_delete(&mut self) -> Result<(), String> {
         if self.tasks.is_empty() {
             return Ok(());
         }
@@ -1651,7 +1716,7 @@ impl TaskwarriorTuiApp {
         }
         cmd.arg("delete");
         let output = cmd.output();
-        match output {
+        let r = match output {
             Ok(_) => Ok(()),
             Err(_) => Err(format!(
                 "Cannot run `task delete` for tasks `{}`. Check documentation for more information",
@@ -1661,7 +1726,10 @@ impl TaskwarriorTuiApp {
                     .collect::<Vec<String>>()
                     .join(" ")
             )),
-        }
+        };
+        self.current_selection_uuid = None;
+        self.current_selection_id = None;
+        r
     }
 
     pub fn task_done(&mut self) -> Result<(), String> {
@@ -1679,7 +1747,7 @@ impl TaskwarriorTuiApp {
         }
         cmd.arg("done");
         let output = cmd.output();
-        match output {
+        let r = match output {
             Ok(_) => Ok(()),
             Err(_) => Err(format!(
                 "Cannot run `task done` for task `{}`. Check documentation for more information",
@@ -1689,22 +1757,36 @@ impl TaskwarriorTuiApp {
                     .collect::<Vec<String>>()
                     .join(" ")
             )),
-        }
+        };
+        self.current_selection_uuid = None;
+        self.current_selection_id = None;
+        r
     }
 
-    pub fn task_undo(&self) -> Result<(), String> {
+    pub fn task_undo(&mut self) -> Result<(), String> {
         if self.tasks.is_empty() {
             return Ok(());
         }
         let output = Command::new("task").arg("rc.confirmation=off").arg("undo").output();
 
         match output {
-            Ok(_) => Ok(()),
+            Ok(output) => {
+                let data = String::from_utf8_lossy(&output.stdout);
+                let re = Regex::new(
+                    r"(?P<task_uuid>[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})",
+                )
+                .unwrap();
+                let caps = re.captures(&data).unwrap();
+                if let Ok(uuid) = Uuid::parse_str(&caps["task_uuid"]) {
+                    self.current_selection_uuid = Some(uuid);
+                }
+                Ok(())
+            }
             Err(_) => Err("Cannot run `task undo`. Check documentation for more information".to_string()),
         }
     }
 
-    pub fn task_edit(&self) -> Result<(), String> {
+    pub fn task_edit(&mut self) -> Result<(), String> {
         if self.tasks.is_empty() {
             return Ok(());
         }
@@ -1713,7 +1795,7 @@ impl TaskwarriorTuiApp {
         let task_uuid = *self.tasks[selected].uuid();
         let r = Command::new("task").arg(format!("{}", task_uuid)).arg("edit").spawn();
 
-        match r {
+        let r = match r {
             Ok(child) => {
                 let output = child.wait_with_output();
                 match output {
@@ -1738,7 +1820,11 @@ impl TaskwarriorTuiApp {
                 "Cannot start `task edit` for task `{}`. Check documentation for more information",
                 task_uuid
             )),
-        }
+        };
+
+        self.current_selection_uuid = Some(task_uuid);
+
+        r
     }
 
     pub fn task_current(&self) -> Option<Task> {

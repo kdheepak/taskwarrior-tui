@@ -139,7 +139,7 @@ impl CompletionList {
     }
 
     pub fn len(&self) -> usize {
-        self.candidates().iter().count()
+        self.candidates().len()
     }
 
     pub fn max_width(&self) -> Option<usize> {
