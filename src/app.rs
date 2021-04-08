@@ -1786,7 +1786,7 @@ impl TaskwarriorTuiApp {
         }
     }
 
-    pub fn task_edit(&self) -> Result<(), String> {
+    pub fn task_edit(&mut self) -> Result<(), String> {
         if self.tasks.is_empty() {
             return Ok(());
         }
@@ -1795,7 +1795,7 @@ impl TaskwarriorTuiApp {
         let task_uuid = *self.tasks[selected].uuid();
         let r = Command::new("task").arg(format!("{}", task_uuid)).arg("edit").spawn();
 
-        match r {
+        let r = match r {
             Ok(child) => {
                 let output = child.wait_with_output();
                 match output {
@@ -1820,7 +1820,11 @@ impl TaskwarriorTuiApp {
                 "Cannot start `task edit` for task `{}`. Check documentation for more information",
                 task_uuid
             )),
-        }
+        };
+
+        self.current_selection_uuid = Some(task_uuid);
+
+        r
     }
 
     pub fn task_current(&self) -> Option<Task> {
