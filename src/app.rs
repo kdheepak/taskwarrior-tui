@@ -1624,18 +1624,20 @@ impl TaskwarriorTuiApp {
                 let output = command.output();
                 match output {
                     Ok(output) => {
-                        let data = String::from_utf8_lossy(&output.stdout);
-                        let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
-                        let caps = re.captures(&data).unwrap();
-                        if self.config.uda_task_report_jump_to_task_on_add {
-                            self.current_selection_id = Some(caps["task_id"].parse::<u64>().unwrap());
+                        if output.status.code() != Some(0) {
+                            Err(format!("Error: {}", String::from_utf8_lossy(&output.stderr)))
+                        } else {
+                            let data = String::from_utf8_lossy(&output.stdout);
+                            let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
+                            if self.config.uda_task_report_jump_to_task_on_add {
+                                if let Some(caps) = re.captures(&data) {
+                                    self.current_selection_id = Some(caps["task_id"].parse::<u64>().unwrap());
+                                }
+                            }
+                            Ok(())
                         }
-                        Ok(())
                     }
-                    Err(_) => Err(format!(
-                        "Cannot run `task add {}`. Check documentation for more information",
-                        shell
-                    )),
+                    Err(e) => Err(format!("Cannot run `task add {}`. {}", shell, e.to_string(),)),
                 }
             }
             None => Err(format!("Unable to run `task add`. Cannot shlex split `{}`", shell)),
