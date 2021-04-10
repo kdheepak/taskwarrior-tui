@@ -777,13 +777,13 @@ impl TaskwarriorTuiApp {
 
     fn task_by_id(&self, id: u64) -> Option<Task> {
         let tasks = &self.tasks;
-        let m = tasks.iter().find(|t| t.id().unwrap() == id);
+        let m = tasks.iter().find(|t| t.id() == Some(id));
         m.cloned()
     }
 
     fn task_index_by_id(&self, id: u64) -> Option<usize> {
         let tasks = &self.tasks;
-        let m = tasks.iter().position(|t| t.id().unwrap() == id);
+        let m = tasks.iter().position(|t| t.id() == Some(id));
         m
     }
 
@@ -870,7 +870,10 @@ impl TaskwarriorTuiApp {
 
         // now start trimming
         while (widths.iter().sum::<usize>() as u16) >= maximum_column_width - (headers.len()) as u16 {
-            let index = widths.iter().position(|i| i == widths.iter().max().unwrap()).unwrap();
+            let index = widths
+                .iter()
+                .position(|i| i == widths.iter().max().unwrap_or(&0))
+                .unwrap_or_default();
             if widths[index] == 1 {
                 break;
             }
@@ -1156,7 +1159,7 @@ impl TaskwarriorTuiApp {
     }
 
     pub fn context_select(&mut self) -> Result<(), String> {
-        let i = self.context_table_state.current_selection().unwrap();
+        let i = self.context_table_state.current_selection().unwrap_or_default();
         let mut command = Command::new("task");
         command.arg("context").arg(&self.contexts[i].name);
         let output = command.output();
@@ -1260,7 +1263,7 @@ impl TaskwarriorTuiApp {
         }
         let i = self.command.as_str().parse::<usize>()?;
         if let Some(task) = self.task_by_id(i as u64) {
-            let i = self.task_index_by_uuid(*task.uuid()).unwrap();
+            let i = self.task_index_by_uuid(*task.uuid()).unwrap_or_default();
             self.current_selection = i;
             Ok(())
         } else {
@@ -1283,7 +1286,7 @@ impl TaskwarriorTuiApp {
             let name = s.next().unwrap_or_default();
             let active = s.last().unwrap_or_default();
             let definition = line.replacen(name, "", 1);
-            let definition = definition.strip_suffix(active).unwrap();
+            let definition = definition.strip_suffix(active).unwrap_or_default();
             if i == 0 || i == 1 {
                 continue;
             } else {
@@ -1485,7 +1488,7 @@ impl TaskwarriorTuiApp {
                             Err(format!(
                                 "Unable to run shortcut {}. Failed with status code {}",
                                 s,
-                                o.status.code().unwrap()
+                                o.status.code().unwrap_or_default()
                             ))
                         }
                     }
@@ -1631,7 +1634,8 @@ impl TaskwarriorTuiApp {
                             let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
                             if self.config.uda_task_report_jump_to_task_on_add {
                                 if let Some(caps) = re.captures(&data) {
-                                    self.current_selection_id = Some(caps["task_id"].parse::<u64>().unwrap());
+                                    self.current_selection_id =
+                                        Some(caps["task_id"].parse::<u64>().unwrap_or_default());
                                 }
                             }
                             Ok(())
@@ -1680,7 +1684,10 @@ impl TaskwarriorTuiApp {
 
         for task_uuid in &task_uuids {
             let mut command = "start";
-            for tag in TaskwarriorTuiApp::task_virtual_tags(*task_uuid).unwrap().split(' ') {
+            for tag in TaskwarriorTuiApp::task_virtual_tags(*task_uuid)
+                .unwrap_or_default()
+                .split(' ')
+            {
                 if tag == "ACTIVE" {
                     command = "stop"
                 }
@@ -1778,9 +1785,10 @@ impl TaskwarriorTuiApp {
                     r"(?P<task_uuid>[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})",
                 )
                 .unwrap();
-                let caps = re.captures(&data).unwrap();
-                if let Ok(uuid) = Uuid::parse_str(&caps["task_uuid"]) {
-                    self.current_selection_uuid = Some(uuid);
+                if let Some(caps) = re.captures(&data) {
+                    if let Ok(uuid) = Uuid::parse_str(&caps["task_uuid"]) {
+                        self.current_selection_uuid = Some(uuid);
+                    }
                 }
                 Ok(())
             }
