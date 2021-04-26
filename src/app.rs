@@ -2836,7 +2836,7 @@ mod tests {
             .is_some());
 
         test_draw_task_report_with_extended_modify_command();
-        test_draw_task_report();
+        // test_draw_task_report();
         test_task_tags();
         test_task_style();
         test_task_context();
