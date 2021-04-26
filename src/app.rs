@@ -1171,6 +1171,8 @@ impl TaskwarriorTuiApp {
             return;
         }
         self.current_selection = 0;
+        self.current_selection_id = None;
+        self.current_selection_uuid = None;
     }
 
     pub fn task_report_bottom(&mut self) {
@@ -1178,6 +1180,8 @@ impl TaskwarriorTuiApp {
             return;
         }
         self.current_selection = self.tasks.len() - 1;
+        self.current_selection_id = None;
+        self.current_selection_uuid = None;
     }
 
     pub fn task_report_next(&mut self) {
@@ -1196,6 +1200,8 @@ impl TaskwarriorTuiApp {
             }
         };
         self.current_selection = i;
+        self.current_selection_id = None;
+        self.current_selection_uuid = None;
     }
 
     pub fn task_report_previous(&mut self) {
@@ -1214,6 +1220,8 @@ impl TaskwarriorTuiApp {
             }
         };
         self.current_selection = i;
+        self.current_selection_id = None;
+        self.current_selection_uuid = None;
     }
 
     pub fn task_report_next_page(&mut self) {
@@ -1237,6 +1245,8 @@ impl TaskwarriorTuiApp {
             }
         };
         self.current_selection = i;
+        self.current_selection_id = None;
+        self.current_selection_uuid = None;
     }
 
     pub fn task_report_previous_page(&mut self) {
@@ -1255,6 +1265,8 @@ impl TaskwarriorTuiApp {
             }
         };
         self.current_selection = i;
+        self.current_selection_id = None;
+        self.current_selection_uuid = None;
     }
 
     pub fn task_report_jump(&mut self) -> Result<()> {
@@ -1265,6 +1277,8 @@ impl TaskwarriorTuiApp {
         if let Some(task) = self.task_by_id(i as u64) {
             let i = self.task_index_by_uuid(*task.uuid()).unwrap_or_default();
             self.current_selection = i;
+            self.current_selection_id = None;
+            self.current_selection_uuid = None;
             Ok(())
         } else {
             Err(anyhow!("Cannot locate task id {} in report", i))
