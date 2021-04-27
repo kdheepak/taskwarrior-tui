@@ -497,6 +497,9 @@ impl TaskwarriorTuiApp {
             }
             AppMode::TaskAnnotate => {
                 let position = self.get_position(&self.command);
+                if self.show_completion_pane {
+                    self.draw_completion_pop_up(f, rects[1], position);
+                }
                 let label = if task_ids.len() > 1 {
                     format!("Annotate Tasks {}", task_ids.join(","))
                 } else {
@@ -2126,6 +2129,7 @@ impl TaskwarriorTuiApp {
                     self.update_completion_list();
                 } else if input == self.keyconfig.annotate {
                     self.mode = AppMode::TaskAnnotate;
+                    self.update_completion_list();
                 } else if input == self.keyconfig.help {
                     self.mode = AppMode::TaskHelpPopup;
                 } else if input == self.keyconfig.filter {
@@ -2417,22 +2421,80 @@ impl TaskwarriorTuiApp {
                 }
             },
             AppMode::TaskAnnotate => match input {
-                Key::Char('\n') => match self.task_annotate() {
-                    Ok(_) => {
-                        self.mode = AppMode::TaskReport;
-                        self.command.update("", 0);
-                        self.update(true)?;
-                    }
-                    Err(e) => {
-                        self.mode = AppMode::TaskError;
-                        self.error = e;
-                    }
-                },
                 Key::Esc => {
-                    self.command.update("", 0);
-                    self.mode = AppMode::TaskReport;
+                    if self.show_completion_pane {
+                        self.show_completion_pane = false;
+                        self.completion_list.unselect();
+                    } else {
+                        self.command.update("", 0);
+                        self.mode = AppMode::TaskReport;
+                    }
                 }
-                _ => handle_movement(&mut self.command, input),
+                Key::Char('\n') => {
+                    if self.show_completion_pane {
+                        self.show_completion_pane = false;
+                        if let Some(s) = self.completion_list.selected() {
+                            let s = format!("{}{}", self.command.as_str(), s);
+                            self.command.update(&s, s.graphemes(true).count());
+                        }
+                        self.completion_list.unselect();
+                    } else {
+                        match self.task_annotate() {
+                            Ok(_) => {
+                                self.mode = AppMode::TaskReport;
+                                self.command_history_context.add(self.command.as_str());
+                                self.command.update("", 0);
+                                self.update(true)?;
+                            }
+                            Err(e) => {
+                                self.mode = AppMode::TaskError;
+                                self.error = e;
+                            }
+                        }
+                    }
+                }
+                Key::Tab => {
+                    if !self.completion_list.is_empty() {
+                        if !self.show_completion_pane {
+                            self.show_completion_pane = true;
+                        }
+                        self.completion_list.next();
+                    }
+                }
+                Key::BackTab => {
+                    if !self.completion_list.is_empty() {
+                        self.completion_list.previous();
+                    }
+                }
+                Key::Up => {
+                    if self.show_completion_pane && !self.completion_list.is_empty() {
+                        self.completion_list.previous();
+                    } else if let Some(s) = self
+                        .command_history_context
+                        .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Reverse)
+                    {
+                        let p = self.command.pos();
+                        self.command.update("", 0);
+                        self.command.update(&s, std::cmp::min(s.graphemes(true).count(), p));
+                    }
+                }
+                Key::Down => {
+                    if self.show_completion_pane && !self.completion_list.is_empty() {
+                        self.completion_list.next();
+                    } else if let Some(s) = self
+                        .command_history_context
+                        .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Forward)
+                    {
+                        let p = self.command.pos();
+                        self.command.update("", 0);
+                        self.command.update(&s, std::cmp::min(s.graphemes(true).count(), p));
+                    }
+                }
+                _ => {
+                    self.command_history_context.last();
+                    handle_movement(&mut self.command, input);
+                    self.update_input_for_completion();
+                }
             },
             AppMode::TaskJump => match input {
                 Key::Char('\n') => match self.task_report_jump() {
@@ -2627,7 +2689,7 @@ impl TaskwarriorTuiApp {
 
     pub fn update_completion_list(&mut self) {
         match self.mode {
-            AppMode::TaskModify | AppMode::TaskFilter | AppMode::TaskAdd | AppMode::TaskLog => {
+            AppMode::TaskModify | AppMode::TaskFilter | AppMode::TaskAnnotate | AppMode::TaskAdd | AppMode::TaskLog => {
                 let virtual_tags = self.task_report_table.virtual_tags.clone();
                 self.completion_list.clear();
                 for task in self.tasks.iter() {
@@ -2673,7 +2735,7 @@ impl TaskwarriorTuiApp {
         }
 
         match self.mode {
-            AppMode::TaskModify | AppMode::TaskAdd | AppMode::TaskLog => {
+            AppMode::TaskModify | AppMode::TaskAnnotate | AppMode::TaskAdd | AppMode::TaskLog => {
                 for s in vec![
                     "+".to_string(),
                     "project:".to_string(),
@@ -2689,7 +2751,7 @@ impl TaskwarriorTuiApp {
 
     pub fn update_input_for_completion(&mut self) {
         match self.mode {
-            AppMode::TaskAdd | AppMode::TaskLog => {
+            AppMode::TaskAdd | AppMode::TaskAnnotate | AppMode::TaskLog => {
                 let i = get_start_word_under_cursor(self.command.as_str(), self.command.pos());
                 let input = self.command.as_str()[i..self.command.pos()].to_string();
                 self.completion_list.input(input);
