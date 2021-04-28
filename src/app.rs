@@ -2872,14 +2872,14 @@ mod tests {
 
     #[test]
     fn test_taskwarrior_tui() {
-        let app = TaskwarriorTuiApp::new();
+        let app = TaskwarriorTuiApp::new("next");
         if let Err(_) = app {
             return;
         }
         let app = app.unwrap();
         assert!(app.task_by_index(0).is_none());
 
-        let app = TaskwarriorTuiApp::new().unwrap();
+        let app = TaskwarriorTuiApp::new("next").unwrap();
         assert!(app
             .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
             .is_none());
@@ -2891,10 +2891,10 @@ mod tests {
 
         setup();
 
-        let app = TaskwarriorTuiApp::new().unwrap();
+        let app = TaskwarriorTuiApp::new("next").unwrap();
         assert!(app.task_by_index(0).is_some());
 
-        let app = TaskwarriorTuiApp::new().unwrap();
+        let app = TaskwarriorTuiApp::new("next").unwrap();
         assert!(app
             .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
             .is_some());
@@ -2913,7 +2913,7 @@ mod tests {
 
     fn test_task_tags() {
         // testing tags
-        let app = TaskwarriorTuiApp::new().unwrap();
+        let app = TaskwarriorTuiApp::new("next").unwrap();
         let task = app.task_by_id(1).unwrap();
 
         let tags = vec!["PENDING".to_string(), "PRIORITY".to_string()];
@@ -2922,7 +2922,7 @@ mod tests {
             assert!(task.tags().unwrap().contains(&tag));
         }
 
-        let app = TaskwarriorTuiApp::new().unwrap();
+        let app = TaskwarriorTuiApp::new("next").unwrap();
         let task = app.task_by_id(11).unwrap();
         let tags = vec!["finance", "UNBLOCKED", "PENDING", "TAGGED", "UDA"]
             .iter()
@@ -2934,7 +2934,7 @@ mod tests {
     }
 
     fn test_task_style() {
-        let app = TaskwarriorTuiApp::new().unwrap();
+        let app = TaskwarriorTuiApp::new("next").unwrap();
         let task = app.task_by_id(1).unwrap();
         for r in vec![
             "active",
@@ -2964,7 +2964,7 @@ mod tests {
     }
 
     fn test_task_context() {
-        let mut app = TaskwarriorTuiApp::new().unwrap();
+        let mut app = TaskwarriorTuiApp::new("next").unwrap();
 
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
@@ -3000,7 +3000,7 @@ mod tests {
     fn test_task_tomorrow() {
         let total_tasks: u64 = 26;
 
-        let mut app = TaskwarriorTuiApp::new().unwrap();
+        let mut app = TaskwarriorTuiApp::new("next").unwrap();
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
@@ -3063,7 +3063,7 @@ mod tests {
             .output()
             .unwrap();
 
-        let mut app = TaskwarriorTuiApp::new().unwrap();
+        let mut app = TaskwarriorTuiApp::new("next").unwrap();
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
@@ -3073,7 +3073,7 @@ mod tests {
     fn test_task_earlier_today() {
         let total_tasks: u64 = 26;
 
-        let mut app = TaskwarriorTuiApp::new().unwrap();
+        let mut app = TaskwarriorTuiApp::new("next").unwrap();
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
@@ -3125,7 +3125,7 @@ mod tests {
             .output()
             .unwrap();
 
-        let mut app = TaskwarriorTuiApp::new().unwrap();
+        let mut app = TaskwarriorTuiApp::new("next").unwrap();
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
@@ -3135,7 +3135,7 @@ mod tests {
     fn test_task_later_today() {
         let total_tasks: u64 = 26;
 
-        let mut app = TaskwarriorTuiApp::new().unwrap();
+        let mut app = TaskwarriorTuiApp::new("next").unwrap();
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
@@ -3194,7 +3194,7 @@ mod tests {
             .output()
             .unwrap();
 
-        let mut app = TaskwarriorTuiApp::new().unwrap();
+        let mut app = TaskwarriorTuiApp::new("next").unwrap();
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
@@ -3203,7 +3203,7 @@ mod tests {
 
     fn test_draw_empty_task_report() {
         let test_case = |expected: &Buffer| {
-            let mut app = TaskwarriorTuiApp::new().unwrap();
+            let mut app = TaskwarriorTuiApp::new("next").unwrap();
 
             app.task_report_next();
             app.context_next();
@@ -3269,7 +3269,7 @@ mod tests {
 
     fn test_draw_task_report_with_extended_modify_command() {
         let test_case = |expected1: &Buffer, expected2: &Buffer| {
-            let mut app = TaskwarriorTuiApp::new().unwrap();
+            let mut app = TaskwarriorTuiApp::new("next").unwrap();
 
             let total_tasks: u64 = 26;
 
@@ -3435,7 +3435,7 @@ mod tests {
 
     fn test_draw_task_report() {
         let test_case = |expected: &Buffer| {
-            let mut app = TaskwarriorTuiApp::new().unwrap();
+            let mut app = TaskwarriorTuiApp::new("next").unwrap();
 
             app.task_report_next();
             app.context_next();
@@ -3591,7 +3591,7 @@ mod tests {
 
     fn test_draw_calendar() {
         let test_case = |expected: &Buffer| {
-            let mut app = TaskwarriorTuiApp::new().unwrap();
+            let mut app = TaskwarriorTuiApp::new("next").unwrap();
 
             app.task_report_next();
             app.context_next();
@@ -3675,7 +3675,7 @@ mod tests {
 
     fn test_draw_help_popup() {
         let test_case = |expected: &Buffer| {
-            let mut app = TaskwarriorTuiApp::new().unwrap();
+            let mut app = TaskwarriorTuiApp::new("next").unwrap();
 
             app.mode = AppMode::TaskHelpPopup;
             app.task_report_next();
@@ -3721,7 +3721,7 @@ mod tests {
 
     fn test_draw_context_menu() {
         let test_case = |expected: &Buffer| {
-            let mut app = TaskwarriorTuiApp::new().unwrap();
+            let mut app = TaskwarriorTuiApp::new("next").unwrap();
 
             app.mode = AppMode::TaskContextMenu;
             app.task_report_next();
