@@ -70,21 +70,30 @@ fn main() {
                 .help("Sets a custom config file")
                 .takes_value(true),
         )
+        .arg(
+            Arg::with_name("report")
+                .short("r")
+                .long("report")
+                .value_name("STRING")
+                .help("Sets default report")
+                .takes_value(true),
+        )
         .get_matches();
 
     let config = matches.value_of("config").unwrap_or("~/.taskrc");
-    task::block_on(tui_main(config)).expect(
-        "[taskwarrior-tui error].  Please report as a github issue on https://github.com/kdheepak/taskwarrior-tui",
+    let report = matches.value_of("report").unwrap_or("next");
+    task::block_on(tui_main(config, report)).expect(
+        "[taskwarrior-tui error]. If you need additional help, please report as a github issue on https://github.com/kdheepak/taskwarrior-tui",
     );
 }
 
-async fn tui_main(_config: &str) -> Result<()> {
+async fn tui_main(_config: &str, report: &str) -> Result<()> {
     panic::set_hook(Box::new(|panic_info| {
         destruct_terminal();
         better_panic::Settings::auto().create_panic_handler()(panic_info);
     }));
 
-    let maybeapp = TaskwarriorTuiApp::new();
+    let maybeapp = TaskwarriorTuiApp::new(report);
     if maybeapp.is_err() {
         destruct_terminal();
         return Err(maybeapp.err().unwrap());
