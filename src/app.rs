@@ -199,10 +199,11 @@ pub struct TaskwarriorTuiApp {
     pub command_history_context: HistoryContext,
     pub completion_list: CompletionList,
     pub show_completion_pane: bool,
+    pub report: String,
 }
 
 impl TaskwarriorTuiApp {
-    pub fn new() -> Result<Self> {
+    pub fn new(report: &str) -> Result<Self> {
         let output = std::process::Command::new("task")
             .arg("rc.color=off")
             .arg("show")
@@ -224,7 +225,7 @@ impl TaskwarriorTuiApp {
         }
 
         let data = String::from_utf8_lossy(&output.stdout);
-        let c = Config::new(&data)?;
+        let c = Config::new(&data, report)?;
         let kc = KeyConfig::new(&data)?;
 
         let (w, h) = crossterm::terminal::size()?;
@@ -251,7 +252,7 @@ impl TaskwarriorTuiApp {
             task_details_scroll: 0,
             task_report_show_info: c.uda_task_report_show_info,
             config: c,
-            task_report_table: TaskReportTable::new(&data)?,
+            task_report_table: TaskReportTable::new(&data, report)?,
             calendar_year: Local::today().year(),
             help_popup: Help::new(),
             contexts: vec![],
@@ -263,6 +264,7 @@ impl TaskwarriorTuiApp {
             command_history_context: HistoryContext::new("command.history"),
             completion_list: CompletionList::with_items(vec![]),
             show_completion_pane: false,
+            report: report.to_string(),
         };
 
         for c in app.config.filter.chars() {
@@ -998,7 +1000,7 @@ impl TaskwarriorTuiApp {
     pub fn update(&mut self, force: bool) -> Result<()> {
         if force || self.dirty || self.tasks_changed_since(self.last_export)? {
             self.last_export = Some(std::time::SystemTime::now());
-            self.task_report_table.export_headers(None)?;
+            self.task_report_table.export_headers(None, &self.report)?;
             let _ = self.export_tasks();
             self.export_contexts()?;
             self.update_tags();

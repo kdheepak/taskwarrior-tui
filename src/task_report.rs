@@ -43,7 +43,7 @@ pub struct TaskReportTable {
 }
 
 impl TaskReportTable {
-    pub fn new(data: &str) -> Result<Self> {
+    pub fn new(data: &str, report: &str) -> Result<Self> {
         let virtual_tags = vec![
             "PROJECT",
             "BLOCKED",
@@ -86,24 +86,27 @@ impl TaskReportTable {
             virtual_tags: virtual_tags.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
             description_width: 100,
         };
-        task_report_table.export_headers(Some(data))?;
+        task_report_table.export_headers(Some(data), report)?;
         Ok(task_report_table)
     }
 
-    pub fn export_headers(&mut self, data: Option<&str>) -> Result<()> {
+    pub fn export_headers(&mut self, data: Option<&str>, report: &str) -> Result<()> {
         self.columns = vec![];
         self.labels = vec![];
 
         let data = match data {
             Some(s) => s.to_string(),
             None => {
-                let output = Command::new("task").arg("show").arg("report.next.columns").output()?;
+                let output = Command::new("task")
+                    .arg("show")
+                    .arg(format!("report.{}.columns", report))
+                    .output()?;
                 String::from_utf8_lossy(&output.stdout).into_owned()
             }
         };
 
         for line in data.split('\n') {
-            if line.starts_with("report.next.columns") {
+            if line.starts_with(format!("report.{}.columns", report).as_str()) {
                 let column_names = line.split(' ').collect::<Vec<_>>()[1];
                 for column in column_names.split(',') {
                     self.columns.push(column.to_string());
@@ -111,11 +114,14 @@ impl TaskReportTable {
             }
         }
 
-        let output = Command::new("task").arg("show").arg("report.next.labels").output()?;
+        let output = Command::new("task")
+            .arg("show")
+            .arg(format!("report.{}.labels", report))
+            .output()?;
         let data = String::from_utf8_lossy(&output.stdout);
 
         for line in data.split('\n') {
-            if line.starts_with("report.next.labels") {
+            if line.starts_with(format!("report.{}.labels", report).as_str()) {
                 let label_names = line.split(' ').collect::<Vec<_>>()[1];
                 for label in label_names.split(',') {
                     self.labels.push(label.to_string());
