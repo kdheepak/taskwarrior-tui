@@ -72,7 +72,8 @@ impl Config {
         let print_empty_columns = bool_collection.get("print_empty_columns").cloned().unwrap_or(false);
 
         let color = Self::get_color_collection(data);
-        let filter = Self::get_filter(data, report);
+        let filter = Self::get_filter(data, report)?;
+        let filter = format!("{} ", filter);
         let data_location = Self::get_data_location(data);
         let due = Self::get_due(data);
         let rule_precedence_color = Self::get_rule_precedence_color(data);
@@ -339,11 +340,9 @@ impl Config {
         data.split(',').map(|s| s.to_string()).collect::<Vec<_>>()
     }
 
-    fn get_filter(data: &str, report: &str) -> String {
-        let filter = Self::get_config(format!("report.{}.filter", report).as_str(), data)
+    fn get_filter(data: &str, report: &str) -> Result<String> {
+        Self::get_config(format!("report.{}.filter", report).as_str(), data)
             .context(format!("Unable to parse `task show report.{}.filter`.", report))
-            .unwrap();
-        format!("{} ", filter)
     }
 
     fn get_data_location(data: &str) -> String {

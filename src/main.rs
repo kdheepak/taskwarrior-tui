@@ -83,7 +83,7 @@ fn main() {
     let config = matches.value_of("config").unwrap_or("~/.taskrc");
     let report = matches.value_of("report").unwrap_or("next");
     task::block_on(tui_main(config, report)).expect(
-        "[taskwarrior-tui error].  Please report as a github issue on https://github.com/kdheepak/taskwarrior-tui",
+        "[taskwarrior-tui error]. If you need additional help, please report as a github issue on https://github.com/kdheepak/taskwarrior-tui",
     );
 }
 
