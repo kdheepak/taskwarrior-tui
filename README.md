@@ -42,6 +42,8 @@ Unless otherwise specified, you will need to install `taskwarrior` first. See <h
 
 See <https://kdheepak.com/taskwarrior-tui/installation/> on instructions for using package managers on various platforms.
 
+If you are compiling from source, you'll need to most recent stable rust compiler.
+
 ### Configuration
 
 `taskwarrior-tui` uses `taskrc` for various configuration options. See the documentation for more information:
