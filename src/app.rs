@@ -2634,7 +2634,7 @@ impl TaskwarriorTuiApp {
                 }
                 Key::Down => {
                     if self.show_completion_pane && !self.completion_list.is_empty() {
-                        self.completion_list.previous();
+                        self.completion_list.next();
                     } else if let Some(s) = self
                         .filter_history_context
                         .history_search(&self.filter.as_str()[..self.filter.pos()], HistoryDirection::Forward)
