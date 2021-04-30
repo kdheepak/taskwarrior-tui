@@ -2658,6 +2658,13 @@ impl TaskwarriorTuiApp {
                         self.completion_list.previous();
                     }
                 }
+                Key::Ctrl('r') => {
+                    self.filter.update("", 0);
+                    for c in self.config.filter.chars() {
+                        self.filter.insert(c, 1);
+                    }
+                    self.dirty = true;
+                }
                 _ => {
                     handle_movement(&mut self.filter, input);
                     self.update_input_for_completion();
