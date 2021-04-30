@@ -417,6 +417,22 @@ impl Config {
         }
     }
 
+    fn get_uda_mark_highlight_indicator(data: &str) -> String {
+        let indicator = Self::get_config("uda.taskwarrior-tui.mark-selection.indicator", data);
+        match indicator {
+            None => "⦿ ".to_string(),
+            Some(indicator) => format!("{} ", indicator),
+        }
+    }
+
+    fn get_uda_unmark_highlight_indicator(data: &str) -> String {
+        let indicator = Self::get_config("uda.taskwarrior-tui.unmark-selection.indicator", data);
+        match indicator {
+            None => "⦾ ".to_string(),
+            Some(indicator) => format!("{} ", indicator),
+        }
+    }
+
     fn get_uda_selection_bold(data: &str) -> bool {
         Self::get_config("uda.taskwarrior-tui.selection.bold", data)
             .unwrap_or_default()
