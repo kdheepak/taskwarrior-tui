@@ -176,10 +176,10 @@ Keybindings for filter / command prompt:
 `Down`
 : scroll history                    - Go forward in history matching from beginning of line to cursor
 
-`TAB`
+`TAB | Ctrl + n`
 : tab complete                      - Open tab completion and selection first element OR cycle to next element
 
-`BACKTAB`
+`BACKTAB | Ctrl + p`
 : tab complete                      - Cycle to previous element
 
 
