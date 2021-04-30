@@ -2294,7 +2294,7 @@ impl TaskwarriorTuiApp {
                     }
                 }
                 Key::BackTab | Key::Ctrl('p') => {
-                    if !self.completion_list.is_empty() {
+                    if self.show_completion_pane && !self.completion_list.is_empty() {
                         self.completion_list.previous();
                     }
                 }
@@ -2388,7 +2388,7 @@ impl TaskwarriorTuiApp {
                     }
                 }
                 Key::BackTab | Key::Ctrl('p') => {
-                    if !self.completion_list.is_empty() {
+                    if self.show_completion_pane && !self.completion_list.is_empty() {
                         self.completion_list.previous();
                     }
                 }
@@ -2464,7 +2464,7 @@ impl TaskwarriorTuiApp {
                     }
                 }
                 Key::BackTab | Key::Ctrl('p') => {
-                    if !self.completion_list.is_empty() {
+                    if self.show_completion_pane && !self.completion_list.is_empty() {
                         self.completion_list.previous();
                     }
                 }
@@ -2559,7 +2559,7 @@ impl TaskwarriorTuiApp {
                     }
                 }
                 Key::BackTab | Key::Ctrl('p') => {
-                    if !self.completion_list.is_empty() {
+                    if self.show_completion_pane && !self.completion_list.is_empty() {
                         self.completion_list.previous();
                     }
                 }
@@ -2654,7 +2654,7 @@ impl TaskwarriorTuiApp {
                     }
                 }
                 Key::BackTab | Key::Ctrl('p') => {
-                    if !self.completion_list.is_empty() {
+                    if self.show_completion_pane && !self.completion_list.is_empty() {
                         self.completion_list.previous();
                     }
                 }
