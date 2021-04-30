@@ -2747,6 +2747,13 @@ impl TaskwarriorTuiApp {
                     self.completion_list.insert(s);
                 }
             }
+            AppMode::TaskFilter => {
+                self.completion_list.insert("status:pending".into());
+                self.completion_list.insert("status:completed".into());
+                self.completion_list.insert("status:deleted".into());
+                self.completion_list.insert("status:recurring".into());
+                self.completion_list.insert("status:waiting".into());
+            }
             _ => {}
         }
     }
