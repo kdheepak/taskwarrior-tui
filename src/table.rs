@@ -156,6 +156,10 @@ pub struct Table<'a, H, R> {
     mark_symbol: Option<&'a str>,
     /// Symbol in front of the unmarked row
     unmark_symbol: Option<&'a str>,
+    /// Symbol in front of the marked and selected row
+    mark_highlight_symbol: Option<&'a str>,
+    /// Symbol in front of the unmarked and selected row
+    unmark_highlight_symbol: Option<&'a str>,
     /// Data to display in each row
     rows: R,
 }
@@ -178,6 +182,8 @@ where
             highlight_symbol: None,
             mark_symbol: None,
             unmark_symbol: None,
+            mark_highlight_symbol: None,
+            unmark_highlight_symbol: None,
             rows: R::default(),
         }
     }
@@ -202,6 +208,8 @@ where
             highlight_symbol: None,
             mark_symbol: None,
             unmark_symbol: None,
+            mark_highlight_symbol: None,
+            unmark_highlight_symbol: None,
             rows,
         }
     }
@@ -256,6 +264,16 @@ where
 
     pub fn unmark_symbol(mut self, unmark_symbol: &'a str) -> Table<'a, H, R> {
         self.unmark_symbol = Some(unmark_symbol);
+        self
+    }
+
+    pub fn mark_highlight_symbol(mut self, mark_highlight_symbol: &'a str) -> Table<'a, H, R> {
+        self.mark_highlight_symbol = Some(mark_highlight_symbol);
+        self
+    }
+
+    pub fn unmark_highlight_symbol(mut self, unmark_highlight_symbol: &'a str) -> Table<'a, H, R> {
+        self.unmark_highlight_symbol = Some(unmark_highlight_symbol);
         self
     }
 
@@ -389,7 +407,7 @@ where
 
         let mark_symbol = match state.mode {
             TableMode::MultipleSelection => {
-                let s = self.mark_symbol.unwrap_or("☑").trim_end();
+                let s = self.mark_symbol.unwrap_or("✔").trim_end();
                 format!("{} ", s)
             }
             TableMode::SingleSelection => self.highlight_symbol.unwrap_or("").to_string(),
@@ -397,10 +415,20 @@ where
 
         let blank_symbol = match state.mode {
             TableMode::MultipleSelection => {
-                let s = self.unmark_symbol.unwrap_or("☐").trim_end();
+                let s = self.unmark_symbol.unwrap_or(" ").trim_end();
                 format!("{} ", s)
             }
             TableMode::SingleSelection => iter::repeat(" ").take(highlight_symbol.width()).collect::<String>(),
+        };
+
+        let mark_highlight_symbol = {
+            let s = self.mark_highlight_symbol.unwrap_or("⦿").trim_end();
+            format!("{} ", s)
+        };
+
+        let unmark_highlight_symbol = {
+            let s = self.unmark_highlight_symbol.unwrap_or("⦾").trim_end();
+            format!("{} ", s)
         };
 
         // Draw rows
@@ -428,9 +456,9 @@ where
                         match state.mode {
                             TableMode::MultipleSelection => {
                                 if state.marked.contains(&(i + state.offset)) {
-                                    (d, highlight_style, mark_symbol.to_string())
+                                    (d, highlight_style, mark_highlight_symbol.to_string())
                                 } else {
-                                    (d, highlight_style, blank_symbol.to_string())
+                                    (d, highlight_style, unmark_highlight_symbol.to_string())
                                 }
                             }
                             TableMode::SingleSelection => (d, highlight_style, highlight_symbol.to_string()),
