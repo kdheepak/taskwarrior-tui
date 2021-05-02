@@ -1381,7 +1381,7 @@ dependencies = [
 
 [[package]]
 name = "taskwarrior-tui"
-version = "0.13.16"
+version = "0.13.17"
 dependencies = [
  "anyhow",
  "async-std",
