@@ -2697,10 +2697,10 @@ impl TaskwarriorTuiApp {
     }
 
     pub fn update_completion_list(&mut self) {
+        self.completion_list.clear();
         match self.mode {
             AppMode::TaskModify | AppMode::TaskFilter | AppMode::TaskAnnotate | AppMode::TaskAdd | AppMode::TaskLog => {
                 let virtual_tags = self.task_report_table.virtual_tags.clone();
-                self.completion_list.clear();
                 for task in self.tasks.iter() {
                     if let Some(tags) = task.tags() {
                         for tag in tags {

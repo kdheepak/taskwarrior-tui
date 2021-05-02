@@ -32,8 +32,8 @@ pub fn get_start_word_under_cursor(line: &str, cursor_pos: usize) -> usize {
 }
 
 pub struct TaskwarriorTuiCompletionHelper {
-    candidates: Vec<String>,
-    completer: rustyline::completion::FilenameCompleter,
+    pub candidates: Vec<String>,
+    pub completer: rustyline::completion::FilenameCompleter,
 }
 
 impl Completer for TaskwarriorTuiCompletionHelper {
@@ -167,7 +167,7 @@ impl CompletionList {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.helper.candidates.is_empty()
+        self.candidates().is_empty()
     }
 
     pub fn candidates(&self) -> Vec<Pair> {
