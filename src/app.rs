@@ -347,6 +347,7 @@ impl TaskwarriorTuiApp {
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded),
             )
+            .today_style(self.config.uda_style_calendar_today)
             .year(self.calendar_year)
             .date_style(dates_with_styles)
             .months_per_row(self.config.uda_calendar_months_per_row);
