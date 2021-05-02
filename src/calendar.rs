@@ -25,6 +25,7 @@ pub struct Calendar<'a> {
     pub style: Style,
     pub months_per_row: usize,
     pub date_style: Vec<(NaiveDate, Style)>,
+    pub today_style: Style,
     pub title_background_color: Color,
 }
 
@@ -39,6 +40,7 @@ impl<'a> Default for Calendar<'a> {
             year,
             month,
             date_style: vec![],
+            today_style: Default::default(),
             title_background_color: Color::Reset,
         }
     }
@@ -70,6 +72,11 @@ impl<'a> Calendar<'a> {
 
     pub fn date_style(mut self, date_style: Vec<(NaiveDate, Style)>) -> Self {
         self.date_style = date_style;
+        self
+    }
+
+    pub fn today_style(mut self, today_style: Style) -> Self {
+        self.today_style = today_style;
         self
     }
 
@@ -142,7 +149,7 @@ impl<'a> Widget for Calendar<'a> {
         let mut year = 0;
         let style = Style::default().add_modifier(Modifier::UNDERLINED);
         if self.year + year as i32 == today.year() {
-            buf.set_string(x, y, &s, style.add_modifier(Modifier::BOLD));
+            buf.set_string(x, y, &s, self.today_style.add_modifier(Modifier::UNDERLINED));
         } else {
             buf.set_string(x, y, &s, style);
         }
@@ -160,7 +167,7 @@ impl<'a> Widget for Calendar<'a> {
                 let s = format!("{:^20}", month_names[m - 1]);
                 let style = Style::default().bg(self.title_background_color);
                 if m == today.month() as usize && self.year + year as i32 == today.year() {
-                    buf.set_string(x, y, &s, style.add_modifier(Modifier::BOLD));
+                    buf.set_string(x, y, &s, self.today_style);
                 } else {
                     buf.set_string(x, y, &s, style);
                 }
@@ -200,7 +207,7 @@ impl<'a> Widget for Calendar<'a> {
                             style = self.date_style[i].1
                         }
                         if d.1 == Local::today().naive_local() {
-                            buf.set_string(x, y, s, style.add_modifier(Modifier::BOLD));
+                            buf.set_string(x, y, s, self.today_style);
                         } else {
                             buf.set_string(x, y, s, style);
                         }
