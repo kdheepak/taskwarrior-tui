@@ -2288,6 +2288,7 @@ impl TaskwarriorTuiApp {
                 }
                 Key::Tab | Key::Ctrl('n') => {
                     if !self.completion_list.is_empty() {
+                        self.update_input_for_completion();
                         if !self.show_completion_pane {
                             self.show_completion_pane = true;
                         }
@@ -2382,6 +2383,7 @@ impl TaskwarriorTuiApp {
                 }
                 Key::Tab | Key::Ctrl('n') => {
                     if !self.completion_list.is_empty() {
+                        self.update_input_for_completion();
                         if !self.show_completion_pane {
                             self.show_completion_pane = true;
                         }
@@ -2458,6 +2460,7 @@ impl TaskwarriorTuiApp {
                 }
                 Key::Tab | Key::Ctrl('n') => {
                     if !self.completion_list.is_empty() {
+                        self.update_input_for_completion();
                         if !self.show_completion_pane {
                             self.show_completion_pane = true;
                         }
@@ -2553,6 +2556,7 @@ impl TaskwarriorTuiApp {
                 }
                 Key::Tab | Key::Ctrl('n') => {
                     if !self.completion_list.is_empty() {
+                        self.update_input_for_completion();
                         if !self.show_completion_pane {
                             self.show_completion_pane = true;
                         }
@@ -2648,6 +2652,7 @@ impl TaskwarriorTuiApp {
                 }
                 Key::Tab | Key::Ctrl('n') => {
                     if !self.completion_list.is_empty() {
+                        self.update_input_for_completion();
                         if !self.show_completion_pane {
                             self.show_completion_pane = true;
                         }
@@ -2699,6 +2704,23 @@ impl TaskwarriorTuiApp {
 
     pub fn update_completion_list(&mut self) {
         self.completion_list.clear();
+
+        match self.mode {
+            AppMode::TaskModify | AppMode::TaskAnnotate | AppMode::TaskAdd | AppMode::TaskLog => {
+                for s in vec![
+                    "+".to_string(),
+                    "project:".to_string(),
+                    "priority:".to_string(),
+                    "due:".to_string(),
+                    "wait:".to_string(),
+                    "depends:".to_string(),
+                ] {
+                    self.completion_list.insert(s);
+                }
+            }
+            _ => {}
+        }
+
         match self.mode {
             AppMode::TaskModify | AppMode::TaskFilter | AppMode::TaskAnnotate | AppMode::TaskAdd | AppMode::TaskLog => {
                 let virtual_tags = self.task_report_table.virtual_tags.clone();
@@ -2740,29 +2762,48 @@ impl TaskwarriorTuiApp {
                         self.completion_list.insert(s);
                     }
                 }
+                for task in self.tasks.iter() {
+                    if let Some(date) = task.wait() {
+                        let now = Local::now();
+                        let date = TimeZone::from_utc_datetime(now.offset(), date);
+                        let s = format!(
+                            "wait:'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}'",
+                            date.year(),
+                            date.month(),
+                            date.day(),
+                            date.hour(),
+                            date.minute(),
+                            date.second(),
+                        );
+                        self.completion_list.insert(s);
+                    }
+                }
+                for task in self.tasks.iter() {
+                    if let Some(date) = task.end() {
+                        let now = Local::now();
+                        let date = TimeZone::from_utc_datetime(now.offset(), date);
+                        let s = format!(
+                            "end:'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}'",
+                            date.year(),
+                            date.month(),
+                            date.day(),
+                            date.hour(),
+                            date.minute(),
+                            date.second(),
+                        );
+                        self.completion_list.insert(s);
+                    }
+                }
             }
             _ => {}
         }
 
-        match self.mode {
-            AppMode::TaskModify | AppMode::TaskAnnotate | AppMode::TaskAdd | AppMode::TaskLog => {
-                for s in vec![
-                    "+".to_string(),
-                    "project:".to_string(),
-                    "priority:".to_string(),
-                    "due:".to_string(),
-                ] {
-                    self.completion_list.insert(s);
-                }
-            }
-            AppMode::TaskFilter => {
-                self.completion_list.insert("status:pending".into());
-                self.completion_list.insert("status:completed".into());
-                self.completion_list.insert("status:deleted".into());
-                self.completion_list.insert("status:recurring".into());
-                self.completion_list.insert("status:waiting".into());
-            }
-            _ => {}
+        if self.mode == AppMode::TaskFilter {
+            self.completion_list.insert("status:pending".into());
+            self.completion_list.insert("status:completed".into());
+            self.completion_list.insert("status:deleted".into());
+            self.completion_list.insert("status:recurring".into());
+            self.completion_list.insert("status:waiting".into());
         }
     }
 
