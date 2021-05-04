@@ -346,8 +346,15 @@ impl Config {
     }
 
     fn get_filter(data: &str, report: &str) -> Result<String> {
-        Self::get_config(format!("report.{}.filter", report).as_str(), data)
-            .context(format!("Unable to parse `task show report.{}.filter`.", report))
+        if let Some(s) = Self::get_config(
+            format!("uda.taskwarrior-tui.task-report.{}.filter", report).as_str(),
+            data,
+        ) {
+            Ok(s)
+        } else {
+            Self::get_config(format!("report.{}.filter", report).as_str(), data)
+                .context(format!("Unable to parse `task show report.{}.filter`.", report))
+        }
     }
 
     fn get_data_location(data: &str) -> String {
