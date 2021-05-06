@@ -41,8 +41,8 @@ shlex = "0.1"
 task-hookrs = { git = "https://github.com/matthiasbeyer/task-hookrs" }
 tui = { version = "0.12", optional = true, default-features = false }
 unicode-segmentation = "1.6"
-unicode-width = "0.1"
 unicode-truncate = "0.2"
+unicode-width = "0.1"
 uuid = { version = "0.8.1", features = ["serde", "v4"] }
 
 [package.metadata.rpm]
