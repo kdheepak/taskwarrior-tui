@@ -498,14 +498,14 @@ where
                                 "{symbol}{elt:>width$}",
                                 symbol = symbol,
                                 elt = elt,
-                                width = *w as usize - symbol.to_string().graphemes(true).count()
+                                width = (*w as usize).saturating_sub(symbol.to_string().width())
                             )
                         } else {
                             format!(
                                 "{symbol}{elt:<width$}",
                                 symbol = symbol,
                                 elt = elt,
-                                width = *w as usize - symbol.to_string().graphemes(true).count()
+                                width = (*w as usize).saturating_sub(symbol.to_string().width())
                             )
                         }
                     } else {

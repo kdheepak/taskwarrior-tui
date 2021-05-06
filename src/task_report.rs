@@ -5,6 +5,7 @@ use std::error::Error;
 use std::process::Command;
 use task_hookrs::task::Task;
 use task_hookrs::uda::UDAValue;
+use unicode_width::UnicodeWidthStr;
 
 pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime) -> String {
     let mut seconds = (to_dt - from_dt).num_seconds();
@@ -277,14 +278,14 @@ impl TaskReportTable {
                     None => format!(""),
                 };
                 let mut d = task.description().to_string();
-                let mut end = self.description_width;
+                let mut available_width = self.description_width;
                 if self.description_width >= c.len() {
-                    end = self.description_width - c.len();
+                    available_width = self.description_width - c.len();
                 }
-                while end < d.len() && !d.is_char_boundary(end) {
-                    end += 1;
+                while available_width < d.width() && !d.is_char_boundary(available_width) {
+                    available_width += 1;
                 }
-                d.truncate(end);
+                d.truncate(available_width);
                 if d != *task.description() {
                     d = format!("{}…", d);
                 }
@@ -292,11 +293,11 @@ impl TaskReportTable {
             }
             "description.truncated" => {
                 let mut d = task.description().to_string();
-                let mut end = self.description_width;
-                while end < d.len() && !d.is_char_boundary(end) {
-                    end += 1;
+                let mut available_width = self.description_width;
+                while available_width < d.len() && !d.is_char_boundary(available_width) {
+                    available_width += 1;
                 }
-                d.truncate(end);
+                d.truncate(available_width);
                 if d != *task.description() {
                     d = format!("{}…", d);
                 }

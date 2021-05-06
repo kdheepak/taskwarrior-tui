@@ -17,6 +17,7 @@ use rustyline_derive::Helper;
 
 use unicode_segmentation::Graphemes;
 use unicode_segmentation::UnicodeSegmentation;
+use unicode_width::UnicodeWidthStr;
 
 pub fn get_start_word_under_cursor(line: &str, cursor_pos: usize) -> usize {
     let mut chars = line[..cursor_pos].chars();
@@ -143,10 +144,7 @@ impl CompletionList {
     }
 
     pub fn max_width(&self) -> Option<usize> {
-        self.candidates()
-            .iter()
-            .map(|p| p.display.graphemes(true).count() + 4)
-            .max()
+        self.candidates().iter().map(|p| p.display.width() + 4).max()
     }
 
     pub fn get(&self, i: usize) -> Option<String> {
