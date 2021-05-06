@@ -1406,6 +1406,7 @@ dependencies = [
  "task-hookrs",
  "tui",
  "unicode-segmentation",
+ "unicode-truncate",
  "unicode-width",
  "uuid",
 ]
@@ -1456,6 +1457,15 @@ name = "unicode-segmentation"
 version = "1.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bb0d2e7be6ae3a5fa87eed5fb451aff96f2573d2694942e40543ae0bbe19c796"
+
+[[package]]
+name = "unicode-truncate"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a04be5ca5f7a4a7270ffea82bc41c59b87c611ed04f20e77c338e8d3c2348e42"
+dependencies = [
+ "unicode-width",
+]
 
 [[package]]
 name = "unicode-width"

@@ -30,6 +30,7 @@ use uuid::Uuid;
 
 use unicode_segmentation::Graphemes;
 use unicode_segmentation::UnicodeSegmentation;
+use unicode_width::UnicodeWidthStr;
 
 use chrono::{Datelike, Local, NaiveDate, NaiveDateTime, TimeZone, Timelike};
 
@@ -369,12 +370,12 @@ impl TaskwarriorTuiApp {
     }
 
     pub fn get_position(&self, lb: &LineBuffer) -> usize {
-        let mut position = lb.as_str().graphemes(true).count();
+        let mut position = 0;
         for (i, (_i, g)) in lb.as_str().grapheme_indices(true).enumerate() {
             if _i == lb.pos() {
-                position = i;
                 break;
             }
+            position += g.width();
         }
         position
     }
@@ -867,7 +868,7 @@ impl TaskwarriorTuiApp {
         for (i, header) in headers.iter().enumerate() {
             if header == "ID" || header == "Name" {
                 // always give ID a couple of extra for indicator
-                widths[i] += self.config.uda_selection_indicator.as_str().graphemes(true).count();
+                widths[i] += self.config.uda_selection_indicator.as_str().width();
                 // if let TableMode::MultipleSelection = self.task_table_state.mode() {
                 //     widths[i] += 2
                 // };
@@ -2268,7 +2269,7 @@ impl TaskwarriorTuiApp {
                         self.show_completion_pane = false;
                         if let Some(s) = self.completion_list.selected() {
                             let s = format!("{}{}", self.modify.as_str(), &s);
-                            self.modify.update(&s, s.graphemes(true).count());
+                            self.modify.update(&s, s.len());
                         }
                         self.completion_list.unselect();
                     } else {
@@ -2309,7 +2310,7 @@ impl TaskwarriorTuiApp {
                     {
                         let p = self.modify.pos();
                         self.modify.update("", 0);
-                        self.modify.update(&s, std::cmp::min(s.graphemes(true).count(), p));
+                        self.modify.update(&s, std::cmp::min(s.len(), p));
                     }
                 }
                 Key::Down => {
@@ -2321,7 +2322,7 @@ impl TaskwarriorTuiApp {
                     {
                         let p = self.modify.pos();
                         self.modify.update("", 0);
-                        self.modify.update(&s, std::cmp::min(s.graphemes(true).count(), p));
+                        self.modify.update(&s, std::cmp::min(s.len(), p));
                     }
                 }
                 _ => {
@@ -2363,7 +2364,7 @@ impl TaskwarriorTuiApp {
                         self.show_completion_pane = false;
                         if let Some(s) = self.completion_list.selected() {
                             let s = format!("{}{}", self.command.as_str(), s);
-                            self.command.update(&s, s.graphemes(true).count());
+                            self.command.update(&s, s.len());
                         }
                         self.completion_list.unselect();
                     } else {
@@ -2404,7 +2405,7 @@ impl TaskwarriorTuiApp {
                     {
                         let p = self.command.pos();
                         self.command.update("", 0);
-                        self.command.update(&s, std::cmp::min(s.graphemes(true).count(), p));
+                        self.command.update(&s, std::cmp::min(s.len(), p));
                     }
                 }
                 Key::Down => {
@@ -2416,7 +2417,7 @@ impl TaskwarriorTuiApp {
                     {
                         let p = self.command.pos();
                         self.command.update("", 0);
-                        self.command.update(&s, std::cmp::min(s.graphemes(true).count(), p));
+                        self.command.update(&s, std::cmp::min(s.len(), p));
                     }
                 }
                 _ => {
@@ -2440,7 +2441,7 @@ impl TaskwarriorTuiApp {
                         self.show_completion_pane = false;
                         if let Some(s) = self.completion_list.selected() {
                             let s = format!("{}{}", self.command.as_str(), s);
-                            self.command.update(&s, s.graphemes(true).count());
+                            self.command.update(&s, s.len());
                         }
                         self.completion_list.unselect();
                     } else {
@@ -2481,7 +2482,7 @@ impl TaskwarriorTuiApp {
                     {
                         let p = self.command.pos();
                         self.command.update("", 0);
-                        self.command.update(&s, std::cmp::min(s.graphemes(true).count(), p));
+                        self.command.update(&s, std::cmp::min(s.len(), p));
                     }
                 }
                 Key::Down => {
@@ -2493,7 +2494,7 @@ impl TaskwarriorTuiApp {
                     {
                         let p = self.command.pos();
                         self.command.update("", 0);
-                        self.command.update(&s, std::cmp::min(s.graphemes(true).count(), p));
+                        self.command.update(&s, std::cmp::min(s.len(), p));
                     }
                 }
                 _ => {
@@ -2536,7 +2537,7 @@ impl TaskwarriorTuiApp {
                         self.show_completion_pane = false;
                         if let Some(s) = self.completion_list.selected() {
                             let s = format!("{}{}", self.command.as_str(), s);
-                            self.command.update(&s, s.graphemes(true).count());
+                            self.command.update(&s, s.len());
                         }
                         self.completion_list.unselect();
                     } else {
@@ -2577,7 +2578,7 @@ impl TaskwarriorTuiApp {
                     {
                         let p = self.command.pos();
                         self.command.update("", 0);
-                        self.command.update(&s, std::cmp::min(s.graphemes(true).count(), p));
+                        self.command.update(&s, std::cmp::min(s.len(), p));
                     }
                 }
                 Key::Down => {
@@ -2589,7 +2590,7 @@ impl TaskwarriorTuiApp {
                     {
                         let p = self.command.pos();
                         self.command.update("", 0);
-                        self.command.update(&s, std::cmp::min(s.graphemes(true).count(), p));
+                        self.command.update(&s, std::cmp::min(s.len(), p));
                     }
                 }
                 _ => {
@@ -2614,7 +2615,7 @@ impl TaskwarriorTuiApp {
                         self.show_completion_pane = false;
                         if let Some(s) = self.completion_list.selected() {
                             let s = format!("{}{}", self.filter.as_str(), s);
-                            self.filter.update(&s, s.graphemes(true).count());
+                            self.filter.update(&s, s.len());
                         }
                         self.completion_list.unselect();
                         self.dirty = true;
@@ -2633,7 +2634,7 @@ impl TaskwarriorTuiApp {
                     {
                         let p = self.filter.pos();
                         self.filter.update("", 0);
-                        self.filter.update(&s, std::cmp::min(p, s.graphemes(true).count()));
+                        self.filter.update(&s, std::cmp::min(p, s.len()));
                         self.dirty = true;
                     }
                 }
@@ -2646,7 +2647,7 @@ impl TaskwarriorTuiApp {
                     {
                         let p = self.filter.pos();
                         self.filter.update("", 0);
-                        self.filter.update(&s, std::cmp::min(p, s.graphemes(true).count()));
+                        self.filter.update(&s, std::cmp::min(p, s.len()));
                         self.dirty = true;
                     }
                 }
@@ -3846,5 +3847,37 @@ mod tests {
         }
 
         test_case(&expected);
+    }
+
+    fn test_graphemes() {
+        dbg!("写作业".graphemes(true).count());
+        dbg!(UnicodeWidthStr::width("写作业"));
+        dbg!(UnicodeWidthStr::width("abc"));
+
+        let mut app = TaskwarriorTuiApp::new("next").unwrap();
+
+        if let Some(task) = app.task_by_id(27) {
+            let i = app.task_index_by_uuid(*task.uuid()).unwrap_or_default();
+            app.current_selection = i;
+            app.current_selection_id = None;
+            app.current_selection_uuid = None;
+        }
+        app.update(true).unwrap();
+        app.mode = AppMode::TaskModify;
+        match app.task_current() {
+            Some(t) => {
+                let s = format!("{} ", t.description());
+                app.modify.update(&s, s.as_str().len())
+            }
+            None => app.modify.update("", 0),
+        }
+        app.update(true).unwrap();
+
+        dbg!(app.modify.as_str());
+        dbg!(app.modify.as_str().len());
+        dbg!(app.modify.graphemes(true).count());
+        dbg!(app.modify.pos());
+        let position = app.get_position(&app.modify);
+        dbg!(position);
     }
 }
