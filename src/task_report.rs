@@ -130,6 +130,22 @@ impl TaskReportTable {
                 }
             }
         }
+
+        if self.labels.is_empty() {
+            for label in self.columns.iter() {
+                let label = label.split('.').collect::<Vec<&str>>()[0];
+                let label = if label == "id" { "ID" } else { label };
+                let mut c = label.chars();
+                let label = match c.next() {
+                    None => String::new(),
+                    Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+                };
+                if !label.is_empty() {
+                    self.labels.push(label);
+                }
+            }
+        }
+
         Ok(())
     }
 
@@ -300,6 +316,7 @@ impl TaskReportTable {
                 }
                 d
             }
+            "description.desc" => task.description().to_string(),
             "description" => task.description().to_string(),
             "urgency" => match &task.urgency() {
                 Some(f) => format!("{:.2}", *f),
