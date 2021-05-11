@@ -23,7 +23,7 @@ async-std = { version = "1", features = ["attributes", "unstable"] }
 better-panic = "0.2.0"
 cassowary = "0.3.0"
 chrono = "0.4"
-clap = "2.33"
+clap = "3.0.0-beta.2"
 crossterm = { version = "0.17", optional = true, default-features = false, features = ["event-stream"] }
 dirs = "2.0.2"
 futures = "0.3"

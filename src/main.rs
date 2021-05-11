@@ -4,6 +4,7 @@
 
 mod app;
 mod calendar;
+mod cli;
 mod completion;
 mod config;
 mod context;
@@ -16,7 +17,6 @@ mod task_report;
 
 use crate::event::{Event, EventConfig, Events, Key};
 use anyhow::Result;
-use clap::{App, Arg};
 use std::env;
 use std::error::Error;
 use std::io::{self, Write};
@@ -38,9 +38,6 @@ use tui::{backend::CrosstermBackend, Terminal};
 
 use app::{AppMode, TaskwarriorTuiApp};
 
-const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
-const APP_NAME: &str = env!("CARGO_PKG_NAME");
-
 pub fn setup_terminal() -> Terminal<CrosstermBackend<io::Stdout>> {
     enable_raw_mode().unwrap();
     let mut stdout = io::stdout();
@@ -58,27 +55,7 @@ pub fn destruct_terminal() {
 
 fn main() {
     better_panic::install();
-    let matches = App::new(APP_NAME)
-        .version(APP_VERSION)
-        .author("Dheepak Krishnamurthy <@kdheepak>")
-        .about("A taskwarrior terminal user interface")
-        .arg(
-            Arg::with_name("config")
-                .short("c")
-                .long("config")
-                .value_name("FILE")
-                .help("Sets a custom config file")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("report")
-                .short("r")
-                .long("report")
-                .value_name("STRING")
-                .help("Sets default report")
-                .takes_value(true),
-        )
-        .get_matches();
+    let matches = cli::generate_cli_app().get_matches();
 
     let config = matches.value_of("config").unwrap_or("~/.taskrc");
     let report = matches.value_of("report").unwrap_or("next");
