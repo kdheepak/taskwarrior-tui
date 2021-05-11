@@ -45,6 +45,10 @@ unicode-truncate = "0.2"
 unicode-width = "0.1"
 uuid = { version = "0.8.1", features = ["serde", "v4"] }
 
+[build-dependencies]
+clap = "3.0.0-beta.2"
+clap_generate = "3.0.0-beta.2"
+
 [package.metadata.rpm]
 package = "taskwarrior-tui"
 
