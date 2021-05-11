@@ -34,4 +34,5 @@ fn main() {
     generate_to::<Bash, _, _>(&mut app, &name, &outdir);
     generate_to::<Zsh, _, _>(&mut app, &name, &outdir);
     generate_to::<Fish, _, _>(&mut app, &name, &outdir);
+    generate_to::<PowerShell, _, _>(&mut app, &name, &outdir);
 }
