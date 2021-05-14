@@ -214,6 +214,10 @@ impl TaskReportTable {
                 Some(v) => vague_format_date_time(Local::now().naive_utc(), NaiveDateTime::new(v.date(), v.time())),
                 None => "".to_string(),
             },
+            "until" => match task.until() {
+                Some(v) => vague_format_date_time(Local::now().naive_utc(), NaiveDateTime::new(v.date(), v.time())),
+                None => "".to_string(),
+            },
             "until.remaining" => match task.until() {
                 Some(v) => vague_format_date_time(Local::now().naive_utc(), NaiveDateTime::new(v.date(), v.time())),
                 None => "".to_string(),
@@ -280,6 +284,18 @@ impl TaskReportTable {
                     .cloned()
                     .collect::<Vec<_>>()
                     .join(","),
+                None => "".to_string(),
+            },
+            "recur" => match task.recur() {
+                Some(v) => v.clone(),
+                None => "".to_string(),
+            },
+            "wait" => match task.wait() {
+                Some(v) => vague_format_date_time(NaiveDateTime::new(v.date(), v.time()), Local::now().naive_utc()),
+                None => "".to_string(),
+            },
+            "wait.remaining" => match task.wait() {
+                Some(v) => vague_format_date_time(Local::now().naive_utc(), NaiveDateTime::new(v.date(), v.time())),
                 None => "".to_string(),
             },
             "description.count" => {
