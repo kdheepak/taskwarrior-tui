@@ -43,6 +43,7 @@ pub struct Config {
     pub print_empty_columns: bool,
     pub due: usize,
     pub rule_precedence_color: Vec<String>,
+    pub uda_priority_values: Vec<String>,
     pub uda_tick_rate: u64,
     pub uda_prefill_task_metadata: bool,
     pub uda_task_detail_prefetch: usize,
@@ -78,6 +79,7 @@ impl Config {
         let data_location = Self::get_data_location(data);
         let due = Self::get_due(data);
         let rule_precedence_color = Self::get_rule_precedence_color(data);
+        let uda_priority_values = Self::get_uda_priority_values(data);
         let uda_tick_rate = Self::get_uda_tick_rate(data);
         let uda_prefill_task_metadata = Self::get_uda_prefill_task_metadata(data);
         let uda_task_detail_prefetch = Self::get_uda_task_detail_prefetch(data);
@@ -113,6 +115,7 @@ impl Config {
             print_empty_columns,
             due,
             rule_precedence_color,
+            uda_priority_values,
             uda_tick_rate,
             uda_prefill_task_metadata,
             uda_task_detail_prefetch,
@@ -341,6 +344,13 @@ impl Config {
     fn get_rule_precedence_color(data: &str) -> Vec<String> {
         let data = Self::get_config("rule.precedence.color", data)
             .context("Unable to parse `task show rule.precedence.color`.")
+            .unwrap();
+        data.split(',').map(|s| s.to_string()).collect::<Vec<_>>()
+    }
+
+    fn get_uda_priority_values(data: &str) -> Vec<String> {
+        let data = Self::get_config("uda.priority.values", data)
+            .context("Unable to parse `task show uda.priority.values`.")
             .unwrap();
         data.split(',').map(|s| s.to_string()).collect::<Vec<_>>()
     }
