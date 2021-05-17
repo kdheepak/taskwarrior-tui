@@ -2724,6 +2724,10 @@ impl TaskwarriorTuiApp {
 
         match self.mode {
             AppMode::TaskModify | AppMode::TaskFilter | AppMode::TaskAnnotate | AppMode::TaskAdd | AppMode::TaskLog => {
+                for priority in self.config.uda_priority_values.iter() {
+                    let p = format!("priority:{}", &priority);
+                    self.completion_list.insert(p);
+                }
                 let virtual_tags = self.task_report_table.virtual_tags.clone();
                 for task in self.tasks.iter() {
                     if let Some(tags) = task.tags() {
@@ -2738,12 +2742,6 @@ impl TaskwarriorTuiApp {
                 for task in self.tasks.iter() {
                     if let Some(project) = task.project() {
                         let p = format!("project:{}", &project);
-                        self.completion_list.insert(p);
-                    }
-                }
-                for task in self.tasks.iter() {
-                    if let Some(priority) = task.priority() {
-                        let p = format!("priority:{}", &priority);
                         self.completion_list.insert(p);
                     }
                 }
