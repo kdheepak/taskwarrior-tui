@@ -218,11 +218,11 @@ impl TaskwarriorTuiApp {
                 .output()
                 .context("Unable to run `task diagnostics`.")
                 .unwrap();
-            panic!(
+            return Err(anyhow!(
                 "Unable to run `task show`.\n{}\n{}\nPlease check your configuration or open a issue on github.",
                 String::from_utf8_lossy(&output.stdout),
-                String::from_utf8_lossy(&output.stderr),
-            );
+                String::from_utf8_lossy(&output.stderr)
+            ));
         }
 
         let data = String::from_utf8_lossy(&output.stdout);

@@ -59,9 +59,11 @@ fn main() {
 
     let config = matches.value_of("config").unwrap_or("~/.taskrc");
     let report = matches.value_of("report").unwrap_or("next");
-    task::block_on(tui_main(config, report)).expect(
-        "[taskwarrior-tui error]. If you need additional help, please report as a github issue on https://github.com/kdheepak/taskwarrior-tui",
-    );
+    let r = task::block_on(tui_main(config, report));
+    if let Err(err) = r {
+        eprintln!("\x1b[0;31m[taskwarrior-tui error]\x1b[0m: {}\n\nIf you need additional help, please report as a github issue on https://github.com/kdheepak/taskwarrior-tui", err);
+        std::process::exit(1);
+    }
 }
 
 async fn tui_main(_config: &str, report: &str) -> Result<()> {
