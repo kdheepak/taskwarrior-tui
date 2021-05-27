@@ -6,7 +6,14 @@ labels: bug
 assignees: ""
 ---
 
-<!-- Thank you for taking the time to fill out a bug report. -->
+<!--
+
+Thank you for taking the time to fill out a bug report.
+
+If you like `taskwarrior-tui`, please consider donating to [@GothenburgBitFactory](https://github.com/sponsors/GothenburgBitFactory).
+
+-->
+
 
 **Describe the bug**
 

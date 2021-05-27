@@ -53,6 +53,8 @@ If you are compiling from source, you'll need to most recent stable rust compile
 
 ## References / Resources
 
+If you like `taskwarrior-tui`, please consider donating to [@GothenburgBitFactory](https://github.com/sponsors/GothenburgBitFactory).
+
 - <https://github.com/GothenburgBitFactory/taskwarrior>
 - <https://github.com/GothenburgBitFactory/libshared>
 - <https://github.com/GothenburgBitFactory/timewarrior>
