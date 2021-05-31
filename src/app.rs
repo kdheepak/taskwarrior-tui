@@ -2007,6 +2007,22 @@ impl TaskwarriorTuiApp {
         }
     }
 
+    pub fn escape(&self, s: &str) -> String {
+        let mut es = String::with_capacity(s.len() + 2);
+        es.push('"');
+        for ch in s.chars() {
+            match ch {
+                '"' => {
+                    es.push('\\');
+                    es.push(ch);
+                }
+                _ => es.push(ch),
+            }
+        }
+        es.push('"');
+        es
+    }
+
     pub fn handle_input(&mut self, input: Key) -> Result<()> {
         match self.mode {
             AppMode::TaskReport => {
@@ -2085,7 +2101,7 @@ impl TaskwarriorTuiApp {
                     match self.task_table_state.mode() {
                         TableMode::SingleSelection => match self.task_current() {
                             Some(t) => {
-                                let mut s = format!("{} ", t.description().replace("'", "\\'"));
+                                let mut s = format!("{} ", self.escape(t.description()));
                                 if self.config.uda_prefill_task_metadata {
                                     if t.tags().is_some() {
                                         let virtual_tags = self.task_report_table.virtual_tags.clone();
