@@ -1334,7 +1334,11 @@ impl TaskwarriorTuiApp {
             let mtime = fs::metadata(pending_fp)?.modified()?;
             mtimes.push(mtime);
         }
-        Ok(*mtimes.iter().max().unwrap())
+        if let Some(t) = mtimes.iter().max() {
+            Ok(*t)
+        } else {
+            Err(anyhow!("Unable to get task files max time"))
+        }
     }
 
     pub fn tasks_changed_since(&mut self, prev: Option<SystemTime>) -> Result<bool> {
