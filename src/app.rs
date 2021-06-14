@@ -1328,17 +1328,13 @@ impl TaskwarriorTuiApp {
 
     fn get_task_files_max_mtime(&self) -> Result<SystemTime> {
         let data_dir = shellexpand::tilde(&self.config.data_location).into_owned();
-        let mut mtimes = Vec::new();
-        for fname in &["backlog.data", "completed.data", "pending.data"] {
-            let pending_fp = Path::new(&data_dir).join(fname);
-            let mtime = fs::metadata(pending_fp)?.modified()?;
-            mtimes.push(mtime);
-        }
-        if let Some(t) = mtimes.iter().max() {
-            Ok(*t)
-        } else {
-            Err(anyhow!("Unable to get task files max time"))
-        }
+        ["backlog.data", "completed.data", "pending.data"]
+            .iter()
+            .map(|n| fs::metadata(Path::new(&data_dir).join(n)).map(|m| m.modified()))
+            .filter_map(Result::ok)
+            .filter_map(Result::ok)
+            .max()
+            .ok_or_else(|| anyhow!("Unable to get task files max time"))
     }
 
     pub fn tasks_changed_since(&mut self, prev: Option<SystemTime>) -> Result<bool> {
