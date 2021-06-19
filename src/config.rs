@@ -322,15 +322,31 @@ impl Config {
     }
 
     fn get_config(config: &str, data: &str) -> Option<String> {
+        let mut config_lines = Vec::new();
+
         for line in data.split('\n') {
-            if line.starts_with(config) {
-                return Some(line.trim_start_matches(config).trim_start().trim_end().to_string());
-            }
-            let config = &config.replace('-', "_");
-            if line.starts_with(config) {
-                return Some(line.trim_start_matches(config).trim_start().trim_end().to_string());
+            if config_lines.is_empty() {
+                if line.starts_with(config) {
+                    config_lines.push(line.trim_start_matches(config).trim_start().trim_end().to_string());
+                } else {
+                    let config = &config.replace('-', "_");
+                    if line.starts_with(config) {
+                        config_lines.push(line.trim_start_matches(config).trim_start().trim_end().to_string());
+                    }
+                }
+            } else {
+                if !line.starts_with(' ') {
+                    return Some(config_lines.join(" "));
+                }
+
+                config_lines.push(line.trim_start().trim_end().to_string());
             }
         }
+
+        if !config_lines.is_empty() {
+            return Some(config_lines.join(" "));
+        }
+
         None
     }
 
@@ -621,5 +637,23 @@ mod tests {
         let c = Config::get_tcolor("bold blue");
         assert_eq!(c.fg.unwrap(), Color::Indexed(12));
         assert!(c.bg.is_none());
+    }
+
+    #[test]
+    fn test_get_config_long_value() {
+        let config = Config::get_config(
+            "report.test.filter",
+            "report.test.description test\nreport.test.filter filter and\n                   test\nreport.test.columns=id",
+        );
+        assert_eq!(config.unwrap(), "filter and test");
+    }
+
+    #[test]
+    fn test_get_config_last_long_value() {
+        let config = Config::get_config(
+            "report.test.filter",
+            "report.test.description test\nreport.test.filter filter and\n                   test",
+        );
+        assert_eq!(config.unwrap(), "filter and test");
     }
 }
