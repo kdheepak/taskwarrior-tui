@@ -1000,7 +1000,7 @@ impl TaskwarriorTuiApp {
     }
 
     pub fn update(&mut self, force: bool) -> Result<()> {
-        if force || self.dirty || self.tasks_changed_since(self.last_export)? {
+        if force || self.dirty || self.tasks_changed_since(self.last_export).unwrap_or(true) {
             self.last_export = Some(std::time::SystemTime::now());
             self.task_report_table.export_headers(None, &self.report)?;
             let _ = self.export_tasks();
@@ -1339,20 +1339,16 @@ impl TaskwarriorTuiApp {
 
     pub fn tasks_changed_since(&mut self, prev: Option<SystemTime>) -> Result<bool> {
         if let Some(prev) = prev {
-            match self.get_task_files_max_mtime() {
-                Ok(mtime) => {
-                    if mtime > prev {
-                        Ok(true)
-                    } else {
-                        // Unfortunately, we can not use std::time::Instant which is guaranteed to be monotonic,
-                        // because we need to compare it to a file mtime as SystemTime, so as a safety for unexpected
-                        // time shifts, cap maximum wait to 1 min
-                        let now = SystemTime::now();
-                        let max_delta = Duration::from_secs(60);
-                        Ok(now.duration_since(prev)? > max_delta)
-                    }
-                }
-                Err(_) => Ok(true),
+            let mtime = self.get_task_files_max_mtime()?;
+            if mtime > prev {
+                Ok(true)
+            } else {
+                // Unfortunately, we can not use std::time::Instant which is guaranteed to be monotonic,
+                // because we need to compare it to a file mtime as SystemTime, so as a safety for unexpected
+                // time shifts, cap maximum wait to 1 min
+                let now = SystemTime::now();
+                let max_delta = Duration::from_secs(60);
+                Ok(now.duration_since(prev)? > max_delta)
             }
         } else {
             Ok(true)
