@@ -335,7 +335,7 @@ impl Config {
                     }
                 }
             } else {
-                if !line.starts_with(' ') {
+                if !line.starts_with("   ") {
                     return Some(config_lines.join(" "));
                 }
 
@@ -644,6 +644,15 @@ mod tests {
         let config = Config::get_config(
             "report.test.filter",
             "report.test.description test\nreport.test.filter filter and\n                   test\nreport.test.columns=id",
+        );
+        assert_eq!(config.unwrap(), "filter and test");
+    }
+
+    #[test]
+    fn test_get_config_long_value_followed_by_default_value() {
+        let config = Config::get_config(
+            "report.test.filter",
+            "report.test.description test\nreport.test.filter filter and\n                   test\n  Default value test",
         );
         assert_eq!(config.unwrap(), "filter and test");
     }
