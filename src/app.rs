@@ -1496,20 +1496,27 @@ impl TaskwarriorTuiApp {
                 for s in cmd.iter().skip(1) {
                     command.arg(&s);
                 }
-                let output = command.output();
-                match output {
-                    Ok(o) => {
-                        if o.status.success() {
-                            Ok(())
-                        } else {
-                            Err(format!(
-                                "Unable to run shortcut {}. Failed with status code {}",
-                                s,
-                                o.status.code().unwrap_or_default()
-                            ))
+                if let Ok(mut child) = command.spawn() {
+                    let exitstatus = child.wait().unwrap();
+                    let output = command.output();
+                    match output {
+                        Ok(o) => {
+                            if o.status.success() {
+                                Ok(())
+                            } else {
+                                Err(format!(
+                                    "Unable to run shortcut {}. Status Codde: {} - stdout: {} stderr: {}",
+                                    s,
+                                    o.status.code().unwrap_or_default(),
+                                    String::from_utf8_lossy(&o.stdout),
+                                    String::from_utf8_lossy(&o.stderr),
+                                ))
+                            }
                         }
+                        Err(s) => Err(format!("`{}` failed: {}", shell, s,)),
                     }
-                    Err(s) => Err(format!("`{}` failed: {}", shell, s,)),
+                } else {
+                    Err(format!("`{}` failed: {}", shell, s,))
                 }
             }
             None => Err(format!("Unable to run `{}`. Cannot shlex split `{}`", shell, shell)),
@@ -2157,6 +2164,7 @@ impl TaskwarriorTuiApp {
                     match self.task_shortcut(1) {
                         Ok(_) => self.update(true)?,
                         Err(e) => {
+                            self.update(true)?;
                             self.mode = AppMode::TaskError;
                             self.error = e;
                         }
@@ -2165,6 +2173,7 @@ impl TaskwarriorTuiApp {
                     match self.task_shortcut(2) {
                         Ok(_) => self.update(true)?,
                         Err(e) => {
+                            self.update(true)?;
                             self.mode = AppMode::TaskError;
                             self.error = e;
                         }
@@ -2173,6 +2182,7 @@ impl TaskwarriorTuiApp {
                     match self.task_shortcut(3) {
                         Ok(_) => self.update(true)?,
                         Err(e) => {
+                            self.update(true)?;
                             self.mode = AppMode::TaskError;
                             self.error = e;
                         }
@@ -2181,6 +2191,7 @@ impl TaskwarriorTuiApp {
                     match self.task_shortcut(4) {
                         Ok(_) => self.update(true)?,
                         Err(e) => {
+                            self.update(true)?;
                             self.mode = AppMode::TaskError;
                             self.error = e;
                         }
@@ -2189,6 +2200,7 @@ impl TaskwarriorTuiApp {
                     match self.task_shortcut(5) {
                         Ok(_) => self.update(true)?,
                         Err(e) => {
+                            self.update(true)?;
                             self.mode = AppMode::TaskError;
                             self.error = e;
                         }
@@ -2197,6 +2209,7 @@ impl TaskwarriorTuiApp {
                     match self.task_shortcut(6) {
                         Ok(_) => self.update(true)?,
                         Err(e) => {
+                            self.update(true)?;
                             self.mode = AppMode::TaskError;
                             self.error = e;
                         }
@@ -2205,6 +2218,7 @@ impl TaskwarriorTuiApp {
                     match self.task_shortcut(7) {
                         Ok(_) => self.update(true)?,
                         Err(e) => {
+                            self.update(true)?;
                             self.mode = AppMode::TaskError;
                             self.error = e;
                         }
@@ -2213,6 +2227,7 @@ impl TaskwarriorTuiApp {
                     match self.task_shortcut(8) {
                         Ok(_) => self.update(true)?,
                         Err(e) => {
+                            self.update(true)?;
                             self.mode = AppMode::TaskError;
                             self.error = e;
                         }
@@ -2221,6 +2236,7 @@ impl TaskwarriorTuiApp {
                     match self.task_shortcut(9) {
                         Ok(_) => self.update(true)?,
                         Err(e) => {
+                            self.update(true)?;
                             self.mode = AppMode::TaskError;
                             self.error = e;
                         }

@@ -93,13 +93,36 @@ async fn tui_main(_config: &str, report: &str) -> Result<()> {
         // Handle input
         match events.next().await? {
             Event::Input(input) => {
-                if input == app.keyconfig.edit && app.mode == AppMode::TaskReport {
+                if (input == app.keyconfig.edit
+                    || input == app.keyconfig.shortcut1
+                    || input == app.keyconfig.shortcut2
+                    || input == app.keyconfig.shortcut3
+                    || input == app.keyconfig.shortcut4
+                    || input == app.keyconfig.shortcut5
+                    || input == app.keyconfig.shortcut6
+                    || input == app.keyconfig.shortcut7
+                    || input == app.keyconfig.shortcut8
+                    || input == app.keyconfig.shortcut9)
+                    && app.mode == AppMode::TaskReport
+                {
                     events.leave_tui_mode(&mut terminal);
                 }
 
                 let r = app.handle_input(input);
 
-                if input == app.keyconfig.edit && app.mode == AppMode::TaskReport {
+                if (input == app.keyconfig.edit
+                    || input == app.keyconfig.shortcut1
+                    || input == app.keyconfig.shortcut2
+                    || input == app.keyconfig.shortcut3
+                    || input == app.keyconfig.shortcut4
+                    || input == app.keyconfig.shortcut5
+                    || input == app.keyconfig.shortcut6
+                    || input == app.keyconfig.shortcut7
+                    || input == app.keyconfig.shortcut8
+                    || input == app.keyconfig.shortcut9)
+                    && app.mode == AppMode::TaskReport
+                    || app.mode == AppMode::TaskError
+                {
                     events.enter_tui_mode(&mut terminal);
                 }
                 if r.is_err() {
