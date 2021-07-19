@@ -1993,12 +1993,14 @@ impl TaskwarriorTuiApp {
     }
 
     pub fn toggle_mark(&mut self) {
-        let selected = self.current_selection;
-        let task_id = self.tasks[selected].id().unwrap_or_default();
-        let task_uuid = *self.tasks[selected].uuid();
+        if !self.tasks.is_empty() {
+            let selected = self.current_selection;
+            let task_id = self.tasks[selected].id().unwrap_or_default();
+            let task_uuid = *self.tasks[selected].uuid();
 
-        if !self.marked.insert(task_uuid) {
-            self.marked.remove(&task_uuid);
+            if !self.marked.insert(task_uuid) {
+                self.marked.remove(&task_uuid);
+            }
         }
     }
 
