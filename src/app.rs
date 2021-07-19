@@ -1496,16 +1496,16 @@ impl TaskwarriorTuiApp {
                 for s in cmd.iter().skip(1) {
                     command.arg(&s);
                 }
-                if let Ok(mut child) = command.spawn() {
-                    let exitstatus = child.wait().unwrap();
-                    let output = command.output();
+                if let Ok(child) = command.spawn() {
+                    std::thread::sleep(Duration::from_secs(2));
+                    let output = child.wait_with_output();
                     match output {
                         Ok(o) => {
                             if o.status.success() {
                                 Ok(())
                             } else {
                                 Err(format!(
-                                    "Unable to run shortcut {}. Status Codde: {} - stdout: {} stderr: {}",
+                                    "Unable to run shortcut {}. Status Code: {} - stdout: {} stderr: {}",
                                     s,
                                     o.status.code().unwrap_or_default(),
                                     String::from_utf8_lossy(&o.stdout),
