@@ -1483,15 +1483,9 @@ impl TaskwarriorTuiApp {
                     for s in cmd.iter().skip(1) {
                         command.arg(&s);
                     }
-                    if let Ok(child) = command.spawn() {
-                        let output = child.wait_with_output();
-                        match output {
-                            Ok(o) => {
-                                if !o.status.success() {
-                                    break;
-                                }
-                            }
-                            Err(s) => break,
+                    if let Ok(output) = command.output() {
+                        if !output.status.success() {
+                            break;
                         }
                     } else {
                         break;
