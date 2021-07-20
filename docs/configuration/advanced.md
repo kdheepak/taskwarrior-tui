@@ -58,3 +58,14 @@ uda.taskwarrior-tui.keyconfig.shortcut1=n
 ```
 
 You can set up shortcuts to run `task sync` or any custom bash script that you'd like.
+
+## Configure one background task
+
+You can configure one background task to run periodically:
+
+```plaintext
+uda.taskwarrior-tui.background_process=task sync
+uda.taskwarrior-tui.background_process_period=60
+```
+
+This will run `task sync` every 5 seconds. If the `background_process` is an empty string (default), then no process will be run. Only if the `background_process` is defined and if the `background_process` runs successfully, it'll be run every `background_process_period` number of seconds (default: 60 seconds).
