@@ -156,7 +156,7 @@ impl Config {
         Self::get_config("uda.taskwarrior-tui.background_process_period", data)
             .unwrap_or_default()
             .parse::<usize>()
-            .unwrap_or(5)
+            .unwrap_or(50)
     }
 
     fn get_uda_shortcuts(data: &str) -> Vec<String> {
