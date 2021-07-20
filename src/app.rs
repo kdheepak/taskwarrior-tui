@@ -276,6 +276,7 @@ impl TaskwarriorTuiApp {
         app.filter_history_context.load()?;
         app.filter_history_context.add(app.filter.as_str());
         app.command_history_context.load()?;
+        app.task_background().unwrap_or_default();
         Ok(app)
     }
 
@@ -1467,6 +1468,41 @@ impl TaskwarriorTuiApp {
         }
     }
 
+    pub fn task_background(&mut self) -> Result<(), String> {
+        let shell = self.config.uda_background_process.clone();
+        if shell.is_empty() {
+            return Ok(());
+        }
+        let shell = shellexpand::tilde(&shell).into_owned();
+        let period = self.config.uda_background_process_period;
+        std::thread::spawn(move || loop {
+            std::thread::sleep(Duration::from_secs(period as u64));
+            let r = match shlex::split(&shell) {
+                Some(cmd) => {
+                    let mut command = Command::new(&cmd[0]);
+                    for s in cmd.iter().skip(1) {
+                        command.arg(&s);
+                    }
+                    if let Ok(child) = command.spawn() {
+                        let output = child.wait_with_output();
+                        match output {
+                            Ok(o) => {
+                                if !o.status.success() {
+                                    break;
+                                }
+                            }
+                            Err(s) => break,
+                        }
+                    } else {
+                        break;
+                    }
+                }
+                None => break,
+            };
+        });
+        Ok(())
+    }
+
     pub fn task_shortcut(&mut self, s: usize) -> Result<(), String> {
         if self.tasks.is_empty() {
             return Ok(());
@@ -1497,7 +1533,6 @@ impl TaskwarriorTuiApp {
                     command.arg(&s);
                 }
                 if let Ok(child) = command.spawn() {
-                    std::thread::sleep(Duration::from_secs(2));
                     let output = child.wait_with_output();
                     match output {
                         Ok(o) => {

@@ -63,6 +63,8 @@ pub struct Config {
     pub uda_style_calendar_today: Style,
     pub uda_style_report_completion_pane: Style,
     pub uda_shortcuts: Vec<String>,
+    pub uda_background_process: String,
+    pub uda_background_process_period: usize,
 }
 
 impl Config {
@@ -99,6 +101,8 @@ impl Config {
         let uda_style_context_active = Self::get_uda_style("context.active", data);
         let uda_style_report_completion_pane = Self::get_uda_style("report.completion-pane", data);
         let uda_shortcuts = Self::get_uda_shortcuts(data);
+        let uda_background_process = Self::get_uda_background_process(data);
+        let uda_background_process_period = Self::get_uda_background_process_period(data);
         let uda_style_calendar_title = uda_style_calendar_title.unwrap_or_default();
         let uda_style_calendar_today =
             uda_style_calendar_today.unwrap_or_else(|| Style::default().add_modifier(Modifier::BOLD));
@@ -135,11 +139,24 @@ impl Config {
             uda_style_calendar_today,
             uda_style_report_completion_pane,
             uda_shortcuts,
+            uda_background_process,
+            uda_background_process_period,
         })
     }
 
     fn get_bool_collection() -> HashMap<String, bool> {
         HashMap::new()
+    }
+
+    fn get_uda_background_process(data: &str) -> String {
+        Self::get_config("uda.taskwarrior-tui.background_process", data).unwrap_or_default()
+    }
+
+    fn get_uda_background_process_period(data: &str) -> usize {
+        Self::get_config("uda.taskwarrior-tui.background_process_period", data)
+            .unwrap_or_default()
+            .parse::<usize>()
+            .unwrap_or(5)
     }
 
     fn get_uda_shortcuts(data: &str) -> Vec<String> {
