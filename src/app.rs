@@ -342,14 +342,25 @@ impl TaskwarriorTuiApp {
             .constraints([Constraint::Min(0)].as_ref())
             .split(f.size());
         let today = Local::today();
+        let mut title = vec![
+            Span::styled("Task", Style::default().add_modifier(Modifier::DIM)),
+            Span::from("|"),
+            Span::styled("Calendar", Style::default().add_modifier(Modifier::BOLD)),
+        ];
+
+        if !self.current_context.is_empty() {
+            let context_style = Style::default();
+            context_style.add_modifier(Modifier::ITALIC);
+            title.insert(
+                title.len(),
+                Span::styled(format!(" ({}) ", self.current_context), context_style),
+            )
+        }
+
         let mut c = Calendar::default()
             .block(
                 Block::default()
-                    .title(Spans::from(vec![
-                        Span::styled("Task", Style::default().add_modifier(Modifier::DIM)),
-                        Span::from("|"),
-                        Span::styled("Calendar", Style::default().add_modifier(Modifier::BOLD)),
-                    ]))
+                    .title(Spans::from(title))
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded),
             )
@@ -926,15 +937,27 @@ impl TaskwarriorTuiApp {
                 AppMode::TaskReport => style = style.add_modifier(Modifier::BOLD),
                 _ => style = style.add_modifier(Modifier::DIM),
             }
+
+            let mut title = vec![
+                Span::styled("Task", style),
+                Span::from("|"),
+                Span::styled("Calendar", Style::default().add_modifier(Modifier::DIM)),
+            ];
+
+            if !self.current_context.is_empty() {
+                let context_style = Style::default();
+                context_style.add_modifier(Modifier::ITALIC);
+                title.insert(
+                    title.len(),
+                    Span::styled(format!(" ({}) ", self.current_context), context_style),
+                )
+            }
+
             f.render_widget(
                 Block::default()
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded)
-                    .title(Spans::from(vec![
-                        Span::styled("Task", style),
-                        Span::from("|"),
-                        Span::styled("Calendar", Style::default().add_modifier(Modifier::DIM)),
-                    ])),
+                    .title(Spans::from(title)),
                 rect,
             );
             return;
@@ -983,16 +1006,28 @@ impl TaskwarriorTuiApp {
             AppMode::TaskReport => style = style.add_modifier(Modifier::BOLD),
             _ => style = style.add_modifier(Modifier::DIM),
         }
+
+        let mut title = vec![
+            Span::styled("Task", style),
+            Span::from("|"),
+            Span::styled("Calendar", Style::default().add_modifier(Modifier::DIM)),
+        ];
+
+        if !self.current_context.is_empty() {
+            let context_style = Style::default();
+            context_style.add_modifier(Modifier::ITALIC);
+            title.insert(
+                title.len(),
+                Span::styled(format!(" ({}) ", self.current_context), context_style),
+            )
+        }
+
         let t = Table::new(header, rows.into_iter())
             .block(
                 Block::default()
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded)
-                    .title(Spans::from(vec![
-                        Span::styled("Task", style),
-                        Span::from("|"),
-                        Span::styled("Calendar", Style::default().add_modifier(Modifier::DIM)),
-                    ])),
+                    .title(Spans::from(title)),
             )
             .header_style(
                 self.config
