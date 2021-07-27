@@ -351,10 +351,9 @@ impl TaskwarriorTuiApp {
         if !self.current_context.is_empty() {
             let context_style = Style::default();
             context_style.add_modifier(Modifier::ITALIC);
-            title.insert(
-                title.len(),
-                Span::styled(format!(" ({}) ", self.current_context), context_style),
-            )
+            title.insert(title.len(), Span::from(" ("));
+            title.insert(title.len(), Span::styled(&self.current_context, context_style));
+            title.insert(title.len(), Span::from(")"));
         }
 
         let mut c = Calendar::default()
@@ -947,10 +946,9 @@ impl TaskwarriorTuiApp {
             if !self.current_context.is_empty() {
                 let context_style = Style::default();
                 context_style.add_modifier(Modifier::ITALIC);
-                title.insert(
-                    title.len(),
-                    Span::styled(format!(" ({}) ", self.current_context), context_style),
-                )
+                title.insert(title.len(), Span::from(" ("));
+                title.insert(title.len(), Span::styled(&self.current_context, context_style));
+                title.insert(title.len(), Span::from(")"));
             }
 
             f.render_widget(
@@ -1016,10 +1014,9 @@ impl TaskwarriorTuiApp {
         if !self.current_context.is_empty() {
             let context_style = Style::default();
             context_style.add_modifier(Modifier::ITALIC);
-            title.insert(
-                title.len(),
-                Span::styled(format!(" ({}) ", self.current_context), context_style),
-            )
+            title.insert(title.len(), Span::from(" ("));
+            title.insert(title.len(), Span::styled(&self.current_context, context_style));
+            title.insert(title.len(), Span::from(")"));
         }
 
         let t = Table::new(header, rows.into_iter())
