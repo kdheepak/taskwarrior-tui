@@ -2124,7 +2124,7 @@ impl TaskwarriorTuiApp {
                         }
                     }
                 } else if input == self.keyconfig.delete {
-                    if self.config.uda_prompt_on_delete {
+                    if self.config.uda_task_report_prompt_on_delete {
                         self.mode = AppMode::TaskDeletePrompt;
                         if self.task_current().is_none() {
                             self.mode = AppMode::TaskReport;
