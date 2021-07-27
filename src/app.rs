@@ -571,9 +571,9 @@ impl TaskwarriorTuiApp {
             }
             AppMode::TaskDeletePrompt => {
                 let label = if task_ids.len() > 1 {
-                    format!("Delete Tasks `{}`?", task_ids.join(","))
+                    format!("Delete Tasks {}?", task_ids.join(","))
                 } else {
-                    format!("Delete Task `{}`?", task_ids.join(","))
+                    format!("Delete Task {}?", task_ids.join(","))
                 };
                 let x = match self.keyconfig.delete {
                     Key::Char(c) => c.to_string(),
@@ -587,7 +587,7 @@ impl TaskwarriorTuiApp {
                     f,
                     rects[1],
                     &format!("Press <{}> to confirm or <{}> to abort.", x, q),
-                    label,
+                    Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
                     0,
                     false,
                 );
