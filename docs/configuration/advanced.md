@@ -69,4 +69,4 @@ uda.taskwarrior-tui.background_process=task sync
 uda.taskwarrior-tui.background_process_period=60
 ```
 
-This will run `task sync` every 60 seconds. If the `background_process` is an empty string (default), then no process will be run. Only if the `background_process` is defined and if the `background_process` runs successfully, it'll be run every `background_process_period` number of seconds (default: 60 seconds).
+This will run `task sync` every 60 seconds. If the `background_process` is an empty string (default), then no process will be run. Only if the `background_process` is defined and if the `background_process` runs successfully, it'll be run every `background_process_period` number of seconds (default: 60 seconds). However, if it fails even once it won't be run again till `taskwarrior-tui` is restarted.
