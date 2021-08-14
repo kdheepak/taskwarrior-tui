@@ -163,6 +163,7 @@ pub enum AppMode {
     TaskContextMenu,
     TaskJump,
     TaskDeletePrompt,
+    TaskDonePrompt,
     Calendar,
 }
 
@@ -173,7 +174,6 @@ pub struct TaskwarriorTuiApp {
     pub context_table_state: TableState,
     pub current_context_filter: String,
     pub current_context: String,
-    pub delete: LineBuffer,
     pub command: LineBuffer,
     pub filter: LineBuffer,
     pub modify: LineBuffer,
@@ -246,7 +246,6 @@ impl TaskwarriorTuiApp {
             current_selection_id: None,
             current_context_filter: "".to_string(),
             current_context: "".to_string(),
-            delete: LineBuffer::with_capacity(MAX_LINE),
             command: LineBuffer::with_capacity(MAX_LINE),
             filter: LineBuffer::with_capacity(MAX_LINE),
             modify: LineBuffer::with_capacity(MAX_LINE),
@@ -316,6 +315,7 @@ impl TaskwarriorTuiApp {
             | AppMode::TaskAdd
             | AppMode::TaskAnnotate
             | AppMode::TaskContextMenu
+            | AppMode::TaskDonePrompt
             | AppMode::TaskDeletePrompt
             | AppMode::TaskError
             | AppMode::TaskHelpPopup
@@ -578,6 +578,29 @@ impl TaskwarriorTuiApp {
                     false,
                 );
                 self.draw_context_menu(f, 80, 50);
+            }
+            AppMode::TaskDonePrompt => {
+                let label = if task_ids.len() > 1 {
+                    format!("Done Tasks {}?", task_ids.join(","))
+                } else {
+                    format!("Done Task {}?", task_ids.join(","))
+                };
+                let x = match self.keyconfig.done {
+                    Key::Char(c) => c.to_string(),
+                    _ => "Enter".to_string(),
+                };
+                let q = match self.keyconfig.quit {
+                    Key::Char(c) => c.to_string(),
+                    _ => "Esc".to_string(),
+                };
+                self.draw_command(
+                    f,
+                    rects[1],
+                    &format!("Press <{}> to confirm or <{}> to abort.", x, q),
+                    Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
+                    0,
+                    false,
+                );
             }
             AppMode::TaskDeletePrompt => {
                 let label = if task_ids.len() > 1 {
@@ -1477,7 +1500,7 @@ impl TaskwarriorTuiApp {
 
         let shell = self.command.as_str();
 
-        match shlex::split(&shell) {
+        match shlex::split(shell) {
             Some(cmd) => {
                 // first argument must be a binary
                 let mut command = Command::new(&cmd[0]);
@@ -1509,7 +1532,7 @@ impl TaskwarriorTuiApp {
 
         let shell = self.command.as_str();
 
-        match shlex::split(&shell) {
+        match shlex::split(shell) {
             Some(cmd) => {
                 for s in cmd {
                     command.arg(&s);
@@ -1638,7 +1661,7 @@ impl TaskwarriorTuiApp {
 
         let shell = self.modify.as_str();
 
-        let r = match shlex::split(&shell) {
+        let r = match shlex::split(shell) {
             Some(cmd) => {
                 for s in cmd {
                     command.arg(&s);
@@ -1689,7 +1712,7 @@ impl TaskwarriorTuiApp {
 
         let shell = self.command.as_str();
 
-        let r = match shlex::split(&shell) {
+        let r = match shlex::split(shell) {
             Some(cmd) => {
                 for s in cmd {
                     command.arg(&s);
@@ -1731,7 +1754,7 @@ impl TaskwarriorTuiApp {
 
         let shell = self.command.as_str();
 
-        match shlex::split(&shell) {
+        match shlex::split(shell) {
             Some(cmd) => {
                 for s in cmd {
                     command.arg(&s);
@@ -2148,11 +2171,18 @@ impl TaskwarriorTuiApp {
                 } else if input == Key::Ctrl('y') {
                     self.task_details_scroll_up();
                 } else if input == self.keyconfig.done {
-                    match self.task_done() {
-                        Ok(_) => self.update(true)?,
-                        Err(e) => {
-                            self.mode = AppMode::TaskError;
-                            self.error = e;
+                    if self.config.uda_task_report_prompt_on_done {
+                        self.mode = AppMode::TaskDonePrompt;
+                        if self.task_current().is_none() {
+                            self.mode = AppMode::TaskReport;
+                        }
+                    } else {
+                        match self.task_done() {
+                            Ok(_) => self.update(true)?,
+                            Err(e) => {
+                                self.mode = AppMode::TaskError;
+                                self.error = e;
+                            }
                         }
                     }
                 } else if input == self.keyconfig.delete {
@@ -2803,6 +2833,24 @@ impl TaskwarriorTuiApp {
                     self.dirty = true;
                 }
             },
+            AppMode::TaskDonePrompt => {
+                if input == self.keyconfig.done || input == Key::Char('\n') {
+                    match self.task_done() {
+                        Ok(_) => {
+                            self.mode = AppMode::TaskReport;
+                            self.update(true)?;
+                        }
+                        Err(e) => {
+                            self.mode = AppMode::TaskError;
+                            self.error = e;
+                        }
+                    }
+                } else if input == self.keyconfig.quit || input == Key::Esc {
+                    self.mode = AppMode::TaskReport;
+                } else {
+                    handle_movement(&mut self.command, input);
+                }
+            }
             AppMode::TaskDeletePrompt => {
                 if input == self.keyconfig.delete || input == Key::Char('\n') {
                     match self.task_delete() {
@@ -2816,7 +2864,6 @@ impl TaskwarriorTuiApp {
                         }
                     }
                 } else if input == self.keyconfig.quit || input == Key::Esc {
-                    self.delete.update("", 0);
                     self.mode = AppMode::TaskReport;
                 } else {
                     handle_movement(&mut self.command, input);

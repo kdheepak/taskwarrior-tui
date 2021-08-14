@@ -159,7 +159,7 @@ impl TaskReportTable {
             }
             let mut item = vec![];
             for name in &self.columns {
-                let s = self.get_string_attribute(name, &task, tasks);
+                let s = self.get_string_attribute(name, task, tasks);
                 item.push(s);
             }
             self.tasks.push(item)
