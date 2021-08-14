@@ -66,6 +66,7 @@ pub struct Config {
     pub uda_background_process: String,
     pub uda_background_process_period: usize,
     pub uda_task_report_prompt_on_delete: bool,
+    pub uda_task_report_prompt_on_done: bool,
 }
 
 impl Config {
@@ -111,6 +112,7 @@ impl Config {
         let uda_style_report_completion_pane =
             uda_style_report_completion_pane.unwrap_or_else(|| Style::default().bg(Color::Rgb(223, 223, 223)));
         let uda_task_report_prompt_on_delete = Self::get_uda_task_report_prompt_on_delete(data);
+        let uda_task_report_prompt_on_done = Self::get_uda_task_report_prompt_on_done(data);
 
         Ok(Self {
             enabled,
@@ -144,6 +146,7 @@ impl Config {
             uda_background_process,
             uda_background_process_period,
             uda_task_report_prompt_on_delete,
+            uda_task_report_prompt_on_done,
         })
     }
 
@@ -449,6 +452,13 @@ impl Config {
             .unwrap_or_default()
             .get_bool()
             .unwrap_or(true)
+    }
+
+    fn get_uda_task_report_prompt_on_done(data: &str) -> bool {
+        Self::get_config("uda.taskwarrior-tui.task-report.prompt-on-done", data)
+            .unwrap_or_default()
+            .get_bool()
+            .unwrap_or(false)
     }
 
     fn get_uda_task_report_prompt_on_delete(data: &str) -> bool {

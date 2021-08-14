@@ -19,6 +19,7 @@ uda.taskwarrior-tui.task-report.show-info=true
 uda.taskwarrior-tui.task-report.looping=true
 uda.taskwarrior-tui.task-report.jump-on-task-add=true
 uda.taskwarrior-tui.task-report.prompt-on-delete=false
+uda.taskwarrior-tui.task-report.prompt-on-done=false
 uda.taskwarrior-tui.style.context.active=black on rgb444
 uda.taskwarrior-tui.style.calendar.title=black on rgb444
 uda.taskwarrior-tui.task-report.next.filter=$(task show report.next.filter)
