@@ -418,7 +418,7 @@ where
                 let s = self.unmark_symbol.unwrap_or(" ").trim_end();
                 format!("{} ", s)
             }
-            TableMode::SingleSelection => iter::repeat(" ").take(highlight_symbol.width()).collect::<String>(),
+            TableMode::SingleSelection => " ".repeat(highlight_symbol.width()),
         };
 
         let mark_highlight_symbol = {

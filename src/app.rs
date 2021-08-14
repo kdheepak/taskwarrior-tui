@@ -1500,7 +1500,7 @@ impl TaskwarriorTuiApp {
 
         let shell = self.command.as_str();
 
-        match shlex::split(&shell) {
+        match shlex::split(shell) {
             Some(cmd) => {
                 // first argument must be a binary
                 let mut command = Command::new(&cmd[0]);
@@ -1532,7 +1532,7 @@ impl TaskwarriorTuiApp {
 
         let shell = self.command.as_str();
 
-        match shlex::split(&shell) {
+        match shlex::split(shell) {
             Some(cmd) => {
                 for s in cmd {
                     command.arg(&s);
@@ -1661,7 +1661,7 @@ impl TaskwarriorTuiApp {
 
         let shell = self.modify.as_str();
 
-        let r = match shlex::split(&shell) {
+        let r = match shlex::split(shell) {
             Some(cmd) => {
                 for s in cmd {
                     command.arg(&s);
@@ -1712,7 +1712,7 @@ impl TaskwarriorTuiApp {
 
         let shell = self.command.as_str();
 
-        let r = match shlex::split(&shell) {
+        let r = match shlex::split(shell) {
             Some(cmd) => {
                 for s in cmd {
                     command.arg(&s);
@@ -1754,7 +1754,7 @@ impl TaskwarriorTuiApp {
 
         let shell = self.command.as_str();
 
-        match shlex::split(&shell) {
+        match shlex::split(shell) {
             Some(cmd) => {
                 for s in cmd {
                     command.arg(&s);

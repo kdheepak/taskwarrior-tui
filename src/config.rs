@@ -189,7 +189,7 @@ impl Config {
                 let attribute = i.next();
                 let line = i.collect::<Vec<_>>().join(" ");
                 let line = line.trim_start_matches(' ');
-                let tcolor = Self::get_tcolor(&line);
+                let tcolor = Self::get_tcolor(line);
                 if let Some(attr) = attribute {
                     color_collection.insert(attr.to_string(), tcolor);
                 };
