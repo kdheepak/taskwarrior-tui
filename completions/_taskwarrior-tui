@@ -19,17 +19,19 @@ _taskwarrior-tui() {
 '--config=[Sets a custom config file]' \
 '-r+[Sets default report]' \
 '--report=[Sets default report]' \
-'-h[Print help information]' \
-'--help[Print help information]' \
-'-V[Print version information]' \
-'--version[Print version information]' \
+'-h[Prints help information]' \
+'--help[Prints help information]' \
+'-V[Prints version information]' \
+'--version[Prints version information]' \
 && ret=0
     
 }
 
 (( $+functions[_taskwarrior-tui_commands] )) ||
 _taskwarrior-tui_commands() {
-    local commands; commands=()
+    local commands; commands=(
+        
+    )
     _describe -t commands 'taskwarrior-tui commands' commands "$@"
 }
 
