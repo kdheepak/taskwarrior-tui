@@ -19,6 +19,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub enum Key {
+    CtrlBackspace,
+    CtrlDelete,
     Backspace,
     Left,
     Right,
@@ -74,7 +76,18 @@ impl Events {
                     maybe_event = event => {
                         if let Some(Ok(event::Event::Key(key))) = maybe_event {
                             let key = match key.code {
-                                Backspace => Key::Backspace,
+                                Backspace => {
+                                    match key.modifiers {
+                                        KeyModifiers::CONTROL => Key::CtrlBackspace,
+                                        _ => Key::Backspace,
+                                    }
+                                },
+                                Delete => {
+                                    match key.modifiers {
+                                        KeyModifiers::CONTROL => Key::CtrlDelete,
+                                        _ => Key::Delete,
+                                    }
+                                },
                                 Enter => Key::Char('\n'),
                                 Left => Key::Left,
                                 Right => Key::Right,
@@ -86,7 +99,6 @@ impl Events {
                                 PageDown => Key::PageDown,
                                 Tab => Key::Tab,
                                 BackTab => Key::BackTab,
-                                Delete => Key::Delete,
                                 Insert => Key::Insert,
                                 F(k) => Key::F(k),
                                 Null => Key::Null,
