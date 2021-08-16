@@ -24,7 +24,7 @@ _taskwarrior-tui() {
 '-V[Print version information]' \
 '--version[Print version information]' \
 && ret=0
-
+    
 }
 
 (( $+functions[_taskwarrior-tui_commands] )) ||

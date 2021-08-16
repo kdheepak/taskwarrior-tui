@@ -12,7 +12,7 @@ _taskwarrior-tui() {
             taskwarrior-tui)
                 cmd="taskwarrior__tui"
                 ;;
-
+            
             *)
                 ;;
         esac
@@ -26,7 +26,7 @@ _taskwarrior-tui() {
                 return 0
             fi
             case "${prev}" in
-
+                
                 --config)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -50,7 +50,7 @@ _taskwarrior-tui() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-
+        
     esac
 }
 
