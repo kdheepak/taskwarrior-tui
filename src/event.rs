@@ -21,6 +21,8 @@ use serde::{Deserialize, Serialize};
 pub enum Key {
     CtrlBackspace,
     CtrlDelete,
+    AltBackspace,
+    AltDelete,
     Backspace,
     Left,
     Right,
@@ -79,12 +81,14 @@ impl Events {
                                 Backspace => {
                                     match key.modifiers {
                                         KeyModifiers::CONTROL => Key::CtrlBackspace,
+                                        KeyModifiers::ALT => Key::AltBackspace,
                                         _ => Key::Backspace,
                                     }
                                 },
                                 Delete => {
                                     match key.modifiers {
                                         KeyModifiers::CONTROL => Key::CtrlDelete,
+                                        KeyModifiers::ALT => Key::AltDelete,
                                         _ => Key::Delete,
                                     }
                                 },

@@ -3048,10 +3048,10 @@ pub fn handle_movement(linebuffer: &mut LineBuffer, input: Key) {
         Key::Ctrl('u') => {
             linebuffer.discard_line();
         }
-        Key::Ctrl('w') | Key::CtrlBackspace => {
+        Key::Ctrl('w') | Key::AltBackspace | Key::CtrlBackspace => {
             linebuffer.delete_prev_word(Word::Emacs, 1);
         }
-        Key::Alt('d') | Key::CtrlDelete => {
+        Key::Alt('d') | Key::AltDelete | Key::CtrlDelete => {
             linebuffer.delete_word(At::AfterEnd, Word::Emacs, 1);
         }
         Key::Alt('f') => {
