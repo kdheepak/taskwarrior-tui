@@ -18,36 +18,36 @@ default = ["crossterm-backend"]
 crossterm-backend = ["tui/crossterm", "crossterm"]
 
 [dependencies]
-anyhow = "1"
-async-std = { version = "1", features = ["attributes", "unstable"] }
+anyhow = "1.0.43"
+async-std = { version = "1.9.0", features = ["attributes", "unstable"] }
 better-panic = "0.2.0"
 cassowary = "0.3.0"
-chrono = "0.4"
-clap = "3.0.0-beta.2"
-crossterm = { version = "0", optional = true, default-features = false, features = ["event-stream"] }
-dirs = "2.0.2"
-futures = "0.3"
-futures-timer = "3.0"
-itertools = "0.9"
+chrono = "0.4.19"
+clap = "3.0.0-beta.4"
+crossterm = { version = "0.20.0", optional = true, default-features = false, features = ["event-stream"] }
+dirs = "3.0.2"
+futures = "0.3.16"
+futures-timer = "3.0.2"
+itertools = "0.10.1"
 lazy_static = "1.4.0"
-rand = "0.7"
-regex = "1"
-rustyline = "8"
-rustyline-derive = "0.4"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-shellexpand = "2.1"
-shlex = "0.1"
+rand = "0.8.4"
+regex = "1.5.4"
+rustyline = "8.2.0"
+rustyline-derive = "0.4.0"
+serde = { version = "1.0.127", features = ["derive"] }
+serde_json = "1.0.66"
+shellexpand = "2.1.0"
+shlex = "1.0.0"
 task-hookrs = { git = "https://github.com/kdheepak/task-hookrs" }
-tui = { version = "0.12", optional = true, default-features = false }
-unicode-segmentation = "1.6"
-unicode-truncate = "0.2"
-unicode-width = "0.1"
-uuid = { version = "0.8.1", features = ["serde", "v4"] }
+tui = { version = "0.16.0", optional = true, default-features = false }
+unicode-segmentation = "1.8.0"
+unicode-truncate = "0.2.0"
+unicode-width = "0.1.8"
+uuid = { version = "0.8.2", features = ["serde", "v4"] }
 
 [build-dependencies]
-clap = "3.0.0-beta.2"
-clap_generate = "3.0.0-beta.2"
+clap = "3.0.0-beta.4"
+clap_generate = "3.0.0-beta.4"
 
 [package.metadata.rpm]
 package = "taskwarrior-tui"
