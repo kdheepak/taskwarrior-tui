@@ -200,6 +200,7 @@ pub struct TaskwarriorTuiApp {
     pub terminal_height: u16,
     pub filter_history_context: HistoryContext,
     pub command_history_context: HistoryContext,
+    pub history_status: Option<String>,
     pub completion_list: CompletionList,
     pub show_completion_pane: bool,
     pub report: String,
@@ -265,6 +266,7 @@ impl TaskwarriorTuiApp {
             terminal_height: h,
             filter_history_context: HistoryContext::new("filter.history"),
             command_history_context: HistoryContext::new("command.history"),
+            history_status: None,
             completion_list: CompletionList::with_items(vec![]),
             show_completion_pane: false,
             report: report.to_string(),
@@ -441,7 +443,11 @@ impl TaskwarriorTuiApp {
                 f,
                 rects[1],
                 self.filter.as_str(),
-                "Filter Tasks",
+                format!(
+                    "{}{}",
+                    "Filter Tasks",
+                    self.history_status.clone().unwrap_or_else(|| "".to_string())
+                ),
                 self.get_position(&self.filter),
                 false,
             ),
@@ -465,7 +471,14 @@ impl TaskwarriorTuiApp {
                     f,
                     rects[1],
                     self.filter.as_str(),
-                    Span::styled("Filter Tasks", Style::default().add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        format!(
+                            "{}{}",
+                            "Filter Tasks",
+                            self.history_status.clone().unwrap_or_else(|| "".to_string())
+                        ),
+                        Style::default().add_modifier(Modifier::BOLD),
+                    ),
                     position,
                     true,
                 );
@@ -479,7 +492,14 @@ impl TaskwarriorTuiApp {
                     f,
                     rects[1],
                     self.command.as_str(),
-                    Span::styled("Log Tasks", Style::default().add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        format!(
+                            "{}{}",
+                            "Log Task",
+                            self.history_status.clone().unwrap_or_else(|| "".to_string())
+                        ),
+                        Style::default().add_modifier(Modifier::BOLD),
+                    ),
                     position,
                     true,
                 );
@@ -509,7 +529,14 @@ impl TaskwarriorTuiApp {
                     f,
                     rects[1],
                     self.modify.as_str(),
-                    Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        format!(
+                            "{}{}",
+                            label,
+                            self.history_status.clone().unwrap_or_else(|| "".to_string())
+                        ),
+                        Style::default().add_modifier(Modifier::BOLD),
+                    ),
                     position,
                     true,
                 );
@@ -528,7 +555,14 @@ impl TaskwarriorTuiApp {
                     f,
                     rects[1],
                     self.command.as_str(),
-                    Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        format!(
+                            "{}{}",
+                            label,
+                            self.history_status.clone().unwrap_or_else(|| "".to_string())
+                        ),
+                        Style::default().add_modifier(Modifier::BOLD),
+                    ),
                     position,
                     true,
                 );
@@ -542,7 +576,14 @@ impl TaskwarriorTuiApp {
                     f,
                     rects[1],
                     self.command.as_str(),
-                    Span::styled("Add Task", Style::default().add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        format!(
+                            "{}{}",
+                            "Add Task",
+                            self.history_status.clone().unwrap_or_else(|| "".to_string())
+                        ),
+                        Style::default().add_modifier(Modifier::BOLD),
+                    ),
                     position,
                     true,
                 );
@@ -2227,6 +2268,8 @@ impl TaskwarriorTuiApp {
                     }
                 } else if input == self.keyconfig.modify {
                     self.mode = AppMode::TaskModify;
+                    self.command_history_context.last();
+                    // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
                     self.update_completion_list();
                     match self.task_table_state.mode() {
                         TableMode::SingleSelection => match self.task_current() {
@@ -2273,17 +2316,25 @@ impl TaskwarriorTuiApp {
                     self.mode = AppMode::TaskSubprocess;
                 } else if input == self.keyconfig.log {
                     self.mode = AppMode::TaskLog;
+                    self.command_history_context.last();
+                    // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
                     self.update_completion_list();
                 } else if input == self.keyconfig.add {
                     self.mode = AppMode::TaskAdd;
+                    self.command_history_context.last();
+                    // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
                     self.update_completion_list();
                 } else if input == self.keyconfig.annotate {
                     self.mode = AppMode::TaskAnnotate;
+                    self.command_history_context.last();
+                    // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
                     self.update_completion_list();
                 } else if input == self.keyconfig.help {
                     self.mode = AppMode::TaskHelpPopup;
                 } else if input == self.keyconfig.filter {
                     self.mode = AppMode::TaskFilter;
+                    self.filter_history_context.last();
+                    // self.history_status = Some(format!(" {} / {}", self.filter_history_context.history_index() + 1, self.filter_history_context.history_len()));
                     self.update_completion_list();
                 } else if input == Key::Char(':') {
                     self.mode = AppMode::TaskJump;
@@ -2416,6 +2467,7 @@ impl TaskwarriorTuiApp {
                         self.completion_list.unselect();
                     } else {
                         self.modify.update("", 0);
+                        // self.history_status = None;
                         self.mode = AppMode::TaskReport;
                     }
                 }
@@ -2432,6 +2484,7 @@ impl TaskwarriorTuiApp {
                             Ok(_) => {
                                 self.mode = AppMode::TaskReport;
                                 self.command_history_context.add(self.modify.as_str());
+                                // self.history_status = None;
                                 self.modify.update("", 0);
                                 self.update(true)?;
                             }
@@ -2466,6 +2519,7 @@ impl TaskwarriorTuiApp {
                         let p = self.modify.pos();
                         self.modify.update("", 0);
                         self.modify.update(&s, std::cmp::min(s.len(), p));
+                        // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
                     }
                 }
                 Key::Down => {
@@ -2478,6 +2532,7 @@ impl TaskwarriorTuiApp {
                         let p = self.modify.pos();
                         self.modify.update("", 0);
                         self.modify.update(&s, std::cmp::min(s.len(), p));
+                        // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
                     }
                 }
                 _ => {
@@ -2511,6 +2566,7 @@ impl TaskwarriorTuiApp {
                         self.completion_list.unselect();
                     } else {
                         self.command.update("", 0);
+                        // self.history_status = None;
                         self.mode = AppMode::TaskReport;
                     }
                 }
@@ -2528,6 +2584,7 @@ impl TaskwarriorTuiApp {
                                 self.mode = AppMode::TaskReport;
                                 self.command_history_context.add(self.command.as_str());
                                 self.command.update("", 0);
+                                // self.history_status = None;
                                 self.update(true)?;
                             }
                             Err(e) => {
@@ -2561,6 +2618,7 @@ impl TaskwarriorTuiApp {
                         let p = self.command.pos();
                         self.command.update("", 0);
                         self.command.update(&s, std::cmp::min(s.len(), p));
+                        // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
                     }
                 }
                 Key::Down => {
@@ -2573,6 +2631,7 @@ impl TaskwarriorTuiApp {
                         let p = self.command.pos();
                         self.command.update("", 0);
                         self.command.update(&s, std::cmp::min(s.len(), p));
+                        // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
                     }
                 }
                 _ => {
@@ -2589,6 +2648,7 @@ impl TaskwarriorTuiApp {
                     } else {
                         self.command.update("", 0);
                         self.mode = AppMode::TaskReport;
+                        // self.history_status = None;
                     }
                 }
                 Key::Char('\n') => {
@@ -2605,6 +2665,7 @@ impl TaskwarriorTuiApp {
                                 self.mode = AppMode::TaskReport;
                                 self.command_history_context.add(self.command.as_str());
                                 self.command.update("", 0);
+                                // self.history_status = None;
                                 self.update(true)?;
                             }
                             Err(e) => {
@@ -2638,6 +2699,7 @@ impl TaskwarriorTuiApp {
                         let p = self.command.pos();
                         self.command.update("", 0);
                         self.command.update(&s, std::cmp::min(s.len(), p));
+                        // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
                     }
                 }
                 Key::Down => {
@@ -2650,6 +2712,7 @@ impl TaskwarriorTuiApp {
                         let p = self.command.pos();
                         self.command.update("", 0);
                         self.command.update(&s, std::cmp::min(s.len(), p));
+                        // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
                     }
                 }
                 _ => {
@@ -2684,6 +2747,7 @@ impl TaskwarriorTuiApp {
                         self.completion_list.unselect();
                     } else {
                         self.command.update("", 0);
+                        // self.history_status = None;
                         self.mode = AppMode::TaskReport;
                     }
                 }
@@ -2701,6 +2765,7 @@ impl TaskwarriorTuiApp {
                                 self.mode = AppMode::TaskReport;
                                 self.command_history_context.add(self.command.as_str());
                                 self.command.update("", 0);
+                                // self.history_status = None;
                                 self.update(true)?;
                             }
                             Err(e) => {
@@ -2734,6 +2799,7 @@ impl TaskwarriorTuiApp {
                         let p = self.command.pos();
                         self.command.update("", 0);
                         self.command.update(&s, std::cmp::min(s.len(), p));
+                        // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
                     }
                 }
                 Key::Down => {
@@ -2746,6 +2812,7 @@ impl TaskwarriorTuiApp {
                         let p = self.command.pos();
                         self.command.update("", 0);
                         self.command.update(&s, std::cmp::min(s.len(), p));
+                        // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
                     }
                 }
                 _ => {
@@ -2762,6 +2829,7 @@ impl TaskwarriorTuiApp {
                     } else {
                         self.mode = AppMode::TaskReport;
                         self.filter_history_context.add(self.filter.as_str());
+                        // self.history_status = None;
                         self.update(true)?;
                     }
                 }
@@ -2777,6 +2845,7 @@ impl TaskwarriorTuiApp {
                     } else {
                         self.mode = AppMode::TaskReport;
                         self.filter_history_context.add(self.filter.as_str());
+                        // self.history_status = None;
                         self.update(true)?;
                     }
                 }
@@ -2790,6 +2859,7 @@ impl TaskwarriorTuiApp {
                         let p = self.filter.pos();
                         self.filter.update("", 0);
                         self.filter.update(&s, std::cmp::min(p, s.len()));
+                        // self.history_status = Some(format!(" {} / {}", self.filter_history_context.history_index() + 1, self.filter_history_context.history_len()));
                         self.dirty = true;
                     }
                 }
@@ -2803,6 +2873,7 @@ impl TaskwarriorTuiApp {
                         let p = self.filter.pos();
                         self.filter.update("", 0);
                         self.filter.update(&s, std::cmp::min(p, s.len()));
+                        // self.history_status = Some(format!(" {} / {}", self.filter_history_context.history_index() + 1, self.filter_history_context.history_len()));
                         self.dirty = true;
                     }
                 }
@@ -2825,6 +2896,8 @@ impl TaskwarriorTuiApp {
                     for c in self.config.filter.chars() {
                         self.filter.insert(c, 1);
                     }
+                    // self.history_status = None;
+                    self.update_input_for_completion();
                     self.dirty = true;
                 }
                 _ => {
@@ -3027,9 +3100,6 @@ pub fn handle_movement(linebuffer: &mut LineBuffer, input: Key) {
         Key::Ctrl('b') | Key::Left => {
             linebuffer.move_backward(1);
         }
-        Key::Char(c) => {
-            linebuffer.insert(c, 1);
-        }
         Key::Ctrl('h') | Key::Backspace => {
             linebuffer.backspace(1);
         }
@@ -3062,6 +3132,9 @@ pub fn handle_movement(linebuffer: &mut LineBuffer, input: Key) {
         }
         Key::Alt('t') => {
             linebuffer.transpose_words(1);
+        }
+        Key::Char(c) => {
+            linebuffer.insert(c, 1);
         }
         _ => {}
     }
@@ -3116,6 +3189,45 @@ mod tests {
         std::fs::remove_dir_all(cd).unwrap();
     }
 
+    fn test_taskwarrior_tui_history() {
+        let mut app = TaskwarriorTuiApp::new("next").unwrap();
+        // setup();
+        app.mode = AppMode::TaskAdd;
+        app.update_completion_list();
+        let input = "\"Wash car\" +test";
+        for c in input.chars() {
+            app.handle_input(Key::Char(c)).unwrap();
+        }
+        app.handle_input(Key::Char('\n')).unwrap();
+
+        app.mode = AppMode::TaskAdd;
+        app.update_completion_list();
+        let input = "\"Buy groceries\" +test";
+        for c in input.chars() {
+            app.handle_input(Key::Char(c)).unwrap();
+        }
+        app.handle_input(Key::Down).unwrap();
+
+        assert_eq!("\"Buy groceries\" +test", app.command.as_str());
+
+        app.handle_input(Key::Char('\n')).unwrap();
+
+        app.mode = AppMode::TaskAdd;
+        app.update_completion_list();
+        let input = "\"Buy groceries";
+        for c in input.chars() {
+            app.handle_input(Key::Char(c)).unwrap();
+        }
+        app.handle_input(Key::Down).unwrap();
+
+        assert_eq!("\"Buy groceries", app.command.as_str());
+
+        app.handle_input(Key::Up).unwrap();
+
+        assert_eq!("\"Buy groceries\" +test", app.command.as_str());
+        // teardown();
+    }
+
     #[test]
     fn test_taskwarrior_tui() {
         let app = TaskwarriorTuiApp::new("next");
@@ -3153,6 +3265,7 @@ mod tests {
         test_task_tomorrow();
         test_task_earlier_today();
         test_task_later_today();
+        test_taskwarrior_tui_history();
 
         teardown();
     }
