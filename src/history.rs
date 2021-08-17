@@ -69,7 +69,7 @@ impl HistoryContext {
         if self.history_index == self.history.len().saturating_sub(1) && dir == Direction::Forward
             || self.history_index == 0 && dir == Direction::Reverse
         {
-            return Some(self.history.get(self.history_index).unwrap().clone());
+            return None;
         }
         let history_index = match dir {
             Direction::Reverse => self.history_index - 1,
@@ -94,5 +94,9 @@ impl HistoryContext {
 
     pub fn last(&mut self) {
         self.history_index = self.history.len().saturating_sub(1);
+    }
+
+    pub fn history_len(&self) -> usize {
+        self.history.len()
     }
 }
