@@ -1,5 +1,7 @@
 # Advanced configuration
 
+## `taskrc` config file options:
+
 Other `taskwarrior-tui` configuration options are possible using the user defined attribute feature of `taskwarrior`.
 All `taskwarrior-tui` specific configuration options will begin with `uda.taskwarrior-tui.`.
 The following is a full list of all the options available and their default values implemented by `taskwarrior-tui` if not defined in your `taskrc` file.
@@ -24,6 +26,13 @@ uda.taskwarrior-tui.style.context.active=black on rgb444
 uda.taskwarrior-tui.style.calendar.title=black on rgb444
 uda.taskwarrior-tui.task-report.next.filter=$(task show report.next.filter)
 ```
+
+The `uda.taskwarrior-tui.task-report.next.filter` variable defines the default view at program startup. Set this to any preconfigured report (`task reports`), or create your own report in taskwarrior and specify its name here.
+
+## commandline options:
+
+`-c`: specify a config file other than standard `.taskrc`
+`-r`: specify a report to be shown, overrides `uda.taskwarrior-tui.task-report.next.filter` for this instance
 
 ## Configure user defined shortcuts:
 
