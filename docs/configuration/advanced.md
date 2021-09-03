@@ -31,7 +31,7 @@ The `uda.taskwarrior-tui.task-report.next.filter` variable defines the default v
 
 ## commandline options:
 
-`-c`: specify a config file other than standard `.taskrc`
+`-c`: specify a config file other than standard `.taskrc`  
 `-r`: specify a report to be shown, overrides `uda.taskwarrior-tui.task-report.next.filter` for this instance
 
 ## Configure user defined shortcuts:
