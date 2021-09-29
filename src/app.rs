@@ -2475,8 +2475,9 @@ impl TaskwarriorTuiApp {
                     if self.show_completion_pane {
                         self.show_completion_pane = false;
                         if let Some(s) = self.completion_list.selected() {
-                            let s = format!("{}{}", self.modify.as_str(), &s);
-                            self.modify.update(&s, s.len());
+                            let (before, after) = self.modify.as_str().split_at(self.modify.pos());
+                            let fs = format!("{}{}{}", before, s, after);
+                            self.modify.update(&fs, self.modify.pos() + s.len());
                         }
                         self.completion_list.unselect();
                     } else {
@@ -2574,8 +2575,9 @@ impl TaskwarriorTuiApp {
                     if self.show_completion_pane {
                         self.show_completion_pane = false;
                         if let Some(s) = self.completion_list.selected() {
-                            let s = format!("{}{}", self.command.as_str(), s);
-                            self.command.update(&s, s.len());
+                            let (before, after) = self.command.as_str().split_at(self.command.pos());
+                            let fs = format!("{}{}{}", before, s, after);
+                            self.command.update(&fs, self.command.pos() + s.len());
                         }
                         self.completion_list.unselect();
                     } else {
@@ -2655,8 +2657,9 @@ impl TaskwarriorTuiApp {
                     if self.show_completion_pane {
                         self.show_completion_pane = false;
                         if let Some(s) = self.completion_list.selected() {
-                            let s = format!("{}{}", self.command.as_str(), s);
-                            self.command.update(&s, s.len());
+                            let (before, after) = self.command.as_str().split_at(self.command.pos());
+                            let fs = format!("{}{}{}", before, s, after);
+                            self.command.update(&fs, self.command.pos() + s.len());
                         }
                         self.completion_list.unselect();
                     } else {
@@ -2755,8 +2758,9 @@ impl TaskwarriorTuiApp {
                     if self.show_completion_pane {
                         self.show_completion_pane = false;
                         if let Some(s) = self.completion_list.selected() {
-                            let s = format!("{}{}", self.command.as_str(), s);
-                            self.command.update(&s, s.len());
+                            let (before, after) = self.command.as_str().split_at(self.command.pos());
+                            let fs = format!("{}{}{}", before, s, after);
+                            self.command.update(&fs, self.command.pos() + s.len());
                         }
                         self.completion_list.unselect();
                     } else {
@@ -2837,8 +2841,9 @@ impl TaskwarriorTuiApp {
                     if self.show_completion_pane {
                         self.show_completion_pane = false;
                         if let Some(s) = self.completion_list.selected() {
-                            let s = format!("{}{}", self.filter.as_str(), s);
-                            self.filter.update(&s, s.len());
+                            let (before, after) = self.filter.as_str().split_at(self.filter.pos());
+                            let fs = format!("{}{}{}", before, s, after);
+                            self.filter.update(&fs, self.filter.pos() + s.len());
                         }
                         self.completion_list.unselect();
                         self.dirty = true;
