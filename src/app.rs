@@ -1218,7 +1218,7 @@ impl TaskwarriorTuiApp {
             if !self.task_details.contains_key(&task_uuid) || task_uuid == current_task_uuid {
                 let output_fut = async_std::process::Command::new("task")
                     .arg("rc.color=off")
-                    .arg(format!("rc.defaultwidth={}", self.terminal_width - 2))
+                    .arg(format!("rc.defaultwidth={}", self.terminal_width.saturating_sub(2)))
                     .arg(format!("{}", task_uuid))
                     .output();
                 output_futs.push(output_fut);
