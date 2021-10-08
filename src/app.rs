@@ -1484,7 +1484,6 @@ impl TaskwarriorTuiApp {
 
         task.arg("rc.json.array=on");
         task.arg("rc.confirmation=off");
-        task.arg("export");
 
         let filter = if !self.current_context_filter.is_empty() {
             let t = format!("{} '\\({}\\)'", self.filter.as_str(), self.current_context_filter);
@@ -1503,6 +1502,8 @@ impl TaskwarriorTuiApp {
                 task.arg("");
             }
         }
+
+        task.arg("export");
 
         let output = task.output()?;
         let data = String::from_utf8_lossy(&output.stdout);
