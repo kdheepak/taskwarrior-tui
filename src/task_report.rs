@@ -79,6 +79,7 @@ impl TaskReportTable {
             "LATEST",
             "RECURRING",
             "INSTANCE",
+            "TEMPLATE",
         ];
         let mut task_report_table = Self {
             labels: vec![],

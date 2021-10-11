@@ -1324,7 +1324,7 @@ impl TaskwarriorTui {
             if !self.task_details.contains_key(&task_uuid) || task_uuid == current_task_uuid {
                 let output_fut = async_std::process::Command::new("task")
                     .arg("rc.color=off")
-                    .arg(format!("rc.defaultwidth={}", self.terminal_width - 2))
+                    .arg(format!("rc.defaultwidth={}", self.terminal_width.saturating_sub(2)))
                     .arg(format!("{}", task_uuid))
                     .output();
                 output_futs.push(output_fut);
@@ -2906,8 +2906,9 @@ impl TaskwarriorTui {
                         if self.show_completion_pane {
                             self.show_completion_pane = false;
                             if let Some(s) = self.completion_list.selected() {
-                                let s = format!("{}{}", self.command.as_str(), s);
-                                self.command.update(&s, s.len());
+                                let (before, after) = self.command.as_str().split_at(self.command.pos());
+                                let fs = format!("{}{}{}", before, s, after);
+                                self.command.update(&fs, self.command.pos() + s.len());
                             }
                             self.completion_list.unselect();
                         } else {
@@ -2953,6 +2954,7 @@ impl TaskwarriorTui {
                             // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
                         }
                     }
+
                     Key::Down => {
                         if self.show_completion_pane && !self.completion_list.is_empty() {
                             self.completion_list.next();
