@@ -129,12 +129,19 @@ impl ProjectsState {
                 .filter(|x| !x.is_empty())
                 .map(ToString::to_string)
                 .collect();
-
+            let name = (&row[0]).parse()?;
+            let remaining = (&row[1]).parse()?;
+            let mut avg_age = "0s".to_string();
+            let mut complete = (&row[2]).parse()?;
+            if row.len() > 3 {
+                avg_age = (&row[2]).parse()?;
+                complete = (&row[3]).parse()?;
+            }
             self.rows.push(ProjectDetails {
-                name: (&row[0]).parse()?,
-                remaining: (&row[1]).parse()?,
-                avg_age: (&row[2]).parse()?,
-                complete: (&row[3]).parse()?,
+                name,
+                remaining,
+                avg_age,
+                complete,
             });
         }
         self.list = self.rows.iter().map(|x| x.name.clone()).collect_vec();

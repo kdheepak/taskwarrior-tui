@@ -1238,10 +1238,10 @@ impl TaskwarriorTui {
             self.task_details.clear();
             self.dirty = false;
             self.save_history()?;
-            self.projects.update_data()?;
         }
         self.cursor_fix();
         self.update_task_table_state();
+        self.projects.update_data()?;
         if self.task_report_show_info {
             task::block_on(self.update_task_details())?;
         }
