@@ -1,5 +1,8 @@
 #![allow(dead_code)]
-use clap_generate::{generate_to, generators::*};
+use clap_generate::{
+    generate_to,
+    generators::{Bash, Fish, PowerShell, Zsh},
+};
 
 include!("src/cli.rs");
 

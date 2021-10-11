@@ -157,11 +157,7 @@ impl CompletionList {
     }
 
     pub fn selected(&self) -> Option<String> {
-        if let Some(i) = self.state.selected() {
-            self.get(i)
-        } else {
-            None
-        }
+        self.state.selected().and_then(|i| self.get(i))
     }
 
     pub fn is_empty(&self) -> bool {
