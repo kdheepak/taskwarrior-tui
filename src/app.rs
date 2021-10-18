@@ -70,7 +70,14 @@ use regex::Regex;
 
 use lazy_static::lazy_static;
 
+use crate::app::Action::Report;
+use crate::pane::project::ProjectsState;
+use crate::pane::Pane;
+use crossterm::style::style;
+use futures::SinkExt;
+use std::borrow::Borrow;
 use std::time::Instant;
+use task_hookrs::project::Project;
 
 const MAX_LINE: usize = 4096;
 
@@ -109,11 +116,11 @@ pub fn get_date_state(reference: &Date, due: usize) -> DateState {
     }
 
     if reference.date() == now.date() {
-        if reference.time() < now.time() {
-            return DateState::EarlierToday;
+        return if reference.time() < now.time() {
+            DateState::EarlierToday
         } else {
-            return DateState::LaterToday;
-        }
+            DateState::LaterToday
+        };
     }
 
     if reference <= now + chrono::Duration::days(7) {
@@ -150,24 +157,29 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
 }
 
 #[derive(PartialEq)]
-pub enum AppMode {
-    TaskReport,
-    TaskFilter,
-    TaskAdd,
-    TaskAnnotate,
-    TaskSubprocess,
-    TaskLog,
-    TaskModify,
-    TaskHelpPopup,
-    TaskError,
-    TaskContextMenu,
-    TaskJump,
-    TaskDeletePrompt,
-    TaskDonePrompt,
+pub enum Mode {
+    Tasks(Action),
+    Projects,
     Calendar,
 }
+#[derive(PartialEq, Debug)]
+pub enum Action {
+    Report,
+    Filter,
+    Add,
+    Annotate,
+    Subprocess,
+    Log,
+    Modify,
+    HelpPopup,
+    Error,
+    ContextMenu,
+    Jump,
+    DeletePrompt,
+    DonePrompt,
+}
 
-pub struct TaskwarriorTuiApp {
+pub struct TaskwarriorTui {
     pub should_quit: bool,
     pub dirty: bool,
     pub task_table_state: TableState,
@@ -187,7 +199,7 @@ pub struct TaskwarriorTuiApp {
     pub current_selection_id: Option<u64>,
     pub task_report_table: TaskReportTable,
     pub calendar_year: i32,
-    pub mode: AppMode,
+    pub mode: Mode,
     pub config: Config,
     pub task_report_show_info: bool,
     pub task_report_height: u16,
@@ -204,9 +216,10 @@ pub struct TaskwarriorTuiApp {
     pub completion_list: CompletionList,
     pub show_completion_pane: bool,
     pub report: String,
+    pub projects: ProjectsState,
 }
 
-impl TaskwarriorTuiApp {
+impl TaskwarriorTui {
     pub fn new(report: &str) -> Result<Self> {
         let output = std::process::Command::new("task")
             .arg("rc.color=off")
@@ -251,7 +264,7 @@ impl TaskwarriorTuiApp {
             filter: LineBuffer::with_capacity(MAX_LINE),
             modify: LineBuffer::with_capacity(MAX_LINE),
             error: "".to_string(),
-            mode: AppMode::TaskReport,
+            mode: Mode::Tasks(Action::Report),
             task_report_height: 0,
             task_details_scroll: 0,
             task_report_show_info: c.uda_task_report_show_info,
@@ -270,6 +283,7 @@ impl TaskwarriorTuiApp {
             completion_list: CompletionList::with_items(vec![]),
             show_completion_pane: false,
             report: report.to_string(),
+            projects: ProjectsState::new(),
         };
 
         for c in app.config.filter.chars() {
@@ -280,7 +294,7 @@ impl TaskwarriorTuiApp {
         app.filter_history_context.load()?;
         app.filter_history_context.add(app.filter.as_str());
         app.command_history_context.load()?;
-        app.task_background().unwrap_or_default();
+        app.task_background();
         Ok(app)
     }
 
@@ -311,20 +325,9 @@ impl TaskwarriorTuiApp {
         self.terminal_width = rect.width;
         self.terminal_height = rect.height;
         match self.mode {
-            AppMode::TaskReport
-            | AppMode::TaskJump
-            | AppMode::TaskFilter
-            | AppMode::TaskAdd
-            | AppMode::TaskAnnotate
-            | AppMode::TaskContextMenu
-            | AppMode::TaskDonePrompt
-            | AppMode::TaskDeletePrompt
-            | AppMode::TaskError
-            | AppMode::TaskHelpPopup
-            | AppMode::TaskSubprocess
-            | AppMode::TaskLog
-            | AppMode::TaskModify => self.draw_task(f),
-            AppMode::Calendar => self.draw_calendar(f),
+            Mode::Tasks(_) => self.draw_task(f),
+            Mode::Calendar => self.draw_calendar(f),
+            Mode::Projects => self.draw_projects(f),
         }
     }
 
@@ -337,6 +340,118 @@ impl TaskwarriorTuiApp {
         f.render_widget(p, area);
     }
 
+    pub fn draw_projects(&mut self, f: &mut Frame<impl Backend>) {
+        let rects = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(0)].as_ref())
+            .split(f.size());
+
+        let today = Local::today();
+        let title = vec![
+            Span::styled("Task", Style::default().add_modifier(Modifier::DIM)),
+            Span::from("|"),
+            Span::styled("Projects", Style::default().add_modifier(Modifier::BOLD)),
+            Span::from("|"),
+            Span::styled("Calendar", Style::default().add_modifier(Modifier::DIM)),
+        ];
+
+        let split_task_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Percentage(100)].as_ref())
+            .split(rects[0]);
+
+        self.projects.report_height = split_task_layout[0].height;
+        self.draw_projects_report_window(f, split_task_layout[0], title);
+        let selected = self.projects.current_selection;
+
+        match self.projects.table_state.mode() {
+            TableMode::SingleSelection => vec![self.projects.list[selected].clone()],
+            TableMode::MultipleSelection => {
+                let mut chosed = vec![];
+                for project in &self.projects.marked {
+                    chosed.push(project.clone());
+                }
+                chosed
+            }
+        };
+    }
+
+    fn draw_projects_report_window(&mut self, f: &mut Frame<impl Backend>, rect: Rect, title: Vec<Span>) {
+        let table = self.projects.simplified_view();
+        let maximum_column_width = rect.width;
+        let widths = self.calculate_widths(&table.0, &table.1, maximum_column_width);
+        //TODO add spacing to content so it justed to right side
+        let selected = self.projects.current_selection;
+        let header = table.1.iter();
+        let mut rows = vec![];
+        let mut highlight_style = Style::default();
+        for (i, project) in table.0.iter().enumerate() {
+            let style = self.style_for_project(project);
+            if i == selected {
+                highlight_style = style;
+                if self.config.uda_selection_bold {
+                    highlight_style = highlight_style.add_modifier(Modifier::BOLD);
+                }
+                if self.config.uda_selection_italic {
+                    highlight_style = highlight_style.add_modifier(Modifier::ITALIC);
+                }
+                if self.config.uda_selection_dim {
+                    highlight_style = highlight_style.add_modifier(Modifier::DIM);
+                }
+                if self.config.uda_selection_blink {
+                    highlight_style = highlight_style.add_modifier(Modifier::SLOW_BLINK);
+                }
+            }
+            rows.push(Row::StyledData(project.iter(), style));
+        }
+        let constraints: Vec<Constraint> = widths
+            .iter()
+            .map(|i| Constraint::Length((*i).try_into().unwrap_or(maximum_column_width as u16)))
+            .collect();
+
+        let t = Table::new(header, rows.into_iter())
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .title(Spans::from(title)),
+            )
+            .header_style(
+                self.config
+                    .color
+                    .get("color.label")
+                    .copied()
+                    .unwrap_or_default()
+                    .add_modifier(Modifier::UNDERLINED),
+            )
+            .highlight_style(highlight_style)
+            .highlight_symbol(&self.config.uda_selection_indicator)
+            .mark_symbol(&self.config.uda_mark_indicator)
+            .unmark_symbol(&self.config.uda_unmark_indicator)
+            .widths(&constraints);
+
+        f.render_stateful_widget(t, rect, &mut self.projects.table_state);
+    }
+    fn style_for_project(&self, project: &[String]) -> Style {
+        let virtual_tag_names_in_precedence = &self.config.rule_precedence_color;
+        let mut style = Style::default();
+        for tag_name in virtual_tag_names_in_precedence.iter().rev() {
+            match tag_name.as_str() {
+                "project." => {
+                    let s = self
+                        .config
+                        .color
+                        .get(&format!("color.project.{}", project[0]))
+                        .copied()
+                        .unwrap_or_default();
+                    style = style.patch(s);
+                }
+                &_ => {}
+            }
+        }
+        style
+    }
+
     pub fn draw_calendar(&mut self, f: &mut Frame<impl Backend>) {
         let dates_with_styles = self.get_dates_with_styles();
         let rects = Layout::default()
@@ -346,6 +461,8 @@ impl TaskwarriorTuiApp {
         let today = Local::today();
         let mut title = vec![
             Span::styled("Task", Style::default().add_modifier(Modifier::DIM)),
+            Span::from("|"),
+            Span::styled("Projects", Style::default().add_modifier(Modifier::DIM)),
             Span::from("|"),
             Span::styled("Calendar", Style::default().add_modifier(Modifier::BOLD)),
         ];
@@ -373,45 +490,13 @@ impl TaskwarriorTuiApp {
         f.render_widget(c, rects[0]);
     }
 
-    pub fn get_dates_with_styles(&self) -> Vec<(NaiveDate, Style)> {
-        let mut tasks_with_styles = vec![];
-
-        if !self.tasks.is_empty() {
-            let tasks = &self.tasks;
-            let tasks_with_due_dates = tasks.iter().filter(|t| t.due().is_some());
-
-            tasks_with_styles
-                .extend(tasks_with_due_dates.map(|t| (t.due().unwrap().clone().date(), self.style_for_task(t))))
-        }
-        tasks_with_styles
-    }
-
-    pub fn get_position(&self, lb: &LineBuffer) -> usize {
-        let mut position = 0;
-        for (i, (_i, g)) in lb.as_str().grapheme_indices(true).enumerate() {
-            if _i == lb.pos() {
-                break;
-            }
-            position += g.width();
-        }
-        position
-    }
-
     pub fn draw_task(&mut self, f: &mut Frame<impl Backend>) {
         let rects = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Min(0), Constraint::Length(3)].as_ref())
             .split(f.size());
 
-        if !self.task_report_show_info {
-            let full_table_layout = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([Constraint::Percentage(100)].as_ref())
-                .split(rects[0]);
-
-            self.task_report_height = full_table_layout[0].height;
-            self.draw_task_report(f, full_table_layout[0]);
-        } else {
+        if self.task_report_show_info {
             let split_task_layout = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
@@ -420,6 +505,14 @@ impl TaskwarriorTuiApp {
             self.task_report_height = split_task_layout[0].height;
             self.draw_task_report(f, split_task_layout[0]);
             self.draw_task_details(f, split_task_layout[1]);
+        } else {
+            let full_table_layout = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Percentage(100)].as_ref())
+                .split(rects[0]);
+
+            self.task_report_height = full_table_layout[0].height;
+            self.draw_task_report(f, full_table_layout[0]);
         }
         let selected = self.current_selection;
         let task_ids = if self.tasks.is_empty() {
@@ -429,7 +522,7 @@ impl TaskwarriorTuiApp {
                 TableMode::SingleSelection => vec![self.tasks[selected].id().unwrap_or_default().to_string()],
                 TableMode::MultipleSelection => {
                     let mut tids = vec![];
-                    for uuid in self.marked.iter() {
+                    for uuid in &self.marked {
                         if let Some(t) = self.task_by_uuid(*uuid) {
                             tids.push(t.id().unwrap_or_default().to_string());
                         }
@@ -438,8 +531,12 @@ impl TaskwarriorTuiApp {
                 }
             }
         };
+        self.handle_task_mode_action(f, &rects, &task_ids);
+    }
+
+    fn handle_task_mode_action(&mut self, f: &mut Frame<impl Backend>, rects: &[Rect], task_ids: &[String]) {
         match self.mode {
-            AppMode::TaskReport => self.draw_command(
+            Mode::Tasks(Action::Report) => Self::draw_command(
                 f,
                 rects[1],
                 self.filter.as_str(),
@@ -448,12 +545,12 @@ impl TaskwarriorTuiApp {
                     "Filter Tasks",
                     self.history_status.clone().unwrap_or_else(|| "".to_string())
                 ),
-                self.get_position(&self.filter),
+                Self::get_position(&self.filter),
                 false,
             ),
-            AppMode::TaskJump => {
-                let position = self.get_position(&self.command);
-                self.draw_command(
+            Mode::Tasks(Action::Jump) => {
+                let position = Self::get_position(&self.command);
+                Self::draw_command(
                     f,
                     rects[1],
                     self.command.as_str(),
@@ -462,12 +559,12 @@ impl TaskwarriorTuiApp {
                     true,
                 );
             }
-            AppMode::TaskFilter => {
-                let position = self.get_position(&self.filter);
+            Mode::Tasks(Action::Filter) => {
+                let position = Self::get_position(&self.filter);
                 if self.show_completion_pane {
                     self.draw_completion_pop_up(f, rects[1], position);
                 }
-                self.draw_command(
+                Self::draw_command(
                     f,
                     rects[1],
                     self.filter.as_str(),
@@ -483,12 +580,12 @@ impl TaskwarriorTuiApp {
                     true,
                 );
             }
-            AppMode::TaskLog => {
-                let position = self.get_position(&self.command);
+            Mode::Tasks(Action::Log) => {
+                let position = Self::get_position(&self.command);
                 if self.show_completion_pane {
                     self.draw_completion_pop_up(f, rects[1], position);
                 }
-                self.draw_command(
+                Self::draw_command(
                     f,
                     rects[1],
                     self.command.as_str(),
@@ -504,9 +601,9 @@ impl TaskwarriorTuiApp {
                     true,
                 );
             }
-            AppMode::TaskSubprocess => {
-                let position = self.get_position(&self.command);
-                self.draw_command(
+            Mode::Tasks(Action::Subprocess) => {
+                let position = Self::get_position(&self.command);
+                Self::draw_command(
                     f,
                     rects[1],
                     self.command.as_str(),
@@ -515,8 +612,8 @@ impl TaskwarriorTuiApp {
                     true,
                 );
             }
-            AppMode::TaskModify => {
-                let position = self.get_position(&self.modify);
+            Mode::Tasks(Action::Modify) => {
+                let position = Self::get_position(&self.modify);
                 if self.show_completion_pane {
                     self.draw_completion_pop_up(f, rects[1], position);
                 }
@@ -525,7 +622,7 @@ impl TaskwarriorTuiApp {
                 } else {
                     format!("Modify Task {}", task_ids.join(","))
                 };
-                self.draw_command(
+                Self::draw_command(
                     f,
                     rects[1],
                     self.modify.as_str(),
@@ -541,8 +638,8 @@ impl TaskwarriorTuiApp {
                     true,
                 );
             }
-            AppMode::TaskAnnotate => {
-                let position = self.get_position(&self.command);
+            Mode::Tasks(Action::Annotate) => {
+                let position = Self::get_position(&self.command);
                 if self.show_completion_pane {
                     self.draw_completion_pop_up(f, rects[1], position);
                 }
@@ -551,7 +648,7 @@ impl TaskwarriorTuiApp {
                 } else {
                     format!("Annotate Task {}", task_ids.join(","))
                 };
-                self.draw_command(
+                Self::draw_command(
                     f,
                     rects[1],
                     self.command.as_str(),
@@ -567,12 +664,12 @@ impl TaskwarriorTuiApp {
                     true,
                 );
             }
-            AppMode::TaskAdd => {
-                let position = self.get_position(&self.command);
+            Mode::Tasks(Action::Add) => {
+                let position = Self::get_position(&self.command);
                 if self.show_completion_pane {
                     self.draw_completion_pop_up(f, rects[1], position);
                 }
-                self.draw_command(
+                Self::draw_command(
                     f,
                     rects[1],
                     self.command.as_str(),
@@ -588,8 +685,8 @@ impl TaskwarriorTuiApp {
                     true,
                 );
             }
-            AppMode::TaskError => {
-                self.draw_command(
+            Mode::Tasks(Action::Error) => {
+                Self::draw_command(
                     f,
                     rects[1],
                     self.error.as_str(),
@@ -598,29 +695,29 @@ impl TaskwarriorTuiApp {
                     false,
                 );
             }
-            AppMode::TaskHelpPopup => {
-                self.draw_command(
+            Mode::Tasks(Action::HelpPopup) => {
+                Self::draw_command(
                     f,
                     rects[1],
                     self.filter.as_str(),
                     "Filter Tasks",
-                    self.get_position(&self.filter),
+                    Self::get_position(&self.filter),
                     false,
                 );
                 self.draw_help_popup(f, 80, 90);
             }
-            AppMode::TaskContextMenu => {
-                self.draw_command(
+            Mode::Tasks(Action::ContextMenu) => {
+                Self::draw_command(
                     f,
                     rects[1],
                     self.filter.as_str(),
                     "Filter Tasks",
-                    self.get_position(&self.filter),
+                    Self::get_position(&self.filter),
                     false,
                 );
                 self.draw_context_menu(f, 80, 50);
             }
-            AppMode::TaskDonePrompt => {
+            Mode::Tasks(Action::DonePrompt) => {
                 let label = if task_ids.len() > 1 {
                     format!("Done Tasks {}?", task_ids.join(","))
                 } else {
@@ -634,7 +731,7 @@ impl TaskwarriorTuiApp {
                     Key::Char(c) => c.to_string(),
                     _ => "Esc".to_string(),
                 };
-                self.draw_command(
+                Self::draw_command(
                     f,
                     rects[1],
                     &format!("Press <{}> to confirm or <{}> to abort.", x, q),
@@ -643,7 +740,8 @@ impl TaskwarriorTuiApp {
                     false,
                 );
             }
-            AppMode::TaskDeletePrompt => {
+
+            Mode::Tasks(Action::DeletePrompt) => {
                 let label = if task_ids.len() > 1 {
                     format!("Delete Tasks {}?", task_ids.join(","))
                 } else {
@@ -657,7 +755,7 @@ impl TaskwarriorTuiApp {
                     Key::Char(c) => c.to_string(),
                     _ => "Esc".to_string(),
                 };
-                self.draw_command(
+                Self::draw_command(
                     f,
                     rects[1],
                     &format!("Press <{}> to confirm or <{}> to abort.", x, q),
@@ -670,6 +768,30 @@ impl TaskwarriorTuiApp {
                 panic!("Reached unreachable code. Something went wrong");
             }
         }
+    }
+
+    pub fn get_dates_with_styles(&self) -> Vec<(NaiveDate, Style)> {
+        let mut tasks_with_styles = vec![];
+
+        if !self.tasks.is_empty() {
+            let tasks = &self.tasks;
+            let tasks_with_due_dates = tasks.iter().filter(|t| t.due().is_some());
+
+            tasks_with_styles
+                .extend(tasks_with_due_dates.map(|t| (t.due().unwrap().clone().date(), self.style_for_task(t))));
+        }
+        tasks_with_styles
+    }
+
+    pub fn get_position(lb: &LineBuffer) -> usize {
+        let mut position = 0;
+        for (i, (j, g)) in lb.as_str().grapheme_indices(true).enumerate() {
+            if j == lb.pos() {
+                break;
+            }
+            position += g.width();
+        }
+        position
     }
 
     fn draw_help_popup(&mut self, f: &mut Frame<impl Backend>, percent_x: u16, percent_y: u16) {
@@ -738,7 +860,7 @@ impl TaskwarriorTuiApp {
                 self.config
                     .color
                     .get("color.label")
-                    .cloned()
+                    .copied()
                     .unwrap_or_default()
                     .add_modifier(Modifier::UNDERLINED),
             )
@@ -796,15 +918,8 @@ impl TaskwarriorTuiApp {
         f.render_stateful_widget(items, rect, &mut self.completion_list.state);
     }
 
-    fn draw_command<'a, T>(
-        &self,
-        f: &mut Frame<impl Backend>,
-        rect: Rect,
-        text: &str,
-        title: T,
-        position: usize,
-        cursor: bool,
-    ) where
+    fn draw_command<'a, T>(f: &mut Frame<impl Backend>, rect: Rect, text: &str, title: T, position: usize, cursor: bool)
+    where
         T: Into<Spans<'a>>,
     {
         f.render_widget(Clear, rect);
@@ -914,7 +1029,7 @@ impl TaskwarriorTuiApp {
                         .config
                         .color
                         .get(&format!("color.uda.priority.{}", p))
-                        .cloned()
+                        .copied()
                         .unwrap_or_default();
                     style = style.patch(s);
                 }
@@ -922,7 +1037,7 @@ impl TaskwarriorTuiApp {
                 if let Some(tags) = task.tags() {
                     for t in tags {
                         let color_tag_name = format!("color.tag.{}", t);
-                        let s = self.config.color.get(&color_tag_name).cloned().unwrap_or_default();
+                        let s = self.config.color.get(&color_tag_name).copied().unwrap_or_default();
                         style = style.patch(s);
                     }
                 }
@@ -932,7 +1047,7 @@ impl TaskwarriorTuiApp {
                         .config
                         .color
                         .get(&format!("color.project.{}", p))
-                        .cloned()
+                        .copied()
                         .unwrap_or_default();
                     style = style.patch(s);
                 }
@@ -942,7 +1057,7 @@ impl TaskwarriorTuiApp {
                 .contains(&tag_name.to_string().replace(".", "").to_uppercase())
             {
                 let color_tag_name = format!("color.{}", tag_name);
-                let s = self.config.color.get(&color_tag_name).cloned().unwrap_or_default();
+                let s = self.config.color.get(&color_tag_name).copied().unwrap_or_default();
                 style = style.patch(s);
             }
         }
@@ -952,7 +1067,7 @@ impl TaskwarriorTuiApp {
 
     pub fn calculate_widths(&self, tasks: &[Vec<String>], headers: &[String], maximum_column_width: u16) -> Vec<usize> {
         // naive implementation of calculate widths
-        let mut widths = headers.iter().map(|s| s.len()).collect::<Vec<usize>>();
+        let mut widths = headers.iter().map(String::len).collect::<Vec<usize>>();
 
         for row in tasks.iter() {
             for (i, cell) in row.iter().enumerate() {
@@ -994,19 +1109,21 @@ impl TaskwarriorTuiApp {
 
     fn draw_task_report(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
         let (tasks, headers) = self.get_task_report();
+        let mut style = Style::default();
+        match self.mode {
+            Mode::Tasks(Action::Report) => style = style.add_modifier(Modifier::BOLD),
+            _ => style = style.add_modifier(Modifier::DIM),
+        }
+
+        let mut title = vec![
+            Span::styled("Task", style),
+            Span::from("|"),
+            Span::styled("Projects", Style::default().add_modifier(Modifier::DIM)),
+            Span::from("|"),
+            Span::styled("Calendar", Style::default().add_modifier(Modifier::DIM)),
+        ];
+
         if tasks.is_empty() {
-            let mut style = Style::default();
-            match self.mode {
-                AppMode::TaskReport => style = style.add_modifier(Modifier::BOLD),
-                _ => style = style.add_modifier(Modifier::DIM),
-            }
-
-            let mut title = vec![
-                Span::styled("Task", style),
-                Span::from("|"),
-                Span::styled("Calendar", Style::default().add_modifier(Modifier::DIM)),
-            ];
-
             if !self.current_context.is_empty() {
                 let context_style = Style::default();
                 context_style.add_modifier(Modifier::ITALIC);
@@ -1063,18 +1180,6 @@ impl TaskwarriorTuiApp {
             .map(|i| Constraint::Length((*i).try_into().unwrap_or(maximum_column_width as u16)))
             .collect();
 
-        let mut style = Style::default();
-        match self.mode {
-            AppMode::TaskReport => style = style.add_modifier(Modifier::BOLD),
-            _ => style = style.add_modifier(Modifier::DIM),
-        }
-
-        let mut title = vec![
-            Span::styled("Task", style),
-            Span::from("|"),
-            Span::styled("Calendar", Style::default().add_modifier(Modifier::DIM)),
-        ];
-
         if !self.current_context.is_empty() {
             let context_style = Style::default();
             context_style.add_modifier(Modifier::ITALIC);
@@ -1094,7 +1199,7 @@ impl TaskwarriorTuiApp {
                 self.config
                     .color
                     .get("color.label")
-                    .cloned()
+                    .copied()
                     .unwrap_or_default()
                     .add_modifier(Modifier::UNDERLINED),
             )
@@ -1127,7 +1232,7 @@ impl TaskwarriorTuiApp {
         if force || self.dirty || self.tasks_changed_since(self.last_export).unwrap_or(true) {
             self.last_export = Some(std::time::SystemTime::now());
             self.task_report_table.export_headers(None, &self.report)?;
-            let _ = self.export_tasks();
+            self.export_tasks()?;
             self.export_contexts()?;
             self.update_tags();
             self.task_details.clear();
@@ -1136,6 +1241,7 @@ impl TaskwarriorTuiApp {
         }
         self.cursor_fix();
         self.update_task_table_state();
+        self.projects.update_data()?;
         if self.task_report_show_info {
             task::block_on(self.update_task_details())?;
         }
@@ -1183,7 +1289,7 @@ impl TaskwarriorTuiApp {
         // remove task_details of tasks not in task report
         let mut to_delete = vec![];
         for k in self.task_details.keys() {
-            if !self.tasks.iter().map(|t| t.uuid()).any(|x| x == k) {
+            if !self.tasks.iter().map(Task::uuid).any(|x| x == k) {
                 to_delete.push(*k);
             }
         }
@@ -1201,13 +1307,13 @@ impl TaskwarriorTuiApp {
 
         for s in 1..=self.config.uda_task_detail_prefetch {
             l.insert(0, std::cmp::min(selected.saturating_sub(s), self.tasks.len() - 1));
-            l.push(std::cmp::min(selected + s, self.tasks.len() - 1))
+            l.push(std::cmp::min(selected + s, self.tasks.len() - 1));
         }
 
         l.dedup();
 
         let mut output_futs = FuturesOrdered::new();
-        for s in l.iter() {
+        for s in &l {
             if self.tasks.is_empty() {
                 return Ok(());
             }
@@ -1225,7 +1331,7 @@ impl TaskwarriorTuiApp {
             }
         }
 
-        for s in l.iter() {
+        for s in &l {
             if s >= &self.tasks.len() {
                 break;
             }
@@ -1257,7 +1363,7 @@ impl TaskwarriorTuiApp {
         self.task_table_state.clear();
 
         for uuid in &self.marked {
-            self.task_table_state.mark(self.task_index_by_uuid(*uuid))
+            self.task_table_state.mark(self.task_index_by_uuid(*uuid));
         }
     }
 
@@ -1289,11 +1395,11 @@ impl TaskwarriorTuiApp {
         self.context_table_state.select(Some(i));
     }
 
-    pub fn context_select(&mut self) -> Result<(), String> {
+    pub fn context_select(&mut self) -> Result<()> {
         let i = self.context_table_state.current_selection().unwrap_or_default();
         let mut command = Command::new("task");
         command.arg("context").arg(&self.contexts[i].name);
-        let output = command.output();
+        command.output()?;
         Ok(())
     }
 
@@ -1406,8 +1512,8 @@ impl TaskwarriorTuiApp {
         }
         let i = self.command.as_str().parse::<usize>()?;
         if let Some(task) = self.task_by_id(i as u64) {
-            let i = self.task_index_by_uuid(*task.uuid()).unwrap_or_default();
-            self.current_selection = i;
+            let j = self.task_index_by_uuid(*task.uuid()).unwrap_or_default();
+            self.current_selection = j;
             self.current_selection_id = None;
             self.current_selection_uuid = None;
             Ok(())
@@ -1434,17 +1540,16 @@ impl TaskwarriorTuiApp {
             let definition = definition.strip_suffix(active).unwrap_or_default();
             if i == 0 || i == 1 {
                 continue;
-            } else {
-                let context = Context::new(name.to_string(), definition.trim().to_string(), active.to_string());
-                self.contexts.push(context);
             }
+            let context = Context::new(name.to_string(), definition.trim().to_string(), active.to_string());
+            self.contexts.push(context);
         }
         if self.contexts.iter().any(|r| r.active != "no") {
             self.contexts
-                .insert(0, Context::new("none".to_string(), "".to_string(), "no".to_string()))
+                .insert(0, Context::new("none".to_string(), "".to_string(), "no".to_string()));
         } else {
             self.contexts
-                .insert(0, Context::new("none".to_string(), "".to_string(), "yes".to_string()))
+                .insert(0, Context::new("none".to_string(), "".to_string(), "yes".to_string()));
         }
 
         Ok(())
@@ -1485,11 +1590,11 @@ impl TaskwarriorTuiApp {
         task.arg("rc.json.array=on");
         task.arg("rc.confirmation=off");
 
-        let filter = if !self.current_context_filter.is_empty() {
+        let filter = if self.current_context_filter.is_empty() {
+            self.filter.as_str().into()
+        } else {
             let t = format!("{} '\\({}\\)'", self.filter.as_str(), self.current_context_filter);
             t
-        } else {
-            self.filter.as_str().into()
         };
 
         match shlex::split(&filter) {
@@ -1502,7 +1607,6 @@ impl TaskwarriorTuiApp {
                 task.arg("");
             }
         }
-
         task.arg("export");
 
         let output = task.output()?;
@@ -1521,7 +1625,7 @@ impl TaskwarriorTuiApp {
     pub fn selected_task_uuids(&self) -> Vec<Uuid> {
         let selected = match self.task_table_state.mode() {
             TableMode::SingleSelection => vec![self.current_selection],
-            TableMode::MultipleSelection => self.task_table_state.marked().cloned().collect::<Vec<usize>>(),
+            TableMode::MultipleSelection => self.task_table_state.marked().copied().collect::<Vec<usize>>(),
         };
 
         let mut task_uuids = vec![];
@@ -1592,16 +1696,16 @@ impl TaskwarriorTuiApp {
         }
     }
 
-    pub fn task_background(&mut self) -> Result<(), String> {
+    pub fn task_background(&mut self) {
         let shell = self.config.uda_background_process.clone();
         if shell.is_empty() {
-            return Ok(());
+            return;
         }
         let shell = shellexpand::tilde(&shell).into_owned();
         let period = self.config.uda_background_process_period;
         std::thread::spawn(move || loop {
             std::thread::sleep(Duration::from_secs(period as u64));
-            let r = match shlex::split(&shell) {
+            match shlex::split(&shell) {
                 Some(cmd) => {
                     let mut command = Command::new(&cmd[0]);
                     for s in cmd.iter().skip(1) {
@@ -1618,7 +1722,6 @@ impl TaskwarriorTuiApp {
                 None => break,
             };
         });
-        Ok(())
     }
 
     pub fn task_shortcut(&mut self, s: usize) -> Result<(), String> {
@@ -1639,7 +1742,7 @@ impl TaskwarriorTuiApp {
             shell,
             task_uuids
                 .iter()
-                .map(|u| u.to_string())
+                .map(ToString::to_string)
                 .collect::<Vec<String>>()
                 .join(" ")
         );
@@ -1772,7 +1875,7 @@ impl TaskwarriorTuiApp {
                         "Cannot run `task {} annotate {}`. Check documentation for more information",
                         task_uuids
                             .iter()
-                            .map(|u| u.to_string())
+                            .map(ToString::to_string)
                             .collect::<Vec<String>>()
                             .join(" "),
                         shell
@@ -1804,9 +1907,7 @@ impl TaskwarriorTuiApp {
                 let output = command.output();
                 match output {
                     Ok(output) => {
-                        if output.status.code() != Some(0) {
-                            Err(format!("Error: {}", String::from_utf8_lossy(&output.stderr)))
-                        } else {
+                        if output.status.code() == Some(0) {
                             let data = String::from_utf8_lossy(&output.stdout);
                             let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
                             if self.config.uda_task_report_jump_to_task_on_add {
@@ -1816,6 +1917,8 @@ impl TaskwarriorTuiApp {
                                 }
                             }
                             Ok(())
+                        } else {
+                            Err(format!("Error: {}", String::from_utf8_lossy(&output.stderr)))
                         }
                     }
                     Err(e) => Err(format!("Cannot run `task add {}`. {}", shell, e.to_string(),)),
@@ -1861,12 +1964,12 @@ impl TaskwarriorTuiApp {
 
         for task_uuid in &task_uuids {
             let mut command = "start";
-            for tag in TaskwarriorTuiApp::task_virtual_tags(*task_uuid)
+            for tag in TaskwarriorTui::task_virtual_tags(*task_uuid)
                 .unwrap_or_default()
                 .split(' ')
             {
                 if tag == "ACTIVE" {
-                    command = "stop"
+                    command = "stop";
                 }
             }
 
@@ -1908,7 +2011,7 @@ impl TaskwarriorTuiApp {
                 "Cannot run `task delete` for tasks `{}`. Check documentation for more information",
                 task_uuids
                     .iter()
-                    .map(|u| u.to_string())
+                    .map(ToString::to_string)
                     .collect::<Vec<String>>()
                     .join(" ")
             )),
@@ -1939,7 +2042,7 @@ impl TaskwarriorTuiApp {
                 "Cannot run `task done` for task `{}`. Check documentation for more information",
                 task_uuids
                     .iter()
-                    .map(|u| u.to_string())
+                    .map(ToString::to_string)
                     .collect::<Vec<String>>()
                     .join(" ")
             )),
@@ -1987,17 +2090,17 @@ impl TaskwarriorTuiApp {
                 let output = child.wait_with_output();
                 match output {
                     Ok(output) => {
-                        if !output.status.success() {
+                        if output.status.success() {
+                            String::from_utf8_lossy(&output.stdout);
+                            String::from_utf8_lossy(&output.stderr);
+                            Ok(())
+                        } else {
                             Err(format!(
                                 "`task edit` for task `{}` failed. {}{}",
                                 task_uuid,
                                 String::from_utf8_lossy(&output.stdout),
                                 String::from_utf8_lossy(&output.stderr),
                             ))
-                        } else {
-                            String::from_utf8_lossy(&output.stdout);
-                            String::from_utf8_lossy(&output.stderr);
-                            Ok(())
                         }
                     }
                     Err(err) => Err(format!("Cannot run `task edit` for task `{}`. {}", task_uuid, err)),
@@ -2033,14 +2136,14 @@ impl TaskwarriorTuiApp {
             for dep in deps {
                 for r_i in 0..tasks.len() {
                     if tasks[r_i].uuid() == &dep {
-                        let lstatus = tasks[l_i].status();
-                        let rstatus = tasks[r_i].status();
-                        if lstatus != &TaskStatus::Completed
-                            && lstatus != &TaskStatus::Deleted
-                            && rstatus != &TaskStatus::Completed
-                            && rstatus != &TaskStatus::Deleted
+                        let l_status = tasks[l_i].status();
+                        let r_status = tasks[r_i].status();
+                        if l_status != &TaskStatus::Completed
+                            && l_status != &TaskStatus::Deleted
+                            && r_status != &TaskStatus::Completed
+                            && r_status != &TaskStatus::Deleted
                         {
-                            remove_tag(&mut tasks[l_i], "UNBLOCKED".to_string());
+                            remove_tag(&mut tasks[l_i], "UNBLOCKED");
                             add_tag(&mut tasks[l_i], "BLOCKED".to_string());
                             add_tag(&mut tasks[r_i], "BLOCKING".to_string());
                         }
@@ -2165,7 +2268,7 @@ impl TaskwarriorTuiApp {
         }
     }
 
-    pub fn escape(&self, s: &str) -> String {
+    pub fn escape(s: &str) -> String {
         let mut es = String::with_capacity(s.len() + 2);
         es.push('"');
         for ch in s.chars() {
@@ -2183,777 +2286,17 @@ impl TaskwarriorTuiApp {
 
     pub fn handle_input(&mut self, input: Key) -> Result<()> {
         match self.mode {
-            AppMode::TaskReport => {
-                if input == Key::Esc {
-                    self.marked.clear();
-                } else if input == self.keyconfig.quit || input == Key::Ctrl('c') {
-                    self.should_quit = true;
-                } else if input == self.keyconfig.select {
-                    self.task_table_state.multiple_selection();
-                    self.toggle_mark();
-                } else if input == self.keyconfig.select_all {
-                    self.task_table_state.multiple_selection();
-                    self.toggle_mark_all();
-                } else if input == self.keyconfig.refresh {
-                    self.update(true)?;
-                } else if input == self.keyconfig.go_to_bottom || input == Key::End {
-                    self.task_report_bottom();
-                } else if input == self.keyconfig.go_to_top || input == Key::Home {
-                    self.task_report_top();
-                } else if input == Key::Down || input == self.keyconfig.down {
-                    self.task_report_next();
-                } else if input == Key::Up || input == self.keyconfig.up {
-                    self.task_report_previous();
-                } else if input == Key::PageDown || input == self.keyconfig.page_down {
-                    self.task_report_next_page();
-                } else if input == Key::PageUp || input == self.keyconfig.page_up {
-                    self.task_report_previous_page();
-                } else if input == Key::Ctrl('e') {
-                    self.task_details_scroll_down();
-                } else if input == Key::Ctrl('y') {
-                    self.task_details_scroll_up();
-                } else if input == self.keyconfig.done {
-                    if self.config.uda_task_report_prompt_on_done {
-                        self.mode = AppMode::TaskDonePrompt;
-                        if self.task_current().is_none() {
-                            self.mode = AppMode::TaskReport;
-                        }
-                    } else {
-                        match self.task_done() {
-                            Ok(_) => self.update(true)?,
-                            Err(e) => {
-                                self.mode = AppMode::TaskError;
-                                self.error = e;
-                            }
-                        }
-                    }
-                } else if input == self.keyconfig.delete {
-                    if self.config.uda_task_report_prompt_on_delete {
-                        self.mode = AppMode::TaskDeletePrompt;
-                        if self.task_current().is_none() {
-                            self.mode = AppMode::TaskReport;
-                        }
-                    } else {
-                        match self.task_delete() {
-                            Ok(_) => self.update(true)?,
-                            Err(e) => {
-                                self.mode = AppMode::TaskError;
-                                self.error = e;
-                            }
-                        }
-                    }
-                } else if input == self.keyconfig.start_stop {
-                    match self.task_start_stop() {
-                        Ok(_) => self.update(true)?,
-                        Err(e) => {
-                            self.mode = AppMode::TaskError;
-                            self.error = e;
-                        }
-                    }
-                } else if input == self.keyconfig.undo {
-                    match self.task_undo() {
-                        Ok(_) => self.update(true)?,
-                        Err(e) => {
-                            self.mode = AppMode::TaskError;
-                            self.error = e;
-                        }
-                    }
-                } else if input == self.keyconfig.edit {
-                    let r = self.task_edit();
-                    match r {
-                        Ok(_) => self.update(true)?,
-                        Err(e) => {
-                            self.mode = AppMode::TaskError;
-                            self.error = e;
-                        }
-                    }
-                } else if input == self.keyconfig.modify {
-                    self.mode = AppMode::TaskModify;
-                    self.command_history_context.last();
-                    // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
-                    self.update_completion_list();
-                    match self.task_table_state.mode() {
-                        TableMode::SingleSelection => match self.task_current() {
-                            Some(t) => {
-                                let mut s = format!("{} ", self.escape(t.description()));
-                                if self.config.uda_prefill_task_metadata {
-                                    if t.tags().is_some() {
-                                        let virtual_tags = self.task_report_table.virtual_tags.clone();
-                                        for tag in t.tags().unwrap() {
-                                            if !virtual_tags.contains(tag) {
-                                                s = format!("{}+{} ", s, tag);
-                                            }
-                                        }
-                                    }
-                                    if t.project().is_some() {
-                                        s = format!("{}project:{} ", s, t.project().unwrap());
-                                    }
-                                    if t.priority().is_some() {
-                                        s = format!("{}priority:{} ", s, t.priority().unwrap());
-                                    }
-                                    if t.due().is_some() {
-                                        let date = t.due().unwrap();
-                                        let now = Local::now();
-                                        let date = TimeZone::from_utc_datetime(now.offset(), date);
-                                        s = format!(
-                                            "{}due:'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}' ",
-                                            s,
-                                            date.year(),
-                                            date.month(),
-                                            date.day(),
-                                            date.hour(),
-                                            date.minute(),
-                                            date.second(),
-                                        )
-                                    }
-                                }
-                                self.modify.update(&s, s.as_str().len())
-                            }
-                            None => self.modify.update("", 0),
-                        },
-                        TableMode::MultipleSelection => self.modify.update("", 0),
-                    }
-                } else if input == self.keyconfig.shell {
-                    self.mode = AppMode::TaskSubprocess;
-                } else if input == self.keyconfig.log {
-                    self.mode = AppMode::TaskLog;
-                    self.command_history_context.last();
-                    // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
-                    self.update_completion_list();
-                } else if input == self.keyconfig.add {
-                    self.mode = AppMode::TaskAdd;
-                    self.command_history_context.last();
-                    // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
-                    self.update_completion_list();
-                } else if input == self.keyconfig.annotate {
-                    self.mode = AppMode::TaskAnnotate;
-                    self.command_history_context.last();
-                    // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
-                    self.update_completion_list();
-                } else if input == self.keyconfig.help {
-                    self.mode = AppMode::TaskHelpPopup;
-                } else if input == self.keyconfig.filter {
-                    self.mode = AppMode::TaskFilter;
-                    self.filter_history_context.last();
-                    // self.history_status = Some(format!(" {} / {}", self.filter_history_context.history_index() + 1, self.filter_history_context.history_len()));
-                    self.update_completion_list();
-                } else if input == Key::Char(':') {
-                    self.mode = AppMode::TaskJump;
-                } else if input == self.keyconfig.shortcut1 {
-                    match self.task_shortcut(1) {
-                        Ok(_) => self.update(true)?,
-                        Err(e) => {
-                            self.update(true)?;
-                            self.mode = AppMode::TaskError;
-                            self.error = e;
-                        }
-                    }
-                } else if input == self.keyconfig.shortcut2 {
-                    match self.task_shortcut(2) {
-                        Ok(_) => self.update(true)?,
-                        Err(e) => {
-                            self.update(true)?;
-                            self.mode = AppMode::TaskError;
-                            self.error = e;
-                        }
-                    }
-                } else if input == self.keyconfig.shortcut3 {
-                    match self.task_shortcut(3) {
-                        Ok(_) => self.update(true)?,
-                        Err(e) => {
-                            self.update(true)?;
-                            self.mode = AppMode::TaskError;
-                            self.error = e;
-                        }
-                    }
-                } else if input == self.keyconfig.shortcut4 {
-                    match self.task_shortcut(4) {
-                        Ok(_) => self.update(true)?,
-                        Err(e) => {
-                            self.update(true)?;
-                            self.mode = AppMode::TaskError;
-                            self.error = e;
-                        }
-                    }
-                } else if input == self.keyconfig.shortcut5 {
-                    match self.task_shortcut(5) {
-                        Ok(_) => self.update(true)?,
-                        Err(e) => {
-                            self.update(true)?;
-                            self.mode = AppMode::TaskError;
-                            self.error = e;
-                        }
-                    }
-                } else if input == self.keyconfig.shortcut6 {
-                    match self.task_shortcut(6) {
-                        Ok(_) => self.update(true)?,
-                        Err(e) => {
-                            self.update(true)?;
-                            self.mode = AppMode::TaskError;
-                            self.error = e;
-                        }
-                    }
-                } else if input == self.keyconfig.shortcut7 {
-                    match self.task_shortcut(7) {
-                        Ok(_) => self.update(true)?,
-                        Err(e) => {
-                            self.update(true)?;
-                            self.mode = AppMode::TaskError;
-                            self.error = e;
-                        }
-                    }
-                } else if input == self.keyconfig.shortcut8 {
-                    match self.task_shortcut(8) {
-                        Ok(_) => self.update(true)?,
-                        Err(e) => {
-                            self.update(true)?;
-                            self.mode = AppMode::TaskError;
-                            self.error = e;
-                        }
-                    }
-                } else if input == self.keyconfig.shortcut9 {
-                    match self.task_shortcut(9) {
-                        Ok(_) => self.update(true)?,
-                        Err(e) => {
-                            self.update(true)?;
-                            self.mode = AppMode::TaskError;
-                            self.error = e;
-                        }
-                    }
-                } else if input == self.keyconfig.zoom {
-                    self.task_report_show_info = !self.task_report_show_info;
-                } else if input == self.keyconfig.context_menu {
-                    self.mode = AppMode::TaskContextMenu;
-                } else if input == self.keyconfig.next_tab {
-                    self.mode = AppMode::Calendar;
-                }
+            Mode::Tasks(_) => {
+                self.handle_input_by_task_mode(input)?;
             }
-            AppMode::TaskContextMenu => {
-                if input == self.keyconfig.quit || input == Key::Esc {
-                    self.mode = AppMode::TaskReport;
-                } else if input == Key::Down || input == self.keyconfig.down {
-                    self.context_next();
-                } else if input == Key::Up || input == self.keyconfig.up {
-                    self.context_previous();
-                } else if input == Key::Char('\n') {
-                    match self.context_select() {
-                        Ok(_) => {
-                            self.get_context()?;
-                            self.update(true)?;
-                        }
-                        Err(e) => {
-                            self.mode = AppMode::TaskError;
-                            self.error = e;
-                        }
-                    }
-                }
+            Mode::Projects => {
+                ProjectsState::handle_input(self, input)?;
             }
-            AppMode::TaskHelpPopup => {
-                if input == self.keyconfig.quit || input == Key::Esc {
-                    self.mode = AppMode::TaskReport;
-                } else if input == self.keyconfig.down {
-                    self.help_popup.scroll = self.help_popup.scroll.checked_add(1).unwrap_or(0);
-                    let th = (self.help_popup.text_height as u16).saturating_sub(1);
-                    if self.help_popup.scroll > th {
-                        self.help_popup.scroll = th
-                    }
-                } else if input == self.keyconfig.up {
-                    self.help_popup.scroll = self.help_popup.scroll.saturating_sub(1);
-                }
-            }
-            AppMode::TaskModify => match input {
-                Key::Esc => {
-                    if self.show_completion_pane {
-                        self.show_completion_pane = false;
-                        self.completion_list.unselect();
-                    } else {
-                        self.modify.update("", 0);
-                        // self.history_status = None;
-                        self.mode = AppMode::TaskReport;
-                    }
-                }
-                Key::Char('\n') => {
-                    if self.show_completion_pane {
-                        self.show_completion_pane = false;
-                        if let Some(s) = self.completion_list.selected() {
-                            let (before, after) = self.modify.as_str().split_at(self.modify.pos());
-                            let fs = format!("{}{}{}", before, s, after);
-                            self.modify.update(&fs, self.modify.pos() + s.len());
-                        }
-                        self.completion_list.unselect();
-                    } else {
-                        match self.task_modify() {
-                            Ok(_) => {
-                                self.mode = AppMode::TaskReport;
-                                self.command_history_context.add(self.modify.as_str());
-                                // self.history_status = None;
-                                self.modify.update("", 0);
-                                self.update(true)?;
-                            }
-                            Err(e) => {
-                                self.mode = AppMode::TaskError;
-                                self.error = e;
-                            }
-                        }
-                    }
-                }
-                Key::Tab | Key::Ctrl('n') => {
-                    if !self.completion_list.is_empty() {
-                        self.update_input_for_completion();
-                        if !self.show_completion_pane {
-                            self.show_completion_pane = true;
-                        }
-                        self.completion_list.next();
-                    }
-                }
-                Key::BackTab | Key::Ctrl('p') => {
-                    if self.show_completion_pane && !self.completion_list.is_empty() {
-                        self.completion_list.previous();
-                    }
-                }
-                Key::Up => {
-                    if self.show_completion_pane && !self.completion_list.is_empty() {
-                        self.completion_list.previous();
-                    } else if let Some(s) = self
-                        .command_history_context
-                        .history_search(&self.modify.as_str()[..self.modify.pos()], HistoryDirection::Reverse)
-                    {
-                        let p = self.modify.pos();
-                        self.modify.update("", 0);
-                        self.modify.update(&s, std::cmp::min(s.len(), p));
-                        // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
-                    }
-                }
-                Key::Down => {
-                    if self.show_completion_pane && !self.completion_list.is_empty() {
-                        self.completion_list.next();
-                    } else if let Some(s) = self
-                        .command_history_context
-                        .history_search(&self.modify.as_str()[..self.modify.pos()], HistoryDirection::Forward)
-                    {
-                        let p = self.modify.pos();
-                        self.modify.update("", 0);
-                        self.modify.update(&s, std::cmp::min(s.len(), p));
-                        // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
-                    }
-                }
-                _ => {
-                    self.command_history_context.last();
-                    handle_movement(&mut self.modify, input);
-                    self.update_input_for_completion();
-                }
-            },
-            AppMode::TaskSubprocess => match input {
-                Key::Char('\n') => match self.task_subprocess() {
-                    Ok(_) => {
-                        self.mode = AppMode::TaskReport;
-                        self.command.update("", 0);
-                        self.update(true)?;
-                    }
-                    Err(e) => {
-                        self.mode = AppMode::TaskError;
-                        self.error = e;
-                    }
-                },
-                Key::Esc => {
-                    self.command.update("", 0);
-                    self.mode = AppMode::TaskReport;
-                }
-                _ => handle_movement(&mut self.command, input),
-            },
-            AppMode::TaskLog => match input {
-                Key::Esc => {
-                    if self.show_completion_pane {
-                        self.show_completion_pane = false;
-                        self.completion_list.unselect();
-                    } else {
-                        self.command.update("", 0);
-                        // self.history_status = None;
-                        self.mode = AppMode::TaskReport;
-                    }
-                }
-                Key::Char('\n') => {
-                    if self.show_completion_pane {
-                        self.show_completion_pane = false;
-                        if let Some(s) = self.completion_list.selected() {
-                            let (before, after) = self.command.as_str().split_at(self.command.pos());
-                            let fs = format!("{}{}{}", before, s, after);
-                            self.command.update(&fs, self.command.pos() + s.len());
-                        }
-                        self.completion_list.unselect();
-                    } else {
-                        match self.task_log() {
-                            Ok(_) => {
-                                self.mode = AppMode::TaskReport;
-                                self.command_history_context.add(self.command.as_str());
-                                self.command.update("", 0);
-                                // self.history_status = None;
-                                self.update(true)?;
-                            }
-                            Err(e) => {
-                                self.mode = AppMode::TaskError;
-                                self.error = e;
-                            }
-                        }
-                    }
-                }
-                Key::Tab | Key::Ctrl('n') => {
-                    if !self.completion_list.is_empty() {
-                        self.update_input_for_completion();
-                        if !self.show_completion_pane {
-                            self.show_completion_pane = true;
-                        }
-                        self.completion_list.next();
-                    }
-                }
-                Key::BackTab | Key::Ctrl('p') => {
-                    if self.show_completion_pane && !self.completion_list.is_empty() {
-                        self.completion_list.previous();
-                    }
-                }
-                Key::Up => {
-                    if self.show_completion_pane && !self.completion_list.is_empty() {
-                        self.completion_list.previous();
-                    } else if let Some(s) = self
-                        .command_history_context
-                        .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Reverse)
-                    {
-                        let p = self.command.pos();
-                        self.command.update("", 0);
-                        self.command.update(&s, std::cmp::min(s.len(), p));
-                        // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
-                    }
-                }
-                Key::Down => {
-                    if self.show_completion_pane && !self.completion_list.is_empty() {
-                        self.completion_list.next();
-                    } else if let Some(s) = self
-                        .command_history_context
-                        .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Forward)
-                    {
-                        let p = self.command.pos();
-                        self.command.update("", 0);
-                        self.command.update(&s, std::cmp::min(s.len(), p));
-                        // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
-                    }
-                }
-                _ => {
-                    self.command_history_context.last();
-                    handle_movement(&mut self.command, input);
-                    self.update_input_for_completion();
-                }
-            },
-            AppMode::TaskAnnotate => match input {
-                Key::Esc => {
-                    if self.show_completion_pane {
-                        self.show_completion_pane = false;
-                        self.completion_list.unselect();
-                    } else {
-                        self.command.update("", 0);
-                        self.mode = AppMode::TaskReport;
-                        // self.history_status = None;
-                    }
-                }
-                Key::Char('\n') => {
-                    if self.show_completion_pane {
-                        self.show_completion_pane = false;
-                        if let Some(s) = self.completion_list.selected() {
-                            let (before, after) = self.command.as_str().split_at(self.command.pos());
-                            let fs = format!("{}{}{}", before, s, after);
-                            self.command.update(&fs, self.command.pos() + s.len());
-                        }
-                        self.completion_list.unselect();
-                    } else {
-                        match self.task_annotate() {
-                            Ok(_) => {
-                                self.mode = AppMode::TaskReport;
-                                self.command_history_context.add(self.command.as_str());
-                                self.command.update("", 0);
-                                // self.history_status = None;
-                                self.update(true)?;
-                            }
-                            Err(e) => {
-                                self.mode = AppMode::TaskError;
-                                self.error = e;
-                            }
-                        }
-                    }
-                }
-                Key::Tab | Key::Ctrl('n') => {
-                    if !self.completion_list.is_empty() {
-                        self.update_input_for_completion();
-                        if !self.show_completion_pane {
-                            self.show_completion_pane = true;
-                        }
-                        self.completion_list.next();
-                    }
-                }
-                Key::BackTab | Key::Ctrl('p') => {
-                    if self.show_completion_pane && !self.completion_list.is_empty() {
-                        self.completion_list.previous();
-                    }
-                }
-                Key::Up => {
-                    if self.show_completion_pane && !self.completion_list.is_empty() {
-                        self.completion_list.previous();
-                    } else if let Some(s) = self
-                        .command_history_context
-                        .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Reverse)
-                    {
-                        let p = self.command.pos();
-                        self.command.update("", 0);
-                        self.command.update(&s, std::cmp::min(s.len(), p));
-                        // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
-                    }
-                }
-                Key::Down => {
-                    if self.show_completion_pane && !self.completion_list.is_empty() {
-                        self.completion_list.next();
-                    } else if let Some(s) = self
-                        .command_history_context
-                        .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Forward)
-                    {
-                        let p = self.command.pos();
-                        self.command.update("", 0);
-                        self.command.update(&s, std::cmp::min(s.len(), p));
-                        // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
-                    }
-                }
-                _ => {
-                    self.command_history_context.last();
-                    handle_movement(&mut self.command, input);
-                    self.update_input_for_completion();
-                }
-            },
-            AppMode::TaskJump => match input {
-                Key::Char('\n') => match self.task_report_jump() {
-                    Ok(_) => {
-                        self.mode = AppMode::TaskReport;
-                        self.command.update("", 0);
-                        self.update(true)?;
-                    }
-                    Err(e) => {
-                        self.command.update("", 0);
-                        self.mode = AppMode::TaskError;
-                        self.error = e.to_string();
-                    }
-                },
-                Key::Esc => {
-                    self.command.update("", 0);
-                    self.mode = AppMode::TaskReport;
-                }
-                _ => handle_movement(&mut self.command, input),
-            },
-            AppMode::TaskAdd => match input {
-                Key::Esc => {
-                    if self.show_completion_pane {
-                        self.show_completion_pane = false;
-                        self.completion_list.unselect();
-                    } else {
-                        self.command.update("", 0);
-                        // self.history_status = None;
-                        self.mode = AppMode::TaskReport;
-                    }
-                }
-                Key::Char('\n') => {
-                    if self.show_completion_pane {
-                        self.show_completion_pane = false;
-                        if let Some(s) = self.completion_list.selected() {
-                            let (before, after) = self.command.as_str().split_at(self.command.pos());
-                            let fs = format!("{}{}{}", before, s, after);
-                            self.command.update(&fs, self.command.pos() + s.len());
-                        }
-                        self.completion_list.unselect();
-                    } else {
-                        match self.task_add() {
-                            Ok(_) => {
-                                self.mode = AppMode::TaskReport;
-                                self.command_history_context.add(self.command.as_str());
-                                self.command.update("", 0);
-                                // self.history_status = None;
-                                self.update(true)?;
-                            }
-                            Err(e) => {
-                                self.mode = AppMode::TaskError;
-                                self.error = e;
-                            }
-                        }
-                    }
-                }
-                Key::Tab | Key::Ctrl('n') => {
-                    if !self.completion_list.is_empty() {
-                        self.update_input_for_completion();
-                        if !self.show_completion_pane {
-                            self.show_completion_pane = true;
-                        }
-                        self.completion_list.next();
-                    }
-                }
-                Key::BackTab | Key::Ctrl('p') => {
-                    if self.show_completion_pane && !self.completion_list.is_empty() {
-                        self.completion_list.previous();
-                    }
-                }
-                Key::Up => {
-                    if self.show_completion_pane && !self.completion_list.is_empty() {
-                        self.completion_list.previous();
-                    } else if let Some(s) = self
-                        .command_history_context
-                        .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Reverse)
-                    {
-                        let p = self.command.pos();
-                        self.command.update("", 0);
-                        self.command.update(&s, std::cmp::min(s.len(), p));
-                        // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
-                    }
-                }
-                Key::Down => {
-                    if self.show_completion_pane && !self.completion_list.is_empty() {
-                        self.completion_list.next();
-                    } else if let Some(s) = self
-                        .command_history_context
-                        .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Forward)
-                    {
-                        let p = self.command.pos();
-                        self.command.update("", 0);
-                        self.command.update(&s, std::cmp::min(s.len(), p));
-                        // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
-                    }
-                }
-                _ => {
-                    self.command_history_context.last();
-                    handle_movement(&mut self.command, input);
-                    self.update_input_for_completion();
-                }
-            },
-            AppMode::TaskFilter => match input {
-                Key::Esc => {
-                    if self.show_completion_pane {
-                        self.show_completion_pane = false;
-                        self.completion_list.unselect();
-                    } else {
-                        self.mode = AppMode::TaskReport;
-                        self.filter_history_context.add(self.filter.as_str());
-                        // self.history_status = None;
-                        self.update(true)?;
-                    }
-                }
-                Key::Char('\n') => {
-                    if self.show_completion_pane {
-                        self.show_completion_pane = false;
-                        if let Some(s) = self.completion_list.selected() {
-                            let (before, after) = self.filter.as_str().split_at(self.filter.pos());
-                            let fs = format!("{}{}{}", before, s, after);
-                            self.filter.update(&fs, self.filter.pos() + s.len());
-                        }
-                        self.completion_list.unselect();
-                        self.dirty = true;
-                    } else {
-                        self.mode = AppMode::TaskReport;
-                        self.filter_history_context.add(self.filter.as_str());
-                        // self.history_status = None;
-                        self.update(true)?;
-                    }
-                }
-                Key::Up => {
-                    if self.show_completion_pane && !self.completion_list.is_empty() {
-                        self.completion_list.previous();
-                    } else if let Some(s) = self
-                        .filter_history_context
-                        .history_search(&self.filter.as_str()[..self.filter.pos()], HistoryDirection::Reverse)
-                    {
-                        let p = self.filter.pos();
-                        self.filter.update("", 0);
-                        self.filter.update(&s, std::cmp::min(p, s.len()));
-                        // self.history_status = Some(format!(" {} / {}", self.filter_history_context.history_index() + 1, self.filter_history_context.history_len()));
-                        self.dirty = true;
-                    }
-                }
-                Key::Down => {
-                    if self.show_completion_pane && !self.completion_list.is_empty() {
-                        self.completion_list.next();
-                    } else if let Some(s) = self
-                        .filter_history_context
-                        .history_search(&self.filter.as_str()[..self.filter.pos()], HistoryDirection::Forward)
-                    {
-                        let p = self.filter.pos();
-                        self.filter.update("", 0);
-                        self.filter.update(&s, std::cmp::min(p, s.len()));
-                        // self.history_status = Some(format!(" {} / {}", self.filter_history_context.history_index() + 1, self.filter_history_context.history_len()));
-                        self.dirty = true;
-                    }
-                }
-                Key::Tab | Key::Ctrl('n') => {
-                    if !self.completion_list.is_empty() {
-                        self.update_input_for_completion();
-                        if !self.show_completion_pane {
-                            self.show_completion_pane = true;
-                        }
-                        self.completion_list.next();
-                    }
-                }
-                Key::BackTab | Key::Ctrl('p') => {
-                    if self.show_completion_pane && !self.completion_list.is_empty() {
-                        self.completion_list.previous();
-                    }
-                }
-                Key::Ctrl('r') => {
-                    self.filter.update("", 0);
-                    for c in self.config.filter.chars() {
-                        self.filter.insert(c, 1);
-                    }
-                    // self.history_status = None;
-                    self.update_input_for_completion();
-                    self.dirty = true;
-                }
-                _ => {
-                    handle_movement(&mut self.filter, input);
-                    self.update_input_for_completion();
-                    self.dirty = true;
-                }
-            },
-            AppMode::TaskDonePrompt => {
-                if input == self.keyconfig.done || input == Key::Char('\n') {
-                    match self.task_done() {
-                        Ok(_) => {
-                            self.mode = AppMode::TaskReport;
-                            self.update(true)?;
-                        }
-                        Err(e) => {
-                            self.mode = AppMode::TaskError;
-                            self.error = e;
-                        }
-                    }
-                } else if input == self.keyconfig.quit || input == Key::Esc {
-                    self.mode = AppMode::TaskReport;
-                } else {
-                    handle_movement(&mut self.command, input);
-                }
-            }
-            AppMode::TaskDeletePrompt => {
-                if input == self.keyconfig.delete || input == Key::Char('\n') {
-                    match self.task_delete() {
-                        Ok(_) => {
-                            self.mode = AppMode::TaskReport;
-                            self.update(true)?;
-                        }
-                        Err(e) => {
-                            self.mode = AppMode::TaskError;
-                            self.error = e;
-                        }
-                    }
-                } else if input == self.keyconfig.quit || input == Key::Esc {
-                    self.mode = AppMode::TaskReport;
-                } else {
-                    handle_movement(&mut self.command, input);
-                }
-            }
-            AppMode::TaskError => self.mode = AppMode::TaskReport,
-            AppMode::Calendar => {
+            Mode::Calendar => {
                 if input == self.keyconfig.quit || input == Key::Ctrl('c') {
                     self.should_quit = true;
                 } else if input == self.keyconfig.previous_tab {
-                    self.mode = AppMode::TaskReport;
+                    self.mode = Mode::Projects;
                 } else if input == Key::Up || input == self.keyconfig.up {
                     if self.calendar_year > 0 {
                         self.calendar_year -= 1;
@@ -2961,12 +2304,799 @@ impl TaskwarriorTuiApp {
                 } else if input == Key::Down || input == self.keyconfig.down {
                     self.calendar_year += 1;
                 } else if input == Key::PageUp || input == self.keyconfig.page_up {
-                    if self.calendar_year > 0 {
-                        self.calendar_year -= 10
-                    }
+                    self.task_report_previous_page();
                 } else if input == Key::PageDown || input == self.keyconfig.page_down {
-                    self.calendar_year += 10
+                    self.calendar_year += 10;
+                } else if input == Key::Ctrl('e') {
+                    self.task_details_scroll_down();
+                } else if input == Key::Ctrl('y') {
+                    self.task_details_scroll_up();
+                } else if input == self.keyconfig.done {
+                    if self.config.uda_task_report_prompt_on_done {
+                        self.mode = Mode::Tasks(Action::DonePrompt);
+                        if self.task_current().is_none() {
+                            self.mode = Mode::Tasks(Action::Report);
+                        }
+                    } else {
+                        match self.task_done() {
+                            Ok(_) => self.update(true)?,
+                            Err(e) => {
+                                self.mode = Mode::Tasks(Action::Error);
+                                self.error = e;
+                            }
+                        }
+                        if self.calendar_year > 0 {
+                            self.calendar_year -= 10;
+                        }
+                    }
                 }
+            }
+        }
+        self.update_task_table_state();
+        Ok(())
+    }
+
+    fn handle_input_by_task_mode(&mut self, input: Key) -> Result<()> {
+        if let Mode::Tasks(task_mode) = &self.mode {
+            match task_mode {
+                Action::Report => {
+                    if input == Key::Esc {
+                        self.marked.clear();
+                    } else if input == self.keyconfig.quit || input == Key::Ctrl('c') {
+                        self.should_quit = true;
+                    } else if input == self.keyconfig.select {
+                        self.task_table_state.multiple_selection();
+                        self.toggle_mark();
+                    } else if input == self.keyconfig.select_all {
+                        self.task_table_state.multiple_selection();
+                        self.toggle_mark_all();
+                    } else if input == self.keyconfig.refresh {
+                        self.update(true)?;
+                    } else if input == self.keyconfig.go_to_bottom || input == Key::End {
+                        self.task_report_bottom();
+                    } else if input == self.keyconfig.go_to_top || input == Key::Home {
+                        self.task_report_top();
+                    } else if input == Key::Down || input == self.keyconfig.down {
+                        self.task_report_next();
+                    } else if input == Key::Up || input == self.keyconfig.up {
+                        self.task_report_previous();
+                    } else if input == Key::PageDown || input == self.keyconfig.page_down {
+                        self.task_report_next_page();
+                    } else if input == Key::PageUp || input == self.keyconfig.page_up {
+                        self.task_report_previous_page();
+                    } else if input == Key::Ctrl('e') {
+                        self.task_details_scroll_down();
+                    } else if input == Key::Ctrl('y') {
+                        self.task_details_scroll_up();
+                    } else if input == self.keyconfig.done {
+                        if self.config.uda_task_report_prompt_on_done {
+                            self.mode = Mode::Tasks(Action::DonePrompt);
+                            if self.task_current().is_none() {
+                                self.mode = Mode::Tasks(Action::Report);
+                            }
+                        } else {
+                            match self.task_done() {
+                                Ok(_) => self.update(true)?,
+                                Err(e) => {
+                                    self.mode = Mode::Tasks(Action::Error);
+                                    self.error = e;
+                                }
+                            }
+                        }
+                    } else if input == self.keyconfig.delete {
+                        if self.config.uda_task_report_prompt_on_delete {
+                            self.mode = Mode::Tasks(Action::DeletePrompt);
+                            if self.task_current().is_none() {
+                                self.mode = Mode::Tasks(Action::Report);
+                            }
+                        } else {
+                            match self.task_delete() {
+                                Ok(_) => self.update(true)?,
+                                Err(e) => {
+                                    self.mode = Mode::Tasks(Action::Error);
+                                    self.error = e;
+                                }
+                            }
+                        }
+                    } else if input == self.keyconfig.start_stop {
+                        match self.task_start_stop() {
+                            Ok(_) => self.update(true)?,
+                            Err(e) => {
+                                self.mode = Mode::Tasks(Action::Error);
+                                self.error = e;
+                            }
+                        }
+                    } else if input == self.keyconfig.undo {
+                        match self.task_undo() {
+                            Ok(_) => self.update(true)?,
+                            Err(e) => {
+                                self.mode = Mode::Tasks(Action::Error);
+                                self.error = e;
+                            }
+                        }
+                    } else if input == self.keyconfig.modify {
+                        self.mode = Mode::Tasks(Action::Modify);
+                        self.command_history_context.last();
+                        // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
+                        self.update_completion_list();
+                        match self.task_table_state.mode() {
+                            TableMode::SingleSelection => match self.task_current() {
+                                Some(t) => {
+                                    let mut s = format!("{} ", Self::escape(t.description()));
+                                    if self.config.uda_prefill_task_metadata {
+                                        if t.tags().is_some() {
+                                            let virtual_tags = self.task_report_table.virtual_tags.clone();
+                                            for tag in t.tags().unwrap() {
+                                                if !virtual_tags.contains(tag) {
+                                                    s = format!("{}+{} ", s, tag);
+                                                }
+                                            }
+                                        }
+                                        if t.project().is_some() {
+                                            s = format!("{}project:{} ", s, t.project().unwrap());
+                                        }
+                                        if t.priority().is_some() {
+                                            s = format!("{}priority:{} ", s, t.priority().unwrap());
+                                        }
+                                        if t.due().is_some() {
+                                            let date = t.due().unwrap();
+                                            let now = Local::now();
+                                            let date = TimeZone::from_utc_datetime(now.offset(), date);
+                                            s = format!(
+                                                "{}due:'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}' ",
+                                                s,
+                                                date.year(),
+                                                date.month(),
+                                                date.day(),
+                                                date.hour(),
+                                                date.minute(),
+                                                date.second(),
+                                            );
+                                        }
+                                    }
+                                    self.modify.update(&s, s.as_str().len());
+                                }
+                                None => self.modify.update("", 0),
+                            },
+                            TableMode::MultipleSelection => self.modify.update("", 0),
+                        }
+                    } else if input == self.keyconfig.shell {
+                        self.mode = Mode::Tasks(Action::Subprocess);
+                    } else if input == self.keyconfig.log {
+                        self.mode = Mode::Tasks(Action::Log);
+                        self.command_history_context.last();
+                        // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
+                        self.update_completion_list();
+                    } else if input == self.keyconfig.add {
+                        self.mode = Mode::Tasks(Action::Add);
+                        self.command_history_context.last();
+                        // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
+                        self.update_completion_list();
+                    } else if input == self.keyconfig.annotate {
+                        self.mode = Mode::Tasks(Action::Annotate);
+                        self.command_history_context.last();
+                        // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
+                        self.update_completion_list();
+                    } else if input == self.keyconfig.help {
+                        self.mode = Mode::Tasks(Action::HelpPopup);
+                    } else if input == self.keyconfig.filter {
+                        self.mode = Mode::Tasks(Action::Filter);
+                        self.filter_history_context.last();
+                        // self.history_status = Some(format!(" {} / {}", self.filter_history_context.history_index() + 1, self.filter_history_context.history_len()));
+                        self.update_completion_list();
+                    } else if input == Key::Char(':') {
+                        self.mode = Mode::Tasks(Action::Jump);
+                    } else if input == self.keyconfig.shortcut1 {
+                        match self.task_shortcut(1) {
+                            Ok(_) => self.update(true)?,
+                            Err(e) => {
+                                self.update(true)?;
+                                self.mode = Mode::Tasks(Action::Error);
+                                self.error = e;
+                            }
+                        }
+                    } else if input == self.keyconfig.shortcut2 {
+                        match self.task_shortcut(2) {
+                            Ok(_) => self.update(true)?,
+                            Err(e) => {
+                                self.update(true)?;
+                                self.mode = Mode::Tasks(Action::Error);
+                                self.error = e;
+                            }
+                        }
+                    } else if input == self.keyconfig.shortcut3 {
+                        match self.task_shortcut(3) {
+                            Ok(_) => self.update(true)?,
+                            Err(e) => {
+                                self.update(true)?;
+                                self.mode = Mode::Tasks(Action::Error);
+                                self.error = e;
+                            }
+                        }
+                    } else if input == self.keyconfig.shortcut4 {
+                        match self.task_shortcut(4) {
+                            Ok(_) => self.update(true)?,
+                            Err(e) => {
+                                self.update(true)?;
+                                self.mode = Mode::Tasks(Action::Error);
+                                self.error = e;
+                            }
+                        }
+                    } else if input == self.keyconfig.shortcut5 {
+                        match self.task_shortcut(5) {
+                            Ok(_) => self.update(true)?,
+                            Err(e) => {
+                                self.update(true)?;
+                                self.mode = Mode::Tasks(Action::Error);
+                                self.error = e;
+                            }
+                        }
+                    } else if input == self.keyconfig.shortcut6 {
+                        match self.task_shortcut(6) {
+                            Ok(_) => self.update(true)?,
+                            Err(e) => {
+                                self.update(true)?;
+                                self.mode = Mode::Tasks(Action::Error);
+                                self.error = e;
+                            }
+                        }
+                    } else if input == self.keyconfig.shortcut7 {
+                        match self.task_shortcut(7) {
+                            Ok(_) => self.update(true)?,
+                            Err(e) => {
+                                self.update(true)?;
+                                self.mode = Mode::Tasks(Action::Error);
+                                self.error = e;
+                            }
+                        }
+                    } else if input == self.keyconfig.shortcut8 {
+                        match self.task_shortcut(8) {
+                            Ok(_) => self.update(true)?,
+                            Err(e) => {
+                                self.update(true)?;
+                                self.mode = Mode::Tasks(Action::Error);
+                                self.error = e;
+                            }
+                        }
+                    } else if input == self.keyconfig.shortcut9 {
+                        match self.task_shortcut(9) {
+                            Ok(_) => self.update(true)?,
+                            Err(e) => {
+                                self.update(true)?;
+                                self.mode = Mode::Tasks(Action::Error);
+                                self.error = e;
+                            }
+                        }
+                    } else if input == self.keyconfig.zoom {
+                        self.task_report_show_info = !self.task_report_show_info;
+                    } else if input == self.keyconfig.context_menu {
+                        self.mode = Mode::Tasks(Action::ContextMenu);
+                    } else if input == self.keyconfig.next_tab {
+                        self.mode = Mode::Projects;
+                    }
+                }
+                Action::ContextMenu => {
+                    if input == self.keyconfig.quit || input == Key::Esc {
+                        self.mode = Mode::Tasks(Action::Report);
+                    } else if input == Key::Down || input == self.keyconfig.down {
+                        self.context_next();
+                    } else if input == Key::Up || input == self.keyconfig.up {
+                        self.context_previous();
+                    } else if input == Key::Char('\n') {
+                        match self.context_select() {
+                            Ok(_) => {
+                                self.get_context()?;
+                                self.update(true)?;
+                            }
+                            Err(e) => {
+                                self.mode = Mode::Tasks(Action::Error);
+                                self.error = e.to_string();
+                            }
+                        }
+                    }
+                }
+                Action::HelpPopup => {
+                    if input == self.keyconfig.quit || input == Key::Esc {
+                        self.mode = Mode::Tasks(Action::Report);
+                    } else if input == self.keyconfig.down {
+                        self.help_popup.scroll = self.help_popup.scroll.checked_add(1).unwrap_or(0);
+                        let th = (self.help_popup.text_height as u16).saturating_sub(1);
+                        if self.help_popup.scroll > th {
+                            self.help_popup.scroll = th;
+                        }
+                    } else if input == self.keyconfig.up {
+                        self.help_popup.scroll = self.help_popup.scroll.saturating_sub(1);
+                    }
+                }
+                Action::Modify => match input {
+                    Key::Esc => {
+                        if self.show_completion_pane {
+                            self.show_completion_pane = false;
+                            self.completion_list.unselect();
+                        } else {
+                            self.modify.update("", 0);
+                            self.mode = Mode::Tasks(Action::Report);
+                        }
+                    }
+                    Key::Char('\n') => {
+                        if self.show_completion_pane {
+                            self.show_completion_pane = false;
+                            if let Some(s) = self.completion_list.selected() {
+                                let s = format!("{}{}", self.modify.as_str(), &s);
+                                self.modify.update(&s, s.len());
+                            }
+                            self.completion_list.unselect();
+                        } else {
+                            match self.task_modify() {
+                                Ok(_) => {
+                                    self.mode = Mode::Tasks(Action::Report);
+                                    self.command_history_context.add(self.modify.as_str());
+                                    self.modify.update("", 0);
+                                    self.update(true)?;
+                                }
+                                Err(e) => {
+                                    self.mode = Mode::Tasks(Action::Error);
+                                    self.error = e;
+                                }
+                            }
+                        }
+                    }
+                    Key::Tab | Key::Ctrl('n') => {
+                        if !self.completion_list.is_empty() {
+                            self.update_input_for_completion();
+                            if !self.show_completion_pane {
+                                self.show_completion_pane = true;
+                            }
+                            self.completion_list.next();
+                        }
+                    }
+                    Key::BackTab | Key::Ctrl('p') => {
+                        if self.show_completion_pane && !self.completion_list.is_empty() {
+                            self.completion_list.previous();
+                        }
+                    }
+
+                    Key::Up => {
+                        if self.show_completion_pane && !self.completion_list.is_empty() {
+                            self.completion_list.previous();
+                        } else if let Some(s) = self
+                            .command_history_context
+                            .history_search(&self.modify.as_str()[..self.modify.pos()], HistoryDirection::Reverse)
+                        {
+                            let p = self.modify.pos();
+                            self.modify.update("", 0);
+                            self.modify.update(&s, std::cmp::min(s.len(), p));
+                            // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
+                        }
+                    }
+                    Key::Down => {
+                        if self.show_completion_pane && !self.completion_list.is_empty() {
+                            self.completion_list.next();
+                        } else if let Some(s) = self
+                            .command_history_context
+                            .history_search(&self.modify.as_str()[..self.modify.pos()], HistoryDirection::Forward)
+                        {
+                            let p = self.modify.pos();
+                            self.modify.update("", 0);
+                            self.modify.update(&s, std::cmp::min(s.len(), p));
+                            // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
+                        }
+                    }
+                    _ => {
+                        self.command_history_context.last();
+                        handle_movement(&mut self.modify, input);
+                        self.update_input_for_completion();
+                    }
+                },
+                Action::Subprocess => match input {
+                    Key::Char('\n') => match self.task_subprocess() {
+                        Ok(_) => {
+                            self.mode = Mode::Tasks(Action::Report);
+                            self.command.update("", 0);
+                            self.update(true)?;
+                        }
+                        Err(e) => {
+                            self.mode = Mode::Tasks(Action::Error);
+                            self.error = e;
+                        }
+                    },
+                    Key::Esc => {
+                        self.command.update("", 0);
+                        self.mode = Mode::Tasks(Action::Report);
+                    }
+                    _ => handle_movement(&mut self.command, input),
+                },
+                Action::Log => match input {
+                    Key::Esc => {
+                        if self.show_completion_pane {
+                            self.show_completion_pane = false;
+                            self.completion_list.unselect();
+                        } else {
+                            self.command.update("", 0);
+                            // self.history_status = None;
+                            self.mode = Mode::Tasks(Action::Report);
+                        }
+                    }
+                    Key::Char('\n') => {
+                        if self.show_completion_pane {
+                            self.show_completion_pane = false;
+                            if let Some(s) = self.completion_list.selected() {
+                                let (before, after) = self.command.as_str().split_at(self.command.pos());
+                                let fs = format!("{}{}{}", before, s, after);
+                                self.command.update(&fs, self.command.pos() + s.len());
+                            }
+                            self.completion_list.unselect();
+                        } else {
+                            match self.task_log() {
+                                Ok(_) => {
+                                    self.mode = Mode::Tasks(Action::Report);
+                                    self.command_history_context.add(self.command.as_str());
+                                    self.command.update("", 0);
+                                    // self.history_status = None;
+                                    self.update(true)?;
+                                }
+                                Err(e) => {
+                                    self.mode = Mode::Tasks(Action::Error);
+                                    self.error = e;
+                                }
+                            }
+                        }
+                    }
+                    Key::Tab | Key::Ctrl('n') => {
+                        if !self.completion_list.is_empty() {
+                            self.update_input_for_completion();
+                            if !self.show_completion_pane {
+                                self.show_completion_pane = true;
+                            }
+                            self.completion_list.next();
+                        }
+                    }
+                    Key::BackTab | Key::Ctrl('p') => {
+                        if self.show_completion_pane && !self.completion_list.is_empty() {
+                            self.completion_list.previous();
+                        }
+                    }
+
+                    Key::Up => {
+                        if self.show_completion_pane && !self.completion_list.is_empty() {
+                            self.completion_list.previous();
+                        } else if let Some(s) = self
+                            .command_history_context
+                            .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Reverse)
+                        {
+                            let p = self.command.pos();
+                            self.command.update("", 0);
+                            self.command.update(&s, std::cmp::min(s.len(), p));
+                            // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
+                        }
+                    }
+                    Key::Down => {
+                        if self.show_completion_pane && !self.completion_list.is_empty() {
+                            self.completion_list.next();
+                        } else if let Some(s) = self
+                            .command_history_context
+                            .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Forward)
+                        {
+                            let p = self.command.pos();
+                            self.command.update("", 0);
+                            self.command.update(&s, std::cmp::min(s.len(), p));
+                            // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
+                        }
+                    }
+                    _ => {
+                        self.command_history_context.last();
+                        handle_movement(&mut self.command, input);
+                        self.update_input_for_completion();
+                    }
+                },
+                Action::Annotate => match input {
+                    Key::Esc => {
+                        if self.show_completion_pane {
+                            self.show_completion_pane = false;
+                            self.completion_list.unselect();
+                        } else {
+                            self.command.update("", 0);
+                            self.mode = Mode::Tasks(Action::Report);
+                            // self.history_status = None;
+                        }
+                    }
+                    Key::Char('\n') => {
+                        if self.show_completion_pane {
+                            self.show_completion_pane = false;
+                            if let Some(s) = self.completion_list.selected() {
+                                let (before, after) = self.command.as_str().split_at(self.command.pos());
+                                let fs = format!("{}{}{}", before, s, after);
+                                self.command.update(&fs, self.command.pos() + s.len());
+                            }
+                            self.completion_list.unselect();
+                        } else {
+                            match self.task_annotate() {
+                                Ok(_) => {
+                                    self.mode = Mode::Tasks(Action::Report);
+                                    self.command_history_context.add(self.command.as_str());
+                                    self.command.update("", 0);
+                                    // self.history_status = None;
+                                    self.update(true)?;
+                                }
+                                Err(e) => {
+                                    self.mode = Mode::Tasks(Action::Error);
+                                    self.error = e;
+                                }
+                            }
+                        }
+                    }
+                    Key::Tab | Key::Ctrl('n') => {
+                        if !self.completion_list.is_empty() {
+                            self.update_input_for_completion();
+                            if !self.show_completion_pane {
+                                self.show_completion_pane = true;
+                            }
+                            self.completion_list.next();
+                        }
+                    }
+                    Key::BackTab | Key::Ctrl('p') => {
+                        if self.show_completion_pane && !self.completion_list.is_empty() {
+                            self.completion_list.previous();
+                        }
+                    }
+                    Key::Up => {
+                        if self.show_completion_pane && !self.completion_list.is_empty() {
+                            self.completion_list.previous();
+                        } else if let Some(s) = self
+                            .command_history_context
+                            .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Reverse)
+                        {
+                            let p = self.command.pos();
+                            self.command.update("", 0);
+                            self.command.update(&s, std::cmp::min(s.len(), p));
+                            // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
+                        }
+                    }
+                    Key::Down => {
+                        if self.show_completion_pane && !self.completion_list.is_empty() {
+                            self.completion_list.next();
+                        } else if let Some(s) = self
+                            .command_history_context
+                            .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Forward)
+                        {
+                            let p = self.command.pos();
+                            self.command.update("", 0);
+                            self.command.update(&s, std::cmp::min(s.len(), p));
+                            // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
+                        }
+                    }
+
+                    _ => {
+                        self.command_history_context.last();
+                        handle_movement(&mut self.command, input);
+                        self.update_input_for_completion();
+                    }
+                },
+                Action::Jump => match input {
+                    Key::Char('\n') => match self.task_report_jump() {
+                        Ok(_) => {
+                            self.mode = Mode::Tasks(Action::Report);
+                            self.command.update("", 0);
+                            self.update(true)?;
+                        }
+                        Err(e) => {
+                            self.command.update("", 0);
+                            self.mode = Mode::Tasks(Action::Error);
+                            self.error = e.to_string();
+                        }
+                    },
+                    Key::Esc => {
+                        self.command.update("", 0);
+                        self.mode = Mode::Tasks(Action::Report);
+                    }
+                    _ => handle_movement(&mut self.command, input),
+                },
+                Action::Add => match input {
+                    Key::Esc => {
+                        if self.show_completion_pane {
+                            self.show_completion_pane = false;
+                            self.completion_list.unselect();
+                        } else {
+                            self.command.update("", 0);
+                            // self.history_status = None;
+                            self.mode = Mode::Tasks(Action::Report);
+                        }
+                    }
+                    Key::Char('\n') => {
+                        if self.show_completion_pane {
+                            self.show_completion_pane = false;
+                            if let Some(s) = self.completion_list.selected() {
+                                let (before, after) = self.command.as_str().split_at(self.command.pos());
+                                let fs = format!("{}{}{}", before, s, after);
+                                self.command.update(&fs, self.command.pos() + s.len());
+                            }
+                            self.completion_list.unselect();
+                        } else {
+                            match self.task_add() {
+                                Ok(_) => {
+                                    self.mode = Mode::Tasks(Action::Report);
+                                    self.command_history_context.add(self.command.as_str());
+                                    self.command.update("", 0);
+                                    // self.history_status = None;
+                                    self.update(true)?;
+                                }
+                                Err(e) => {
+                                    self.mode = Mode::Tasks(Action::Error);
+                                    self.error = e;
+                                }
+                            }
+                        }
+                    }
+                    Key::Tab | Key::Ctrl('n') => {
+                        if !self.completion_list.is_empty() {
+                            self.update_input_for_completion();
+                            if !self.show_completion_pane {
+                                self.show_completion_pane = true;
+                            }
+                            self.completion_list.next();
+                        }
+                    }
+                    Key::BackTab | Key::Ctrl('p') => {
+                        if self.show_completion_pane && !self.completion_list.is_empty() {
+                            self.completion_list.previous();
+                        }
+                    }
+                    Key::Up => {
+                        if self.show_completion_pane && !self.completion_list.is_empty() {
+                            self.completion_list.previous();
+                        } else if let Some(s) = self
+                            .command_history_context
+                            .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Reverse)
+                        {
+                            let p = self.command.pos();
+                            self.command.update("", 0);
+                            self.command.update(&s, std::cmp::min(s.len(), p));
+                            // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
+                        }
+                    }
+
+                    Key::Down => {
+                        if self.show_completion_pane && !self.completion_list.is_empty() {
+                            self.completion_list.next();
+                        } else if let Some(s) = self
+                            .command_history_context
+                            .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Forward)
+                        {
+                            let p = self.command.pos();
+                            self.command.update("", 0);
+                            self.command.update(&s, std::cmp::min(s.len(), p));
+                            // self.history_status = Some(format!(" {} / {}", self.command_history_context.history_index() + 1, self.command_history_context.history_len()));
+                        }
+                    }
+                    _ => {
+                        self.command_history_context.last();
+                        handle_movement(&mut self.command, input);
+                        self.update_input_for_completion();
+                    }
+                },
+                Action::Filter => match input {
+                    Key::Esc => {
+                        if self.show_completion_pane {
+                            self.show_completion_pane = false;
+                            self.completion_list.unselect();
+                        } else {
+                            self.mode = Mode::Tasks(Action::Report);
+                            self.filter_history_context.add(self.filter.as_str());
+                            // self.history_status = None;
+                            self.update(true)?;
+                        }
+                    }
+                    Key::Char('\n') => {
+                        if self.show_completion_pane {
+                            self.show_completion_pane = false;
+                            if let Some(s) = self.completion_list.selected() {
+                                let (before, after) = self.command.as_str().split_at(self.command.pos());
+                                let fs = format!("{}{}{}", before, s, after);
+                                self.command.update(&fs, self.command.pos() + s.len());
+                            }
+                            self.completion_list.unselect();
+                            self.dirty = true;
+                        } else {
+                            self.mode = Mode::Tasks(Action::Report);
+                            self.filter_history_context.add(self.filter.as_str());
+                            // self.history_status = None;
+                            self.update(true)?;
+                        }
+                    }
+                    Key::Up => {
+                        if self.show_completion_pane && !self.completion_list.is_empty() {
+                            self.completion_list.previous();
+                        } else if let Some(s) = self
+                            .filter_history_context
+                            .history_search(&self.filter.as_str()[..self.filter.pos()], HistoryDirection::Reverse)
+                        {
+                            let p = self.filter.pos();
+                            self.filter.update("", 0);
+                            self.filter.update(&s, std::cmp::min(p, s.len()));
+                            // self.history_status = Some(format!(" {} / {}", self.filter_history_context.history_index() + 1, self.filter_history_context.history_len()));
+                            self.dirty = true;
+                        }
+                    }
+                    Key::Down => {
+                        if self.show_completion_pane && !self.completion_list.is_empty() {
+                            self.completion_list.next();
+                        } else if let Some(s) = self
+                            .filter_history_context
+                            .history_search(&self.filter.as_str()[..self.filter.pos()], HistoryDirection::Forward)
+                        {
+                            let p = self.filter.pos();
+                            self.filter.update("", 0);
+                            self.filter.update(&s, std::cmp::min(p, s.len()));
+                            // self.history_status = Some(format!(" {} / {}", self.filter_history_context.history_index() + 1, self.filter_history_context.history_len()));
+                            self.dirty = true;
+                        }
+                    }
+                    Key::Tab | Key::Ctrl('n') => {
+                        if !self.completion_list.is_empty() {
+                            self.update_input_for_completion();
+                            if !self.show_completion_pane {
+                                self.show_completion_pane = true;
+                            }
+                            self.completion_list.next();
+                        }
+                    }
+                    Key::BackTab | Key::Ctrl('p') => {
+                        if self.show_completion_pane && !self.completion_list.is_empty() {
+                            self.completion_list.previous();
+                        }
+                    }
+                    Key::Ctrl('r') => {
+                        self.filter.update("", 0);
+                        for c in self.config.filter.chars() {
+                            self.filter.insert(c, 1);
+                        }
+                        // self.history_status = None;
+                        self.update_input_for_completion();
+                        self.dirty = true;
+                    }
+                    _ => {
+                        handle_movement(&mut self.filter, input);
+                        self.update_input_for_completion();
+                        self.dirty = true;
+                    }
+                },
+                Action::DonePrompt => {
+                    if input == self.keyconfig.done || input == Key::Char('\n') {
+                        match self.task_done() {
+                            Ok(_) => {
+                                self.mode = Mode::Tasks(Action::Report);
+                                self.update(true)?;
+                            }
+                            Err(e) => {
+                                self.mode = Mode::Tasks(Action::Error);
+                                self.error = e;
+                            }
+                        }
+                    } else if input == self.keyconfig.quit || input == Key::Esc {
+                        self.mode = Mode::Tasks(Action::Report);
+                    } else {
+                        handle_movement(&mut self.command, input);
+                    }
+                }
+                Action::DeletePrompt => {
+                    if input == self.keyconfig.delete || input == Key::Char('\n') {
+                        match self.task_delete() {
+                            Ok(_) => {
+                                self.mode = Mode::Tasks(Action::Report);
+                                self.update(true)?;
+                            }
+                            Err(e) => {
+                                self.mode = Mode::Tasks(Action::Error);
+                                self.error = e;
+                            }
+                        }
+                    } else if input == self.keyconfig.quit || input == Key::Esc {
+                        self.mode = Mode::Tasks(Action::Report);
+                    } else {
+                        handle_movement(&mut self.command, input);
+                    }
+                }
+                Action::Error => self.mode = Mode::Tasks(Action::Report),
             }
         }
         self.update_task_table_state();
@@ -2976,98 +3106,92 @@ impl TaskwarriorTuiApp {
     pub fn update_completion_list(&mut self) {
         self.completion_list.clear();
 
-        match self.mode {
-            AppMode::TaskModify | AppMode::TaskAnnotate | AppMode::TaskAdd | AppMode::TaskLog => {
-                for s in vec![
-                    "+".to_string(),
-                    "project:".to_string(),
-                    "priority:".to_string(),
-                    "due:".to_string(),
-                    "wait:".to_string(),
-                    "depends:".to_string(),
-                ] {
-                    self.completion_list.insert(s);
-                }
+        if let Mode::Tasks(Action::Modify | Action::Annotate | Action::Add | Action::Log) = self.mode {
+            for s in vec![
+                "+".to_string(),
+                "project:".to_string(),
+                "priority:".to_string(),
+                "due:".to_string(),
+                "wait:".to_string(),
+                "depends:".to_string(),
+            ] {
+                self.completion_list.insert(s);
             }
-            _ => {}
         }
 
-        match self.mode {
-            AppMode::TaskModify | AppMode::TaskFilter | AppMode::TaskAnnotate | AppMode::TaskAdd | AppMode::TaskLog => {
-                for priority in self.config.uda_priority_values.iter() {
-                    let p = format!("priority:{}", &priority);
-                    self.completion_list.insert(p);
-                }
-                let virtual_tags = self.task_report_table.virtual_tags.clone();
-                for task in self.tasks.iter() {
-                    if let Some(tags) = task.tags() {
-                        for tag in tags {
-                            let t = format!("+{}", &tag);
-                            if !virtual_tags.contains(tag) {
-                                self.completion_list.insert(t);
-                            }
+        if let Mode::Tasks(Action::Modify | Action::Filter | Action::Annotate | Action::Add | Action::Log) = self.mode {
+            for priority in &self.config.uda_priority_values {
+                let p = format!("priority:{}", priority);
+                self.completion_list.insert(p);
+            }
+            let virtual_tags = self.task_report_table.virtual_tags.clone();
+            for task in &self.tasks {
+                if let Some(tags) = task.tags() {
+                    for tag in tags {
+                        let t = format!("+{}", &tag);
+                        if !virtual_tags.contains(tag) {
+                            self.completion_list.insert(t);
                         }
                     }
                 }
-                for task in self.tasks.iter() {
-                    if let Some(project) = task.project() {
-                        let p = format!("project:{}", &project);
-                        self.completion_list.insert(p);
-                    }
-                }
-                for task in self.tasks.iter() {
-                    if let Some(date) = task.due() {
-                        let now = Local::now();
-                        let date = TimeZone::from_utc_datetime(now.offset(), date);
-                        let s = format!(
-                            "due:'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}'",
-                            date.year(),
-                            date.month(),
-                            date.day(),
-                            date.hour(),
-                            date.minute(),
-                            date.second(),
-                        );
-                        self.completion_list.insert(s);
-                    }
-                }
-                for task in self.tasks.iter() {
-                    if let Some(date) = task.wait() {
-                        let now = Local::now();
-                        let date = TimeZone::from_utc_datetime(now.offset(), date);
-                        let s = format!(
-                            "wait:'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}'",
-                            date.year(),
-                            date.month(),
-                            date.day(),
-                            date.hour(),
-                            date.minute(),
-                            date.second(),
-                        );
-                        self.completion_list.insert(s);
-                    }
-                }
-                for task in self.tasks.iter() {
-                    if let Some(date) = task.end() {
-                        let now = Local::now();
-                        let date = TimeZone::from_utc_datetime(now.offset(), date);
-                        let s = format!(
-                            "end:'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}'",
-                            date.year(),
-                            date.month(),
-                            date.day(),
-                            date.hour(),
-                            date.minute(),
-                            date.second(),
-                        );
-                        self.completion_list.insert(s);
-                    }
+            }
+            for task in &self.tasks {
+                if let Some(project) = task.project() {
+                    let p = format!("project:{}", &project);
+                    self.completion_list.insert(p);
                 }
             }
-            _ => {}
+            for task in &self.tasks {
+                if let Some(date) = task.due() {
+                    let now = Local::now();
+                    let date = TimeZone::from_utc_datetime(now.offset(), date);
+                    let s = format!(
+                        "due:'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}'",
+                        date.year(),
+                        date.month(),
+                        date.day(),
+                        date.hour(),
+                        date.minute(),
+                        date.second(),
+                    );
+                    self.completion_list.insert(s);
+                }
+            }
+            for task in &self.tasks {
+                if let Some(date) = task.wait() {
+                    let now = Local::now();
+                    let date = TimeZone::from_utc_datetime(now.offset(), date);
+                    let s = format!(
+                        "wait:'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}'",
+                        date.year(),
+                        date.month(),
+                        date.day(),
+                        date.hour(),
+                        date.minute(),
+                        date.second(),
+                    );
+                    self.completion_list.insert(s);
+                }
+            }
+            for task in &self.tasks {
+                if let Some(date) = task.end() {
+                    let now = Local::now();
+                    let date = TimeZone::from_utc_datetime(now.offset(), date);
+                    let s = format!(
+                        "end:'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}'",
+                        date.year(),
+                        date.month(),
+                        date.day(),
+                        date.hour(),
+                        date.minute(),
+                        date.second(),
+                    );
+                    self.completion_list.insert(s);
+                }
+            }
         }
 
-        if self.mode == AppMode::TaskFilter {
+        if self.mode == Mode::Tasks(Action::Filter) {
             self.completion_list.insert("status:pending".into());
             self.completion_list.insert("status:completed".into());
             self.completion_list.insert("status:deleted".into());
@@ -3075,20 +3199,19 @@ impl TaskwarriorTuiApp {
             self.completion_list.insert("status:waiting".into());
         }
     }
-
     pub fn update_input_for_completion(&mut self) {
         match self.mode {
-            AppMode::TaskAdd | AppMode::TaskAnnotate | AppMode::TaskLog => {
+            Mode::Tasks(Action::Add | Action::Annotate | Action::Log) => {
                 let i = get_start_word_under_cursor(self.command.as_str(), self.command.pos());
                 let input = self.command.as_str()[i..self.command.pos()].to_string();
                 self.completion_list.input(input);
             }
-            AppMode::TaskModify => {
+            Mode::Tasks(Action::Modify) => {
                 let i = get_start_word_under_cursor(self.modify.as_str(), self.modify.pos());
                 let input = self.modify.as_str()[i..self.modify.pos()].to_string();
                 self.completion_list.input(input);
             }
-            AppMode::TaskFilter => {
+            Mode::Tasks(Action::Filter) => {
                 let i = get_start_word_under_cursor(self.filter.as_str(), self.filter.pos());
                 let input = self.filter.as_str()[i..self.filter.pos()].to_string();
                 self.completion_list.input(input);
@@ -3153,7 +3276,7 @@ pub fn add_tag(task: &mut Task, tag: String) {
     }
 }
 
-pub fn remove_tag(task: &mut Task, tag: String) {
+pub fn remove_tag(task: &mut Task, tag: &str) {
     if let Some(t) = task.tags_mut() {
         if let Some(index) = t.iter().position(|x| *x == tag) {
             t.remove(index);
@@ -3196,9 +3319,9 @@ mod tests {
     }
 
     fn test_taskwarrior_tui_history() {
-        let mut app = TaskwarriorTuiApp::new("next").unwrap();
+        let mut app = TaskwarriorTui::new("next").unwrap();
         // setup();
-        app.mode = AppMode::TaskAdd;
+        app.mode = Mode::Tasks(Action::Add);
         app.update_completion_list();
         let input = "\"Wash car\" +test";
         for c in input.chars() {
@@ -3206,7 +3329,7 @@ mod tests {
         }
         app.handle_input(Key::Char('\n')).unwrap();
 
-        app.mode = AppMode::TaskAdd;
+        app.mode = Mode::Tasks(Action::Add);
         app.update_completion_list();
         let input = "\"Buy groceries\" +test";
         for c in input.chars() {
@@ -3218,7 +3341,7 @@ mod tests {
 
         app.handle_input(Key::Char('\n')).unwrap();
 
-        app.mode = AppMode::TaskAdd;
+        app.mode = Mode::Tasks(Action::Add);
         app.update_completion_list();
         let input = "\"Buy groceries";
         for c in input.chars() {
@@ -3236,14 +3359,14 @@ mod tests {
 
     #[test]
     fn test_taskwarrior_tui() {
-        let app = TaskwarriorTuiApp::new("next");
+        let app = TaskwarriorTui::new("next");
         if let Err(_) = app {
             return;
         }
         let app = app.unwrap();
         assert!(app.task_by_index(0).is_none());
 
-        let app = TaskwarriorTuiApp::new("next").unwrap();
+        let app = TaskwarriorTui::new("next").unwrap();
         assert!(app
             .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
             .is_none());
@@ -3255,10 +3378,10 @@ mod tests {
 
         setup();
 
-        let app = TaskwarriorTuiApp::new("next").unwrap();
+        let app = TaskwarriorTui::new("next").unwrap();
         assert!(app.task_by_index(0).is_some());
 
-        let app = TaskwarriorTuiApp::new("next").unwrap();
+        let app = TaskwarriorTui::new("next").unwrap();
         assert!(app
             .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
             .is_some());
@@ -3278,7 +3401,7 @@ mod tests {
 
     fn test_task_tags() {
         // testing tags
-        let app = TaskwarriorTuiApp::new("next").unwrap();
+        let app = TaskwarriorTui::new("next").unwrap();
         let task = app.task_by_id(1).unwrap();
 
         let tags = vec!["PENDING".to_string(), "PRIORITY".to_string()];
@@ -3287,11 +3410,11 @@ mod tests {
             assert!(task.tags().unwrap().contains(&tag));
         }
 
-        let app = TaskwarriorTuiApp::new("next").unwrap();
+        let app = TaskwarriorTui::new("next").unwrap();
         let task = app.task_by_id(11).unwrap();
         let tags = vec!["finance", "UNBLOCKED", "PENDING", "TAGGED", "UDA"]
             .iter()
-            .map(|s| s.to_string())
+            .map(ToString::to_string)
             .collect::<Vec<String>>();
         for tag in tags {
             assert!(task.tags().unwrap().contains(&tag));
@@ -3299,7 +3422,7 @@ mod tests {
     }
 
     fn test_task_style() {
-        let app = TaskwarriorTuiApp::new("next").unwrap();
+        let app = TaskwarriorTui::new("next").unwrap();
         let task = app.task_by_id(1).unwrap();
         for r in vec![
             "active",
@@ -3329,7 +3452,7 @@ mod tests {
     }
 
     fn test_task_context() {
-        let mut app = TaskwarriorTuiApp::new("next").unwrap();
+        let mut app = TaskwarriorTui::new("next").unwrap();
 
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
@@ -3365,7 +3488,7 @@ mod tests {
     fn test_task_tomorrow() {
         let total_tasks: u64 = 26;
 
-        let mut app = TaskwarriorTuiApp::new("next").unwrap();
+        let mut app = TaskwarriorTui::new("next").unwrap();
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
@@ -3428,7 +3551,7 @@ mod tests {
             .output()
             .unwrap();
 
-        let mut app = TaskwarriorTuiApp::new("next").unwrap();
+        let mut app = TaskwarriorTui::new("next").unwrap();
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
@@ -3438,7 +3561,7 @@ mod tests {
     fn test_task_earlier_today() {
         let total_tasks: u64 = 26;
 
-        let mut app = TaskwarriorTuiApp::new("next").unwrap();
+        let mut app = TaskwarriorTui::new("next").unwrap();
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
@@ -3490,7 +3613,7 @@ mod tests {
             .output()
             .unwrap();
 
-        let mut app = TaskwarriorTuiApp::new("next").unwrap();
+        let mut app = TaskwarriorTui::new("next").unwrap();
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
@@ -3500,7 +3623,7 @@ mod tests {
     fn test_task_later_today() {
         let total_tasks: u64 = 26;
 
-        let mut app = TaskwarriorTuiApp::new("next").unwrap();
+        let mut app = TaskwarriorTui::new("next").unwrap();
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
@@ -3559,7 +3682,7 @@ mod tests {
             .output()
             .unwrap();
 
-        let mut app = TaskwarriorTuiApp::new("next").unwrap();
+        let mut app = TaskwarriorTui::new("next").unwrap();
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
@@ -3568,7 +3691,7 @@ mod tests {
 
     fn test_draw_empty_task_report() {
         let test_case = |expected: &Buffer| {
-            let mut app = TaskwarriorTuiApp::new("next").unwrap();
+            let mut app = TaskwarriorTui::new("next").unwrap();
 
             app.task_report_next();
             app.context_next();
@@ -3634,7 +3757,7 @@ mod tests {
 
     fn test_draw_task_report_with_extended_modify_command() {
         let test_case = |expected1: &Buffer, expected2: &Buffer| {
-            let mut app = TaskwarriorTuiApp::new("next").unwrap();
+            let mut app = TaskwarriorTui::new("next").unwrap();
 
             let total_tasks: u64 = 26;
 
@@ -3646,7 +3769,7 @@ mod tests {
             let now = Local::now();
             let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
 
-            app.mode = AppMode::TaskModify;
+            app.mode = Mode::Tasks(Action::Modify);
             match app.task_table_state.mode() {
                 TableMode::SingleSelection => match app.task_current() {
                     Some(t) => {
@@ -3669,7 +3792,7 @@ mod tests {
                         .constraints([Constraint::Min(0), Constraint::Length(3)].as_ref())
                         .split(f.size());
 
-                    let position = app.get_position(&app.modify);
+                    let position = TaskwarriorTui::get_position(&app.modify);
                     f.set_cursor(
                         std::cmp::min(
                             rects[1].x + position as u16 + 1,
@@ -3702,7 +3825,7 @@ mod tests {
                     } else {
                         format!("Modify Task {}", task_ids.join(","))
                     };
-                    app.draw_command(
+                    TaskwarriorTui::draw_command(
                         f,
                         rects[1],
                         app.modify.as_str(),
@@ -3725,7 +3848,7 @@ mod tests {
                         .constraints([Constraint::Min(0), Constraint::Length(3)].as_ref())
                         .split(f.size());
 
-                    let position = app.get_position(&app.modify);
+                    let position = TaskwarriorTui::get_position(&app.modify);
                     f.set_cursor(
                         std::cmp::min(
                             rects[1].x + position as u16 + 1,
@@ -3758,7 +3881,7 @@ mod tests {
                     } else {
                         format!("Modify Task {}", task_ids.join(","))
                     };
-                    app.draw_command(
+                    TaskwarriorTui::draw_command(
                         f,
                         rects[1],
                         app.modify.as_str(),
@@ -3800,7 +3923,7 @@ mod tests {
 
     fn test_draw_task_report() {
         let test_case = |expected: &Buffer| {
-            let mut app = TaskwarriorTuiApp::new("next").unwrap();
+            let mut app = TaskwarriorTui::new("next").unwrap();
 
             app.task_report_next();
             app.context_next();
@@ -3956,14 +4079,14 @@ mod tests {
 
     fn test_draw_calendar() {
         let test_case = |expected: &Buffer| {
-            let mut app = TaskwarriorTuiApp::new("next").unwrap();
+            let mut app = TaskwarriorTui::new("next").unwrap();
 
             app.task_report_next();
             app.context_next();
             app.update(true).unwrap();
 
             app.calendar_year = 2020;
-            app.mode = AppMode::Calendar;
+            app.mode = Mode::Calendar;
 
             let backend = TestBackend::new(50, 15);
             let mut terminal = Terminal::new(backend).unwrap();
@@ -4040,9 +4163,9 @@ mod tests {
 
     fn test_draw_help_popup() {
         let test_case = |expected: &Buffer| {
-            let mut app = TaskwarriorTuiApp::new("next").unwrap();
+            let mut app = TaskwarriorTui::new("next").unwrap();
 
-            app.mode = AppMode::TaskHelpPopup;
+            app.mode = Mode::Tasks(Action::HelpPopup);
             app.task_report_next();
             app.context_next();
             app.update(true).unwrap();
@@ -4086,9 +4209,9 @@ mod tests {
 
     fn test_draw_context_menu() {
         let test_case = |expected: &Buffer| {
-            let mut app = TaskwarriorTuiApp::new("next").unwrap();
+            let mut app = TaskwarriorTui::new("next").unwrap();
 
-            app.mode = AppMode::TaskContextMenu;
+            app.mode = Mode::Tasks(Action::ContextMenu);
             app.task_report_next();
             app.context_next();
             app.update(true).unwrap();
@@ -4162,7 +4285,7 @@ mod tests {
         dbg!(UnicodeWidthStr::width("写作业"));
         dbg!(UnicodeWidthStr::width("abc"));
 
-        let mut app = TaskwarriorTuiApp::new("next").unwrap();
+        let mut app = TaskwarriorTui::new("next").unwrap();
 
         if let Some(task) = app.task_by_id(27) {
             let i = app.task_index_by_uuid(*task.uuid()).unwrap_or_default();
@@ -4171,7 +4294,7 @@ mod tests {
             app.current_selection_uuid = None;
         }
         app.update(true).unwrap();
-        app.mode = AppMode::TaskModify;
+        app.mode = Mode::Tasks(Action::Modify);
         match app.task_current() {
             Some(t) => {
                 let s = format!("{} ", t.description());
@@ -4185,7 +4308,7 @@ mod tests {
         dbg!(app.modify.as_str().len());
         dbg!(app.modify.graphemes(true).count());
         dbg!(app.modify.pos());
-        let position = app.get_position(&app.modify);
+        let position = TaskwarriorTui::get_position(&app.modify);
         dbg!(position);
     }
 }

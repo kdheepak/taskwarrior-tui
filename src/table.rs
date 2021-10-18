@@ -1,6 +1,6 @@
 use cassowary::{
     strength::{MEDIUM, REQUIRED, WEAK},
-    WeightedRelation::*,
+    WeightedRelation::{EQ, GE, LE},
     {Expression, Solver},
 };
 use std::collections::HashSet;
@@ -340,7 +340,7 @@ where
                 }
                 Constraint::Min(v) => variables[i] | GE(WEAK) | f64::from(v),
                 Constraint::Max(v) => variables[i] | LE(WEAK) | f64::from(v),
-            })
+            });
         }
         solver
             .add_constraint(
@@ -354,7 +354,7 @@ where
         for &(var, value) in solver.fetch_changes() {
             let index = var_indices[&var];
             let value = if value.is_sign_negative() { 0 } else { value as u16 };
-            solved_widths[index] = value
+            solved_widths[index] = value;
         }
 
         let mut y = table_area.top();
@@ -399,7 +399,7 @@ where
 
         let highlight_symbol = match state.mode {
             TableMode::MultipleSelection => {
-                let s = self.highlight_symbol.unwrap_or("•").trim_end();
+                let s = self.highlight_symbol.unwrap_or("\u{2022}").trim_end();
                 format!("{} ", s)
             }
             TableMode::SingleSelection => self.highlight_symbol.unwrap_or("").to_string(),
@@ -407,7 +407,7 @@ where
 
         let mark_symbol = match state.mode {
             TableMode::MultipleSelection => {
-                let s = self.mark_symbol.unwrap_or("✔").trim_end();
+                let s = self.mark_symbol.unwrap_or("\u{2714}").trim_end();
                 format!("{} ", s)
             }
             TableMode::SingleSelection => self.highlight_symbol.unwrap_or("").to_string(),
@@ -422,12 +422,12 @@ where
         };
 
         let mark_highlight_symbol = {
-            let s = self.mark_highlight_symbol.unwrap_or("⦿").trim_end();
+            let s = self.mark_highlight_symbol.unwrap_or("\u{29bf}").trim_end();
             format!("{} ", s)
         };
 
         let unmark_highlight_symbol = {
-            let s = self.unmark_highlight_symbol.unwrap_or("⦾").trim_end();
+            let s = self.unmark_highlight_symbol.unwrap_or("\u{29be}").trim_end();
             format!("{} ", s)
         };
 
@@ -437,7 +437,7 @@ where
             let remaining = (table_area.bottom() - y) as usize;
 
             // Make sure the table shows the selected item
-            state.offset = if let Some(s) = selected {
+            state.offset = selected.map_or(0, |s| {
                 if s >= remaining + state.offset - 1 {
                     s + 1 - remaining
                 } else if s < state.offset {
@@ -445,9 +445,7 @@ where
                 } else {
                     state.offset
                 }
-            } else {
-                0
-            };
+            });
             for (i, row) in self.rows.skip(state.offset).take(remaining).enumerate() {
                 let (data, style, symbol) = match row {
                     Row::Data(d) | Row::StyledData(d, _)
@@ -491,8 +489,7 @@ where
                         );
                         if c == header_index {
                             let symbol = match state.mode {
-                                TableMode::SingleSelection => &symbol,
-                                TableMode::MultipleSelection => &symbol,
+                                TableMode::SingleSelection | TableMode::MultipleSelection => &symbol,
                             };
                             format!(
                                 "{symbol}{elt:>width$}",

@@ -31,9 +31,8 @@ pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime) -> S
         return format!("{}{}h", minus, seconds / 60 / 60);
     } else if seconds >= 60 {
         return format!("{}{}min", minus, seconds / 60);
-    } else {
-        return format!("{}{}s", minus, seconds);
     }
+    return format!("{}{}s", minus, seconds);
 }
 
 pub struct TaskReportTable {
@@ -86,7 +85,7 @@ impl TaskReportTable {
             labels: vec![],
             columns: vec![],
             tasks: vec![vec![]],
-            virtual_tags: virtual_tags.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
+            virtual_tags: virtual_tags.iter().map(ToString::to_string).collect::<Vec<_>>(),
             description_width: 100,
         };
         task_report_table.export_headers(Some(data), report)?;
@@ -97,15 +96,14 @@ impl TaskReportTable {
         self.columns = vec![];
         self.labels = vec![];
 
-        let data = match data {
-            Some(s) => s.to_string(),
-            None => {
-                let output = Command::new("task")
-                    .arg("show")
-                    .arg(format!("report.{}.columns", report))
-                    .output()?;
-                String::from_utf8_lossy(&output.stdout).into_owned()
-            }
+        let data = if let Some(s) = data {
+            s.to_string()
+        } else {
+            let output = Command::new("task")
+                .arg("show")
+                .arg(format!("report.{}.columns", report))
+                .output()?;
+            String::from_utf8_lossy(&output.stdout).into_owned()
         };
 
         for line in data.split('\n') {
@@ -133,7 +131,7 @@ impl TaskReportTable {
         }
 
         if self.labels.is_empty() {
-            for label in self.columns.iter() {
+            for label in &self.columns {
                 let label = label.split('.').collect::<Vec<&str>>()[0];
                 let label = if label == "id" { "ID" } else { label };
                 let mut c = label.chars();
@@ -163,18 +161,17 @@ impl TaskReportTable {
                 let s = self.get_string_attribute(name, task, tasks);
                 item.push(s);
             }
-            self.tasks.push(item)
+            self.tasks.push(item);
         }
     }
 
     pub fn simplify_table(&mut self) -> (Vec<Vec<String>>, Vec<String>) {
         // find which columns are empty
         let null_columns_len;
-        if !self.tasks.is_empty() {
-            null_columns_len = self.tasks[0].len();
-        } else {
+        if self.tasks.is_empty() {
             return (vec![], vec![]);
         }
+        null_columns_len = self.tasks[0].len();
 
         let mut null_columns = vec![0; null_columns_len];
         for task in &self.tasks {
@@ -191,7 +188,7 @@ impl TaskReportTable {
                 .iter()
                 .enumerate()
                 .filter(|&(i, _)| null_columns[i] != 0)
-                .map(|(_, e)| e.to_owned())
+                .map(|(_, e)| e.clone())
                 .collect();
             tasks.push(t);
         }
@@ -202,7 +199,7 @@ impl TaskReportTable {
             .iter()
             .enumerate()
             .filter(|&(i, _)| null_columns[i] != 0)
-            .map(|(_, e)| e.to_owned())
+            .map(|(_, e)| e.clone())
             .collect();
 
         (tasks, headers)
@@ -215,11 +212,7 @@ impl TaskReportTable {
                 Some(v) => vague_format_date_time(Local::now().naive_utc(), NaiveDateTime::new(v.date(), v.time())),
                 None => "".to_string(),
             },
-            "until" => match task.until() {
-                Some(v) => vague_format_date_time(Local::now().naive_utc(), NaiveDateTime::new(v.date(), v.time())),
-                None => "".to_string(),
-            },
-            "until.remaining" => match task.until() {
+            "until" | "until.remaining" => match task.until() {
                 Some(v) => vague_format_date_time(Local::now().naive_utc(), NaiveDateTime::new(v.date(), v.time())),
                 None => "".to_string(),
             },
@@ -234,7 +227,7 @@ impl TaskReportTable {
             "status.short" => task.status().to_string().chars().next().unwrap().to_string(),
             "status" => task.status().to_string(),
             "priority" => match task.priority() {
-                Some(p) => p.to_owned(),
+                Some(p) => p.clone(),
                 None => "".to_string(),
             },
             "project" => match task.project() {
@@ -259,10 +252,10 @@ impl TaskReportTable {
                         let mut dt = vec![];
                         for u in v {
                             if let Some(t) = tasks.iter().find(|t| t.uuid() == u) {
-                                dt.push(t.id().unwrap())
+                                dt.push(t.id().unwrap());
                             }
                         }
-                        join(dt.iter().map(|i| i.to_string()), " ")
+                        join(dt.iter().map(ToString::to_string), " ")
                     }
                 }
                 None => "".to_string(),
@@ -300,16 +293,18 @@ impl TaskReportTable {
                 None => "".to_string(),
             },
             "description.count" => {
-                let c = match task.annotations() {
-                    Some(a) => format!("[{}]", a.len()),
-                    None => format!(""),
+                let c = if let Some(a) = task.annotations() {
+                    format!("[{}]", a.len())
+                } else {
+                    format!("")
                 };
                 format!("{} {}", task.description().to_string(), c)
             }
             "description.truncated_count" => {
-                let c = match task.annotations() {
-                    Some(a) => format!(" [{}]", a.len()),
-                    None => format!(""),
+                let c = if let Some(a) = task.annotations() {
+                    format!("[{}]", a.len())
+                } else {
+                    format!("")
                 };
                 let d = task.description().to_string();
                 let mut available_width = self.description_width;
@@ -319,7 +314,7 @@ impl TaskReportTable {
                 let (d, _) = d.unicode_truncate(available_width);
                 let mut d = d.to_string();
                 if d != *task.description() {
-                    d = format!("{}…", d);
+                    d = format!("{}\u{2026}", d);
                 }
                 format!("{}{}", d, c)
             }
@@ -329,12 +324,11 @@ impl TaskReportTable {
                 let (d, _) = d.unicode_truncate(available_width);
                 let mut d = d.to_string();
                 if d != *task.description() {
-                    d = format!("{}…", d);
+                    d = format!("{}\u{2026}", d);
                 }
                 d
             }
-            "description.desc" => task.description().to_string(),
-            "description" => task.description().to_string(),
+            "description.desc" | "description" => task.description().to_string(),
             "urgency" => match &task.urgency() {
                 Some(f) => format!("{:.2}", *f),
                 None => "0.00".to_string(),

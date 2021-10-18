@@ -2,6 +2,31 @@
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 
+use std::env;
+use std::error::Error;
+use std::io::{self, Write};
+use std::panic;
+use std::time::Duration;
+
+use anyhow::Result;
+use async_std::prelude::*;
+use async_std::sync::{Arc, Mutex};
+use async_std::task;
+use crossterm::{
+    cursor,
+    event::{DisableMouseCapture, EnableMouseCapture, EventStream},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
+};
+use futures::stream::{FuturesUnordered, StreamExt};
+use tui::{backend::CrosstermBackend, Terminal};
+
+use app::{Mode, TaskwarriorTui};
+
+use crate::app::Action;
+use crate::event::{Event, EventConfig, Events, Key};
+use crate::keyconfig::KeyConfig;
+
 mod app;
 mod calendar;
 mod cli;
@@ -12,41 +37,22 @@ mod event;
 mod help;
 mod history;
 mod keyconfig;
+mod pane;
 mod table;
 mod task_report;
 
-use crate::event::{Event, EventConfig, Events, Key};
-use anyhow::Result;
-use std::env;
-use std::error::Error;
-use std::io::{self, Write};
-use std::panic;
-use std::time::Duration;
-
-use async_std::prelude::*;
-use async_std::sync::{Arc, Mutex};
-use async_std::task;
-use futures::stream::{FuturesUnordered, StreamExt};
-
-use crossterm::{
-    cursor,
-    event::{DisableMouseCapture, EnableMouseCapture, EventStream},
-    execute,
-    terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
-};
-use tui::{backend::CrosstermBackend, Terminal};
-
-use app::{AppMode, TaskwarriorTuiApp};
-
+/// # Panics
+/// Will panic if could not obtain terminal
 pub fn setup_terminal() -> Terminal<CrosstermBackend<io::Stdout>> {
-    enable_raw_mode().unwrap();
+    enable_raw_mode().expect("Running not in terminal");
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen).unwrap();
     execute!(stdout, Clear(ClearType::All)).unwrap();
     let backend = CrosstermBackend::new(stdout);
     Terminal::new(backend).unwrap()
 }
-
+/// # Panics
+/// Will panic if could not `disable_raw_mode`
 pub fn destruct_terminal() {
     disable_raw_mode().unwrap();
     execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture).unwrap();
@@ -72,7 +78,7 @@ async fn tui_main(_config: &str, report: &str) -> Result<()> {
         better_panic::Settings::auto().create_panic_handler()(panic_info);
     }));
 
-    let maybeapp = TaskwarriorTuiApp::new(report);
+    let maybeapp = TaskwarriorTui::new(report);
     if maybeapp.is_err() {
         destruct_terminal();
         return Err(maybeapp.err().unwrap());
@@ -103,9 +109,9 @@ async fn tui_main(_config: &str, report: &str) -> Result<()> {
                     || input == app.keyconfig.shortcut7
                     || input == app.keyconfig.shortcut8
                     || input == app.keyconfig.shortcut9)
-                    && app.mode == AppMode::TaskReport
+                    && app.mode == Mode::Tasks(Action::Report)
                 {
-                    events.leave_tui_mode(&mut terminal);
+                    Events::leave_tui_mode(&mut terminal);
                 }
 
                 let r = app.handle_input(input);
@@ -120,10 +126,10 @@ async fn tui_main(_config: &str, report: &str) -> Result<()> {
                     || input == app.keyconfig.shortcut7
                     || input == app.keyconfig.shortcut8
                     || input == app.keyconfig.shortcut9)
-                    && app.mode == AppMode::TaskReport
-                    || app.mode == AppMode::TaskError
+                    && app.mode == Mode::Tasks(Action::Report)
+                    || app.mode == Mode::Tasks(Action::Error)
                 {
-                    events.enter_tui_mode(&mut terminal);
+                    Events::enter_tui_mode(&mut terminal);
                 }
                 if r.is_err() {
                     destruct_terminal();

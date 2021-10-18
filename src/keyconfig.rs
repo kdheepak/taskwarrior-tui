@@ -97,31 +97,31 @@ impl KeyConfig {
     }
 
     pub fn update(&mut self, data: &str) -> Result<()> {
-        let quit = self.get_config("uda.taskwarrior-tui.keyconfig.quit", data);
-        let refresh = self.get_config("uda.taskwarrior-tui.keyconfig.refresh", data);
-        let go_to_bottom = self.get_config("uda.taskwarrior-tui.keyconfig.go-to-bottom", data);
-        let go_to_top = self.get_config("uda.taskwarrior-tui.keyconfig.go-to-top", data);
-        let down = self.get_config("uda.taskwarrior-tui.keyconfig.down", data);
-        let up = self.get_config("uda.taskwarrior-tui.keyconfig.up", data);
-        let page_down = self.get_config("uda.taskwarrior-tui.keyconfig.page-down", data);
-        let page_up = self.get_config("uda.taskwarrior-tui.keyconfig.page-up", data);
-        let delete = self.get_config("uda.taskwarrior-tui.keyconfig.delete", data);
-        let done = self.get_config("uda.taskwarrior-tui.keyconfig.done", data);
-        let start_stop = self.get_config("uda.taskwarrior-tui.keyconfig.start-stop", data);
-        let select = self.get_config("uda.taskwarrior-tui.keyconfig.select", data);
-        let select_all = self.get_config("uda.taskwarrior-tui.keyconfig.select-all", data);
-        let undo = self.get_config("uda.taskwarrior-tui.keyconfig.undo", data);
-        let edit = self.get_config("uda.taskwarrior-tui.keyconfig.edit", data);
-        let modify = self.get_config("uda.taskwarrior-tui.keyconfig.modify", data);
-        let shell = self.get_config("uda.taskwarrior-tui.keyconfig.shell", data);
-        let log = self.get_config("uda.taskwarrior-tui.keyconfig.log", data);
-        let add = self.get_config("uda.taskwarrior-tui.keyconfig.add", data);
-        let annotate = self.get_config("uda.taskwarrior-tui.keyconfig.annotate", data);
-        let filter = self.get_config("uda.taskwarrior-tui.keyconfig.filter", data);
-        let zoom = self.get_config("uda.taskwarrior-tui.keyconfig.zoom", data);
-        let context_menu = self.get_config("uda.taskwarrior-tui.keyconfig.context-menu", data);
-        let next_tab = self.get_config("uda.taskwarrior-tui.keyconfig.next-tab", data);
-        let previous_tab = self.get_config("uda.taskwarrior-tui.keyconfig.previous-tab", data);
+        let quit = Self::get_config("uda.taskwarrior-tui.keyconfig.quit", data);
+        let refresh = Self::get_config("uda.taskwarrior-tui.keyconfig.refresh", data);
+        let go_to_bottom = Self::get_config("uda.taskwarrior-tui.keyconfig.go-to-bottom", data);
+        let go_to_top = Self::get_config("uda.taskwarrior-tui.keyconfig.go-to-top", data);
+        let down = Self::get_config("uda.taskwarrior-tui.keyconfig.down", data);
+        let up = Self::get_config("uda.taskwarrior-tui.keyconfig.up", data);
+        let page_down = Self::get_config("uda.taskwarrior-tui.keyconfig.page-down", data);
+        let page_up = Self::get_config("uda.taskwarrior-tui.keyconfig.page-up", data);
+        let delete = Self::get_config("uda.taskwarrior-tui.keyconfig.delete", data);
+        let done = Self::get_config("uda.taskwarrior-tui.keyconfig.done", data);
+        let start_stop = Self::get_config("uda.taskwarrior-tui.keyconfig.start-stop", data);
+        let select = Self::get_config("uda.taskwarrior-tui.keyconfig.select", data);
+        let select_all = Self::get_config("uda.taskwarrior-tui.keyconfig.select-all", data);
+        let undo = Self::get_config("uda.taskwarrior-tui.keyconfig.undo", data);
+        let edit = Self::get_config("uda.taskwarrior-tui.keyconfig.edit", data);
+        let modify = Self::get_config("uda.taskwarrior-tui.keyconfig.modify", data);
+        let shell = Self::get_config("uda.taskwarrior-tui.keyconfig.shell", data);
+        let log = Self::get_config("uda.taskwarrior-tui.keyconfig.log", data);
+        let add = Self::get_config("uda.taskwarrior-tui.keyconfig.add", data);
+        let annotate = Self::get_config("uda.taskwarrior-tui.keyconfig.annotate", data);
+        let filter = Self::get_config("uda.taskwarrior-tui.keyconfig.filter", data);
+        let zoom = Self::get_config("uda.taskwarrior-tui.keyconfig.zoom", data);
+        let context_menu = Self::get_config("uda.taskwarrior-tui.keyconfig.context-menu", data);
+        let next_tab = Self::get_config("uda.taskwarrior-tui.keyconfig.next-tab", data);
+        let previous_tab = Self::get_config("uda.taskwarrior-tui.keyconfig.previous-tab", data);
 
         self.quit = quit.unwrap_or(self.quit);
         self.refresh = refresh.unwrap_or(self.refresh);
@@ -190,14 +190,12 @@ impl KeyConfig {
         }
     }
 
-    fn get_config(&self, config: &str, data: &str) -> Option<Key> {
+    fn get_config(config: &str, data: &str) -> Option<Key> {
         for line in data.split('\n') {
             if line.starts_with(config) {
                 let line = line.trim_start_matches(config).trim_start().trim_end().to_string();
                 if line.len() == 1 {
                     return Some(Key::Char(line.chars().next().unwrap()));
-                } else {
-                    return None;
                 }
             } else if line.starts_with(&config.replace('-', "_")) {
                 let line = line
@@ -207,8 +205,6 @@ impl KeyConfig {
                     .to_string();
                 if line.len() == 1 {
                     return Some(Key::Char(line.chars().next().unwrap()));
-                } else {
-                    return None;
                 }
             }
         }

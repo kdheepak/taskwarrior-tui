@@ -74,8 +74,8 @@ impl Config {
         let bool_collection = Self::get_bool_collection();
 
         let enabled = true;
-        let obfuscate = bool_collection.get("obfuscate").cloned().unwrap_or(false);
-        let print_empty_columns = bool_collection.get("print_empty_columns").cloned().unwrap_or(false);
+        let obfuscate = bool_collection.get("obfuscate").copied().unwrap_or(false);
+        let print_empty_columns = bool_collection.get("print_empty_columns").copied().unwrap_or(false);
 
         let color = Self::get_color_collection(data);
         let filter = Self::get_filter(data, report)?;
@@ -384,14 +384,14 @@ impl Config {
         let data = Self::get_config("rule.precedence.color", data)
             .context("Unable to parse `task show rule.precedence.color`.")
             .unwrap();
-        data.split(',').map(|s| s.to_string()).collect::<Vec<_>>()
+        data.split(',').map(ToString::to_string).collect::<Vec<_>>()
     }
 
     fn get_uda_priority_values(data: &str) -> Vec<String> {
         let data = Self::get_config("uda.priority.values", data)
             .context("Unable to parse `task show uda.priority.values`.")
             .unwrap();
-        data.split(',').map(|s| s.to_string()).collect::<Vec<_>>()
+        data.split(',').map(ToString::to_string).collect::<Vec<_>>()
     }
 
     fn get_filter(data: &str, report: &str) -> Result<String> {
@@ -471,7 +471,7 @@ impl Config {
     fn get_uda_selection_indicator(data: &str) -> String {
         let indicator = Self::get_config("uda.taskwarrior-tui.selection.indicator", data);
         match indicator {
-            None => "• ".to_string(),
+            None => "\u{2022} ".to_string(),
             Some(indicator) => format!("{} ", indicator),
         }
     }
@@ -479,7 +479,7 @@ impl Config {
     fn get_uda_mark_indicator(data: &str) -> String {
         let indicator = Self::get_config("uda.taskwarrior-tui.mark.indicator", data);
         match indicator {
-            None => "✔ ".to_string(),
+            None => "\u{2714} ".to_string(),
             Some(indicator) => format!("{} ", indicator),
         }
     }
@@ -495,7 +495,7 @@ impl Config {
     fn get_uda_mark_highlight_indicator(data: &str) -> String {
         let indicator = Self::get_config("uda.taskwarrior-tui.mark-selection.indicator", data);
         match indicator {
-            None => "⦿ ".to_string(),
+            None => "\u{29bf} ".to_string(),
             Some(indicator) => format!("{} ", indicator),
         }
     }
@@ -503,7 +503,7 @@ impl Config {
     fn get_uda_unmark_highlight_indicator(data: &str) -> String {
         let indicator = Self::get_config("uda.taskwarrior-tui.unmark-selection.indicator", data);
         match indicator {
-            None => "⦾ ".to_string(),
+            None => "\u{29be} ".to_string(),
             Some(indicator) => format!("{} ", indicator),
         }
     }

@@ -17,7 +17,7 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, PartialOrd, Eq)]
 pub enum Key {
     CtrlBackspace,
     CtrlDelete,
@@ -61,7 +61,13 @@ pub struct Events {
 
 impl Events {
     pub fn with_config(config: EventConfig) -> Events {
-        use crossterm::event::{KeyCode::*, KeyModifiers};
+        use crossterm::event::{
+            KeyCode::{
+                BackTab, Backspace, Char, Delete, Down, End, Enter, Esc, Home, Insert, Left, Null, PageDown, PageUp,
+                Right, Tab, Up, F,
+            },
+            KeyModifiers,
+        };
         let tick_rate = config.tick_rate;
         let (tx, rx) = unbounded::<Event<Key>>();
         task::spawn_local(async move {
@@ -131,13 +137,13 @@ impl Events {
         self.rx.recv().await
     }
 
-    pub fn leave_tui_mode(&self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
+    pub fn leave_tui_mode(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
         disable_raw_mode().unwrap();
         execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture).unwrap();
         terminal.show_cursor().unwrap();
     }
 
-    pub fn enter_tui_mode(&self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
+    pub fn enter_tui_mode(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
         execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture).unwrap();
         enable_raw_mode().unwrap();
         terminal.resize(terminal.size().unwrap()).unwrap();

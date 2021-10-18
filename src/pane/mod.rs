@@ -1,0 +1,28 @@
+use anyhow::Result;
+
+use crate::app::{Action, Mode, TaskwarriorTui};
+use crate::event::Key;
+use clap::App;
+use std::ops::Index;
+
+pub mod project;
+
+pub trait Pane {
+    fn handle_input(app: &mut TaskwarriorTui, input: Key) -> Result<()>;
+    fn change_focus_to_left_pane(app: &mut TaskwarriorTui) {
+        match app.mode {
+            Mode::Tasks(_) => {}
+            Mode::Projects => app.mode = Mode::Tasks(Action::Report),
+            Mode::Calendar => {
+                app.mode = Mode::Projects;
+            }
+        }
+    }
+    fn change_focus_to_right_pane(app: &mut TaskwarriorTui) {
+        match app.mode {
+            Mode::Tasks(_) => app.mode = Mode::Projects,
+            Mode::Projects => app.mode = Mode::Calendar,
+            Mode::Calendar => {}
+        }
+    }
+}
