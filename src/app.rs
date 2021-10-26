@@ -59,7 +59,6 @@ use rustyline::line_buffer::LineBuffer;
 use rustyline::At;
 use rustyline::Editor;
 use rustyline::Word;
-use rustyline_derive::Helper;
 
 use crate::history::HistoryContext;
 

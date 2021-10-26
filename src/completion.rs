@@ -13,7 +13,6 @@ use rustyline::highlight::{Highlighter, MatchingBracketHighlighter};
 use rustyline::hint::Hinter;
 use rustyline::line_buffer::LineBuffer;
 use rustyline::Context;
-use rustyline_derive::Helper;
 
 use unicode_segmentation::Graphemes;
 use unicode_segmentation::UnicodeSegmentation;

@@ -1,6 +1,6 @@
 [package]
 name = "taskwarrior-tui"
-version = "0.13.34"
+version = "0.13.35"
 license = "MIT"
 description = "A Taskwarrior Terminal User Interface"
 repository = "https://github.com/kdheepak/taskwarrior-tui/"
@@ -32,8 +32,7 @@ itertools = "0.10.1"
 lazy_static = "1.4.0"
 rand = "0.8.4"
 regex = "1.5.4"
-rustyline = "8.2.0"
-rustyline-derive = "0.4.0"
+rustyline = "8.2"
 serde = { version = "1.0.127", features = ["derive"] }
 serde_json = "1.0.66"
 shellexpand = "2.1.0"
