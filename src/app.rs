@@ -2405,6 +2405,14 @@ impl TaskwarriorTui {
                                 self.error = e;
                             }
                         }
+                    } else if input == self.keyconfig.edit {
+                        match self.task_edit() {
+                            Ok(_) => self.update(true)?,
+                            Err(e) => {
+                                self.mode = Mode::Tasks(Action::Error);
+                                self.error = e;
+                            }
+                        }
                     } else if input == self.keyconfig.undo {
                         match self.task_undo() {
                             Ok(_) => self.update(true)?,
