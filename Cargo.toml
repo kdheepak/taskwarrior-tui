@@ -1,6 +1,6 @@
 [package]
 name = "taskwarrior-tui"
-version = "0.13.35"
+version = "0.13.36"
 license = "MIT"
 description = "A Taskwarrior Terminal User Interface"
 repository = "https://github.com/kdheepak/taskwarrior-tui/"
@@ -54,7 +54,9 @@ buildflags = ["--release"]
 taskwarrior-tui = { path = "/usr/bin/taskwarrior-tui" }
 
 [profile.release]
-debug = true
+debug = 1
+incremental = true
+lto = "off"
 
 [build-dependencies]
 clap = "3.0.0-beta.4"
