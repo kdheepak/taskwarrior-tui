@@ -4254,7 +4254,6 @@ mod tests {
 
             app.mode = Mode::Tasks(Action::ContextMenu);
             app.task_report_next();
-            // app.context_next();
             app.update(true).unwrap();
 
             let backend = TestBackend::new(80, 10);
