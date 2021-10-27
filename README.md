@@ -34,7 +34,7 @@ Showcase of features: <https://youtu.be/0ZdkfNrIAcw>
 
 ### Installation
 
-Unless otherwise specified, you will need to install `taskwarrior>=v2.6.0` first. See <https://taskwarrior.org/download/> for more information.
+Unless otherwise specified, you will need to install the latest version of `taskwarrior` first. See <https://taskwarrior.org/download/> for more information.
 
 **Manual** [![](https://img.shields.io/github/v/tag/kdheepak/taskwarrior-tui)](https://github.com/kdheepak/taskwarrior-tui/releases/latest) [![](https://img.shields.io/github/downloads/kdheepak/taskwarrior-tui/total)](https://github.com/kdheepak/taskwarrior-tui/releases/latest)
 
