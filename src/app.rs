@@ -3721,7 +3721,7 @@ mod tests {
         };
 
         let mut expected = Buffer::with_lines(vec![
-            "╭Task|Calendar───────────────────────────────────╮",
+            "╭Task|Projects|Calendar──────────────────────────╮",
             "│                                                │",
             "│                                                │",
             "│                                                │",
@@ -3745,6 +3745,12 @@ mod tests {
                 .set_style(Style::default().add_modifier(Modifier::BOLD));
         }
         for i in 6..=13 {
+            // Projects
+            expected
+                .get_mut(i, 0)
+                .set_style(Style::default().add_modifier(Modifier::DIM));
+        }
+        for i in 15..=22 {
             // Calendar
             expected
                 .get_mut(i, 0)
@@ -4101,7 +4107,7 @@ mod tests {
         };
 
         let mut expected = Buffer::with_lines(vec![
-            "╭Task|Calendar───────────────────────────────────╮",
+            "╭Task|Projects|Calendar──────────────────────────╮",
             "│                                                │",
             "│                      2020                      │",
             "│                                                │",
@@ -4125,6 +4131,12 @@ mod tests {
                 .set_style(Style::default().add_modifier(Modifier::DIM));
         }
         for i in 6..=13 {
+            // Projects
+            expected
+                .get_mut(i, 0)
+                .set_style(Style::default().add_modifier(Modifier::DIM));
+        }
+        for i in 15..=22 {
             // Calendar
             expected
                 .get_mut(i, 0)
