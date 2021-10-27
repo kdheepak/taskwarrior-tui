@@ -13,14 +13,16 @@ pub struct Context {
     pub name: String,
     pub description: String,
     pub active: String,
+    pub typ: String,
 }
 
 impl Context {
-    pub fn new(name: String, description: String, active: String) -> Self {
+    pub fn new(name: String, description: String, active: String, typ: String) -> Self {
         Self {
             name,
             description,
             active,
+            typ,
         }
     }
 }
