@@ -374,16 +374,20 @@ impl TaskwarriorTui {
         self.draw_projects_report_window(f, split_task_layout[0], title);
         let selected = self.projects.current_selection;
 
-        match self.projects.table_state.mode() {
-            TableMode::SingleSelection => vec![self.projects.list[selected].clone()],
-            TableMode::MultipleSelection => {
-                let mut chosed = vec![];
-                for project in &self.projects.marked {
-                    chosed.push(project.clone());
+        // TODO: what do to with selected project?
+        if self.projects.list.is_empty() {
+        } else {
+            match self.projects.table_state.mode() {
+                TableMode::SingleSelection => vec![self.projects.list[selected].clone()],
+                TableMode::MultipleSelection => {
+                    let mut chosed = vec![];
+                    for project in &self.projects.marked {
+                        chosed.push(project.clone());
+                    }
+                    chosed
                 }
-                chosed
-            }
-        };
+            };
+        }
     }
 
     fn draw_projects_report_window(&mut self, f: &mut Frame<impl Backend>, rect: Rect, title: Vec<Span>) {
@@ -442,6 +446,7 @@ impl TaskwarriorTui {
 
         f.render_stateful_widget(t, rect, &mut self.projects.table_state);
     }
+
     fn style_for_project(&self, project: &[String]) -> Style {
         let virtual_tag_names_in_precedence = &self.config.rule_precedence_color;
         let mut style = Style::default();
