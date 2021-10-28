@@ -302,12 +302,23 @@ impl TaskwarriorTui {
         self.current_context = String::from_utf8_lossy(&output.stdout).to_string();
         self.current_context = self.current_context.strip_suffix('\n').unwrap_or("").to_string();
 
+        // support new format for context
         let output = Command::new("task")
             .arg("_get")
             .arg(format!("rc.context.{}.read", self.current_context))
             .output()?;
         self.current_context_filter = String::from_utf8_lossy(&output.stdout).to_string();
         self.current_context_filter = self.current_context_filter.strip_suffix('\n').unwrap_or("").to_string();
+
+        // If new format is not used, check if old format is used
+        if self.current_context_filter.is_empty() {
+            let output = Command::new("task")
+                .arg("_get")
+                .arg(format!("rc.context.{}", self.current_context))
+                .output()?;
+            self.current_context_filter = String::from_utf8_lossy(&output.stdout).to_string();
+            self.current_context_filter = self.current_context_filter.strip_suffix('\n').unwrap_or("").to_string();
+        }
         Ok(())
     }
 
