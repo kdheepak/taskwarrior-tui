@@ -84,18 +84,6 @@ lazy_static! {
     static ref START_TIME: Instant = Instant::now();
 }
 
-pub fn cmp(t1: &Task, t2: &Task) -> Ordering {
-    let urgency1 = match t1.urgency() {
-        Some(f) => *f,
-        None => 0.0,
-    };
-    let urgency2 = match t2.urgency() {
-        Some(f) => *f,
-        None => 0.0,
-    };
-    urgency2.partial_cmp(&urgency1).unwrap_or(Ordering::Less)
-}
-
 #[derive(Debug)]
 pub enum DateState {
     BeforeToday,
@@ -1652,7 +1640,6 @@ impl TaskwarriorTui {
         if !error.contains("The expression could not be evaluated.") {
             if let Ok(imported) = import(data.as_bytes()) {
                 self.tasks = imported;
-                self.tasks.sort_by(cmp);
             }
         }
 
