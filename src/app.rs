@@ -3235,7 +3235,6 @@ impl TaskwarriorTui {
             self.completion_list.insert("status:completed".into());
             self.completion_list.insert("status:deleted".into());
             self.completion_list.insert("status:recurring".into());
-            self.completion_list.insert("status:waiting".into());
         }
     }
     pub fn update_input_for_completion(&mut self) {
