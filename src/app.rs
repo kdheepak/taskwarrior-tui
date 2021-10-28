@@ -1644,6 +1644,7 @@ impl TaskwarriorTui {
             }
         }
         task.arg("export");
+        task.arg(&self.report);
 
         let output = task.output()?;
         let data = String::from_utf8_lossy(&output.stdout);
