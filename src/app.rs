@@ -1617,7 +1617,7 @@ impl TaskwarriorTui {
         let filter = if self.current_context_filter.is_empty() {
             self.filter.as_str().into()
         } else {
-            let t = format!("{} '\\({}\\)'", self.filter.as_str(), self.current_context_filter);
+            let t = format!("{} '{}'", self.filter.as_str(), self.current_context_filter);
             t
         };
 
@@ -3321,8 +3321,33 @@ mod tests {
     use std::ffi::OsStr;
     use std::fs::File;
     use std::path::Path;
+    use std::{fmt::Write, io};
     use tui::backend::TestBackend;
     use tui::buffer::Buffer;
+
+    /// Returns a string representation of the given buffer for debugging purpose.
+    fn buffer_view(buffer: &Buffer) -> String {
+        let mut view = String::with_capacity(buffer.content.len() + buffer.area.height as usize * 3);
+        for cells in buffer.content.chunks(buffer.area.width as usize) {
+            let mut overwritten = vec![];
+            let mut skip: usize = 0;
+            view.push('"');
+            for (x, c) in cells.iter().enumerate() {
+                if skip == 0 {
+                    view.push_str(&c.symbol);
+                } else {
+                    overwritten.push((x, &c.symbol))
+                }
+                skip = std::cmp::max(skip, c.symbol.width()).saturating_sub(1);
+            }
+            view.push('"');
+            if !overwritten.is_empty() {
+                write!(&mut view, " Hidden by multi-width symbols: {:?}", overwritten).unwrap();
+            }
+            view.push('\n');
+        }
+        view
+    }
 
     #[test]
     fn test_centered_rect() {
@@ -4323,6 +4348,19 @@ mod tests {
         test_case(&expected);
     }
 
+    // #[test]
+    fn test_app() {
+        let mut app = TaskwarriorTui::new("completed").unwrap();
+
+        app.update(true).unwrap();
+
+        let backend = TestBackend::new(80, 20);
+        let mut terminal = Terminal::new(backend).unwrap();
+        app.render(&mut terminal).unwrap();
+        println!("{}", buffer_view(terminal.backend().buffer()));
+    }
+
+    // #[test]
     fn test_graphemes() {
         dbg!("写作业".graphemes(true).count());
         dbg!(UnicodeWidthStr::width("写作业"));
