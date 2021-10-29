@@ -61,7 +61,7 @@ impl Default for KeyConfig {
             delete: Key::Char('x'),
             done: Key::Char('d'),
             start_stop: Key::Char('s'),
-            quick_tag: Key::Char('n'),
+            quick_tag: Key::Char('t'),
             select: Key::Char('v'),
             select_all: Key::Char('V'),
             undo: Key::Char('u'),
