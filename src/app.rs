@@ -2014,6 +2014,9 @@ impl TaskwarriorTui {
 
     pub fn task_tag_next(&mut self) -> Result<(), String> {
         let app = TaskwarriorTui::new("next").unwrap();
+        let tag_name = &self.config.uda_tag_next_name;
+        let ptag_name = format!("+{}", tag_name);
+        let ntag_name = format!("-{}", tag_name);
         if self.tasks.is_empty() {
             return Ok(());
         }
@@ -2022,10 +2025,10 @@ impl TaskwarriorTui {
 
         for task_uuid in &task_uuids {
             if let Some(task) = app.task_by_uuid(*task_uuid) {
-                let mut tag_to_set = "+next";
+                let mut tag_to_set = &ptag_name;
                 for tag in task.tags().unwrap() {
-                    if tag == "next" {
-                        tag_to_set = "-next";
+                    if tag == tag_name {
+                        tag_to_set = &ntag_name;
                     }
                 }
 
