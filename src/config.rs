@@ -65,7 +65,7 @@ pub struct Config {
     pub uda_shortcuts: Vec<String>,
     pub uda_background_process: String,
     pub uda_background_process_period: usize,
-    pub uda_tag_next_name: String,
+    pub uda_quick_tag_name: String,
     pub uda_task_report_prompt_on_delete: bool,
     pub uda_task_report_prompt_on_done: bool,
 }
@@ -112,7 +112,7 @@ impl Config {
         let uda_style_context_active = uda_style_context_active.unwrap_or_default();
         let uda_style_report_completion_pane =
             uda_style_report_completion_pane.unwrap_or_else(|| Style::default().bg(Color::Rgb(223, 223, 223)));
-        let uda_tag_next_name = Self::get_uda_tag_next_name(data);
+        let uda_quick_tag_name = Self::get_uda_quick_tag_name(data);
         let uda_task_report_prompt_on_delete = Self::get_uda_task_report_prompt_on_delete(data);
         let uda_task_report_prompt_on_done = Self::get_uda_task_report_prompt_on_done(data);
 
@@ -147,7 +147,7 @@ impl Config {
             uda_shortcuts,
             uda_background_process,
             uda_background_process_period,
-            uda_tag_next_name,
+            uda_quick_tag_name,
             uda_task_report_prompt_on_delete,
             uda_task_report_prompt_on_done,
         })
@@ -546,8 +546,8 @@ impl Config {
             .unwrap_or(4)
     }
 
-    fn get_uda_tag_next_name(data: &str) -> String {
-        let tag_name = Self::get_config("uda.taskwarrior-tui.next-tag.name", data);
+    fn get_uda_quick_tag_name(data: &str) -> String {
+        let tag_name = Self::get_config("uda.taskwarrior-tui.quick-tag.name", data);
         match tag_name {
             None => "next".to_string(),
             Some(tag_name) => tag_name,

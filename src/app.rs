@@ -2012,9 +2012,8 @@ impl TaskwarriorTui {
         Ok(())
     }
 
-    pub fn task_tag_next(&mut self) -> Result<(), String> {
-        let app = TaskwarriorTui::new("next").unwrap();
-        let tag_name = &self.config.uda_tag_next_name;
+    pub fn task_quick_tag(&mut self) -> Result<(), String> {
+        let tag_name = &self.config.uda_quick_tag_name;
         let ptag_name = format!("+{}", tag_name);
         let ntag_name = format!("-{}", tag_name);
         if self.tasks.is_empty() {
@@ -2024,7 +2023,7 @@ impl TaskwarriorTui {
         let task_uuids = self.selected_task_uuids();
 
         for task_uuid in &task_uuids {
-            if let Some(task) = app.task_by_uuid(*task_uuid) {
+            if let Some(task) = self.task_by_uuid(*task_uuid) {
                 let mut tag_to_set = &ptag_name;
                 for tag in task.tags().unwrap() {
                     if tag == tag_name {
@@ -2037,6 +2036,7 @@ impl TaskwarriorTui {
                     .arg("modify")
                     .arg(tag_to_set)
                     .output();
+
                 if output.is_err() {
                     return Err(format!(
                         "Error running `task modify {}` for task `{}`.",
@@ -2473,8 +2473,8 @@ impl TaskwarriorTui {
                                 self.error = e;
                             }
                         }
-                    } else if input == self.keyconfig.tag_next {
-                        match self.task_tag_next() {
+                    } else if input == self.keyconfig.quick_tag {
+                        match self.task_quick_tag() {
                             Ok(_) => self.update(true)?,
                             Err(e) => {
                                 self.mode = Mode::Tasks(Action::Error);

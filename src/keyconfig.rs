@@ -19,7 +19,7 @@ pub struct KeyConfig {
     pub delete: Key,
     pub done: Key,
     pub start_stop: Key,
-    pub tag_next: Key,
+    pub quick_tag: Key,
     pub select: Key,
     pub select_all: Key,
     pub undo: Key,
@@ -61,7 +61,7 @@ impl Default for KeyConfig {
             delete: Key::Char('x'),
             done: Key::Char('d'),
             start_stop: Key::Char('s'),
-            tag_next: Key::Char('n'),
+            quick_tag: Key::Char('n'),
             select: Key::Char('v'),
             select_all: Key::Char('V'),
             undo: Key::Char('u'),
@@ -110,7 +110,7 @@ impl KeyConfig {
         let delete = Self::get_config("uda.taskwarrior-tui.keyconfig.delete", data);
         let done = Self::get_config("uda.taskwarrior-tui.keyconfig.done", data);
         let start_stop = Self::get_config("uda.taskwarrior-tui.keyconfig.start-stop", data);
-        let tag_next = Self::get_config("uda.taskwarrior-tui.keyconfig.tag-next", data);
+        let quick_tag = Self::get_config("uda.taskwarrior-tui.keyconfig.quick-tag", data);
         let select = Self::get_config("uda.taskwarrior-tui.keyconfig.select", data);
         let select_all = Self::get_config("uda.taskwarrior-tui.keyconfig.select-all", data);
         let undo = Self::get_config("uda.taskwarrior-tui.keyconfig.undo", data);
@@ -137,7 +137,7 @@ impl KeyConfig {
         self.delete = delete.unwrap_or(self.delete);
         self.done = done.unwrap_or(self.done);
         self.start_stop = start_stop.unwrap_or(self.start_stop);
-        self.tag_next = tag_next.unwrap_or(self.tag_next);
+        self.quick_tag = quick_tag.unwrap_or(self.quick_tag);
         self.select = select.unwrap_or(self.select);
         self.select_all = select_all.unwrap_or(self.select_all);
         self.undo = undo.unwrap_or(self.undo);
@@ -171,7 +171,7 @@ impl KeyConfig {
             &self.select,
             &self.select_all,
             &self.start_stop,
-            &self.tag_next,
+            &self.quick_tag,
             &self.undo,
             &self.edit,
             &self.modify,
