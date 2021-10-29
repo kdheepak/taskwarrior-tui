@@ -118,25 +118,43 @@ impl ProjectsState {
             .context("Unable to run `task summary`")
             .unwrap();
         let data = String::from_utf8_lossy(&output.stdout);
+        let contains_avg_age = data
+            .split('\n')
+            .into_iter()
+            .skip(1)
+            .collect::<Vec<&str>>()
+            .first()
+            .unwrap()
+            .contains("Avg age");
         for line in data.split('\n').into_iter().skip(3) {
             if line.is_empty() {
                 break;
             }
-            let row: Vec<String> = line
+            let mut row: Vec<String> = line
                 .split(' ')
                 .map(str::trim)
                 .map(str::trim_start)
                 .filter(|x| !x.is_empty())
+                .filter(|x| !x.chars().all(|c| c == '='))
                 .map(ToString::to_string)
                 .collect();
-            let name = (&row[0]).parse()?;
-            let remaining = (&row[1]).parse()?;
-            let mut avg_age = "0s".to_string();
-            let mut complete = (&row[2]).parse()?;
-            if row.len() > 3 {
-                avg_age = (&row[2]).parse()?;
-                complete = (&row[3]).parse()?;
-            }
+            assert!(row.len() >= 3);
+            let (complete, avg_age, remaining, name) = if contains_avg_age {
+                (
+                    row.pop().unwrap().parse().unwrap(),
+                    row.pop().unwrap().parse().unwrap(),
+                    row.pop().unwrap().parse().unwrap(),
+                    row.join(" "),
+                )
+            } else {
+                (
+                    row.pop().unwrap().parse().unwrap(),
+                    "0s".to_string(),
+                    row.pop().unwrap().parse().unwrap(),
+                    row.join(" "),
+                )
+            };
+
             self.rows.push(ProjectDetails {
                 name,
                 remaining,
