@@ -276,8 +276,11 @@ impl TaskwarriorTui {
         for c in app.config.filter.chars() {
             app.filter.insert(c, 1);
         }
+
         app.get_context()?;
+
         app.update(true)?;
+
         app.filter_history_context.load()?;
         app.filter_history_context.add(app.filter.as_str());
         app.command_history_context.load()?;
@@ -4427,7 +4430,7 @@ mod tests {
 
     // #[test]
     fn test_app() {
-        let mut app = TaskwarriorTui::new("completed").unwrap();
+        let mut app = TaskwarriorTui::new("next").unwrap();
 
         app.update(true).unwrap();
 
