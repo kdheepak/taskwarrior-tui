@@ -1945,7 +1945,7 @@ impl TaskwarriorTui {
                             Err(format!("Error: {}", String::from_utf8_lossy(&output.stderr)))
                         }
                     }
-                    Err(e) => Err(format!("Cannot run `task add {}`. {}", shell, e.to_string(),)),
+                    Err(e) => Err(format!("Cannot run `task add {}`. {}", shell, e,)),
                 }
             }
             None => Err(format!("Unable to run `task add`. Cannot shlex split `{}`", shell)),
@@ -2000,6 +2000,49 @@ impl TaskwarriorTui {
             let output = Command::new("task").arg(task_uuid.to_string()).arg(command).output();
             if output.is_err() {
                 return Err(format!("Error running `task {}` for task `{}`.", command, task_uuid,));
+            }
+        }
+
+        if task_uuids.len() == 1 {
+            if let Some(uuid) = task_uuids.get(0) {
+                self.current_selection_uuid = Some(*uuid);
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn task_quick_tag(&mut self) -> Result<(), String> {
+        let tag_name = &self.config.uda_quick_tag_name;
+        let ptag_name = format!("+{}", tag_name);
+        let ntag_name = format!("-{}", tag_name);
+        if self.tasks.is_empty() {
+            return Ok(());
+        }
+
+        let task_uuids = self.selected_task_uuids();
+
+        for task_uuid in &task_uuids {
+            if let Some(task) = self.task_by_uuid(*task_uuid) {
+                let mut tag_to_set = &ptag_name;
+                for tag in task.tags().unwrap() {
+                    if tag == tag_name {
+                        tag_to_set = &ntag_name;
+                    }
+                }
+
+                let output = Command::new("task")
+                    .arg(task_uuid.to_string())
+                    .arg("modify")
+                    .arg(tag_to_set)
+                    .output();
+
+                if output.is_err() {
+                    return Err(format!(
+                        "Error running `task modify {}` for task `{}`.",
+                        tag_to_set, task_uuid,
+                    ));
+                }
             }
         }
 
@@ -2179,47 +2222,47 @@ impl TaskwarriorTui {
 
         // other virtual tags
         // TODO: support all virtual tags that taskwarrior supports
-        for mut task in tasks.iter_mut() {
+        for task in tasks.iter_mut() {
             match task.status() {
-                TaskStatus::Waiting => add_tag(&mut task, "WAITING".to_string()),
-                TaskStatus::Completed => add_tag(&mut task, "COMPLETED".to_string()),
-                TaskStatus::Pending => add_tag(&mut task, "PENDING".to_string()),
-                TaskStatus::Deleted => add_tag(&mut task, "DELETED".to_string()),
+                TaskStatus::Waiting => add_tag(task, "WAITING".to_string()),
+                TaskStatus::Completed => add_tag(task, "COMPLETED".to_string()),
+                TaskStatus::Pending => add_tag(task, "PENDING".to_string()),
+                TaskStatus::Deleted => add_tag(task, "DELETED".to_string()),
                 TaskStatus::Recurring => (),
             }
             if task.start().is_some() {
-                add_tag(&mut task, "ACTIVE".to_string());
+                add_tag(task, "ACTIVE".to_string());
             }
             if task.scheduled().is_some() {
-                add_tag(&mut task, "SCHEDULED".to_string());
+                add_tag(task, "SCHEDULED".to_string());
             }
             if task.parent().is_some() {
-                add_tag(&mut task, "INSTANCE".to_string());
+                add_tag(task, "INSTANCE".to_string());
             }
             if task.until().is_some() {
-                add_tag(&mut task, "UNTIL".to_string());
+                add_tag(task, "UNTIL".to_string());
             }
             if task.annotations().is_some() {
-                add_tag(&mut task, "ANNOTATED".to_string());
+                add_tag(task, "ANNOTATED".to_string());
             }
             let virtual_tags = self.task_report_table.virtual_tags.clone();
             if task.tags().is_some() && task.tags().unwrap().iter().any(|s| !virtual_tags.contains(s)) {
-                add_tag(&mut task, "TAGGED".to_string());
+                add_tag(task, "TAGGED".to_string());
             }
             if !task.uda().is_empty() {
-                add_tag(&mut task, "UDA".to_string());
+                add_tag(task, "UDA".to_string());
             }
             if task.mask().is_some() {
-                add_tag(&mut task, "TEMPLATE".to_string());
+                add_tag(task, "TEMPLATE".to_string());
             }
             if task.project().is_some() {
-                add_tag(&mut task, "PROJECT".to_string());
+                add_tag(task, "PROJECT".to_string());
             }
             if task.priority().is_some() {
-                add_tag(&mut task, "PRIORITY".to_string());
+                add_tag(task, "PRIORITY".to_string());
             }
             if task.recur().is_some() {
-                add_tag(&mut task, "RECURRING".to_string());
+                add_tag(task, "RECURRING".to_string());
                 let r = task.recur().unwrap();
             }
             if let Some(d) = task.due() {
@@ -2231,24 +2274,24 @@ impl TaskwarriorTui {
                     let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
                     let d = d.clone();
                     if (reference - chrono::Duration::nanoseconds(1)).month() == now.month() {
-                        add_tag(&mut task, "MONTH".to_string());
+                        add_tag(task, "MONTH".to_string());
                     }
                     if (reference - chrono::Duration::nanoseconds(1)).month() % 4 == now.month() % 4 {
-                        add_tag(&mut task, "QUARTER".to_string());
+                        add_tag(task, "QUARTER".to_string());
                     }
                     if reference.year() == now.year() {
-                        add_tag(&mut task, "YEAR".to_string());
+                        add_tag(task, "YEAR".to_string());
                     }
                     match get_date_state(&d, self.config.due) {
                         DateState::EarlierToday | DateState::LaterToday => {
-                            add_tag(&mut task, "DUE".to_string());
-                            add_tag(&mut task, "TODAY".to_string());
-                            add_tag(&mut task, "DUETODAY".to_string());
+                            add_tag(task, "DUE".to_string());
+                            add_tag(task, "TODAY".to_string());
+                            add_tag(task, "DUETODAY".to_string());
                         }
                         DateState::AfterToday => {
-                            add_tag(&mut task, "DUE".to_string());
+                            add_tag(task, "DUE".to_string());
                             if reference.date() == (now + chrono::Duration::days(1)).date() {
-                                add_tag(&mut task, "TOMORROW".to_string());
+                                add_tag(task, "TOMORROW".to_string());
                             }
                         }
                         _ => (),
@@ -2265,7 +2308,7 @@ impl TaskwarriorTui {
                     let now = Local::now().naive_utc();
                     let d = NaiveDateTime::new(d.date(), d.time());
                     if d < now {
-                        add_tag(&mut task, "OVERDUE".to_string());
+                        add_tag(task, "OVERDUE".to_string());
                     }
                 }
             }
@@ -2424,6 +2467,14 @@ impl TaskwarriorTui {
                         }
                     } else if input == self.keyconfig.start_stop {
                         match self.task_start_stop() {
+                            Ok(_) => self.update(true)?,
+                            Err(e) => {
+                                self.mode = Mode::Tasks(Action::Error);
+                                self.error = e;
+                            }
+                        }
+                    } else if input == self.keyconfig.quick_tag {
+                        match self.task_quick_tag() {
                             Ok(_) => self.update(true)?,
                             Err(e) => {
                                 self.mode = Mode::Tasks(Action::Error);
@@ -3466,7 +3517,38 @@ mod tests {
             assert!(task.tags().unwrap().contains(&tag));
         }
 
-        let app = TaskwarriorTui::new("next").unwrap();
+        let mut app = TaskwarriorTui::new("next").unwrap();
+        let task = app.task_by_id(11).unwrap();
+        let tags = vec!["finance", "UNBLOCKED", "PENDING", "TAGGED", "UDA"]
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<String>>();
+        for tag in tags {
+            assert!(task.tags().unwrap().contains(&tag));
+        }
+
+        if let Some(task) = app.task_by_id(11) {
+            let i = app.task_index_by_uuid(*task.uuid()).unwrap_or_default();
+            app.current_selection = i;
+            app.current_selection_id = None;
+            app.current_selection_uuid = None;
+        }
+
+        app.task_quick_tag().unwrap();
+        app.update(true).unwrap();
+
+        let task = app.task_by_id(11).unwrap();
+        let tags = vec!["next", "finance", "UNBLOCKED", "PENDING", "TAGGED", "UDA"]
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<String>>();
+        for tag in tags {
+            assert!(task.tags().unwrap().contains(&tag));
+        }
+
+        app.task_quick_tag().unwrap();
+        app.update(true).unwrap();
+
         let task = app.task_by_id(11).unwrap();
         let tags = vec!["finance", "UNBLOCKED", "PENDING", "TAGGED", "UDA"]
             .iter()
@@ -3571,11 +3653,6 @@ mod tests {
         let output = command.output().unwrap();
         let s = String::from_utf8_lossy(&output.stdout);
         let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
-        let caps = re.captures(&s);
-        if caps.is_none() {
-            let s = String::from_utf8_lossy(&output.stderr);
-            assert!(false);
-        }
         let caps = re.captures(&s).unwrap();
 
         let task_id = caps["task_id"].parse::<u64>().unwrap();
@@ -4114,7 +4191,7 @@ mod tests {
             36..=42, // Descr
             44..=48, // Urg
         ] {
-            for i in r.clone().into_iter() {
+            for i in r.clone() {
                 expected
                     .get_mut(i, 1)
                     .set_style(Style::default().add_modifier(Modifier::UNDERLINED));

@@ -88,6 +88,9 @@ Keybindings for task report:
 `s`
 : task {selected} start/stop        - Toggle start and stop
 
+`t`
+: task {selected} +{tag}/-{tag}     - Toggle {uda.taskwarrior-tui.quick-tag.name} (default: `next`)
+
 `u`
 : task undo                         - Undo
 

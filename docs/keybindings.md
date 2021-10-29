@@ -8,7 +8,6 @@ Keybindings:
 
     [: Previous view                     - Go to previous view
 
-
 Keybindings for task report:
 
     /: task {string}                     - Filter task report
@@ -38,6 +37,8 @@ Keybindings for task report:
     q: exit                              - Quit
 
     s: task {selected} start/stop        - Toggle start and stop
+
+    n: task {selected} +{tag}/-{tag}     - Toggle {uda.taskwarrior-tui.quick-tag.name} (default: `next`)
 
     u: task undo                         - Undo
 
@@ -101,7 +102,6 @@ Keybindings for filter / command prompt:
 
     BACKTAB | Ctrl + p: tab complete     - Cycle to previous element
 
-
 Keybindings for context switcher:
 
     j: {selected+=1}                     - Move forward a context
@@ -109,7 +109,6 @@ Keybindings for context switcher:
     k: {selected-=1}                     - Move back a context
 
     Enter: task context {selected}       - Select highlighted context
-
 
 Keybindings for calendar:
 

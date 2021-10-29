@@ -298,7 +298,7 @@ impl TaskReportTable {
                 } else {
                     format!("")
                 };
-                format!("{} {}", task.description().to_string(), c)
+                format!("{} {}", task.description(), c)
             }
             "description.truncated_count" => {
                 let c = if let Some(a) = task.annotations() {
