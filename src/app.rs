@@ -2012,6 +2012,41 @@ impl TaskwarriorTui {
         Ok(())
     }
 
+    pub fn task_tag_next(&mut self) -> Result<(), String> {
+
+        let app = TaskwarriorTui::new("next").unwrap();
+        if self.tasks.is_empty() {
+            return Ok(());
+        }
+
+        let task_uuids = self.selected_task_uuids();
+
+        for task_uuid in &task_uuids {
+            if let Some(task) = app.task_by_uuid(*task_uuid) {
+                let mut tag_to_set = "+next";
+                for tag in task.tags().unwrap() {
+                    if tag == "next" {
+                        tag_to_set = "-next";
+                    }
+                }
+                
+                let output = Command::new("task").arg(task_uuid.to_string()).arg("modify").arg(tag_to_set).output();
+                if output.is_err() {
+                    return Err(format!("Error running `task modify {}` for task `{}`.", tag_to_set, task_uuid,));
+                }
+            }
+
+        }
+
+        if task_uuids.len() == 1 {
+            if let Some(uuid) = task_uuids.get(0) {
+                self.current_selection_uuid = Some(*uuid);
+            }
+        }
+
+        Ok(())
+    }
+
     pub fn task_delete(&mut self) -> Result<(), String> {
         if self.tasks.is_empty() {
             return Ok(());
@@ -2424,6 +2459,14 @@ impl TaskwarriorTui {
                         }
                     } else if input == self.keyconfig.start_stop {
                         match self.task_start_stop() {
+                            Ok(_) => self.update(true)?,
+                            Err(e) => {
+                                self.mode = Mode::Tasks(Action::Error);
+                                self.error = e;
+                            }
+                        }
+                    } else if input == self.keyconfig.tag_next {
+                        match self.task_tag_next() {
                             Ok(_) => self.update(true)?,
                             Err(e) => {
                                 self.mode = Mode::Tasks(Action::Error);
