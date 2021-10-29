@@ -17,6 +17,7 @@ uda.taskwarrior-tui.keyconfig.page-up=K
 uda.taskwarrior-tui.keyconfig.delete=x
 uda.taskwarrior-tui.keyconfig.done=d
 uda.taskwarrior-tui.keyconfig.start-stop=s
+uda.taskwarrior-tui.keyconfig.tag-next=n
 uda.taskwarrior-tui.keyconfig.undo=u
 uda.taskwarrior-tui.keyconfig.edit=e
 uda.taskwarrior-tui.keyconfig.modify=m
