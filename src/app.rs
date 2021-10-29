@@ -3506,7 +3506,6 @@ mod tests {
         teardown();
     }
 
-    #[test]
     fn test_task_tags() {
         // testing tags
         let app = TaskwarriorTui::new("next").unwrap();
