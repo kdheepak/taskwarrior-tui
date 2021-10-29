@@ -39,6 +39,8 @@ Keybindings for task report:
 
     s: task {selected} start/stop        - Toggle start and stop
 
+    n: task {selected} +next/-next       - Toggle "next" tag
+
     u: task undo                         - Undo
 
     v: {toggle mark on selected}         - Toggle mark on selected
