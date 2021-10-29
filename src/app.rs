@@ -3506,6 +3506,7 @@ mod tests {
         teardown();
     }
 
+    #[test]
     fn test_task_tags() {
         // testing tags
         let app = TaskwarriorTui::new("next").unwrap();
@@ -3517,7 +3518,38 @@ mod tests {
             assert!(task.tags().unwrap().contains(&tag));
         }
 
-        let app = TaskwarriorTui::new("next").unwrap();
+        let mut app = TaskwarriorTui::new("next").unwrap();
+        let task = app.task_by_id(11).unwrap();
+        let tags = vec!["finance", "UNBLOCKED", "PENDING", "TAGGED", "UDA"]
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<String>>();
+        for tag in tags {
+            assert!(task.tags().unwrap().contains(&tag));
+        }
+
+        if let Some(task) = app.task_by_id(11) {
+            let i = app.task_index_by_uuid(*task.uuid()).unwrap_or_default();
+            app.current_selection = i;
+            app.current_selection_id = None;
+            app.current_selection_uuid = None;
+        }
+
+        app.task_quick_tag().unwrap();
+        app.update(true).unwrap();
+
+        let task = app.task_by_id(11).unwrap();
+        let tags = vec!["next", "finance", "UNBLOCKED", "PENDING", "TAGGED", "UDA"]
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<String>>();
+        for tag in tags {
+            assert!(task.tags().unwrap().contains(&tag));
+        }
+
+        app.task_quick_tag().unwrap();
+        app.update(true).unwrap();
+
         let task = app.task_by_id(11).unwrap();
         let tags = vec!["finance", "UNBLOCKED", "PENDING", "TAGGED", "UDA"]
             .iter()
@@ -3622,11 +3654,6 @@ mod tests {
         let output = command.output().unwrap();
         let s = String::from_utf8_lossy(&output.stdout);
         let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
-        let caps = re.captures(&s);
-        if caps.is_none() {
-            let s = String::from_utf8_lossy(&output.stderr);
-            assert!(false);
-        }
         let caps = re.captures(&s).unwrap();
 
         let task_id = caps["task_id"].parse::<u64>().unwrap();
