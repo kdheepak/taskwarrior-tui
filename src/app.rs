@@ -2013,7 +2013,6 @@ impl TaskwarriorTui {
     }
 
     pub fn task_tag_next(&mut self) -> Result<(), String> {
-
         let app = TaskwarriorTui::new("next").unwrap();
         if self.tasks.is_empty() {
             return Ok(());
@@ -2029,13 +2028,19 @@ impl TaskwarriorTui {
                         tag_to_set = "-next";
                     }
                 }
-                
-                let output = Command::new("task").arg(task_uuid.to_string()).arg("modify").arg(tag_to_set).output();
+
+                let output = Command::new("task")
+                    .arg(task_uuid.to_string())
+                    .arg("modify")
+                    .arg(tag_to_set)
+                    .output();
                 if output.is_err() {
-                    return Err(format!("Error running `task modify {}` for task `{}`.", tag_to_set, task_uuid,));
+                    return Err(format!(
+                        "Error running `task modify {}` for task `{}`.",
+                        tag_to_set, task_uuid,
+                    ));
                 }
             }
-
         }
 
         if task_uuids.len() == 1 {
