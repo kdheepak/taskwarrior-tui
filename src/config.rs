@@ -550,7 +550,7 @@ impl Config {
         let tag_name = Self::get_config("uda.taskwarrior-tui.next-tag.name", data);
         match tag_name {
             None => "next".to_string(),
-            Some(tag_name) => format!("{}", tag_name),
+            Some(tag_name) => tag_name,
         }
     }
 }
