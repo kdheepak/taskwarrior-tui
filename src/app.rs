@@ -1945,7 +1945,7 @@ impl TaskwarriorTui {
                             Err(format!("Error: {}", String::from_utf8_lossy(&output.stderr)))
                         }
                     }
-                    Err(e) => Err(format!("Cannot run `task add {}`. {}", shell, e.to_string(),)),
+                    Err(e) => Err(format!("Cannot run `task add {}`. {}", shell, e,)),
                 }
             }
             None => Err(format!("Unable to run `task add`. Cannot shlex split `{}`", shell)),
@@ -2222,47 +2222,47 @@ impl TaskwarriorTui {
 
         // other virtual tags
         // TODO: support all virtual tags that taskwarrior supports
-        for mut task in tasks.iter_mut() {
+        for task in tasks.iter_mut() {
             match task.status() {
-                TaskStatus::Waiting => add_tag(&mut task, "WAITING".to_string()),
-                TaskStatus::Completed => add_tag(&mut task, "COMPLETED".to_string()),
-                TaskStatus::Pending => add_tag(&mut task, "PENDING".to_string()),
-                TaskStatus::Deleted => add_tag(&mut task, "DELETED".to_string()),
+                TaskStatus::Waiting => add_tag(task, "WAITING".to_string()),
+                TaskStatus::Completed => add_tag(task, "COMPLETED".to_string()),
+                TaskStatus::Pending => add_tag(task, "PENDING".to_string()),
+                TaskStatus::Deleted => add_tag(task, "DELETED".to_string()),
                 TaskStatus::Recurring => (),
             }
             if task.start().is_some() {
-                add_tag(&mut task, "ACTIVE".to_string());
+                add_tag(task, "ACTIVE".to_string());
             }
             if task.scheduled().is_some() {
-                add_tag(&mut task, "SCHEDULED".to_string());
+                add_tag(task, "SCHEDULED".to_string());
             }
             if task.parent().is_some() {
-                add_tag(&mut task, "INSTANCE".to_string());
+                add_tag(task, "INSTANCE".to_string());
             }
             if task.until().is_some() {
-                add_tag(&mut task, "UNTIL".to_string());
+                add_tag(task, "UNTIL".to_string());
             }
             if task.annotations().is_some() {
-                add_tag(&mut task, "ANNOTATED".to_string());
+                add_tag(task, "ANNOTATED".to_string());
             }
             let virtual_tags = self.task_report_table.virtual_tags.clone();
             if task.tags().is_some() && task.tags().unwrap().iter().any(|s| !virtual_tags.contains(s)) {
-                add_tag(&mut task, "TAGGED".to_string());
+                add_tag(task, "TAGGED".to_string());
             }
             if !task.uda().is_empty() {
-                add_tag(&mut task, "UDA".to_string());
+                add_tag(task, "UDA".to_string());
             }
             if task.mask().is_some() {
-                add_tag(&mut task, "TEMPLATE".to_string());
+                add_tag(task, "TEMPLATE".to_string());
             }
             if task.project().is_some() {
-                add_tag(&mut task, "PROJECT".to_string());
+                add_tag(task, "PROJECT".to_string());
             }
             if task.priority().is_some() {
-                add_tag(&mut task, "PRIORITY".to_string());
+                add_tag(task, "PRIORITY".to_string());
             }
             if task.recur().is_some() {
-                add_tag(&mut task, "RECURRING".to_string());
+                add_tag(task, "RECURRING".to_string());
                 let r = task.recur().unwrap();
             }
             if let Some(d) = task.due() {
@@ -2274,24 +2274,24 @@ impl TaskwarriorTui {
                     let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
                     let d = d.clone();
                     if (reference - chrono::Duration::nanoseconds(1)).month() == now.month() {
-                        add_tag(&mut task, "MONTH".to_string());
+                        add_tag(task, "MONTH".to_string());
                     }
                     if (reference - chrono::Duration::nanoseconds(1)).month() % 4 == now.month() % 4 {
-                        add_tag(&mut task, "QUARTER".to_string());
+                        add_tag(task, "QUARTER".to_string());
                     }
                     if reference.year() == now.year() {
-                        add_tag(&mut task, "YEAR".to_string());
+                        add_tag(task, "YEAR".to_string());
                     }
                     match get_date_state(&d, self.config.due) {
                         DateState::EarlierToday | DateState::LaterToday => {
-                            add_tag(&mut task, "DUE".to_string());
-                            add_tag(&mut task, "TODAY".to_string());
-                            add_tag(&mut task, "DUETODAY".to_string());
+                            add_tag(task, "DUE".to_string());
+                            add_tag(task, "TODAY".to_string());
+                            add_tag(task, "DUETODAY".to_string());
                         }
                         DateState::AfterToday => {
-                            add_tag(&mut task, "DUE".to_string());
+                            add_tag(task, "DUE".to_string());
                             if reference.date() == (now + chrono::Duration::days(1)).date() {
-                                add_tag(&mut task, "TOMORROW".to_string());
+                                add_tag(task, "TOMORROW".to_string());
                             }
                         }
                         _ => (),
@@ -2308,7 +2308,7 @@ impl TaskwarriorTui {
                     let now = Local::now().naive_utc();
                     let d = NaiveDateTime::new(d.date(), d.time());
                     if d < now {
-                        add_tag(&mut task, "OVERDUE".to_string());
+                        add_tag(task, "OVERDUE".to_string());
                     }
                 }
             }
@@ -4165,7 +4165,7 @@ mod tests {
             36..=42, // Descr
             44..=48, // Urg
         ] {
-            for i in r.clone().into_iter() {
+            for i in r.clone() {
                 expected
                     .get_mut(i, 1)
                     .set_style(Style::default().add_modifier(Modifier::UNDERLINED));
