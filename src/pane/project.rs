@@ -1,6 +1,3 @@
-// Based on https://gist.github.com/diwic/5c20a283ca3a03752e1a27b0f3ebfa30
-// See https://old.reddit.com/r/rust/comments/4xneq5/the_calendar_example_challenge_ii_why_eddyb_all/
-
 use anyhow::Context as AnyhowContext;
 use anyhow::{anyhow, Result};
 use std::fmt;
@@ -66,6 +63,7 @@ impl ProjectsState {
             rows: vec![],
         }
     }
+
     fn pattern_by_marked(app: &mut TaskwarriorTui) -> String {
         let mut project_pattern = String::new();
         if !app.projects.marked.is_empty() {
@@ -74,16 +72,17 @@ impl ProjectsState {
                 if input.as_str() == "(none)" {
                     input = " ".to_string();
                 }
-                if idx > 0 {
-                    project_pattern = format!("{} or project:{}", project_pattern, input);
-                } else {
+                if idx == 0 {
                     project_pattern = format!("\'(project:{}", input);
+                } else {
+                    project_pattern = format!("{} or project:{}", project_pattern, input);
                 }
             }
             project_pattern = format!("{})\'", project_pattern);
         }
         project_pattern
     }
+
     pub fn toggle_mark(&mut self) {
         if !self.list.is_empty() {
             let selected = self.current_selection;
@@ -92,6 +91,7 @@ impl ProjectsState {
             }
         }
     }
+
     pub fn simplified_view(&mut self) -> (Vec<Vec<String>>, Vec<String>) {
         let rows = self
             .rows
@@ -165,15 +165,18 @@ impl ProjectsState {
         self.list = self.rows.iter().map(|x| x.name.clone()).collect_vec();
         Ok(())
     }
+
     fn update_table_state(&mut self) {
         self.table_state.select(Some(self.current_selection));
         if self.marked.is_empty() {
             self.table_state.single_selection();
-        }
-        self.table_state.clear();
-        for project in &self.marked {
-            let index = self.list.iter().position(|x| x == project);
-            self.table_state.mark(index);
+        } else {
+            self.table_state.multiple_selection();
+            self.table_state.clear();
+            for project in &self.marked {
+                let index = self.list.iter().position(|x| x == project);
+                self.table_state.mark(index);
+            }
         }
     }
 }
@@ -218,7 +221,7 @@ fn update_task_filter_by_selection(app: &mut TaskwarriorTui) -> Result<()> {
     app.projects.toggle_mark();
     let new_project_pattern = ProjectsState::pattern_by_marked(app);
     let current_filter = app.filter.as_str();
-    app.filter_history_context.add(current_filter);
+    app.filter_history.add(current_filter);
 
     let mut filter = current_filter.replace(&last_project_pattern, "");
     filter = format!("{}{}", filter, new_project_pattern);
