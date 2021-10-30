@@ -40,12 +40,14 @@ pub struct ProjectsState {
     pub rows: Vec<ProjectDetails>,
 }
 
+#[derive(Debug, Clone, Default)]
 pub struct ProjectDetails {
     name: Project,
     remaining: usize,
     avg_age: String,
     complete: String,
 }
+
 impl ProjectsState {
     pub(crate) fn new() -> Self {
         Self {
@@ -118,50 +120,39 @@ impl ProjectsState {
             .context("Unable to run `task summary`")
             .unwrap();
         let data = String::from_utf8_lossy(&output.stdout);
-        let contains_avg_age = data
-            .split('\n')
-            .into_iter()
-            .skip(1)
-            .collect::<Vec<&str>>()
-            .first()
-            .unwrap()
-            .contains("Avg age");
-        for line in data.split('\n').into_iter().skip(3) {
-            if line.is_empty() {
-                break;
-            }
-            let mut row: Vec<String> = line
-                .split(' ')
-                .map(str::trim)
-                .map(str::trim_start)
-                .filter(|x| !x.is_empty())
-                .filter(|x| !x.chars().all(|c| c == '='))
-                .map(ToString::to_string)
-                .collect();
-            assert!(row.len() >= 3);
-            let (complete, avg_age, remaining, name) = if contains_avg_age {
-                (
-                    row.pop().unwrap().parse().unwrap(),
-                    row.pop().unwrap().parse().unwrap(),
-                    row.pop().unwrap().parse().unwrap(),
-                    row.join(" "),
-                )
-            } else {
-                (
-                    row.pop().unwrap().parse().unwrap(),
-                    "0s".to_string(),
-                    row.pop().unwrap().parse().unwrap(),
-                    row.join(" "),
-                )
-            };
 
-            self.rows.push(ProjectDetails {
-                name,
-                remaining,
-                avg_age,
-                complete,
-            });
+        let lines = data.split('\n').into_iter().skip(1).collect::<Vec<&str>>();
+
+        let header = lines.first().unwrap();
+
+        let contains_avg_age = header.contains("Avg age");
+
+        if contains_avg_age {
+            let name_index = header.find("Remaining").unwrap();
+            let remaining_index = header.find("Remaining").unwrap() + "Remaining".len();
+            let average_age_index = header.find("Avg age").unwrap() + "Avg age".len();
+            let complete_index = header.find("Complete").unwrap() + "Complete".len();
+
+            for line in lines.into_iter().skip(2) {
+                if line.is_empty() {
+                    break;
+                }
+
+                let line = line.to_string();
+                let name = line[0..name_index].trim().to_string();
+                let remaining = line[name_index..remaining_index].trim().parse().unwrap();
+                let avg_age = line[remaining_index..average_age_index].trim().to_string();
+                let complete = line[average_age_index..complete_index].trim().to_string();
+
+                self.rows.push(ProjectDetails {
+                    name,
+                    remaining,
+                    avg_age,
+                    complete,
+                });
+            }
         }
+
         self.list = self.rows.iter().map(|x| x.name.clone()).collect_vec();
         Ok(())
     }
@@ -228,4 +219,19 @@ fn update_task_filter_by_selection(app: &mut TaskwarriorTui) -> Result<()> {
     app.filter.update(filter.as_str(), filter.len());
     app.update(true)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_project_summary() {
+        let mut app = TaskwarriorTui::new("next").unwrap();
+
+        app.update(true).unwrap();
+
+        dbg!(&app.projects.rows);
+        dbg!(&app.projects.list);
+    }
 }
