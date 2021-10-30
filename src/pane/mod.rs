@@ -5,6 +5,7 @@ use crate::event::Key;
 use clap::App;
 use std::ops::Index;
 
+pub mod context;
 pub mod project;
 
 pub trait Pane {
