@@ -3552,8 +3552,9 @@ mod tests {
 
         assert_eq!(app.contexts.table_state.current_selection(), Some(0));
         app.context_next();
+        app.context_next();
         app.context_select().unwrap();
-        assert_eq!(app.contexts.table_state.current_selection(), Some(1));
+        assert_eq!(app.contexts.table_state.current_selection(), Some(2));
 
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
@@ -3561,7 +3562,8 @@ mod tests {
         assert_eq!(app.tasks.len(), 1);
         assert_eq!(app.current_context_filter, "+finance -private");
 
-        assert_eq!(app.contexts.table_state.current_selection(), Some(1));
+        assert_eq!(app.contexts.table_state.current_selection(), Some(2));
+        app.context_previous();
         app.context_previous();
         app.context_select().unwrap();
         assert_eq!(app.contexts.table_state.current_selection(), Some(0));
