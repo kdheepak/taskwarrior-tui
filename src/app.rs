@@ -1618,9 +1618,11 @@ impl TaskwarriorTui {
             return Ok(());
         }
 
+        let task_uuids = self.selected_task_uuids();
+
         let shell = self.command.as_str();
 
-        match shlex::split(shell) {
+        let r = match shlex::split(shell) {
             Some(cmd) => {
                 // first argument must be a binary
                 let mut command = Command::new(&cmd[0]);
@@ -1638,7 +1640,15 @@ impl TaskwarriorTui {
                 }
             }
             None => Err(format!("Cannot run subprocess. Unable to shlex split `{}`", shell)),
+        };
+
+        if task_uuids.len() == 1 {
+            if let Some(uuid) = task_uuids.get(0) {
+                self.current_selection_uuid = Some(*uuid);
+            }
         }
+
+        r
     }
 
     pub fn task_log(&mut self) -> Result<(), String> {
