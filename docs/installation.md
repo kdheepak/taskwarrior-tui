@@ -46,7 +46,7 @@ yay -S taskwarrior-tui-git # build from source
 snap install taskwarrior-tui
 ```
 
-**Using [`zdharma/zinit`](https://github.com/zdharma/zinit)** [![](https://img.shields.io/github/v/tag/kdheepak/taskwarrior-tui)](https://github.com/kdheepak/taskwarrior-tui/releases/latest)
+**Using [`zdharma-continuum/zinit`](https://github.com/zdharma-continuum/zinit)** [![](https://img.shields.io/github/v/tag/kdheepak/taskwarrior-tui)](https://github.com/kdheepak/taskwarrior-tui/releases/latest)
 
 Add the following to your `~/.zshrc`:
 
