@@ -14,7 +14,6 @@ If you like `taskwarrior-tui`, please consider donating to [@GothenburgBitFactor
 
 -->
 
-
 **Describe the bug**
 
 <!-- A clear and concise description of what the bug is with screenshots if available. -->
@@ -27,6 +26,7 @@ Steps to reproduce the behavior:
 
 <!--
 Please provide a minimal working example of the bug with screenshots if possible.
+If not possible, please provide a anonymized version of your `.taskrc` file and the output of `task next` (or whatever relevant taskwarrior feature you are using).
 
 You can set the TASKDATA and TASKRC environment variables to point to a different location for temporary fresh taskwarrior session.
 
@@ -63,6 +63,7 @@ Use your favorite tool to generate a screenshot or a gif of the error.
 ```bash
 taskwarrior-tui --version
 ```
+
 - task version:
 
 ```bash
@@ -72,6 +73,8 @@ task --version
 **Additional context and information**
 
 <!--
+
 Please provide detailed stacktraces, screenshot, etc here.
 If `taskwarrior-tui` crashes, you can set the RUST_BACKTRACE=1 for a detailed stacktrace.
+
 -->
