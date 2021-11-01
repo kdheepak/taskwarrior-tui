@@ -1236,6 +1236,13 @@ impl TaskwarriorTui {
 
     pub fn update(&mut self, force: bool) -> Result<()> {
         if force || self.dirty || self.tasks_changed_since(self.last_export).unwrap_or(true) {
+            let task_uuids = self.selected_task_uuids();
+            if self.current_selection_uuid.is_none() && self.current_selection_id.is_none() && task_uuids.len() == 1 {
+                if let Some(uuid) = task_uuids.get(0) {
+                    self.current_selection_uuid = Some(*uuid);
+                }
+            }
+
             self.last_export = Some(std::time::SystemTime::now());
             self.task_report_table.export_headers(None, &self.report)?;
             self.export_tasks()?;
@@ -1605,6 +1612,9 @@ impl TaskwarriorTui {
         let mut task_uuids = vec![];
 
         for s in selected {
+            if self.tasks.is_empty() {
+                break;
+            }
             let task_id = self.tasks[s].id().unwrap_or_default();
             let task_uuid = *self.tasks[s].uuid();
             task_uuids.push(task_uuid);
@@ -1618,9 +1628,11 @@ impl TaskwarriorTui {
             return Ok(());
         }
 
+        let task_uuids = self.selected_task_uuids();
+
         let shell = self.command.as_str();
 
-        match shlex::split(shell) {
+        let r = match shlex::split(shell) {
             Some(cmd) => {
                 // first argument must be a binary
                 let mut command = Command::new(&cmd[0]);
@@ -1638,7 +1650,15 @@ impl TaskwarriorTui {
                 }
             }
             None => Err(format!("Cannot run subprocess. Unable to shlex split `{}`", shell)),
+        };
+
+        if task_uuids.len() == 1 {
+            if let Some(uuid) = task_uuids.get(0) {
+                self.current_selection_uuid = Some(*uuid);
+            }
         }
+
+        r
     }
 
     pub fn task_log(&mut self) -> Result<(), String> {
