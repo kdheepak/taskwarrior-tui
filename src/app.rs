@@ -1572,10 +1572,9 @@ impl TaskwarriorTui {
         task.arg("rc.confirmation=off");
 
         let filter = if self.current_context_filter.is_empty() {
-            self.filter.as_str().into()
+            format!("'{}'", self.filter.as_str())
         } else {
-            let t = format!("{} '{}'", self.filter.as_str(), self.current_context_filter);
-            t
+            format!("'{}' '{}'", self.filter.as_str(), self.current_context_filter)
         };
 
         match shlex::split(&filter) {
@@ -3436,11 +3435,7 @@ mod tests {
 
     #[test]
     fn test_taskwarrior_tui() {
-        let app = TaskwarriorTui::new("next");
-        if let Err(_) = app {
-            return;
-        }
-        let app = app.unwrap();
+        let app = TaskwarriorTui::new("next").unwrap();
         assert!(app.task_by_index(0).is_none());
 
         let app = TaskwarriorTui::new("next").unwrap();
@@ -3840,7 +3835,7 @@ mod tests {
             "│                                                │",
             "╰────────────────────────────────────────────────╯",
             "╭Filter Tasks────────────────────────────────────╮",
-            "│status:pending -private                         │",
+            "│(status:pending or status:waiting)              │",
             "╰────────────────────────────────────────────────╯",
         ]);
 
@@ -4135,7 +4130,7 @@ mod tests {
             "│ID            27                                │",
             "╰────────────────────────────────────────────────╯",
             "╭Filter Tasks────────────────────────────────────╮",
-            "│status:pending -private                         │",
+            "│(status:pending or status:waiting)              │",
             "╰────────────────────────────────────────────────╯",
         ]);
 
