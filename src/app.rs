@@ -78,6 +78,8 @@ use std::borrow::Borrow;
 use std::time::Instant;
 use task_hookrs::project::Project;
 
+use version_compare::{Cmp, Version};
+
 const MAX_LINE: usize = 4096;
 
 lazy_static! {
@@ -203,6 +205,7 @@ pub struct TaskwarriorTui {
     pub report: String,
     pub projects: ProjectsState,
     pub contexts: ContextsState,
+    pub task_version: String,
 }
 
 impl TaskwarriorTui {
@@ -230,6 +233,17 @@ impl TaskwarriorTui {
         let data = String::from_utf8_lossy(&output.stdout);
         let c = Config::new(&data, report)?;
         let kc = KeyConfig::new(&data)?;
+
+        let output = std::process::Command::new("task")
+            .arg("--version")
+            .output()
+            .context("Unable to run `task --version`")
+            .unwrap();
+        let task_version = String::from_utf8_lossy(&output.stdout).to_string();
+
+        if Version::from(&task_version).is_none() {
+            return Err(anyhow!("Unable to parse `task --version`.\nGot {}", task_version));
+        }
 
         let (w, h) = crossterm::terminal::size()?;
 
@@ -269,6 +283,7 @@ impl TaskwarriorTui {
             report: report.to_string(),
             projects: ProjectsState::new(),
             contexts: ContextsState::new(),
+            task_version,
         };
 
         for c in app.config.filter.chars() {
@@ -1571,28 +1586,30 @@ impl TaskwarriorTui {
         task.arg("rc.json.array=on");
         task.arg("rc.confirmation=off");
 
-        let filter = if self.current_context_filter.is_empty() {
-            format!("'{}'", self.filter.as_str())
+        if Version::from(&self.task_version).unwrap() >= Version::from("2.6.0").unwrap() {
+            task.arg(format!("'{}'", self.filter.as_str().trim()));
         } else {
-            format!("'{}' '{}'", self.filter.as_str(), self.current_context_filter)
-        };
-
-        match shlex::split(&filter) {
-            Some(cmd) => {
-                for s in cmd {
-                    task.arg(&s);
-                }
-            }
-            None => {
-                task.arg("");
-            }
+            task.arg(self.filter.as_str().trim());
         }
+
+        if !self.current_context_filter.is_empty()
+            && Version::from(&self.task_version).unwrap() >= Version::from("2.6.0").unwrap()
+        {
+            task.arg(format!("'{}'", self.current_context_filter.trim()));
+        } else if !self.current_context_filter.is_empty() {
+            task.arg(format!("'\\({}\\)'", self.current_context_filter));
+        }
+
         task.arg("export");
-        task.arg(&self.report);
+
+        if Version::from(&self.task_version).unwrap() >= Version::from("2.6.0").unwrap() {
+            task.arg(&self.report);
+        }
 
         let output = task.output()?;
         let data = String::from_utf8_lossy(&output.stdout);
         let error = String::from_utf8_lossy(&output.stderr);
+
         if !error.contains("The expression could not be evaluated.") {
             if let Ok(imported) = import(data.as_bytes()) {
                 self.tasks = imported;
