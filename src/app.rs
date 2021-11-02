@@ -78,12 +78,13 @@ use std::borrow::Borrow;
 use std::time::Instant;
 use task_hookrs::project::Project;
 
-use version_compare::{Cmp, Version};
+use versions::Versioning;
 
 const MAX_LINE: usize = 4096;
 
 lazy_static! {
     static ref START_TIME: Instant = Instant::now();
+    static ref LATEST_TASKWARRIOR_VERSION: Versioning = Versioning::new("2.6.0").unwrap();
 }
 
 #[derive(Debug)]
@@ -205,7 +206,7 @@ pub struct TaskwarriorTui {
     pub report: String,
     pub projects: ProjectsState,
     pub contexts: ContextsState,
-    pub task_version: String,
+    pub task_version: Versioning,
 }
 
 impl TaskwarriorTui {
@@ -239,11 +240,8 @@ impl TaskwarriorTui {
             .output()
             .context("Unable to run `task --version`")
             .unwrap();
-        let task_version = String::from_utf8_lossy(&output.stdout).to_string();
 
-        if Version::from(&task_version).is_none() {
-            return Err(anyhow!("Unable to parse `task --version`.\nGot {}", task_version));
-        }
+        let task_version = Versioning::new(String::from_utf8_lossy(&output.stdout).trim()).unwrap();
 
         let (w, h) = crossterm::terminal::size()?;
 
@@ -1586,15 +1584,13 @@ impl TaskwarriorTui {
         task.arg("rc.json.array=on");
         task.arg("rc.confirmation=off");
 
-        if Version::from(&self.task_version).unwrap() >= Version::from("2.6.0").unwrap() {
+        if self.task_version >= *LATEST_TASKWARRIOR_VERSION {
             task.arg(format!("'{}'", self.filter.as_str().trim()));
         } else {
             task.arg(self.filter.as_str().trim());
         }
 
-        if !self.current_context_filter.is_empty()
-            && Version::from(&self.task_version).unwrap() >= Version::from("2.6.0").unwrap()
-        {
+        if !self.current_context_filter.is_empty() && self.task_version >= *LATEST_TASKWARRIOR_VERSION {
             task.arg(format!("'{}'", self.current_context_filter.trim()));
         } else if !self.current_context_filter.is_empty() {
             task.arg(format!("'\\({}\\)'", self.current_context_filter));
@@ -1602,7 +1598,7 @@ impl TaskwarriorTui {
 
         task.arg("export");
 
-        if Version::from(&self.task_version).unwrap() >= Version::from("2.6.0").unwrap() {
+        if self.task_version >= *LATEST_TASKWARRIOR_VERSION {
             task.arg(&self.report);
         }
 
