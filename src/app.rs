@@ -1568,15 +1568,15 @@ impl TaskwarriorTui {
         task.arg("rc.json.array=on");
         task.arg("rc.confirmation=off");
 
-        if self.task_version >= *LATEST_TASKWARRIOR_VERSION {
+        if !self.filter.as_str().trim().is_empty() && self.task_version >= *LATEST_TASKWARRIOR_VERSION {
             task.arg(format!("'{}'", self.filter.as_str().trim()));
-        } else {
+        } else if !self.filter.as_str().trim().is_empty() {
             task.arg(self.filter.as_str().trim());
         }
 
-        if !self.current_context_filter.is_empty() && self.task_version >= *LATEST_TASKWARRIOR_VERSION {
+        if !self.current_context_filter.trim().is_empty() && self.task_version >= *LATEST_TASKWARRIOR_VERSION {
             task.arg(format!("'{}'", self.current_context_filter.trim()));
-        } else if !self.current_context_filter.is_empty() {
+        } else if !self.current_context_filter.trim().is_empty() {
             task.arg(format!("'\\({}\\)'", self.current_context_filter));
         }
 
@@ -4402,18 +4402,6 @@ mod tests {
     }
 
     // #[test]
-    fn test_app() {
-        let mut app = TaskwarriorTui::new("next").unwrap();
-
-        app.update(true).unwrap();
-
-        let backend = TestBackend::new(80, 20);
-        let mut terminal = Terminal::new(backend).unwrap();
-        app.render(&mut terminal).unwrap();
-        println!("{}", buffer_view(terminal.backend().buffer()));
-    }
-
-    // #[test]
     fn test_graphemes() {
         dbg!("写作业".graphemes(true).count());
         dbg!(UnicodeWidthStr::width("写作业"));
@@ -4444,5 +4432,17 @@ mod tests {
         dbg!(app.modify.pos());
         let position = TaskwarriorTui::get_position(&app.modify);
         dbg!(position);
+    }
+
+    // #[test]
+    fn test_app() {
+        let mut app = TaskwarriorTui::new("all").unwrap();
+
+        app.update(true).unwrap();
+
+        let backend = TestBackend::new(80, 20);
+        let mut terminal = Terminal::new(backend).unwrap();
+        app.render(&mut terminal).unwrap();
+        println!("{}", buffer_view(terminal.backend().buffer()));
     }
 }
