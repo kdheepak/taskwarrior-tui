@@ -398,7 +398,9 @@ impl Config {
     }
 
     fn get_filter(data: &str, report: &str) -> Result<String> {
-        if let Some(s) = Self::get_config(
+        if report == "all" {
+            Ok("".into())
+        } else if let Some(s) = Self::get_config(
             format!("uda.taskwarrior-tui.task-report.{}.filter", report).as_str(),
             data,
         ) {
