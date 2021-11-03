@@ -1,6 +1,7 @@
 use anyhow::Result;
 
-use crate::app::{Action, Mode, TaskwarriorTui};
+use crate::action::Action;
+use crate::app::{Mode, TaskwarriorTui};
 use crate::event::Key;
 use clap::App;
 use std::ops::Index;
