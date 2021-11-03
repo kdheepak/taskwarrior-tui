@@ -18,7 +18,8 @@ use tui::{
     widgets::{Block, Widget},
 };
 
-use crate::app::{Action, Mode, TaskwarriorTui};
+use crate::action::Action;
+use crate::app::{Mode, TaskwarriorTui};
 use crate::event::Key;
 use crate::pane::Pane;
 use crate::table::TableState;

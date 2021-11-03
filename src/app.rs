@@ -68,7 +68,7 @@ use regex::Regex;
 
 use lazy_static::lazy_static;
 
-use crate::app::Action::Report;
+use crate::action::Action;
 use crate::pane::context::{ContextDetails, ContextsState};
 use crate::pane::project::ProjectsState;
 use crate::pane::Pane;
@@ -151,22 +151,6 @@ pub enum Mode {
     Tasks(Action),
     Projects,
     Calendar,
-}
-#[derive(PartialEq, Debug)]
-pub enum Action {
-    Report,
-    Filter,
-    Add,
-    Annotate,
-    Subprocess,
-    Log,
-    Modify,
-    HelpPopup,
-    Error,
-    ContextMenu,
-    Jump,
-    DeletePrompt,
-    DonePrompt,
 }
 
 pub struct TaskwarriorTui {

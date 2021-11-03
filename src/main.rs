@@ -2,6 +2,20 @@
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 
+mod action;
+mod app;
+mod calendar;
+mod cli;
+mod completion;
+mod config;
+mod event;
+mod help;
+mod history;
+mod keyconfig;
+mod pane;
+mod table;
+mod task_report;
+
 use std::env;
 use std::error::Error;
 use std::io::{self, Write};
@@ -23,22 +37,9 @@ use tui::{backend::CrosstermBackend, Terminal};
 
 use app::{Mode, TaskwarriorTui};
 
-use crate::app::Action;
+use crate::action::Action;
 use crate::event::{Event, EventConfig, Events, Key};
 use crate::keyconfig::KeyConfig;
-
-mod app;
-mod calendar;
-mod cli;
-mod completion;
-mod config;
-mod event;
-mod help;
-mod history;
-mod keyconfig;
-mod pane;
-mod table;
-mod task_report;
 
 /// # Panics
 /// Will panic if could not obtain terminal
