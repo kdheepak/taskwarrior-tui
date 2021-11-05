@@ -3583,7 +3583,7 @@ mod tests {
         assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
 
-        assert_eq!(app.tasks.len(), 1);
+        assert_eq!(app.tasks.len(), 26);
         assert_eq!(app.current_context_filter, "+finance -private");
 
         assert_eq!(app.contexts.table_state.current_selection(), Some(2));
