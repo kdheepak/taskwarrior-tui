@@ -59,6 +59,7 @@ pub struct Config {
     pub uda_selection_blink: bool,
     pub uda_calendar_months_per_row: usize,
     pub uda_style_context_active: Style,
+    pub uda_report_style_selection: Style,
     pub uda_style_calendar_title: Style,
     pub uda_style_calendar_today: Style,
     pub uda_style_report_completion_pane: Style,
@@ -99,6 +100,7 @@ impl Config {
         let uda_selection_dim = Self::get_uda_selection_dim(data);
         let uda_selection_blink = Self::get_uda_selection_blink(data);
         let uda_calendar_months_per_row = Self::get_uda_months_per_row(data);
+        let uda_report_style_selection = Self::get_uda_style("report.selection", data);
         let uda_style_calendar_title = Self::get_uda_style("calendar.title", data);
         let uda_style_calendar_today = Self::get_uda_style("calendar.today", data);
         let uda_style_context_active = Self::get_uda_style("context.active", data);
@@ -106,6 +108,7 @@ impl Config {
         let uda_shortcuts = Self::get_uda_shortcuts(data);
         let uda_background_process = Self::get_uda_background_process(data);
         let uda_background_process_period = Self::get_uda_background_process_period(data);
+        let uda_report_style_selection = uda_report_style_selection.unwrap_or_default();
         let uda_style_calendar_title = uda_style_calendar_title.unwrap_or_default();
         let uda_style_calendar_today =
             uda_style_calendar_today.unwrap_or_else(|| Style::default().add_modifier(Modifier::BOLD));
@@ -140,6 +143,7 @@ impl Config {
             uda_selection_dim,
             uda_selection_blink,
             uda_calendar_months_per_row,
+            uda_report_style_selection,
             uda_style_context_active,
             uda_style_calendar_title,
             uda_style_calendar_today,
