@@ -1041,7 +1041,7 @@ impl TaskwarriorTuiApp {
         for (i, task) in tasks.iter().enumerate() {
             let style = self.style_for_task(&self.tasks[i]);
             if i == selected {
-                highlight_style = style;
+                highlight_style = self.config.uda_report_style_selection;
                 if self.config.uda_selection_bold {
                     highlight_style = highlight_style.add_modifier(Modifier::BOLD);
                 }
