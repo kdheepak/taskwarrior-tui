@@ -50,7 +50,7 @@ use tui::{
     style::{Color, Modifier, Style},
     terminal::Frame,
     text::{Span, Spans, Text},
-    widgets::{Block, BorderType, Borders, Clear, List, ListItem, Paragraph},
+    widgets::{Block, BorderType, Borders, Clear, List, ListItem, Paragraph, Wrap},
 };
 
 use rustyline::history::Direction as HistoryDirection;
@@ -690,11 +690,29 @@ impl TaskwarriorTui {
                 Self::draw_command(
                     f,
                     rects[1],
-                    self.error.as_str(),
+                    "Press ESC to return",
                     Span::styled("Error", Style::default().add_modifier(Modifier::BOLD)),
                     0,
                     false,
                 );
+                let text = self.error.as_str();
+                let title = vec![Span::styled("Error", Style::default().add_modifier(Modifier::BOLD))];
+                let rect = centered_rect(90, 60, f.size());
+                f.render_widget(Clear, rect);
+                let p = Paragraph::new(Text::from(text))
+                    .block(
+                        Block::default()
+                            .borders(Borders::ALL)
+                            .border_type(BorderType::Rounded)
+                            .title(title),
+                    )
+                    .wrap(Wrap { trim: true });
+                f.render_widget(p, rect);
+                // draw error pop up
+                let rects = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints([Constraint::Min(0)].as_ref())
+                    .split(f.size());
             }
             Mode::Tasks(Action::HelpPopup) => {
                 Self::draw_command(
@@ -1565,8 +1583,8 @@ impl TaskwarriorTui {
     pub fn export_tasks(&mut self) -> Result<()> {
         let mut task = Command::new("task");
 
-        // task.arg("rc.json.array=on");
-        // task.arg("rc.confirmation=off");
+        task.arg("rc.json.array=on");
+        task.arg("rc.confirmation=off");
 
         if !self.filter.as_str().trim().is_empty() {
             if let Some(args) = shlex::split(self.filter.as_str().trim()) {
@@ -1592,10 +1610,13 @@ impl TaskwarriorTui {
         let data = String::from_utf8_lossy(&output.stdout);
         let error = String::from_utf8_lossy(&output.stderr);
 
-        if !error.contains("The expression could not be evaluated.") {
+        if output.status.success() {
             if let Ok(imported) = import(data.as_bytes()) {
                 self.tasks = imported;
             }
+        } else {
+            self.mode = Mode::Tasks(Action::Error);
+            self.error = format!("Running `{:?}` failed ({}): {}", &task, output.status, error);
         }
 
         Ok(())
@@ -4439,8 +4460,6 @@ mod tests {
     // #[test]
     fn test_app() {
         let mut app = TaskwarriorTui::new("next").unwrap();
-
-        app.update(true).unwrap();
 
         let backend = TestBackend::new(80, 20);
         let mut terminal = Terminal::new(backend).unwrap();
