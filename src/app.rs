@@ -191,7 +191,7 @@ pub struct TaskwarriorTui {
     pub projects: ProjectsState,
     pub contexts: ContextsState,
     pub task_version: Versioning,
-    pub can_update: bool,
+    pub can_task_export_error: bool,
 }
 
 impl TaskwarriorTui {
@@ -267,7 +267,7 @@ impl TaskwarriorTui {
             projects: ProjectsState::new(),
             contexts: ContextsState::new(),
             task_version,
-            can_update: true,
+            can_task_export_error: true,
         };
 
         for c in app.config.filter.chars() {
@@ -1616,12 +1616,12 @@ impl TaskwarriorTui {
             if let Ok(imported) = import(data.as_bytes()) {
                 self.tasks = imported;
             }
-            self.can_update = true;
+            self.can_task_export_error = true;
         } else {
-            if self.can_update {
+            if self.can_task_export_error {
                 self.mode = Mode::Tasks(Action::Error);
                 self.error = format!("Running `{:?}` failed ({}): {}", &task, output.status, error);
-                self.can_update = false;
+                self.can_task_export_error = false;
             }
         }
 
@@ -3061,7 +3061,7 @@ impl TaskwarriorTui {
                             self.mode = Mode::Tasks(Action::Report);
                             self.filter_history.add(self.filter.as_str());
                             // self.history_status = None;
-                            if self.can_update {
+                            if self.can_task_export_error {
                                 self.update(true)?;
                             }
                         }
