@@ -1565,10 +1565,16 @@ impl TaskwarriorTui {
     pub fn export_tasks(&mut self) -> Result<()> {
         let mut task = Command::new("task");
 
-        task.arg("rc.json.array=on");
-        task.arg("rc.confirmation=off");
+        // task.arg("rc.json.array=on");
+        // task.arg("rc.confirmation=off");
 
-        task.arg(self.filter.as_str().trim());
+        if !self.filter.as_str().trim().is_empty() {
+            if let Some(args) = shlex::split(self.filter.as_str().trim()) {
+                for arg in args {
+                    task.arg(arg);
+                }
+            }
+        }
 
         if !self.current_context_filter.trim().is_empty() && self.task_version >= *LATEST_TASKWARRIOR_VERSION {
             task.arg(self.current_context_filter.trim());
@@ -4432,7 +4438,7 @@ mod tests {
 
     // #[test]
     fn test_app() {
-        let mut app = TaskwarriorTui::new("all").unwrap();
+        let mut app = TaskwarriorTui::new("next").unwrap();
 
         app.update(true).unwrap();
 
