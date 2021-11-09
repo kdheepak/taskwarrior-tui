@@ -12,7 +12,6 @@ _taskwarrior-tui() {
             taskwarrior-tui)
                 cmd="taskwarrior__tui"
                 ;;
-            
             *)
                 ;;
         esac
@@ -20,13 +19,12 @@ _taskwarrior-tui() {
 
     case "${cmd}" in
         taskwarrior__tui)
-            opts=" -h -V -c -r  --help --version --config --report  "
+            opts="-h -V -c -r --help --version --config --report"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
-                
                 --config)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -50,7 +48,6 @@ _taskwarrior-tui() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        
     esac
 }
 
