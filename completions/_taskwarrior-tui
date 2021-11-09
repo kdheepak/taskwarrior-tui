@@ -15,16 +15,15 @@ _taskwarrior-tui() {
 
     local context curcontext="$curcontext" state line
     _arguments "${_arguments_options[@]}" \
-'-c+[Sets a custom config file]' \
-'--config=[Sets a custom config file]' \
-'-r+[Sets default report]' \
-'--report=[Sets default report]' \
+'-c+[Sets a custom config file]:FILE: ' \
+'--config=[Sets a custom config file]:FILE: ' \
+'-r+[Sets default report]:STRING: ' \
+'--report=[Sets default report]:STRING: ' \
 '-h[Print help information]' \
 '--help[Print help information]' \
 '-V[Print version information]' \
 '--version[Print version information]' \
 && ret=0
-    
 }
 
 (( $+functions[_taskwarrior-tui_commands] )) ||
