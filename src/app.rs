@@ -1617,12 +1617,10 @@ impl TaskwarriorTui {
                 self.tasks = imported;
             }
             self.can_task_export_error = true;
-        } else {
-            if self.can_task_export_error {
-                self.mode = Mode::Tasks(Action::Error);
-                self.error = format!("Running `{:?}` failed ({}): {}", &task, output.status, error);
-                self.can_task_export_error = false;
-            }
+        } else if self.can_task_export_error {
+            self.mode = Mode::Tasks(Action::Error);
+            self.error = format!("Running `{:?}` failed ({}): {}", &task, output.status, error);
+            self.can_task_export_error = false;
         }
 
         Ok(())
