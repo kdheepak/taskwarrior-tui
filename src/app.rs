@@ -162,7 +162,6 @@ pub struct TaskwarriorTui {
     pub command: LineBuffer,
     pub filter: LineBuffer,
     pub modify: LineBuffer,
-    pub error: String,
     pub tasks: Vec<Task>,
     pub task_details: HashMap<Uuid, String>,
     pub marked: HashSet<Uuid>,
@@ -191,7 +190,7 @@ pub struct TaskwarriorTui {
     pub projects: ProjectsState,
     pub contexts: ContextsState,
     pub task_version: Versioning,
-    pub can_task_export_error: bool,
+    pub error: Option<String>,
 }
 
 impl TaskwarriorTui {
@@ -245,7 +244,6 @@ impl TaskwarriorTui {
             command: LineBuffer::with_capacity(MAX_LINE),
             filter: LineBuffer::with_capacity(MAX_LINE),
             modify: LineBuffer::with_capacity(MAX_LINE),
-            error: "".to_string(),
             mode: Mode::Tasks(Action::Report),
             task_report_height: 0,
             task_details_scroll: 0,
@@ -267,7 +265,7 @@ impl TaskwarriorTui {
             projects: ProjectsState::new(),
             contexts: ContextsState::new(),
             task_version,
-            can_task_export_error: true,
+            error: None,
         };
 
         for c in app.config.filter.chars() {
@@ -539,18 +537,51 @@ impl TaskwarriorTui {
 
     fn handle_task_mode_action(&mut self, f: &mut Frame<impl Backend>, rects: &[Rect], task_ids: &[String]) {
         match self.mode {
-            Mode::Tasks(Action::Report) => Self::draw_command(
-                f,
-                rects[1],
-                self.filter.as_str(),
-                format!(
-                    "{}{}",
-                    "Filter Tasks",
-                    self.history_status.clone().unwrap_or_else(|| "".to_string())
-                ),
-                Self::get_position(&self.filter),
-                false,
-            ),
+            Mode::Tasks(Action::Error) => {
+                Self::draw_command(
+                    f,
+                    rects[1],
+                    "Press ESC to return",
+                    Span::styled("Error", Style::default().add_modifier(Modifier::BOLD)),
+                    0,
+                    false,
+                    self.error.clone(),
+                );
+                let text = self.error.clone().unwrap();
+                let title = vec![Span::styled("Error", Style::default().add_modifier(Modifier::BOLD))];
+                let rect = centered_rect(90, 60, f.size());
+                f.render_widget(Clear, rect);
+                let p = Paragraph::new(Text::from(text))
+                    .block(
+                        Block::default()
+                            .borders(Borders::ALL)
+                            .border_type(BorderType::Rounded)
+                            .title(title),
+                    )
+                    .wrap(Wrap { trim: true });
+                f.render_widget(p, rect);
+                // draw error pop up
+                let rects = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints([Constraint::Min(0)].as_ref())
+                    .split(f.size());
+            }
+            Mode::Tasks(Action::Report) => {
+                let position = Self::get_position(&self.command);
+                Self::draw_command(
+                    f,
+                    rects[1],
+                    self.filter.as_str(),
+                    format!(
+                        "{}{}",
+                        "Filter Tasks",
+                        self.history_status.clone().unwrap_or_else(|| "".to_string())
+                    ),
+                    Self::get_position(&self.filter),
+                    false,
+                    self.error.clone(),
+                );
+            }
             Mode::Tasks(Action::Jump) => {
                 let position = Self::get_position(&self.command);
                 Self::draw_command(
@@ -560,6 +591,7 @@ impl TaskwarriorTui {
                     Span::styled("Jump to Task", Style::default().add_modifier(Modifier::BOLD)),
                     position,
                     true,
+                    self.error.clone(),
                 );
             }
             Mode::Tasks(Action::Filter) => {
@@ -581,6 +613,7 @@ impl TaskwarriorTui {
                     ),
                     position,
                     true,
+                    self.error.clone(),
                 );
             }
             Mode::Tasks(Action::Log) => {
@@ -602,6 +635,7 @@ impl TaskwarriorTui {
                     ),
                     position,
                     true,
+                    self.error.clone(),
                 );
             }
             Mode::Tasks(Action::Subprocess) => {
@@ -613,6 +647,7 @@ impl TaskwarriorTui {
                     Span::styled("Shell Command", Style::default().add_modifier(Modifier::BOLD)),
                     position,
                     true,
+                    self.error.clone(),
                 );
             }
             Mode::Tasks(Action::Modify) => {
@@ -639,6 +674,7 @@ impl TaskwarriorTui {
                     ),
                     position,
                     true,
+                    self.error.clone(),
                 );
             }
             Mode::Tasks(Action::Annotate) => {
@@ -665,6 +701,7 @@ impl TaskwarriorTui {
                     ),
                     position,
                     true,
+                    self.error.clone(),
                 );
             }
             Mode::Tasks(Action::Add) => {
@@ -686,35 +723,8 @@ impl TaskwarriorTui {
                     ),
                     position,
                     true,
+                    self.error.clone(),
                 );
-            }
-            Mode::Tasks(Action::Error) => {
-                Self::draw_command(
-                    f,
-                    rects[1],
-                    "Press ESC to return",
-                    Span::styled("Error", Style::default().add_modifier(Modifier::BOLD)),
-                    0,
-                    false,
-                );
-                let text = self.error.as_str();
-                let title = vec![Span::styled("Error", Style::default().add_modifier(Modifier::BOLD))];
-                let rect = centered_rect(90, 60, f.size());
-                f.render_widget(Clear, rect);
-                let p = Paragraph::new(Text::from(text))
-                    .block(
-                        Block::default()
-                            .borders(Borders::ALL)
-                            .border_type(BorderType::Rounded)
-                            .title(title),
-                    )
-                    .wrap(Wrap { trim: true });
-                f.render_widget(p, rect);
-                // draw error pop up
-                let rects = Layout::default()
-                    .direction(Direction::Vertical)
-                    .constraints([Constraint::Min(0)].as_ref())
-                    .split(f.size());
             }
             Mode::Tasks(Action::HelpPopup) => {
                 Self::draw_command(
@@ -724,6 +734,7 @@ impl TaskwarriorTui {
                     "Filter Tasks",
                     Self::get_position(&self.filter),
                     false,
+                    self.error.clone(),
                 );
                 self.draw_help_popup(f, 80, 90);
             }
@@ -735,6 +746,7 @@ impl TaskwarriorTui {
                     "Filter Tasks",
                     Self::get_position(&self.filter),
                     false,
+                    self.error.clone(),
                 );
                 self.draw_context_menu(f, 80, 50);
             }
@@ -759,9 +771,9 @@ impl TaskwarriorTui {
                     Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
                     0,
                     false,
+                    self.error.clone(),
                 );
             }
-
             Mode::Tasks(Action::DeletePrompt) => {
                 let label = if task_ids.len() > 1 {
                     format!("Delete Tasks {}?", task_ids.join(","))
@@ -783,6 +795,7 @@ impl TaskwarriorTui {
                     Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
                     0,
                     false,
+                    self.error.clone(),
                 );
             }
             _ => {
@@ -939,8 +952,15 @@ impl TaskwarriorTui {
         f.render_stateful_widget(items, rect, &mut self.completion_list.state);
     }
 
-    fn draw_command<'a, T>(f: &mut Frame<impl Backend>, rect: Rect, text: &str, title: T, position: usize, cursor: bool)
-    where
+    fn draw_command<'a, T>(
+        f: &mut Frame<impl Backend>,
+        rect: Rect,
+        text: &str,
+        title: T,
+        position: usize,
+        cursor: bool,
+        error: Option<String>,
+    ) where
         T: Into<Spans<'a>>,
     {
         f.render_widget(Clear, rect);
@@ -950,11 +970,17 @@ impl TaskwarriorTui {
                 rect.y + 1,
             );
         }
+        let border_style = if error.is_some() {
+            Style::default().fg(Color::Indexed(1)) // red color border for errors
+        } else {
+            Style::default()
+        };
         let p = Paragraph::new(Text::from(text))
             .block(
                 Block::default()
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded)
+                    .border_style(border_style)
                     .title(title.into()),
             )
             .scroll((0, ((position + 3) as u16).saturating_sub(rect.width)));
@@ -1617,12 +1643,13 @@ impl TaskwarriorTui {
         if output.status.success() {
             if let Ok(imported) = import(data.as_bytes()) {
                 self.tasks = imported;
-                self.can_task_export_error = true;
+                self.error = None;
             }
-        } else if self.can_task_export_error {
-            self.can_task_export_error = false;
-            self.mode = Mode::Tasks(Action::Error);
-            self.error = format!("Running `{:?}` failed ({}):\n\n{}", &task, output.status, error);
+        } else {
+            self.error = Some(format!(
+                "Running `{:?}` failed ({}):\n\n{}",
+                &task, output.status, error
+            ));
         }
 
         Ok(())
@@ -2383,8 +2410,7 @@ impl TaskwarriorTui {
                         match self.task_done() {
                             Ok(_) => self.update(true)?,
                             Err(e) => {
-                                self.mode = Mode::Tasks(Action::Error);
-                                self.error = e;
+                                self.error = Some(e);
                             }
                         }
                         if self.calendar_year > 0 {
@@ -2440,8 +2466,7 @@ impl TaskwarriorTui {
                             match self.task_done() {
                                 Ok(_) => self.update(true)?,
                                 Err(e) => {
-                                    self.mode = Mode::Tasks(Action::Error);
-                                    self.error = e;
+                                    self.error = Some(e);
                                 }
                             }
                         }
@@ -2455,8 +2480,7 @@ impl TaskwarriorTui {
                             match self.task_delete() {
                                 Ok(_) => self.update(true)?,
                                 Err(e) => {
-                                    self.mode = Mode::Tasks(Action::Error);
-                                    self.error = e;
+                                    self.error = Some(e);
                                 }
                             }
                         }
@@ -2464,32 +2488,28 @@ impl TaskwarriorTui {
                         match self.task_start_stop() {
                             Ok(_) => self.update(true)?,
                             Err(e) => {
-                                self.mode = Mode::Tasks(Action::Error);
-                                self.error = e;
+                                self.error = Some(e);
                             }
                         }
                     } else if input == self.keyconfig.quick_tag {
                         match self.task_quick_tag() {
                             Ok(_) => self.update(true)?,
                             Err(e) => {
-                                self.mode = Mode::Tasks(Action::Error);
-                                self.error = e;
+                                self.error = Some(e);
                             }
                         }
                     } else if input == self.keyconfig.edit {
                         match self.task_edit() {
                             Ok(_) => self.update(true)?,
                             Err(e) => {
-                                self.mode = Mode::Tasks(Action::Error);
-                                self.error = e;
+                                self.error = Some(e);
                             }
                         }
                     } else if input == self.keyconfig.undo {
                         match self.task_undo() {
                             Ok(_) => self.update(true)?,
                             Err(e) => {
-                                self.mode = Mode::Tasks(Action::Error);
-                                self.error = e;
+                                self.error = Some(e);
                             }
                         }
                     } else if input == self.keyconfig.modify {
@@ -2569,8 +2589,7 @@ impl TaskwarriorTui {
                             Ok(_) => self.update(true)?,
                             Err(e) => {
                                 self.update(true)?;
-                                self.mode = Mode::Tasks(Action::Error);
-                                self.error = e;
+                                self.error = Some(e);
                             }
                         }
                     } else if input == self.keyconfig.shortcut2 {
@@ -2578,8 +2597,7 @@ impl TaskwarriorTui {
                             Ok(_) => self.update(true)?,
                             Err(e) => {
                                 self.update(true)?;
-                                self.mode = Mode::Tasks(Action::Error);
-                                self.error = e;
+                                self.error = Some(e);
                             }
                         }
                     } else if input == self.keyconfig.shortcut3 {
@@ -2587,8 +2605,7 @@ impl TaskwarriorTui {
                             Ok(_) => self.update(true)?,
                             Err(e) => {
                                 self.update(true)?;
-                                self.mode = Mode::Tasks(Action::Error);
-                                self.error = e;
+                                self.error = Some(e);
                             }
                         }
                     } else if input == self.keyconfig.shortcut4 {
@@ -2596,8 +2613,7 @@ impl TaskwarriorTui {
                             Ok(_) => self.update(true)?,
                             Err(e) => {
                                 self.update(true)?;
-                                self.mode = Mode::Tasks(Action::Error);
-                                self.error = e;
+                                self.error = Some(e);
                             }
                         }
                     } else if input == self.keyconfig.shortcut5 {
@@ -2605,8 +2621,7 @@ impl TaskwarriorTui {
                             Ok(_) => self.update(true)?,
                             Err(e) => {
                                 self.update(true)?;
-                                self.mode = Mode::Tasks(Action::Error);
-                                self.error = e;
+                                self.error = Some(e);
                             }
                         }
                     } else if input == self.keyconfig.shortcut6 {
@@ -2614,8 +2629,7 @@ impl TaskwarriorTui {
                             Ok(_) => self.update(true)?,
                             Err(e) => {
                                 self.update(true)?;
-                                self.mode = Mode::Tasks(Action::Error);
-                                self.error = e;
+                                self.error = Some(e);
                             }
                         }
                     } else if input == self.keyconfig.shortcut7 {
@@ -2623,8 +2637,7 @@ impl TaskwarriorTui {
                             Ok(_) => self.update(true)?,
                             Err(e) => {
                                 self.update(true)?;
-                                self.mode = Mode::Tasks(Action::Error);
-                                self.error = e;
+                                self.error = Some(e);
                             }
                         }
                     } else if input == self.keyconfig.shortcut8 {
@@ -2632,8 +2645,7 @@ impl TaskwarriorTui {
                             Ok(_) => self.update(true)?,
                             Err(e) => {
                                 self.update(true)?;
-                                self.mode = Mode::Tasks(Action::Error);
-                                self.error = e;
+                                self.error = Some(e);
                             }
                         }
                     } else if input == self.keyconfig.shortcut9 {
@@ -2641,8 +2653,7 @@ impl TaskwarriorTui {
                             Ok(_) => self.update(true)?,
                             Err(e) => {
                                 self.update(true)?;
-                                self.mode = Mode::Tasks(Action::Error);
-                                self.error = e;
+                                self.error = Some(e);
                             }
                         }
                     } else if input == self.keyconfig.zoom {
@@ -2651,6 +2662,8 @@ impl TaskwarriorTui {
                         self.mode = Mode::Tasks(Action::ContextMenu);
                     } else if input == self.keyconfig.next_tab {
                         self.mode = Mode::Projects;
+                    } else if input == Key::Ctrl(']') {
+                        self.mode = Mode::Tasks(Action::Error);
                     }
                 }
                 Action::ContextMenu => {
@@ -2667,8 +2680,7 @@ impl TaskwarriorTui {
                                 self.update(true)?;
                             }
                             Err(e) => {
-                                self.mode = Mode::Tasks(Action::Error);
-                                self.error = e.to_string();
+                                self.error = Some(e.to_string());
                             }
                         }
                     }
@@ -2713,8 +2725,7 @@ impl TaskwarriorTui {
                                     self.update(true)?;
                                 }
                                 Err(e) => {
-                                    self.mode = Mode::Tasks(Action::Error);
-                                    self.error = e;
+                                    self.error = Some(e);
                                 }
                             }
                         }
@@ -2774,8 +2785,7 @@ impl TaskwarriorTui {
                             self.update(true)?;
                         }
                         Err(e) => {
-                            self.mode = Mode::Tasks(Action::Error);
-                            self.error = e;
+                            self.error = Some(e);
                         }
                     },
                     Key::Esc => {
@@ -2814,8 +2824,7 @@ impl TaskwarriorTui {
                                     self.update(true)?;
                                 }
                                 Err(e) => {
-                                    self.mode = Mode::Tasks(Action::Error);
-                                    self.error = e;
+                                    self.error = Some(e);
                                 }
                             }
                         }
@@ -2897,8 +2906,7 @@ impl TaskwarriorTui {
                                     self.update(true)?;
                                 }
                                 Err(e) => {
-                                    self.mode = Mode::Tasks(Action::Error);
-                                    self.error = e;
+                                    self.error = Some(e);
                                 }
                             }
                         }
@@ -2959,8 +2967,7 @@ impl TaskwarriorTui {
                         }
                         Err(e) => {
                             self.command.update("", 0);
-                            self.mode = Mode::Tasks(Action::Error);
-                            self.error = e.to_string();
+                            self.error = Some(e.to_string());
                         }
                     },
                     Key::Esc => {
@@ -2999,8 +3006,7 @@ impl TaskwarriorTui {
                                     self.update(true)?;
                                 }
                                 Err(e) => {
-                                    self.mode = Mode::Tasks(Action::Error);
-                                    self.error = e;
+                                    self.error = Some(e);
                                 }
                             }
                         }
@@ -3061,9 +3067,7 @@ impl TaskwarriorTui {
                             self.mode = Mode::Tasks(Action::Report);
                             self.filter_history.add(self.filter.as_str());
                             // self.history_status = None;
-                            if self.can_task_export_error {
-                                self.update(true)?;
-                            }
+                            self.update(true)?;
                         }
                     }
                     Key::Char('\n') => {
@@ -3148,8 +3152,7 @@ impl TaskwarriorTui {
                                 self.update(true)?;
                             }
                             Err(e) => {
-                                self.mode = Mode::Tasks(Action::Error);
-                                self.error = e;
+                                self.error = Some(e);
                             }
                         }
                     } else if input == self.keyconfig.quit || input == Key::Esc {
@@ -3166,8 +3169,7 @@ impl TaskwarriorTui {
                                 self.update(true)?;
                             }
                             Err(e) => {
-                                self.mode = Mode::Tasks(Action::Error);
-                                self.error = e;
+                                self.error = Some(e);
                             }
                         }
                     } else if input == self.keyconfig.quit || input == Key::Esc {
@@ -3176,7 +3178,7 @@ impl TaskwarriorTui {
                         handle_movement(&mut self.command, input);
                     }
                 }
-                Action::Error => self.mode = Mode::Tasks(Action::Report),
+                Action::Error => (),
             }
         }
         self.update_task_table_state();
@@ -3979,6 +3981,7 @@ mod tests {
                         Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
                         position,
                         true,
+                        app.error.clone(),
                     );
                 })
                 .unwrap();
@@ -4035,6 +4038,7 @@ mod tests {
                         Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
                         position,
                         true,
+                        app.error.clone(),
                     );
                 })
                 .unwrap();
