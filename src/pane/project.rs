@@ -112,6 +112,13 @@ impl ProjectsState {
         (rows, headers)
     }
 
+    pub fn last_line(&self, line: &str) -> bool {
+        let words = line.trim().split(' ').map(|s| s.trim()).collect::<Vec<&str>>();
+        return words.len() == 2
+            && words[0].chars().map(|c| c.is_numeric()).all(|b| b)
+            && (words[1] == "project" || words[1] == "projects");
+    }
+
     pub fn update_data(&mut self) -> Result<()> {
         self.list.clear();
         self.rows.clear();
@@ -136,8 +143,8 @@ impl ProjectsState {
             let complete_index = header.find("Complete").unwrap() + "Complete".len();
 
             for line in lines.into_iter().skip(2) {
-                if line.is_empty() {
-                    break;
+                if line.is_empty() || self.last_line(line) {
+                    continue;
                 }
 
                 let line = line.to_string();
