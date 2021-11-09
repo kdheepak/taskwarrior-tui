@@ -50,7 +50,7 @@ use tui::{
     style::{Color, Modifier, Style},
     terminal::Frame,
     text::{Span, Spans, Text},
-    widgets::{Block, BorderType, Borders, Clear, List, ListItem, Paragraph},
+    widgets::{Block, BorderType, Borders, Clear, List, ListItem, Paragraph, Wrap},
 };
 
 use rustyline::history::Direction as HistoryDirection;
@@ -191,6 +191,7 @@ pub struct TaskwarriorTui {
     pub projects: ProjectsState,
     pub contexts: ContextsState,
     pub task_version: Versioning,
+    pub can_task_export_error: bool,
 }
 
 impl TaskwarriorTui {
@@ -266,6 +267,7 @@ impl TaskwarriorTui {
             projects: ProjectsState::new(),
             contexts: ContextsState::new(),
             task_version,
+            can_task_export_error: true,
         };
 
         for c in app.config.filter.chars() {
@@ -690,11 +692,29 @@ impl TaskwarriorTui {
                 Self::draw_command(
                     f,
                     rects[1],
-                    self.error.as_str(),
+                    "Press ESC to return",
                     Span::styled("Error", Style::default().add_modifier(Modifier::BOLD)),
                     0,
                     false,
                 );
+                let text = self.error.as_str();
+                let title = vec![Span::styled("Error", Style::default().add_modifier(Modifier::BOLD))];
+                let rect = centered_rect(90, 60, f.size());
+                f.render_widget(Clear, rect);
+                let p = Paragraph::new(Text::from(text))
+                    .block(
+                        Block::default()
+                            .borders(Borders::ALL)
+                            .border_type(BorderType::Rounded)
+                            .title(title),
+                    )
+                    .wrap(Wrap { trim: true });
+                f.render_widget(p, rect);
+                // draw error pop up
+                let rects = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints([Constraint::Min(0)].as_ref())
+                    .split(f.size());
             }
             Mode::Tasks(Action::HelpPopup) => {
                 Self::draw_command(
@@ -1568,7 +1588,13 @@ impl TaskwarriorTui {
         task.arg("rc.json.array=on");
         task.arg("rc.confirmation=off");
 
-        task.arg(self.filter.as_str().trim());
+        if !self.filter.as_str().trim().is_empty() {
+            if let Some(args) = shlex::split(self.filter.as_str().trim()) {
+                for arg in args {
+                    task.arg(arg);
+                }
+            }
+        }
 
         if !self.current_context_filter.trim().is_empty() && self.task_version >= *LATEST_TASKWARRIOR_VERSION {
             task.arg(self.current_context_filter.trim());
@@ -1586,10 +1612,15 @@ impl TaskwarriorTui {
         let data = String::from_utf8_lossy(&output.stdout);
         let error = String::from_utf8_lossy(&output.stderr);
 
-        if !error.contains("The expression could not be evaluated.") {
+        if output.status.success() {
             if let Ok(imported) = import(data.as_bytes()) {
                 self.tasks = imported;
             }
+            self.can_task_export_error = true;
+        } else if self.can_task_export_error {
+            self.mode = Mode::Tasks(Action::Error);
+            self.error = format!("Running `{:?}` failed ({}): {}", &task, output.status, error);
+            self.can_task_export_error = false;
         }
 
         Ok(())
@@ -3028,7 +3059,9 @@ impl TaskwarriorTui {
                             self.mode = Mode::Tasks(Action::Report);
                             self.filter_history.add(self.filter.as_str());
                             // self.history_status = None;
-                            self.update(true)?;
+                            if self.can_task_export_error {
+                                self.update(true)?;
+                            }
                         }
                     }
                     Key::Char('\n') => {
@@ -4432,9 +4465,7 @@ mod tests {
 
     // #[test]
     fn test_app() {
-        let mut app = TaskwarriorTui::new("all").unwrap();
-
-        app.update(true).unwrap();
+        let mut app = TaskwarriorTui::new("next").unwrap();
 
         let backend = TestBackend::new(80, 20);
         let mut terminal = Terminal::new(backend).unwrap();
