@@ -1589,7 +1589,7 @@ impl TaskwarriorTui {
         task.arg("rc.confirmation=off");
 
         if let Some(args) = shlex::split(&format!(
-            "rc.report.{}.filter='{}'",
+            r#"rc.report.{}.filter='{}'"#,
             self.report,
             self.filter.as_str().trim()
         )) {
@@ -3476,7 +3476,8 @@ mod tests {
             return;
         }
         let app = app.unwrap();
-        assert!(app.task_by_index(0).is_none());
+
+        assert!(app.task_by_index(0).is_none(), "Expected task data to be empty but found {} tasks. Delete contents of {:?} and {:?} and run the tests again.", app.tasks.len(), Path::new(env!("TASKDATA")), Path::new(env!("TASKDATA")).parent().unwrap().join(".config"));
 
         let app = TaskwarriorTui::new("next").unwrap();
         assert!(app
