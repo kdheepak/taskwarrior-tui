@@ -122,12 +122,13 @@ impl ProjectsState {
             .unwrap();
         let data = String::from_utf8_lossy(&output.stdout);
 
-        let lines = data.split('\n').into_iter().skip(1).collect::<Vec<&str>>();
-
+        let lines = data
+            .split('\n')
+            .into_iter()
+            .filter(|s| !s.trim().is_empty())
+            .collect::<Vec<&str>>();
         let header = lines.first().unwrap();
-
         let contains_avg_age = header.contains("Avg age");
-
         if contains_avg_age {
             let name_index = header.find("Remaining").unwrap();
             let remaining_index = header.find("Remaining").unwrap() + "Remaining".len();
@@ -227,9 +228,13 @@ fn update_task_filter_by_selection(app: &mut TaskwarriorTui) -> Result<()> {
 mod tests {
     use super::*;
 
-    // #[test]
+    #[test]
     fn test_project_summary() {
-        let mut app = TaskwarriorTui::new("next").unwrap();
+        let app = TaskwarriorTui::new("next");
+        if app.is_err() {
+            return;
+        }
+        let mut app = app.unwrap();
 
         app.update(true).unwrap();
 
