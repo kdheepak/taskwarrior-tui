@@ -8,9 +8,9 @@ pub enum Action {
     Log,
     Modify,
     HelpPopup,
-    Error,
     ContextMenu,
     Jump,
     DeletePrompt,
     DonePrompt,
+    Error,
 }
