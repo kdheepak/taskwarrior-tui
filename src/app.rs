@@ -1588,11 +1588,13 @@ impl TaskwarriorTui {
         task.arg("rc.json.array=on");
         task.arg("rc.confirmation=off");
 
-        if !self.filter.as_str().trim().is_empty() {
-            if let Some(args) = shlex::split(self.filter.as_str().trim()) {
-                for arg in args {
-                    task.arg(arg);
-                }
+        if let Some(args) = shlex::split(&format!(
+            r#"rc.report.{}.filter='{}'"#,
+            self.report,
+            self.filter.as_str().trim()
+        )) {
+            for arg in args {
+                task.arg(arg);
             }
         }
 
@@ -1615,12 +1617,12 @@ impl TaskwarriorTui {
         if output.status.success() {
             if let Ok(imported) = import(data.as_bytes()) {
                 self.tasks = imported;
+                self.can_task_export_error = true;
             }
-            self.can_task_export_error = true;
         } else if self.can_task_export_error {
-            self.mode = Mode::Tasks(Action::Error);
-            self.error = format!("Running `{:?}` failed ({}): {}", &task, output.status, error);
             self.can_task_export_error = false;
+            self.mode = Mode::Tasks(Action::Error);
+            self.error = format!("Running `{:?}` failed ({}):\n\n{}", &task, output.status, error);
         }
 
         Ok(())
@@ -3474,7 +3476,8 @@ mod tests {
             return;
         }
         let app = app.unwrap();
-        assert!(app.task_by_index(0).is_none());
+
+        assert!(app.task_by_index(0).is_none(), "Expected task data to be empty but found {} tasks. Delete contents of {:?} and {:?} and run the tests again.", app.tasks.len(), Path::new(env!("TASKDATA")), Path::new(env!("TASKDATA")).parent().unwrap().join(".config"));
 
         let app = TaskwarriorTui::new("next").unwrap();
         assert!(app
@@ -4463,9 +4466,13 @@ mod tests {
         dbg!(position);
     }
 
-    // #[test]
+    #[test]
     fn test_app() {
-        let mut app = TaskwarriorTui::new("next").unwrap();
+        let app = TaskwarriorTui::new("next");
+        if app.is_err() {
+            return;
+        }
+        let mut app = app.unwrap();
 
         let backend = TestBackend::new(80, 20);
         let mut terminal = Terminal::new(backend).unwrap();
