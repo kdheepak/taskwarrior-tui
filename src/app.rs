@@ -1568,14 +1568,10 @@ impl TaskwarriorTui {
         task.arg("rc.json.array=on");
         task.arg("rc.confirmation=off");
 
-        if !self.filter.as_str().trim().is_empty() && self.task_version >= *LATEST_TASKWARRIOR_VERSION {
-            task.arg(format!("'{}'", self.filter.as_str().trim()));
-        } else if !self.filter.as_str().trim().is_empty() {
-            task.arg(self.filter.as_str().trim());
-        }
+        task.arg(self.filter.as_str().trim());
 
         if !self.current_context_filter.trim().is_empty() && self.task_version >= *LATEST_TASKWARRIOR_VERSION {
-            task.arg(format!("'{}'", self.current_context_filter.trim()));
+            task.arg(self.current_context_filter.trim());
         } else if !self.current_context_filter.trim().is_empty() {
             task.arg(format!("'\\({}\\)'", self.current_context_filter));
         }
