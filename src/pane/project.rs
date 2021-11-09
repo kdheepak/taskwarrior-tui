@@ -141,7 +141,8 @@ impl ProjectsState {
 
                 let line = line.to_string();
                 let name = line[0..name_index].trim().to_string();
-                let remaining = line[name_index..remaining_index].trim().parse().unwrap();
+                let remaining = line[name_index..remaining_index].trim().parse();
+                let remaining = if let Ok(v) = remaining { v } else { 0 };
                 let avg_age = line[remaining_index..average_age_index].trim().to_string();
                 let complete = line[average_age_index..complete_index].trim().to_string();
 
