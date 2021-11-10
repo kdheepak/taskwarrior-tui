@@ -549,7 +549,7 @@ impl TaskwarriorTui {
                     false,
                     self.error.clone(),
                 );
-                let text = self.error.clone().unwrap();
+                let text = self.error.clone().unwrap_or_else(|| "Unknown error.".to_string());
                 let title = vec![Span::styled("Error", Style::default().add_modifier(Modifier::BOLD))];
                 let rect = centered_rect(90, 60, f.size());
                 f.render_widget(Clear, rect);
@@ -1649,6 +1649,10 @@ impl TaskwarriorTui {
             if let Ok(imported) = import(data.as_bytes()) {
                 self.tasks = imported;
                 self.error = None;
+                if self.mode == Mode::Tasks(Action::Error) {
+                    self.mode = self.previous_mode.clone().unwrap_or(Mode::Tasks(Action::Report));
+                    self.previous_mode = None;
+                }
             }
         } else {
             self.error = Some(format!(
