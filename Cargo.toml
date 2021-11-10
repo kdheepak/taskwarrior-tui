@@ -1,6 +1,6 @@
 [package]
 name = "taskwarrior-tui"
-version = "0.14.12"
+version = "0.14.13"
 license = "MIT"
 description = "A Taskwarrior Terminal User Interface"
 repository = "https://github.com/kdheepak/taskwarrior-tui/"
