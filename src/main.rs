@@ -127,7 +127,6 @@ async fn tui_main(_config: &str, report: &str) -> Result<()> {
                     || input == app.keyconfig.shortcut8
                     || input == app.keyconfig.shortcut9)
                     && app.mode == Mode::Tasks(Action::Report)
-                    || app.mode == Mode::Tasks(Action::Error)
                 {
                     Events::enter_tui_mode(&mut terminal);
                 }
