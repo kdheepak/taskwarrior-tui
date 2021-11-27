@@ -616,12 +616,9 @@ impl TaskwarriorTui {
                     rects[1],
                     self.filter.as_str(),
                     (
-                        Span::styled(
-                            format!("{}", "Filter Tasks",),
-                            Style::default().add_modifier(Modifier::BOLD),
-                        ),
+                        Span::styled("Filter Tasks", Style::default().add_modifier(Modifier::BOLD)),
                         Some(Span::styled(
-                            format!("{}", self.history_status.clone().unwrap_or_else(|| "".to_string())),
+                            self.history_status.clone().unwrap_or_else(|| "".to_string()),
                             Style::default().add_modifier(Modifier::BOLD),
                         )),
                     ),
@@ -640,12 +637,9 @@ impl TaskwarriorTui {
                     rects[1],
                     self.command.as_str(),
                     (
-                        Span::styled(
-                            format!("{}", "Log Task",),
-                            Style::default().add_modifier(Modifier::BOLD),
-                        ),
+                        Span::styled("Log Task", Style::default().add_modifier(Modifier::BOLD)),
                         Some(Span::styled(
-                            format!("{}", self.history_status.clone().unwrap_or_else(|| "".to_string())),
+                            self.history_status.clone().unwrap_or_else(|| "".to_string()),
                             Style::default().add_modifier(Modifier::BOLD),
                         )),
                     ),
@@ -686,7 +680,7 @@ impl TaskwarriorTui {
                     (
                         Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
                         Some(Span::styled(
-                            format!("{}", self.history_status.clone().unwrap_or_else(|| "".to_string())),
+                            self.history_status.clone().unwrap_or_else(|| "".to_string()),
                             Style::default().add_modifier(Modifier::BOLD),
                         )),
                     ),
@@ -712,7 +706,7 @@ impl TaskwarriorTui {
                     (
                         Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
                         Some(Span::styled(
-                            format!("{}", self.history_status.clone().unwrap_or_else(|| "".to_string())),
+                            self.history_status.clone().unwrap_or_else(|| "".to_string()),
                             Style::default().add_modifier(Modifier::BOLD),
                         )),
                     ),
@@ -3193,9 +3187,9 @@ impl TaskwarriorTui {
                         if self.show_completion_pane {
                             self.show_completion_pane = false;
                             if let Some(s) = self.completion_list.selected() {
-                                let (before, after) = self.command.as_str().split_at(self.command.pos());
+                                let (before, after) = self.filter.as_str().split_at(self.filter.pos());
                                 let fs = format!("{}{}{}", before, s, after);
-                                self.command.update(&fs, self.command.pos() + s.len());
+                                self.filter.update(&fs, self.filter.pos() + s.len());
                             }
                             self.completion_list.unselect();
                             self.dirty = true;
