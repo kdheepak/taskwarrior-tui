@@ -77,4 +77,25 @@ task --version
 Please provide detailed stacktraces, screenshot, etc here.
 If `taskwarrior-tui` crashes, you can set the RUST_BACKTRACE=1 for a detailed stacktrace.
 
+The following is the data directory that `taskwarrior-tui` uses:
+
+Platform | Value                                |  Example
+--------------------------------------------------------------------------------------------
+Linux    | $XDG_DATA_HOME or $HOME/.local/share |  /home/alice/.local/share
+macOS    | $HOME/Library/Application Support    |  /Users/Alice/Library/Application Support
+Windows  | {FOLDERID_LocalAppData}              |  C:\Users\Alice\AppData\Local
+
+If an appropriate log level is set, the following file may have useful information: ${data-dir}/taskwarrior-tui/taskwarrior-tui.log
+
+```bash
+export TASKWARRIOR_TUI_LOG_LEVEL=debug
+export RUST_BACKTRACE=1
+taskwarrior-tui
+
+# OR
+
+export TASKWARRIOR_TUI_LOG_LEVEL=trace
+export RUST_BACKTRACE=1
+taskwarrior-tui
+```
 -->
