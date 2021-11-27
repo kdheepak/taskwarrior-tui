@@ -80,6 +80,8 @@ use task_hookrs::project::Project;
 
 use versions::Versioning;
 
+use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
+
 const MAX_LINE: usize = 4096;
 
 lazy_static! {
@@ -1283,6 +1285,7 @@ impl TaskwarriorTui {
     }
 
     pub fn update(&mut self, force: bool) -> Result<()> {
+        trace!("self.update({:?});", force);
         if force || self.dirty || self.tasks_changed_since(self.last_export).unwrap_or(true) {
             let task_uuids = self.selected_task_uuids();
             if self.current_selection_uuid.is_none() && self.current_selection_id.is_none() && task_uuids.len() == 1 {
@@ -1410,6 +1413,7 @@ impl TaskwarriorTui {
     }
 
     pub fn update_task_table_state(&mut self) {
+        trace!("self.update_task_table_state()");
         self.task_table_state.select(Some(self.current_selection));
 
         for uuid in self.marked.clone() {
