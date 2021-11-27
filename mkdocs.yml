@@ -19,6 +19,9 @@ markdown_extensions:
 # Plugins
 plugins:
   - search
+  - exclude:
+      glob:
+        - "*.1"
 
 # Theme
 theme:
@@ -42,12 +45,12 @@ extra:
 nav:
   - Home: index.md
   - Getting Started:
-    - Installation:         installation.md
-    - Quick Start:          quick_start.md
-    - Keybindings:          keybindings.md
+      - Installation: installation.md
+      - Quick Start: quick_start.md
+      - Keybindings: keybindings.md
   - Configuration:
-    - Key configuration:    configuration/keys.md
-    - Color configuration:  configuration/colors.md
-    - Advanced:             configuration/advanced.md
+      - Key configuration: configuration/keys.md
+      - Color configuration: configuration/colors.md
+      - Advanced: configuration/advanced.md
   - Developer Guide:
-    - Guide:                developer/guide.md
+      - Guide: developer/guide.md
