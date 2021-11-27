@@ -2,7 +2,7 @@
 
 ## Running tests
 
-```
+```bash
 git clone https://github.com/kdheepak/taskwarrior-tui
 cd taskwarrior-tui
 
@@ -14,13 +14,13 @@ cargo test
 
 ## Running debug build
 
-```
+```bash
 cargo run
 ```
 
 ## Running release build
 
-```
+```bash
 cargo run --release
 ```
 
@@ -28,8 +28,20 @@ cargo run --release
 
 If you want to test the `test_taskwarrior_timing` function in `src/app.rs`:
 
-```
+```bash
 cargo test -- app::tests::test_taskwarrior_timing --nocapture
+```
+
+## Getting logs
+
+```bash
+export TASKWARRIOR_TUI_LOG_LEVEL=debug
+taskwarrior-tui
+
+# OR
+
+export TASKWARRIOR_TUI_LOG_LEVEL=trace
+cargo run
 ```
 
 ## Contributing to documentation
