@@ -80,6 +80,8 @@ use task_hookrs::project::Project;
 
 use versions::Versioning;
 
+use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
+
 const MAX_LINE: usize = 4096;
 
 lazy_static! {
@@ -544,7 +546,10 @@ impl TaskwarriorTui {
                     f,
                     rects[1],
                     "Press any key to continue.",
-                    Span::styled("Error", Style::default().add_modifier(Modifier::BOLD)),
+                    (
+                        Span::styled("Error", Style::default().add_modifier(Modifier::BOLD)),
+                        None,
+                    ),
                     0,
                     false,
                     self.error.clone(),
@@ -577,10 +582,9 @@ impl TaskwarriorTui {
                     f,
                     rects[1],
                     self.filter.as_str(),
-                    format!(
-                        "{}{}",
-                        "Filter Tasks",
-                        self.history_status.clone().unwrap_or_else(|| "".to_string())
+                    (
+                        Span::raw("Filter Tasks"),
+                        Some(Span::raw(self.history_status.clone().unwrap_or_else(|| "".to_string()))),
                     ),
                     Self::get_position(&self.filter),
                     false,
@@ -593,7 +597,10 @@ impl TaskwarriorTui {
                     f,
                     rects[1],
                     self.command.as_str(),
-                    Span::styled("Jump to Task", Style::default().add_modifier(Modifier::BOLD)),
+                    (
+                        Span::styled("Jump to Task", Style::default().add_modifier(Modifier::BOLD)),
+                        None,
+                    ),
                     position,
                     true,
                     self.error.clone(),
@@ -608,13 +615,12 @@ impl TaskwarriorTui {
                     f,
                     rects[1],
                     self.filter.as_str(),
-                    Span::styled(
-                        format!(
-                            "{}{}",
-                            "Filter Tasks",
-                            self.history_status.clone().unwrap_or_else(|| "".to_string())
-                        ),
-                        Style::default().add_modifier(Modifier::BOLD),
+                    (
+                        Span::styled("Filter Tasks", Style::default().add_modifier(Modifier::BOLD)),
+                        Some(Span::styled(
+                            self.history_status.clone().unwrap_or_else(|| "".to_string()),
+                            Style::default().add_modifier(Modifier::BOLD),
+                        )),
                     ),
                     position,
                     true,
@@ -630,13 +636,12 @@ impl TaskwarriorTui {
                     f,
                     rects[1],
                     self.command.as_str(),
-                    Span::styled(
-                        format!(
-                            "{}{}",
-                            "Log Task",
-                            self.history_status.clone().unwrap_or_else(|| "".to_string())
-                        ),
-                        Style::default().add_modifier(Modifier::BOLD),
+                    (
+                        Span::styled("Log Task", Style::default().add_modifier(Modifier::BOLD)),
+                        Some(Span::styled(
+                            self.history_status.clone().unwrap_or_else(|| "".to_string()),
+                            Style::default().add_modifier(Modifier::BOLD),
+                        )),
                     ),
                     position,
                     true,
@@ -649,7 +654,10 @@ impl TaskwarriorTui {
                     f,
                     rects[1],
                     self.command.as_str(),
-                    Span::styled("Shell Command", Style::default().add_modifier(Modifier::BOLD)),
+                    (
+                        Span::styled("Shell Command", Style::default().add_modifier(Modifier::BOLD)),
+                        None,
+                    ),
                     position,
                     true,
                     self.error.clone(),
@@ -669,13 +677,12 @@ impl TaskwarriorTui {
                     f,
                     rects[1],
                     self.modify.as_str(),
-                    Span::styled(
-                        format!(
-                            "{}{}",
-                            label,
-                            self.history_status.clone().unwrap_or_else(|| "".to_string())
-                        ),
-                        Style::default().add_modifier(Modifier::BOLD),
+                    (
+                        Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
+                        Some(Span::styled(
+                            self.history_status.clone().unwrap_or_else(|| "".to_string()),
+                            Style::default().add_modifier(Modifier::BOLD),
+                        )),
                     ),
                     position,
                     true,
@@ -696,13 +703,12 @@ impl TaskwarriorTui {
                     f,
                     rects[1],
                     self.command.as_str(),
-                    Span::styled(
-                        format!(
-                            "{}{}",
-                            label,
-                            self.history_status.clone().unwrap_or_else(|| "".to_string())
-                        ),
-                        Style::default().add_modifier(Modifier::BOLD),
+                    (
+                        Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
+                        Some(Span::styled(
+                            self.history_status.clone().unwrap_or_else(|| "".to_string()),
+                            Style::default().add_modifier(Modifier::BOLD),
+                        )),
                     ),
                     position,
                     true,
@@ -718,13 +724,12 @@ impl TaskwarriorTui {
                     f,
                     rects[1],
                     self.command.as_str(),
-                    Span::styled(
-                        format!(
-                            "{}{}",
-                            "Add Task",
-                            self.history_status.clone().unwrap_or_else(|| "".to_string())
-                        ),
-                        Style::default().add_modifier(Modifier::BOLD),
+                    (
+                        Span::styled("Add Task", Style::default().add_modifier(Modifier::BOLD)),
+                        Some(Span::styled(
+                            self.history_status.clone().unwrap_or_else(|| "".to_string()),
+                            Style::default().add_modifier(Modifier::BOLD),
+                        )),
                     ),
                     position,
                     true,
@@ -736,7 +741,7 @@ impl TaskwarriorTui {
                     f,
                     rects[1],
                     self.filter.as_str(),
-                    "Filter Tasks",
+                    ("Filter Tasks".into(), None),
                     Self::get_position(&self.filter),
                     false,
                     self.error.clone(),
@@ -748,7 +753,7 @@ impl TaskwarriorTui {
                     f,
                     rects[1],
                     self.filter.as_str(),
-                    "Filter Tasks",
+                    ("Filter Tasks".into(), None),
                     Self::get_position(&self.filter),
                     false,
                     self.error.clone(),
@@ -773,7 +778,7 @@ impl TaskwarriorTui {
                     f,
                     rects[1],
                     &format!("Press <{}> to confirm or <{}> to abort.", x, q),
-                    Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
+                    (Span::styled(label, Style::default().add_modifier(Modifier::BOLD)), None),
                     0,
                     false,
                     self.error.clone(),
@@ -797,7 +802,7 @@ impl TaskwarriorTui {
                     f,
                     rects[1],
                     &format!("Press <{}> to confirm or <{}> to abort.", x, q),
-                    Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
+                    (Span::styled(label, Style::default().add_modifier(Modifier::BOLD)), None),
                     0,
                     false,
                     self.error.clone(),
@@ -957,17 +962,15 @@ impl TaskwarriorTui {
         f.render_stateful_widget(items, rect, &mut self.completion_list.state);
     }
 
-    fn draw_command<'a, T>(
+    fn draw_command(
         f: &mut Frame<impl Backend>,
         rect: Rect,
         text: &str,
-        title: T,
+        title: (Span, Option<Span>),
         position: usize,
         cursor: bool,
         error: Option<String>,
-    ) where
-        T: Into<Spans<'a>>,
-    {
+    ) {
         f.render_widget(Clear, rect);
         if cursor {
             f.set_cursor(
@@ -980,13 +983,22 @@ impl TaskwarriorTui {
         } else {
             Style::default()
         };
+
+        let title = if let Some(subtitle) = title.1 {
+            let w = (title.0.width() + subtitle.width()).try_into().unwrap();
+            let w = rect.width.saturating_sub(w).saturating_sub(2);
+            Spans::from(vec![title.0, Span::from("─".repeat(w.into())), subtitle])
+        } else {
+            Spans::from(vec![title.0])
+        };
+
         let p = Paragraph::new(Text::from(text))
             .block(
                 Block::default()
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded)
                     .border_style(border_style)
-                    .title(title.into()),
+                    .title(title),
             )
             .scroll((0, ((position + 3) as u16).saturating_sub(rect.width)));
         f.render_widget(p, rect);
@@ -1283,6 +1295,7 @@ impl TaskwarriorTui {
     }
 
     pub fn update(&mut self, force: bool) -> Result<()> {
+        trace!("self.update({:?});", force);
         if force || self.dirty || self.tasks_changed_since(self.last_export).unwrap_or(true) {
             let task_uuids = self.selected_task_uuids();
             if self.current_selection_uuid.is_none() && self.current_selection_id.is_none() && task_uuids.len() == 1 {
@@ -1410,6 +1423,7 @@ impl TaskwarriorTui {
     }
 
     pub fn update_task_table_state(&mut self) {
+        trace!("self.update_task_table_state()");
         self.task_table_state.select(Some(self.current_selection));
 
         for uuid in self.marked.clone() {
@@ -2533,7 +2547,11 @@ impl TaskwarriorTui {
                     } else if input == self.keyconfig.modify {
                         self.mode = Mode::Tasks(Action::Modify);
                         self.command_history.last();
-                        // self.history_status = Some(format!(" {} / {}", self.command_history.history_index() + 1, self.command_history.history_len()));
+                        self.history_status = Some(format!(
+                            " {} / {}",
+                            self.command_history.history_index() + 1,
+                            self.command_history.history_len()
+                        ));
                         self.update_completion_list();
                         match self.task_table_state.mode() {
                             TableMode::SingleSelection => match self.task_current() {
@@ -2581,24 +2599,40 @@ impl TaskwarriorTui {
                     } else if input == self.keyconfig.log {
                         self.mode = Mode::Tasks(Action::Log);
                         self.command_history.last();
-                        // self.history_status = Some(format!(" {} / {}", self.command_history.history_index() + 1, self.command_history.history_len()));
+                        self.history_status = Some(format!(
+                            " {} / {}",
+                            self.command_history.history_index() + 1,
+                            self.command_history.history_len()
+                        ));
                         self.update_completion_list();
                     } else if input == self.keyconfig.add {
                         self.mode = Mode::Tasks(Action::Add);
                         self.command_history.last();
-                        // self.history_status = Some(format!(" {} / {}", self.command_history.history_index() + 1, self.command_history.history_len()));
+                        self.history_status = Some(format!(
+                            " {} / {}",
+                            self.command_history.history_index() + 1,
+                            self.command_history.history_len()
+                        ));
                         self.update_completion_list();
                     } else if input == self.keyconfig.annotate {
                         self.mode = Mode::Tasks(Action::Annotate);
                         self.command_history.last();
-                        // self.history_status = Some(format!(" {} / {}", self.command_history.history_index() + 1, self.command_history.history_len()));
+                        self.history_status = Some(format!(
+                            " {} / {}",
+                            self.command_history.history_index() + 1,
+                            self.command_history.history_len()
+                        ));
                         self.update_completion_list();
                     } else if input == self.keyconfig.help {
                         self.mode = Mode::Tasks(Action::HelpPopup);
                     } else if input == self.keyconfig.filter {
                         self.mode = Mode::Tasks(Action::Filter);
                         self.filter_history.last();
-                        // self.history_status = Some(format!(" {} / {}", self.filter_history.history_index() + 1, self.filter_history.history_len()));
+                        self.history_status = Some(format!(
+                            " {} / {}",
+                            self.filter_history.history_index() + 1,
+                            self.filter_history.history_len()
+                        ));
                         self.update_completion_list();
                     } else if input == Key::Char(':') {
                         self.mode = Mode::Tasks(Action::Jump);
@@ -2779,7 +2813,11 @@ impl TaskwarriorTui {
                             let p = self.modify.pos();
                             self.modify.update("", 0);
                             self.modify.update(&s, std::cmp::min(s.len(), p));
-                            // self.history_status = Some(format!(" {} / {}", self.command_history.history_index() + 1, self.command_history.history_len()));
+                            self.history_status = Some(format!(
+                                " {} / {}",
+                                self.command_history.history_index() + 1,
+                                self.command_history.history_len()
+                            ));
                         }
                     }
                     Key::Down => {
@@ -2792,7 +2830,11 @@ impl TaskwarriorTui {
                             let p = self.modify.pos();
                             self.modify.update("", 0);
                             self.modify.update(&s, std::cmp::min(s.len(), p));
-                            // self.history_status = Some(format!(" {} / {}", self.command_history.history_index() + 1, self.command_history.history_len()));
+                            self.history_status = Some(format!(
+                                " {} / {}",
+                                self.command_history.history_index() + 1,
+                                self.command_history.history_len()
+                            ));
                         }
                     }
                     _ => {
@@ -2832,7 +2874,7 @@ impl TaskwarriorTui {
                             self.completion_list.unselect();
                         } else {
                             self.command.update("", 0);
-                            // self.history_status = None;
+                            self.history_status = None;
                             self.mode = Mode::Tasks(Action::Report);
                         }
                     }
@@ -2854,7 +2896,7 @@ impl TaskwarriorTui {
                                     self.mode = Mode::Tasks(Action::Report);
                                     self.command_history.add(self.command.as_str());
                                     self.command.update("", 0);
-                                    // self.history_status = None;
+                                    self.history_status = None;
                                     self.update(true)?;
                                 }
                                 Err(e) => {
@@ -2888,7 +2930,11 @@ impl TaskwarriorTui {
                             let p = self.command.pos();
                             self.command.update("", 0);
                             self.command.update(&s, std::cmp::min(s.len(), p));
-                            // self.history_status = Some(format!(" {} / {}", self.command_history.history_index() + 1, self.command_history.history_len()));
+                            self.history_status = Some(format!(
+                                " {} / {}",
+                                self.command_history.history_index() + 1,
+                                self.command_history.history_len()
+                            ));
                         }
                     }
                     Key::Down => {
@@ -2901,7 +2947,11 @@ impl TaskwarriorTui {
                             let p = self.command.pos();
                             self.command.update("", 0);
                             self.command.update(&s, std::cmp::min(s.len(), p));
-                            // self.history_status = Some(format!(" {} / {}", self.command_history.history_index() + 1, self.command_history.history_len()));
+                            self.history_status = Some(format!(
+                                " {} / {}",
+                                self.command_history.history_index() + 1,
+                                self.command_history.history_len()
+                            ));
                         }
                     }
                     _ => {
@@ -2918,7 +2968,7 @@ impl TaskwarriorTui {
                         } else {
                             self.command.update("", 0);
                             self.mode = Mode::Tasks(Action::Report);
-                            // self.history_status = None;
+                            self.history_status = None;
                         }
                     }
                     Key::Char('\n') => {
@@ -2939,7 +2989,7 @@ impl TaskwarriorTui {
                                     self.mode = Mode::Tasks(Action::Report);
                                     self.command_history.add(self.command.as_str());
                                     self.command.update("", 0);
-                                    // self.history_status = None;
+                                    self.history_status = None;
                                     self.update(true)?;
                                 }
                                 Err(e) => {
@@ -2972,7 +3022,11 @@ impl TaskwarriorTui {
                             let p = self.command.pos();
                             self.command.update("", 0);
                             self.command.update(&s, std::cmp::min(s.len(), p));
-                            // self.history_status = Some(format!(" {} / {}", self.command_history.history_index() + 1, self.command_history.history_len()));
+                            self.history_status = Some(format!(
+                                " {} / {}",
+                                self.command_history.history_index() + 1,
+                                self.command_history.history_len()
+                            ));
                         }
                     }
                     Key::Down => {
@@ -2985,7 +3039,11 @@ impl TaskwarriorTui {
                             let p = self.command.pos();
                             self.command.update("", 0);
                             self.command.update(&s, std::cmp::min(s.len(), p));
-                            // self.history_status = Some(format!(" {} / {}", self.command_history.history_index() + 1, self.command_history.history_len()));
+                            self.history_status = Some(format!(
+                                " {} / {}",
+                                self.command_history.history_index() + 1,
+                                self.command_history.history_len()
+                            ));
                         }
                     }
 
@@ -3027,7 +3085,7 @@ impl TaskwarriorTui {
                             self.completion_list.unselect();
                         } else {
                             self.command.update("", 0);
-                            // self.history_status = None;
+                            self.history_status = None;
                             self.mode = Mode::Tasks(Action::Report);
                         }
                     }
@@ -3049,7 +3107,7 @@ impl TaskwarriorTui {
                                     self.mode = Mode::Tasks(Action::Report);
                                     self.command_history.add(self.command.as_str());
                                     self.command.update("", 0);
-                                    // self.history_status = None;
+                                    self.history_status = None;
                                     self.update(true)?;
                                 }
                                 Err(e) => {
@@ -3082,7 +3140,11 @@ impl TaskwarriorTui {
                             let p = self.command.pos();
                             self.command.update("", 0);
                             self.command.update(&s, std::cmp::min(s.len(), p));
-                            // self.history_status = Some(format!(" {} / {}", self.command_history.history_index() + 1, self.command_history.history_len()));
+                            self.history_status = Some(format!(
+                                " {} / {}",
+                                self.command_history.history_index() + 1,
+                                self.command_history.history_len()
+                            ));
                         }
                     }
 
@@ -3096,7 +3158,11 @@ impl TaskwarriorTui {
                             let p = self.command.pos();
                             self.command.update("", 0);
                             self.command.update(&s, std::cmp::min(s.len(), p));
-                            // self.history_status = Some(format!(" {} / {}", self.command_history.history_index() + 1, self.command_history.history_len()));
+                            self.history_status = Some(format!(
+                                " {} / {}",
+                                self.command_history.history_index() + 1,
+                                self.command_history.history_len()
+                            ));
                         }
                     }
                     _ => {
@@ -3113,7 +3179,7 @@ impl TaskwarriorTui {
                         } else {
                             self.mode = Mode::Tasks(Action::Report);
                             self.filter_history.add(self.filter.as_str());
-                            // self.history_status = None;
+                            self.history_status = None;
                             self.update(true)?;
                         }
                     }
@@ -3121,9 +3187,9 @@ impl TaskwarriorTui {
                         if self.show_completion_pane {
                             self.show_completion_pane = false;
                             if let Some(s) = self.completion_list.selected() {
-                                let (before, after) = self.command.as_str().split_at(self.command.pos());
+                                let (before, after) = self.filter.as_str().split_at(self.filter.pos());
                                 let fs = format!("{}{}{}", before, s, after);
-                                self.command.update(&fs, self.command.pos() + s.len());
+                                self.filter.update(&fs, self.filter.pos() + s.len());
                             }
                             self.completion_list.unselect();
                             self.dirty = true;
@@ -3133,7 +3199,7 @@ impl TaskwarriorTui {
                         } else {
                             self.mode = Mode::Tasks(Action::Report);
                             self.filter_history.add(self.filter.as_str());
-                            // self.history_status = None;
+                            self.history_status = None;
                             self.update(true)?;
                         }
                     }
@@ -3147,7 +3213,11 @@ impl TaskwarriorTui {
                             let p = self.filter.pos();
                             self.filter.update("", 0);
                             self.filter.update(&s, std::cmp::min(p, s.len()));
-                            // self.history_status = Some(format!(" {} / {}", self.filter_history.history_index() + 1, self.filter_history.history_len()));
+                            self.history_status = Some(format!(
+                                " {} / {}",
+                                self.filter_history.history_index() + 1,
+                                self.filter_history.history_len()
+                            ));
                             self.dirty = true;
                         }
                     }
@@ -3161,7 +3231,11 @@ impl TaskwarriorTui {
                             let p = self.filter.pos();
                             self.filter.update("", 0);
                             self.filter.update(&s, std::cmp::min(p, s.len()));
-                            // self.history_status = Some(format!(" {} / {}", self.filter_history.history_index() + 1, self.filter_history.history_len()));
+                            self.history_status = Some(format!(
+                                " {} / {}",
+                                self.filter_history.history_index() + 1,
+                                self.filter_history.history_len()
+                            ));
                             self.dirty = true;
                         }
                     }
@@ -3184,7 +3258,7 @@ impl TaskwarriorTui {
                         for c in self.config.filter.chars() {
                             self.filter.insert(c, 1);
                         }
-                        // self.history_status = None;
+                        self.history_status = None;
                         self.update_input_for_completion();
                         self.dirty = true;
                     }
@@ -4047,7 +4121,7 @@ mod tests {
                         f,
                         rects[1],
                         app.modify.as_str(),
-                        Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
+                        (Span::styled(label, Style::default().add_modifier(Modifier::BOLD)), None),
                         position,
                         true,
                         app.error.clone(),
@@ -4104,7 +4178,7 @@ mod tests {
                         f,
                         rects[1],
                         app.modify.as_str(),
-                        Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
+                        (Span::styled(label, Style::default().add_modifier(Modifier::BOLD)), None),
                         position,
                         true,
                         app.error.clone(),

@@ -16,6 +16,10 @@ mod pane;
 mod table;
 mod task_report;
 
+use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
+use log4rs::append::file::FileAppender;
+use log4rs::config::{Appender, Config, Logger, Root};
+use log4rs::encode::pattern::PatternEncoder;
 use std::env;
 use std::error::Error;
 use std::io::{self, Write};
@@ -41,8 +45,8 @@ use crate::action::Action;
 use crate::event::{Event, EventConfig, Events, Key};
 use crate::keyconfig::KeyConfig;
 
-/// # Panics
-/// Will panic if could not obtain terminal
+const LOG_PATTERN: &str = "{d(%Y-%m-%d %H:%M:%S)} | {l} | {f}:{L} | {m}{n}";
+
 pub fn setup_terminal() -> Terminal<CrosstermBackend<io::Stdout>> {
     enable_raw_mode().expect("Running not in terminal");
     let mut stdout = io::stdout();
@@ -51,8 +55,7 @@ pub fn setup_terminal() -> Terminal<CrosstermBackend<io::Stdout>> {
     let backend = CrosstermBackend::new(stdout);
     Terminal::new(backend).unwrap()
 }
-/// # Panics
-/// Will panic if could not `disable_raw_mode`
+
 pub fn destruct_terminal() {
     disable_raw_mode().unwrap();
     execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture).unwrap();
@@ -61,10 +64,44 @@ pub fn destruct_terminal() {
 
 fn main() {
     better_panic::install();
+
+    let data_local_dir = dirs::data_local_dir()
+        .expect("Unable to open data local directory.")
+        .join("taskwarrior-tui");
+    std::fs::create_dir_all(&data_local_dir).unwrap_or_else(|_| panic!("Unable to create {:?}", data_local_dir));
+
+    let logfile = FileAppender::builder()
+        .encoder(Box::new(PatternEncoder::new(LOG_PATTERN)))
+        .append(false)
+        .build(data_local_dir.join("taskwarrior-tui.log"))
+        .unwrap();
+
+    let levelfilter = match std::env::var("TASKWARRIOR_TUI_LOG_LEVEL")
+        .unwrap_or_else(|_| "info".to_string())
+        .as_str()
+    {
+        "off" => LevelFilter::Off,
+        "warn" => LevelFilter::Warn,
+        "info" => LevelFilter::Info,
+        "debug" => LevelFilter::Debug,
+        "trace" => LevelFilter::Trace,
+        _ => LevelFilter::Info,
+    };
+    let config = Config::builder()
+        .appender(Appender::builder().build("logfile", Box::new(logfile)))
+        .logger(Logger::builder().build("taskwarrior_tui", levelfilter))
+        .build(Root::builder().appender("logfile").build(LevelFilter::Info))
+        .unwrap();
+
+    log4rs::init_config(config).unwrap();
+
     let matches = cli::generate_cli_app().get_matches();
 
+    debug!("getting matches from clap...");
     let config = matches.value_of("config").unwrap_or("~/.taskrc");
     let report = matches.value_of("report").unwrap_or("next");
+    debug!("report = {:?}", &report);
+    debug!("config = {:?}", &config);
     let r = task::block_on(tui_main(config, report));
     if let Err(err) = r {
         eprintln!("\x1b[0;31m[taskwarrior-tui error]\x1b[0m: {}\n\nIf you need additional help, please report as a github issue on https://github.com/kdheepak/taskwarrior-tui", err);
@@ -99,6 +136,7 @@ async fn tui_main(_config: &str, report: &str) -> Result<()> {
         // Handle input
         match events.next().await? {
             Event::Input(input) => {
+                debug!("Received input = {:?}", input);
                 if (input == app.keyconfig.edit
                     || input == app.keyconfig.shortcut1
                     || input == app.keyconfig.shortcut2
@@ -136,6 +174,7 @@ async fn tui_main(_config: &str, report: &str) -> Result<()> {
                 }
             }
             Event::Tick => {
+                trace!("Tick event");
                 let r = app.update(false);
                 if r.is_err() {
                     destruct_terminal();
