@@ -24,6 +24,7 @@ use std::env;
 use std::error::Error;
 use std::io::{self, Write};
 use std::panic;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use anyhow::Result;
@@ -62,19 +63,22 @@ pub fn destruct_terminal() {
     execute!(io::stdout(), cursor::Show).unwrap();
 }
 
-fn main() {
-    better_panic::install();
+pub fn initialize_logging() {
+    let data_local_dir = if let Ok(s) = std::env::var("TASKWARRIOR_TUI_DATA") {
+        PathBuf::from(s)
+    } else {
+        dirs::data_local_dir()
+            .expect("Unable to find data directory for taskwarrior-tui")
+            .join("taskwarrior-tui")
+    };
 
-    let data_local_dir = dirs::data_local_dir()
-        .expect("Unable to open data local directory.")
-        .join("taskwarrior-tui");
     std::fs::create_dir_all(&data_local_dir).unwrap_or_else(|_| panic!("Unable to create {:?}", data_local_dir));
 
     let logfile = FileAppender::builder()
         .encoder(Box::new(PatternEncoder::new(LOG_PATTERN)))
         .append(false)
         .build(data_local_dir.join("taskwarrior-tui.log"))
-        .unwrap();
+        .expect("Failed to build log file appender.");
 
     let levelfilter = match std::env::var("TASKWARRIOR_TUI_LOG_LEVEL")
         .unwrap_or_else(|_| "info".to_string())
@@ -91,9 +95,15 @@ fn main() {
         .appender(Appender::builder().build("logfile", Box::new(logfile)))
         .logger(Logger::builder().build("taskwarrior_tui", levelfilter))
         .build(Root::builder().appender("logfile").build(LevelFilter::Info))
-        .unwrap();
+        .expect("Failed to build logging config.");
 
-    log4rs::init_config(config).unwrap();
+    log4rs::init_config(config).expect("Failed to initialize logging.");
+}
+
+fn main() {
+    better_panic::install();
+
+    initialize_logging();
 
     let matches = cli::generate_cli_app().get_matches();
 

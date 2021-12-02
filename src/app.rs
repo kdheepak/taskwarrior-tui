@@ -2546,10 +2546,13 @@ impl TaskwarriorTui {
                         }
                     } else if input == self.keyconfig.modify {
                         self.mode = Mode::Tasks(Action::Modify);
-                        self.command_history.last();
+                        self.command_history.reset();
                         self.history_status = Some(format!(
                             " {} / {}",
-                            self.command_history.history_index() + 1,
+                            self.command_history
+                                .history_index()
+                                .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
+                                .saturating_add(1),
                             self.command_history.history_len()
                         ));
                         self.update_completion_list();
@@ -2598,28 +2601,37 @@ impl TaskwarriorTui {
                         self.mode = Mode::Tasks(Action::Subprocess);
                     } else if input == self.keyconfig.log {
                         self.mode = Mode::Tasks(Action::Log);
-                        self.command_history.last();
+                        self.command_history.reset();
                         self.history_status = Some(format!(
                             " {} / {}",
-                            self.command_history.history_index() + 1,
+                            self.command_history
+                                .history_index()
+                                .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
+                                .saturating_add(1),
                             self.command_history.history_len()
                         ));
                         self.update_completion_list();
                     } else if input == self.keyconfig.add {
                         self.mode = Mode::Tasks(Action::Add);
-                        self.command_history.last();
+                        self.command_history.reset();
                         self.history_status = Some(format!(
                             " {} / {}",
-                            self.command_history.history_index() + 1,
+                            self.command_history
+                                .history_index()
+                                .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
+                                .saturating_add(1),
                             self.command_history.history_len()
                         ));
                         self.update_completion_list();
                     } else if input == self.keyconfig.annotate {
                         self.mode = Mode::Tasks(Action::Annotate);
-                        self.command_history.last();
+                        self.command_history.reset();
                         self.history_status = Some(format!(
                             " {} / {}",
-                            self.command_history.history_index() + 1,
+                            self.command_history
+                                .history_index()
+                                .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
+                                .saturating_add(1),
                             self.command_history.history_len()
                         ));
                         self.update_completion_list();
@@ -2627,10 +2639,13 @@ impl TaskwarriorTui {
                         self.mode = Mode::Tasks(Action::HelpPopup);
                     } else if input == self.keyconfig.filter {
                         self.mode = Mode::Tasks(Action::Filter);
-                        self.filter_history.last();
+                        self.filter_history.reset();
                         self.history_status = Some(format!(
                             " {} / {}",
-                            self.filter_history.history_index() + 1,
+                            self.filter_history
+                                .history_index()
+                                .unwrap_or_else(|| self.filter_history.history_len().saturating_sub(1))
+                                .saturating_add(1),
                             self.filter_history.history_len()
                         ));
                         self.update_completion_list();
@@ -2815,7 +2830,10 @@ impl TaskwarriorTui {
                             self.modify.update(&s, std::cmp::min(s.len(), p));
                             self.history_status = Some(format!(
                                 " {} / {}",
-                                self.command_history.history_index() + 1,
+                                self.command_history
+                                    .history_index()
+                                    .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
+                                    .saturating_add(1),
                                 self.command_history.history_len()
                             ));
                         }
@@ -2832,13 +2850,16 @@ impl TaskwarriorTui {
                             self.modify.update(&s, std::cmp::min(s.len(), p));
                             self.history_status = Some(format!(
                                 " {} / {}",
-                                self.command_history.history_index() + 1,
+                                self.command_history
+                                    .history_index()
+                                    .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
+                                    .saturating_add(1),
                                 self.command_history.history_len()
                             ));
                         }
                     }
                     _ => {
-                        self.command_history.last();
+                        self.command_history.reset();
                         handle_movement(&mut self.modify, input);
                         self.update_input_for_completion();
                     }
@@ -2932,7 +2953,10 @@ impl TaskwarriorTui {
                             self.command.update(&s, std::cmp::min(s.len(), p));
                             self.history_status = Some(format!(
                                 " {} / {}",
-                                self.command_history.history_index() + 1,
+                                self.command_history
+                                    .history_index()
+                                    .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
+                                    .saturating_add(1),
                                 self.command_history.history_len()
                             ));
                         }
@@ -2949,13 +2973,16 @@ impl TaskwarriorTui {
                             self.command.update(&s, std::cmp::min(s.len(), p));
                             self.history_status = Some(format!(
                                 " {} / {}",
-                                self.command_history.history_index() + 1,
+                                self.command_history
+                                    .history_index()
+                                    .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
+                                    .saturating_add(1),
                                 self.command_history.history_len()
                             ));
                         }
                     }
                     _ => {
-                        self.command_history.last();
+                        self.command_history.reset();
                         handle_movement(&mut self.command, input);
                         self.update_input_for_completion();
                     }
@@ -3024,7 +3051,10 @@ impl TaskwarriorTui {
                             self.command.update(&s, std::cmp::min(s.len(), p));
                             self.history_status = Some(format!(
                                 " {} / {}",
-                                self.command_history.history_index() + 1,
+                                self.command_history
+                                    .history_index()
+                                    .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
+                                    .saturating_add(1),
                                 self.command_history.history_len()
                             ));
                         }
@@ -3041,14 +3071,17 @@ impl TaskwarriorTui {
                             self.command.update(&s, std::cmp::min(s.len(), p));
                             self.history_status = Some(format!(
                                 " {} / {}",
-                                self.command_history.history_index() + 1,
+                                self.command_history
+                                    .history_index()
+                                    .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
+                                    .saturating_add(1),
                                 self.command_history.history_len()
                             ));
                         }
                     }
 
                     _ => {
-                        self.command_history.last();
+                        self.command_history.reset();
                         handle_movement(&mut self.command, input);
                         self.update_input_for_completion();
                     }
@@ -3142,7 +3175,10 @@ impl TaskwarriorTui {
                             self.command.update(&s, std::cmp::min(s.len(), p));
                             self.history_status = Some(format!(
                                 " {} / {}",
-                                self.command_history.history_index() + 1,
+                                self.command_history
+                                    .history_index()
+                                    .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
+                                    .saturating_add(1),
                                 self.command_history.history_len()
                             ));
                         }
@@ -3160,13 +3196,16 @@ impl TaskwarriorTui {
                             self.command.update(&s, std::cmp::min(s.len(), p));
                             self.history_status = Some(format!(
                                 " {} / {}",
-                                self.command_history.history_index() + 1,
+                                self.command_history
+                                    .history_index()
+                                    .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
+                                    .saturating_add(1),
                                 self.command_history.history_len()
                             ));
                         }
                     }
                     _ => {
-                        self.command_history.last();
+                        self.command_history.reset();
                         handle_movement(&mut self.command, input);
                         self.update_input_for_completion();
                     }
@@ -3215,7 +3254,10 @@ impl TaskwarriorTui {
                             self.filter.update(&s, std::cmp::min(p, s.len()));
                             self.history_status = Some(format!(
                                 " {} / {}",
-                                self.filter_history.history_index() + 1,
+                                self.filter_history
+                                    .history_index()
+                                    .unwrap_or_else(|| self.filter_history.history_len().saturating_sub(1))
+                                    .saturating_add(1),
                                 self.filter_history.history_len()
                             ));
                             self.dirty = true;
@@ -3233,7 +3275,10 @@ impl TaskwarriorTui {
                             self.filter.update(&s, std::cmp::min(p, s.len()));
                             self.history_status = Some(format!(
                                 " {} / {}",
-                                self.filter_history.history_index() + 1,
+                                self.filter_history
+                                    .history_index()
+                                    .unwrap_or_else(|| self.filter_history.history_len().saturating_sub(1))
+                                    .saturating_add(1),
                                 self.filter_history.history_len()
                             ));
                             self.dirty = true;
