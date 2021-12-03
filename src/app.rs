@@ -362,79 +362,17 @@ impl TaskwarriorTui {
 
         self.projects.report_height = split_task_layout[0].height;
         self.draw_projects_report_window(f, split_task_layout[0], title);
-        let selected = self.projects.current_selection;
-
-        // TODO: what do to with selected project?
-        if self.projects.list.is_empty() {
-        } else {
-            match self.projects.table_state.mode() {
-                TableMode::SingleSelection => vec![self.projects.list[selected].clone()],
-                TableMode::MultipleSelection => {
-                    let mut chosed = vec![];
-                    for project in &self.projects.marked {
-                        chosed.push(project.clone());
-                    }
-                    chosed
-                }
-            };
-        }
     }
 
     fn draw_projects_report_window(&mut self, f: &mut Frame<impl Backend>, rect: Rect, title: Vec<Span>) {
-        let table = self.projects.simplified_view();
-        let maximum_column_width = rect.width;
-        let widths = self.calculate_widths(&table.0, &table.1, maximum_column_width);
-        //TODO add spacing to content so it justed to right side
-        let selected = self.projects.current_selection;
-        let header = table.1.iter();
-        let mut rows = vec![];
-        let mut highlight_style = Style::default();
-        for (i, project) in table.0.iter().enumerate() {
-            let style = self.style_for_project(project);
-            if i == selected {
-                highlight_style = style;
-                if self.config.uda_selection_bold {
-                    highlight_style = highlight_style.add_modifier(Modifier::BOLD);
-                }
-                if self.config.uda_selection_italic {
-                    highlight_style = highlight_style.add_modifier(Modifier::ITALIC);
-                }
-                if self.config.uda_selection_dim {
-                    highlight_style = highlight_style.add_modifier(Modifier::DIM);
-                }
-                if self.config.uda_selection_blink {
-                    highlight_style = highlight_style.add_modifier(Modifier::SLOW_BLINK);
-                }
-            }
-            rows.push(Row::StyledData(project.iter(), style));
-        }
-        let constraints: Vec<Constraint> = widths
-            .iter()
-            .map(|i| Constraint::Length((*i).try_into().unwrap_or(maximum_column_width as u16)))
-            .collect();
-
-        let t = Table::new(header, rows.into_iter())
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_type(BorderType::Rounded)
-                    .title(Spans::from(title)),
-            )
-            .header_style(
-                self.config
-                    .color
-                    .get("color.label")
-                    .copied()
-                    .unwrap_or_default()
-                    .add_modifier(Modifier::UNDERLINED),
-            )
-            .highlight_style(highlight_style)
-            .highlight_symbol(&self.config.uda_selection_indicator)
-            .mark_symbol(&self.config.uda_mark_indicator)
-            .unmark_symbol(&self.config.uda_unmark_indicator)
-            .widths(&constraints);
-
-        f.render_stateful_widget(t, rect, &mut self.projects.table_state);
+        let data = self.projects.data.clone();
+        let p = Paragraph::new(Text::from(&data[..])).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .title(title),
+        );
+        f.render_widget(p, rect);
     }
 
     fn style_for_project(&self, project: &[String]) -> Style {
@@ -1307,8 +1245,8 @@ impl TaskwarriorTui {
             self.last_export = Some(std::time::SystemTime::now());
             self.task_report_table.export_headers(None, &self.report)?;
             self.export_tasks()?;
-            self.projects.update_data()?;
             self.contexts.update_data()?;
+            self.projects.update_data()?;
             self.update_tags();
             self.task_details.clear();
             self.dirty = false;
@@ -2212,8 +2150,6 @@ impl TaskwarriorTui {
                 match output {
                     Ok(output) => {
                         if output.status.success() {
-                            String::from_utf8_lossy(&output.stdout);
-                            String::from_utf8_lossy(&output.stderr);
                             Ok(())
                         } else {
                             Err(format!(

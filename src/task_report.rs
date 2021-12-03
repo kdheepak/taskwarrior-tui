@@ -296,7 +296,7 @@ impl TaskReportTable {
                 let c = if let Some(a) = task.annotations() {
                     format!("[{}]", a.len())
                 } else {
-                    format!("")
+                    Default::default()
                 };
                 format!("{} {}", task.description(), c)
             }
@@ -304,7 +304,7 @@ impl TaskReportTable {
                 let c = if let Some(a) = task.annotations() {
                     format!("[{}]", a.len())
                 } else {
-                    format!("")
+                    Default::default()
                 };
                 let d = task.description().to_string();
                 let mut available_width = self.description_width;
