@@ -39,6 +39,7 @@ pub struct ProjectsState {
     pub report_height: u16,
     pub columns: Vec<String>,
     pub rows: Vec<ProjectDetails>,
+    pub data: String,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -63,6 +64,7 @@ impl ProjectsState {
                 AVG_AGE_HEADER.to_string(),
                 COMPLETE_HEADER.to_string(),
             ],
+            data: Default::default(),
             rows: vec![],
         }
     }
@@ -128,42 +130,7 @@ impl ProjectsState {
             .context("Unable to run `task summary`")
             .unwrap();
         let data = String::from_utf8_lossy(&output.stdout);
-
-        let lines = data
-            .split('\n')
-            .into_iter()
-            .filter(|s| !s.trim().is_empty())
-            .collect::<Vec<&str>>();
-        let header = lines.first().unwrap();
-        let contains_avg_age = header.contains("Avg age");
-        if contains_avg_age {
-            let name_index = header.find("Remaining").unwrap();
-            let remaining_index = header.find("Remaining").unwrap() + "Remaining".len();
-            let average_age_index = header.find("Avg age").unwrap() + "Avg age".len();
-            let complete_index = header.find("Complete").unwrap() + "Complete".len();
-
-            for line in lines.into_iter().skip(2) {
-                if line.is_empty() || self.last_line(line) {
-                    continue;
-                }
-
-                let line = line.to_string();
-                let name = line[0..name_index].trim().to_string();
-                let remaining = line[name_index..remaining_index].trim().parse();
-                let remaining = if let Ok(v) = remaining { v } else { 0 };
-                let avg_age = line[remaining_index..average_age_index].trim().to_string();
-                let complete = line[average_age_index..complete_index].trim().to_string();
-
-                self.rows.push(ProjectDetails {
-                    name,
-                    remaining,
-                    avg_age,
-                    complete,
-                });
-            }
-        }
-
-        self.list = self.rows.iter().map(|x| x.name.clone()).collect_vec();
+        self.data = data.into();
         Ok(())
     }
 
@@ -203,7 +170,7 @@ impl Pane for ProjectsState {
 }
 
 fn focus_on_next_project(app: &mut TaskwarriorTui) {
-    if app.projects.current_selection < app.projects.list.len() - 1 {
+    if app.projects.current_selection < app.projects.list.len().saturating_sub(1) {
         app.projects.current_selection += 1;
         app.projects.table_state.select(Some(app.projects.current_selection));
     }
