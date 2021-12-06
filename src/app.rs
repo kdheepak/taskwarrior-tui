@@ -86,7 +86,7 @@ const MAX_LINE: usize = 4096;
 
 lazy_static! {
     static ref START_TIME: Instant = Instant::now();
-    static ref LATEST_TASKWARRIOR_VERSION: Versioning = Versioning::new("2.6.0").unwrap();
+    static ref TASKWARRIOR_VERSION_SUPPORTED: Versioning = Versioning::new("2.6.0").unwrap();
 }
 
 #[derive(Debug)]
@@ -1577,7 +1577,7 @@ impl TaskwarriorTui {
             self.filter.as_str().trim()
         ));
 
-        if !self.current_context_filter.trim().is_empty() && self.task_version >= *LATEST_TASKWARRIOR_VERSION {
+        if !self.current_context_filter.trim().is_empty() && self.task_version >= *TASKWARRIOR_VERSION_SUPPORTED {
             task.arg(self.current_context_filter.trim());
         } else if !self.current_context_filter.trim().is_empty() {
             task.arg(format!("'\\({}\\)'", self.current_context_filter));
@@ -1585,7 +1585,7 @@ impl TaskwarriorTui {
 
         task.arg("export");
 
-        if self.task_version >= *LATEST_TASKWARRIOR_VERSION {
+        if self.task_version >= *TASKWARRIOR_VERSION_SUPPORTED {
             task.arg(&self.report);
         }
 
