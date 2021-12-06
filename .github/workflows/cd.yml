@@ -4,7 +4,7 @@ on:
     branches:
       - main
     tags:
-        - v*
+      - v*
 
 jobs:
   build:
@@ -15,44 +15,44 @@ jobs:
         include:
           - os: macOS-latest
             target: x86_64-apple-darwin
-            rust_flags: ''
-            features: ''
-            binary_postfix: ''
+            rust_flags: ""
+            features: ""
+            binary_postfix: ""
             upx_args: --best
             strip: true
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            rust_flags: ''
-            features: ''
-            binary_postfix: ''
+            rust_flags: ""
+            features: ""
+            binary_postfix: ""
             upx_args: --best --lzma
             strip: true
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-            rust_flags: ''
-            features: ''
-            binary: 'taskwarrior-tui-x86_64-unknown-linux-musl'
+            rust_flags: ""
+            features: ""
+            binary: "taskwarrior-tui-x86_64-unknown-linux-musl"
             upx_args: --best --lzma
             strip: true
           - os: windows-latest
             target: x86_64-pc-windows-gnu
             rust_flags: -C target-feature=+crt-static
-            features: ''
-            binary_postfix: '.exe'
+            features: ""
+            binary_postfix: ".exe"
             upx_args: -9
             strip: false
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             rust_flags: -C target-feature=+crt-static
-            features: ''
-            binary_postfix: '.exe'
+            features: ""
+            binary_postfix: ".exe"
             upx_args: -9
             strip: false
           - os: windows-latest
             target: i686-pc-windows-msvc
             rust_flags: -C target-feature=+crt-static
-            features: ''
-            binary_postfix: '.exe'
+            features: ""
+            binary_postfix: ".exe"
             upx_args: -9
             strip: false
     env:
@@ -63,7 +63,6 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-          target: ${{ matrix.target }}
           default: true
       - uses: actions-rs/cargo@v1
         with:
@@ -127,6 +126,15 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+          default: true
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
       - uses: actions-rs/cargo@v1
         with:
           command: build
@@ -155,6 +163,10 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
       - uses: actions-rs/cargo@v1
         with:
           command: build
@@ -185,6 +197,10 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
       - uses: actions-rs/cargo@v1
         with:
           command: build
@@ -199,6 +215,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
       - uses: actions-rs/cargo@v1
         with:
           command: build
