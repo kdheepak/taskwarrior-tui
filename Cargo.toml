@@ -64,3 +64,4 @@ lto = "off"
 [build-dependencies]
 clap = "3.0.0-beta.4"
 clap_generate = "3.0.0-beta.4"
+shlex = "1.0.0"
