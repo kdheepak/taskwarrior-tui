@@ -129,11 +129,6 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-          target: ${{ matrix.target }}
-          default: true
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
           default: true
       - uses: actions-rs/cargo@v1
         with:
