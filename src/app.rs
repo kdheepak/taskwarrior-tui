@@ -1590,6 +1590,13 @@ impl TaskwarriorTui {
         }
 
         info!("Running `{:?}`", task);
+        debug!(
+            "Running `task {}`",
+            task.get_args()
+                .map(|s| s.to_string_lossy().to_string())
+                .collect::<Vec<String>>()
+                .join(" ")
+        );
         let output = task.output()?;
         let data = String::from_utf8_lossy(&output.stdout);
         let error = String::from_utf8_lossy(&output.stderr);
