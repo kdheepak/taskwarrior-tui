@@ -208,6 +208,10 @@ impl TaskReportTable {
     pub fn get_string_attribute(&self, attribute: &str, task: &Task, tasks: &[Task]) -> String {
         match attribute {
             "id" => task.id().unwrap_or_default().to_string(),
+            "scheduled.relative" => match task.scheduled() {
+                Some(v) => vague_format_date_time(Local::now().naive_utc(), NaiveDateTime::new(v.date(), v.time())),
+                None => "".to_string(),
+            },
             "due.relative" => match task.due() {
                 Some(v) => vague_format_date_time(Local::now().naive_utc(), NaiveDateTime::new(v.date(), v.time())),
                 None => "".to_string(),
