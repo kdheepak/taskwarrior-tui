@@ -3320,6 +3320,7 @@ impl TaskwarriorTui {
                 "project:".to_string(),
                 "priority:".to_string(),
                 "due:".to_string(),
+                "scheduled:".to_string(),
                 "wait:".to_string(),
                 "depends:".to_string(),
             ] {
@@ -3371,6 +3372,22 @@ impl TaskwarriorTui {
                     let date = TimeZone::from_utc_datetime(now.offset(), date);
                     let s = format!(
                         "wait:'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}'",
+                        date.year(),
+                        date.month(),
+                        date.day(),
+                        date.hour(),
+                        date.minute(),
+                        date.second(),
+                    );
+                    self.completion_list.insert(s);
+                }
+            }
+            for task in &self.tasks {
+                if let Some(date) = task.scheduled() {
+                    let now = Local::now();
+                    let date = TimeZone::from_utc_datetime(now.offset(), date);
+                    let s = format!(
+                        "scheduled:'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}'",
                         date.year(),
                         date.month(),
                         date.day(),
