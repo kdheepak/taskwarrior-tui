@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use std::process::Command;
+use std::process::{Command, Output};
 
 use clap_generate::{
     generate_to,
@@ -8,7 +8,7 @@ use clap_generate::{
 
 include!("src/cli.rs");
 
-fn run_pandoc() -> Result<(), &'static str> {
+fn run_pandoc() -> Result<Output, std::io::Error> {
     let mut cmd = Command::new("pandoc");
     if let Some(args) = shlex::split("--standalone --to=man docs/taskwarrior-tui.1.md -o docs/taskwarrior-tui.1") {
         for arg in args {
@@ -16,10 +16,7 @@ fn run_pandoc() -> Result<(), &'static str> {
         }
     }
     let output = cmd.output();
-    match output {
-        Ok(_) => Ok(()),
-        Err(_) => Err("Cannot run `pandoc` to generate man page documentation."),
-    }
+    output
 }
 
 fn main() {
@@ -31,5 +28,7 @@ fn main() {
     generate_to(Zsh, &mut app, &name, &outdir).unwrap();
     generate_to(Fish, &mut app, &name, &outdir).unwrap();
     generate_to(PowerShell, &mut app, &name, &outdir).unwrap();
-    run_pandoc().unwrap();
+    if run_pandoc().is_err() {
+        dbg!("Unable to run pandoc to generate man page documentation");
+    }
 }
