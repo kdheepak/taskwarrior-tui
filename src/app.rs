@@ -1571,11 +1571,15 @@ impl TaskwarriorTui {
         task.arg("rc.json.array=on");
         task.arg("rc.confirmation=off");
 
-        task.arg(&format!(
-            r#""rc.report.{}.filter='{}'""#,
+        if let Some(args) = shlex::split(&format!(
+            r#"rc.report.{}.filter='{}'"#,
             self.report,
             self.filter.as_str().trim()
-        ));
+        )) {
+            for arg in args {
+                task.arg(arg);
+            }
+        }
 
         if !self.current_context_filter.trim().is_empty() && self.task_version >= *TASKWARRIOR_VERSION_SUPPORTED {
             task.arg(self.current_context_filter.trim());
@@ -1593,11 +1597,6 @@ impl TaskwarriorTui {
         let output = task.output()?;
         let data = String::from_utf8_lossy(&output.stdout);
         let error = String::from_utf8_lossy(&output.stderr);
-        if !error.is_empty() {
-            error!("{}", error)
-        } else if !data.is_empty() {
-            debug!("{}", data)
-        }
 
         if output.status.success() {
             if let Ok(imported) = import(data.as_bytes()) {
