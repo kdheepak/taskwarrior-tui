@@ -1572,7 +1572,7 @@ impl TaskwarriorTui {
         task.arg("rc.confirmation=off");
 
         task.arg(&format!(
-            r#""rc.report.{}.filter={}""#,
+            r#""rc.report.{}.filter='{}'""#,
             self.report,
             self.filter.as_str().trim()
         ));
