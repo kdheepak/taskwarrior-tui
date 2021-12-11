@@ -9,7 +9,7 @@ _taskwarrior-tui() {
     for i in ${COMP_WORDS[@]}
     do
         case "${i}" in
-            taskwarrior-tui)
+            "$1")
                 cmd="taskwarrior__tui"
                 ;;
             *)

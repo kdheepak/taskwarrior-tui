@@ -53,7 +53,7 @@ use tui::{
     widgets::{Block, BorderType, Borders, Clear, List, ListItem, Paragraph, Wrap},
 };
 
-use rustyline::history::Direction as HistoryDirection;
+use rustyline::history::SearchDirection as HistoryDirection;
 use rustyline::line_buffer::LineBuffer;
 use rustyline::At;
 use rustyline::Editor;

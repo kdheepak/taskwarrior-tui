@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use rustyline::error::ReadlineError;
-use rustyline::history::Direction;
 use rustyline::history::History;
+use rustyline::history::SearchDirection;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
@@ -59,7 +59,7 @@ impl HistoryContext {
         self.history_index
     }
 
-    pub fn history_search(&mut self, buf: &str, dir: Direction) -> Option<String> {
+    pub fn history_search(&mut self, buf: &str, dir: SearchDirection) -> Option<String> {
         log::debug!(
             "Searching history for {:?} in direction {:?} with history index = {:?} and history len = {:?}",
             buf,
@@ -76,22 +76,22 @@ impl HistoryContext {
         let history_index = if self.history_index().is_none() {
             log::debug!("History index is none");
             match dir {
-                Direction::Forward => return None,
-                Direction::Reverse => self.history_index = Some(self.history_len().saturating_sub(1)),
+                SearchDirection::Forward => return None,
+                SearchDirection::Reverse => self.history_index = Some(self.history_len().saturating_sub(1)),
             }
             self.history_index.unwrap()
         } else {
             let hi = self.history_index().unwrap();
 
-            if hi == self.history.len().saturating_sub(1) && dir == Direction::Forward
-                || hi == 0 && dir == Direction::Reverse
+            if hi == self.history.len().saturating_sub(1) && dir == SearchDirection::Forward
+                || hi == 0 && dir == SearchDirection::Reverse
             {
                 return None;
             }
 
             match dir {
-                Direction::Reverse => hi.saturating_sub(1),
-                Direction::Forward => hi.saturating_add(1).min(self.history_len().saturating_sub(1)),
+                SearchDirection::Reverse => hi.saturating_sub(1),
+                SearchDirection::Forward => hi.saturating_add(1).min(self.history_len().saturating_sub(1)),
             }
         };
 
@@ -99,8 +99,8 @@ impl HistoryContext {
         return if let Some(history_index) = self.history.starts_with(buf, history_index, dir) {
             log::debug!("Found index {:?}", history_index);
             log::debug!("Previous index {:?}", self.history_index);
-            self.history_index = Some(history_index);
-            self.history.get(history_index).cloned()
+            self.history_index = Some(history_index.idx);
+            Some(history_index.entry.to_string())
         } else if buf.is_empty() {
             self.history_index = Some(history_index);
             self.history.get(history_index).cloned()

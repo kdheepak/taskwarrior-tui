@@ -13,7 +13,7 @@ pub fn generate_cli_app() -> App<'static> {
                 .short('c')
                 .long("config")
                 .value_name("FILE")
-                .about("Sets a custom config file")
+                .help("Sets a custom config file")
                 .takes_value(true),
         )
         .arg(
@@ -21,7 +21,7 @@ pub fn generate_cli_app() -> App<'static> {
                 .short('r')
                 .long("report")
                 .value_name("STRING")
-                .about("Sets default report")
+                .help("Sets default report")
                 .takes_value(true),
         );
 
