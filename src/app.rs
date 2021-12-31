@@ -1173,6 +1173,9 @@ impl TaskwarriorTui {
                 if self.config.uda_selection_blink {
                     highlight_style = highlight_style.add_modifier(Modifier::SLOW_BLINK);
                 }
+                if self.config.uda_selection_reverse {
+                    highlight_style = highlight_style.add_modifier(Modifier::REVERSED);
+                }
             }
             rows.push(Row::StyledData(task.iter(), style));
         }
