@@ -15,8 +15,7 @@ fn run_pandoc() -> Result<Output, std::io::Error> {
             cmd.arg(arg);
         }
     }
-    let output = cmd.output();
-    output
+    cmd.output()
 }
 
 fn main() {

@@ -12,6 +12,7 @@ uda.taskwarrior-tui.selection.bold=yes
 uda.taskwarrior-tui.selection.italic=no
 uda.taskwarrior-tui.selection.dim=no
 uda.taskwarrior-tui.selection.blink=no
+uda.taskwarrior-tui.selection.reverse=no
 uda.taskwarrior-tui.mark.indicator=✔
 uda.taskwarrior-tui.unmark.indicator= 
 uda.taskwarrior-tui.mark-selection.indicator=⦿
