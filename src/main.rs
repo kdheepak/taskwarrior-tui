@@ -13,6 +13,7 @@ mod help;
 mod history;
 mod keyconfig;
 mod pane;
+mod scrollbar;
 mod table;
 mod task_report;
 

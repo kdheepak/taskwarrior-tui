@@ -6,6 +6,7 @@ use crate::event::Key;
 use crate::event::{Event, Events};
 use crate::help::Help;
 use crate::keyconfig::KeyConfig;
+use crate::scrollbar::Scrollbar;
 use crate::table::{Row, Table, TableMode, TableState};
 use crate::task_report::TaskReportTable;
 
@@ -25,6 +26,7 @@ use task_hookrs::date::Date;
 use task_hookrs::import::import;
 use task_hookrs::status::TaskStatus;
 use task_hookrs::task::Task;
+use tui::symbols::bar::FULL;
 use uuid::Uuid;
 
 use unicode_segmentation::Graphemes;
@@ -1158,10 +1160,12 @@ impl TaskwarriorTui {
         let header = headers.iter();
         let mut rows = vec![];
         let mut highlight_style = Style::default();
+        let mut pos = 0;
         for (i, task) in tasks.iter().enumerate() {
             let style = self.style_for_task(&self.tasks[i]);
             if i == selected {
-                highlight_style = style.patch(self.config.uda_report_style_selection);
+                pos = i;
+                highlight_style = style.patch(self.config.uda_style_report_selection);
                 if self.config.uda_selection_bold {
                     highlight_style = highlight_style.add_modifier(Modifier::BOLD);
                 }
@@ -1216,6 +1220,12 @@ impl TaskwarriorTui {
             .widths(&constraints);
 
         f.render_stateful_widget(t, rect, &mut self.task_table_state);
+        if tasks.iter().len() as u16 > rect.height.saturating_sub(4) {
+            let mut widget = Scrollbar::new(pos, tasks.iter().len());
+            widget.pos_style = self.config.uda_style_report_scrollbar;
+            widget.pos_symbol = self.config.uda_scrollbar_indicator.clone();
+            f.render_widget(widget, rect);
+        }
     }
 
     pub fn get_all_contexts(&self) -> (Vec<Vec<String>>, Vec<String>) {
