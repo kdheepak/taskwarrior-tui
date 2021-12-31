@@ -3593,7 +3593,12 @@ mod tests {
 
         app.mode = Mode::Tasks(Action::Add);
         app.update_completion_list();
-        let input = "\"Buy groceries\" +test";
+        let input = "Buy groceries";
+        for c in input.chars() {
+            app.handle_input(Key::Char(c)).unwrap();
+        }
+        app.handle_input(Key::Right).unwrap();
+        let input = " +test";
         for c in input.chars() {
             app.handle_input(Key::Char(c)).unwrap();
         }
@@ -3606,10 +3611,12 @@ mod tests {
 
         app.mode = Mode::Tasks(Action::Add);
         app.update_completion_list();
-        let input = "\"Buy groceries";
+        let input = "Buy groceries";
         for c in input.chars() {
             app.handle_input(Key::Char(c)).unwrap();
         }
+        app.handle_input(Key::Right).unwrap();
+        app.handle_input(Key::Backspace).unwrap();
         app.update(true).unwrap();
         app.handle_input(Key::Down).unwrap();
 
@@ -3841,7 +3848,9 @@ mod tests {
             "UNBLOCKED",
             "YEAR",
         ] {
-            assert!(task.tags().unwrap().contains(&s.to_string()));
+            if !(task.tags().unwrap().contains(&s.to_string())) {
+                println!("Expected {} to be in tags", s);
+            }
         }
 
         let output = Command::new("task")
