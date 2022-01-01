@@ -48,6 +48,9 @@ pub struct Config {
     pub rule_precedence_color: Vec<String>,
     pub uda_priority_values: Vec<String>,
     pub uda_tick_rate: u64,
+    pub uda_auto_insert_double_quotes_on_add: bool,
+    pub uda_auto_insert_double_quotes_on_annotate: bool,
+    pub uda_auto_insert_double_quotes_on_log: bool,
     pub uda_prefill_task_metadata: bool,
     pub uda_task_detail_prefetch: usize,
     pub uda_task_report_show_info: bool,
@@ -93,6 +96,9 @@ impl Config {
         let rule_precedence_color = Self::get_rule_precedence_color(data);
         let uda_priority_values = Self::get_uda_priority_values(data);
         let uda_tick_rate = Self::get_uda_tick_rate(data);
+        let uda_auto_insert_double_quotes_on_add = Self::get_uda_auto_insert_double_quotes_on_add(data);
+        let uda_auto_insert_double_quotes_on_annotate = Self::get_uda_auto_insert_double_quotes_on_annotate(data);
+        let uda_auto_insert_double_quotes_on_log = Self::get_uda_auto_insert_double_quotes_on_log(data);
         let uda_prefill_task_metadata = Self::get_uda_prefill_task_metadata(data);
         let uda_task_detail_prefetch = Self::get_uda_task_detail_prefetch(data);
         let uda_task_report_show_info = Self::get_uda_task_report_show_info(data);
@@ -141,6 +147,9 @@ impl Config {
             rule_precedence_color,
             uda_priority_values,
             uda_tick_rate,
+            uda_auto_insert_double_quotes_on_add,
+            uda_auto_insert_double_quotes_on_annotate,
+            uda_auto_insert_double_quotes_on_log,
             uda_prefill_task_metadata,
             uda_task_detail_prefetch,
             uda_task_report_show_info,
@@ -433,6 +442,30 @@ impl Config {
         Self::get_config("data.location", data)
             .context("Unable to parse `task show data.location`.")
             .unwrap()
+    }
+
+    fn get_uda_auto_insert_double_quotes_on_add(data: &str) -> bool {
+        Self::get_config("uda.taskwarrior-tui.task-report.auto-insert-double-quotes-on-add", data)
+            .unwrap_or_default()
+            .get_bool()
+            .unwrap_or(true)
+    }
+
+    fn get_uda_auto_insert_double_quotes_on_annotate(data: &str) -> bool {
+        Self::get_config(
+            "uda.taskwarrior-tui.task-report.auto-insert-double-quotes-on-annotate",
+            data,
+        )
+        .unwrap_or_default()
+        .get_bool()
+        .unwrap_or(true)
+    }
+
+    fn get_uda_auto_insert_double_quotes_on_log(data: &str) -> bool {
+        Self::get_config("uda.taskwarrior-tui.task-report.auto-insert-double-quotes-on-log", data)
+            .unwrap_or_default()
+            .get_bool()
+            .unwrap_or(true)
     }
 
     fn get_uda_prefill_task_metadata(data: &str) -> bool {
