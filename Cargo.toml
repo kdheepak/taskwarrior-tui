@@ -18,15 +18,15 @@ default = ["crossterm-backend"]
 crossterm-backend = ["tui/crossterm", "crossterm"]
 
 [dependencies]
-anyhow = "1.0.51"
+anyhow = "1.0.52"
 async-std = { version = "1.10.0", features = ["attributes", "unstable"] }
 better-panic = "0.2.0"
 cassowary = "0.3.0"
 chrono = "0.4.19"
-clap = "3.0.0-rc.4"
+clap = { version = "3.0.0", features = ["derive"] }
 crossterm = { version = "0.22.1", optional = true, default-features = false, features = ["event-stream"] }
 dirs = "4.0.0"
-futures = "0.3.18"
+futures = "0.3.19"
 futures-timer = "3.0.2"
 itertools = "0.10.3"
 lazy_static = "1.4.0"
@@ -35,9 +35,9 @@ log4rs = "1.0.0"
 path-clean = "0.1.0"
 rand = "0.8.4"
 regex = "1.5.4"
-rustyline = "9.1.1"
-serde = { version = "1.0.131", features = ["derive"] }
-serde_json = "1.0.72"
+rustyline = "9.1.2"
+serde = { version = "1.0.132", features = ["derive"] }
+serde_json = "1.0.73"
 shellexpand = "2.1.0"
 shlex = "1.1.0"
 task-hookrs = { git = "https://github.com/kdheepak/task-hookrs" }
@@ -63,6 +63,6 @@ incremental = true
 lto = "off"
 
 [build-dependencies]
-clap = "3.0.0-rc.4"
-clap_generate = "3.0.0-rc.4"
+clap = { version = "3.0.0", features = ["derive"] }
+clap_complete = "3.0.0"
 shlex = "1.1.0"
