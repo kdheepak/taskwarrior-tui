@@ -3,7 +3,10 @@ use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::error::Error;
 use std::str;
-use tui::style::{Color, Modifier, Style};
+use tui::{
+    style::{Color, Modifier, Style},
+    symbols::bar::FULL,
+};
 
 trait TaskWarriorBool {
     fn get_bool(&self) -> Option<bool>;
@@ -53,6 +56,8 @@ pub struct Config {
     pub uda_selection_indicator: String,
     pub uda_mark_indicator: String,
     pub uda_unmark_indicator: String,
+    pub uda_scrollbar_indicator: String,
+    pub uda_style_report_scrollbar: Style,
     pub uda_selection_bold: bool,
     pub uda_selection_italic: bool,
     pub uda_selection_dim: bool,
@@ -60,7 +65,7 @@ pub struct Config {
     pub uda_selection_reverse: bool,
     pub uda_calendar_months_per_row: usize,
     pub uda_style_context_active: Style,
-    pub uda_report_style_selection: Style,
+    pub uda_style_report_selection: Style,
     pub uda_style_calendar_title: Style,
     pub uda_style_calendar_today: Style,
     pub uda_style_report_completion_pane: Style,
@@ -96,13 +101,15 @@ impl Config {
         let uda_selection_indicator = Self::get_uda_selection_indicator(data);
         let uda_mark_indicator = Self::get_uda_mark_indicator(data);
         let uda_unmark_indicator = Self::get_uda_unmark_indicator(data);
+        let uda_scrollbar_indicator = Self::get_uda_scrollbar_indicator(data);
         let uda_selection_bold = Self::get_uda_selection_bold(data);
         let uda_selection_italic = Self::get_uda_selection_italic(data);
         let uda_selection_dim = Self::get_uda_selection_dim(data);
         let uda_selection_blink = Self::get_uda_selection_blink(data);
         let uda_selection_reverse = Self::get_uda_selection_reverse(data);
         let uda_calendar_months_per_row = Self::get_uda_months_per_row(data);
-        let uda_report_style_selection = Self::get_uda_style("report.selection", data);
+        let uda_style_report_selection = Self::get_uda_style("report.selection", data);
+        let uda_style_report_scrollbar = Self::get_uda_style("report.scrollbar", data);
         let uda_style_calendar_title = Self::get_uda_style("calendar.title", data);
         let uda_style_calendar_today = Self::get_uda_style("calendar.today", data);
         let uda_style_context_active = Self::get_uda_style("context.active", data);
@@ -110,7 +117,9 @@ impl Config {
         let uda_shortcuts = Self::get_uda_shortcuts(data);
         let uda_background_process = Self::get_uda_background_process(data);
         let uda_background_process_period = Self::get_uda_background_process_period(data);
-        let uda_report_style_selection = uda_report_style_selection.unwrap_or_default();
+        let uda_style_report_selection = uda_style_report_selection.unwrap_or_default();
+        let uda_style_report_scrollbar =
+            uda_style_report_scrollbar.unwrap_or_else(|| Style::default().fg(Color::Black));
         let uda_style_calendar_title = uda_style_calendar_title.unwrap_or_default();
         let uda_style_calendar_today =
             uda_style_calendar_today.unwrap_or_else(|| Style::default().add_modifier(Modifier::BOLD));
@@ -140,17 +149,19 @@ impl Config {
             uda_selection_indicator,
             uda_mark_indicator,
             uda_unmark_indicator,
+            uda_scrollbar_indicator,
             uda_selection_bold,
             uda_selection_italic,
             uda_selection_dim,
             uda_selection_blink,
             uda_selection_reverse,
             uda_calendar_months_per_row,
-            uda_report_style_selection,
+            uda_style_report_selection,
             uda_style_context_active,
             uda_style_calendar_title,
             uda_style_calendar_today,
             uda_style_report_completion_pane,
+            uda_style_report_scrollbar,
             uda_shortcuts,
             uda_background_process,
             uda_background_process_period,
@@ -504,6 +515,19 @@ impl Config {
         }
     }
 
+    fn get_uda_scrollbar_indicator(data: &str) -> String {
+        let indicator = Self::get_config("uda.taskwarrior-tui.scrollbar.indicator", data);
+        match indicator {
+            None => FULL.to_string(),
+            Some(indicator) => format!(
+                "{}",
+                indicator
+                    .chars()
+                    .next()
+                    .unwrap_or_else(|| FULL.to_string().chars().next().unwrap())
+            ),
+        }
+    }
     fn get_uda_mark_highlight_indicator(data: &str) -> String {
         let indicator = Self::get_config("uda.taskwarrior-tui.mark-selection.indicator", data);
         match indicator {
