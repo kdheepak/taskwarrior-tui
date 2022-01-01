@@ -15,8 +15,12 @@ _taskwarrior-tui() {
 
     local context curcontext="$curcontext" state line
     _arguments "${_arguments_options[@]}" \
-'-c+[Sets a custom config file]:FILE: ' \
-'--config=[Sets a custom config file]:FILE: ' \
+'-d+[Sets the data folder for taskwarrior-tui]:FOLDER: ' \
+'--data=[Sets the data folder for taskwarrior-tui]:FOLDER: ' \
+'-c+[Sets the config folder for taskwarrior-tui]:FOLDER: ' \
+'--config=[Sets the config folder for taskwarrior-tui]:FOLDER: ' \
+'--taskdata=[Sets the .task folder using the TASKDATA environment variable for taskwarrior]:FOLDER: ' \
+'--taskrc=[Sets the .taskrc file using the TASKRC environment variable for taskwarrior]:FILE: ' \
 '-r+[Sets default report]:STRING: ' \
 '--report=[Sets default report]:STRING: ' \
 '-h[Print help information]' \
