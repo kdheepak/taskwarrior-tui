@@ -285,9 +285,12 @@ impl TaskwarriorTui {
         app.filter_history.load()?;
         app.filter_history.add(app.filter.as_str());
         app.command_history.load()?;
-        app.command.update(r#""""#, 1);
         app.task_background();
         Ok(app)
+    }
+
+    pub fn reset_command(&mut self) {
+        self.command.update("", 0)
     }
 
     pub fn get_context(&mut self) -> Result<()> {
@@ -533,7 +536,7 @@ impl TaskwarriorTui {
                 );
             }
             Mode::Tasks(Action::Jump) => {
-                let position = Self::get_position(&self.command);
+                let (position, cmd) = (0, "");
                 Self::draw_command(
                     f,
                     rects[1],
@@ -569,6 +572,9 @@ impl TaskwarriorTui {
                 );
             }
             Mode::Tasks(Action::Log) => {
+                if self.config.uda_auto_insert_double_quotes_on_log && self.command.is_empty() {
+                    self.command.update(r#""""#, 1);
+                };
                 let position = Self::get_position(&self.command);
                 if self.show_completion_pane {
                     self.draw_completion_pop_up(f, rects[1], position);
@@ -590,11 +596,11 @@ impl TaskwarriorTui {
                 );
             }
             Mode::Tasks(Action::Subprocess) => {
-                let position = Self::get_position(&self.command);
+                let (position, cmd) = (0, "");
                 Self::draw_command(
                     f,
                     rects[1],
-                    self.command.as_str(),
+                    cmd,
                     (
                         Span::styled("Shell Command", Style::default().add_modifier(Modifier::BOLD)),
                         None,
@@ -631,6 +637,9 @@ impl TaskwarriorTui {
                 );
             }
             Mode::Tasks(Action::Annotate) => {
+                if self.config.uda_auto_insert_double_quotes_on_annotate && self.command.is_empty() {
+                    self.command.update(r#""""#, 1);
+                };
                 let position = Self::get_position(&self.command);
                 if self.show_completion_pane {
                     self.draw_completion_pop_up(f, rects[1], position);
@@ -657,6 +666,9 @@ impl TaskwarriorTui {
                 );
             }
             Mode::Tasks(Action::Add) => {
+                if self.config.uda_auto_insert_double_quotes_on_add && self.command.is_empty() {
+                    self.command.update(r#""""#, 1);
+                };
                 let position = Self::get_position(&self.command);
                 if self.show_completion_pane {
                     self.draw_completion_pop_up(f, rects[1], position);
@@ -2824,7 +2836,7 @@ impl TaskwarriorTui {
                             match self.task_subprocess() {
                                 Ok(_) => {
                                     self.mode = Mode::Tasks(Action::Report);
-                                    self.command.update(r#""""#, 1);
+                                    self.reset_command();
                                     self.update(true)?;
                                 }
                                 Err(e) => {
@@ -2834,7 +2846,7 @@ impl TaskwarriorTui {
                         }
                     }
                     Key::Esc => {
-                        self.command.update(r#""""#, 1);
+                        self.reset_command();
                         self.mode = Mode::Tasks(Action::Report);
                     }
                     _ => handle_movement(&mut self.command, input),
@@ -2845,7 +2857,7 @@ impl TaskwarriorTui {
                             self.show_completion_pane = false;
                             self.completion_list.unselect();
                         } else {
-                            self.command.update(r#""""#, 1);
+                            self.reset_command();
                             self.history_status = None;
                             self.mode = Mode::Tasks(Action::Report);
                         }
@@ -2867,7 +2879,7 @@ impl TaskwarriorTui {
                                 Ok(_) => {
                                     self.mode = Mode::Tasks(Action::Report);
                                     self.command_history.add(self.command.as_str());
-                                    self.command.update(r#""""#, 1);
+                                    self.reset_command();
                                     self.history_status = None;
                                     self.update(true)?;
                                 }
@@ -2944,7 +2956,7 @@ impl TaskwarriorTui {
                             self.show_completion_pane = false;
                             self.completion_list.unselect();
                         } else {
-                            self.command.update(r#""""#, 1);
+                            self.reset_command();
                             self.mode = Mode::Tasks(Action::Report);
                             self.history_status = None;
                         }
@@ -2966,7 +2978,7 @@ impl TaskwarriorTui {
                                 Ok(_) => {
                                     self.mode = Mode::Tasks(Action::Report);
                                     self.command_history.add(self.command.as_str());
-                                    self.command.update(r#""""#, 1);
+                                    self.reset_command();
                                     self.history_status = None;
                                     self.update(true)?;
                                 }
@@ -3046,18 +3058,18 @@ impl TaskwarriorTui {
                             match self.task_report_jump() {
                                 Ok(_) => {
                                     self.mode = Mode::Tasks(Action::Report);
-                                    self.command.update(r#""""#, 1);
+                                    self.reset_command();
                                     self.update(true)?;
                                 }
                                 Err(e) => {
-                                    self.command.update(r#""""#, 1);
+                                    self.reset_command();
                                     self.error = Some(e.to_string());
                                 }
                             }
                         }
                     }
                     Key::Esc => {
-                        self.command.update(r#""""#, 1);
+                        self.reset_command();
                         self.mode = Mode::Tasks(Action::Report);
                     }
                     _ => handle_movement(&mut self.command, input),
@@ -3068,7 +3080,7 @@ impl TaskwarriorTui {
                             self.show_completion_pane = false;
                             self.completion_list.unselect();
                         } else {
-                            self.command.update(r#""""#, 1);
+                            self.reset_command();
                             self.history_status = None;
                             self.mode = Mode::Tasks(Action::Report);
                         }
@@ -3090,7 +3102,7 @@ impl TaskwarriorTui {
                                 Ok(_) => {
                                     self.mode = Mode::Tasks(Action::Report);
                                     self.command_history.add(self.command.as_str());
-                                    self.command.update(r#""""#, 1);
+                                    self.reset_command();
                                     self.history_status = None;
                                     self.update(true)?;
                                 }
@@ -3585,14 +3597,30 @@ mod tests {
         // setup();
         app.mode = Mode::Tasks(Action::Add);
         app.update_completion_list();
-        let input = "\"Wash car\" +test";
+        let input = "Wash car";
+        for c in input.chars() {
+            app.handle_input(Key::Char(c)).unwrap();
+        }
+        app.handle_input(Key::Right).unwrap();
+        let input = " +test";
         for c in input.chars() {
             app.handle_input(Key::Char(c)).unwrap();
         }
         app.handle_input(Key::Char('\n')).unwrap();
 
         app.mode = Mode::Tasks(Action::Add);
+
         app.update_completion_list();
+
+        let backend = TestBackend::new(50, 15);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal
+            .draw(|f| {
+                app.draw(f);
+                app.draw(f);
+            })
+            .unwrap();
+
         let input = "Buy groceries";
         for c in input.chars() {
             app.handle_input(Key::Char(c)).unwrap();
@@ -3611,6 +3639,16 @@ mod tests {
 
         app.mode = Mode::Tasks(Action::Add);
         app.update_completion_list();
+
+        let backend = TestBackend::new(50, 15);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal
+            .draw(|f| {
+                app.draw(f);
+                app.draw(f);
+            })
+            .unwrap();
+
         let input = "Buy groceries";
         for c in input.chars() {
             app.handle_input(Key::Char(c)).unwrap();
