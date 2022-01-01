@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 use std::process::{Command, Output};
 
-use clap_generate::{
+use clap_complete::{
     generate_to,
-    generators::{Bash, Fish, PowerShell, Zsh},
+    shells::{Bash, Fish, PowerShell, Zsh},
 };
 
 include!("src/cli.rs");
