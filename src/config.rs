@@ -52,6 +52,7 @@ pub struct Config {
     pub uda_auto_insert_double_quotes_on_annotate: bool,
     pub uda_auto_insert_double_quotes_on_log: bool,
     pub uda_prefill_task_metadata: bool,
+    pub uda_reset_filter_on_esc: bool,
     pub uda_task_detail_prefetch: usize,
     pub uda_task_report_show_info: bool,
     pub uda_task_report_looping: bool,
@@ -100,6 +101,7 @@ impl Config {
         let uda_auto_insert_double_quotes_on_annotate = Self::get_uda_auto_insert_double_quotes_on_annotate(data);
         let uda_auto_insert_double_quotes_on_log = Self::get_uda_auto_insert_double_quotes_on_log(data);
         let uda_prefill_task_metadata = Self::get_uda_prefill_task_metadata(data);
+        let uda_reset_filter_on_esc = Self::get_uda_reset_filter_on_esc(data);
         let uda_task_detail_prefetch = Self::get_uda_task_detail_prefetch(data);
         let uda_task_report_show_info = Self::get_uda_task_report_show_info(data);
         let uda_task_report_looping = Self::get_uda_task_report_looping(data);
@@ -151,6 +153,7 @@ impl Config {
             uda_auto_insert_double_quotes_on_annotate,
             uda_auto_insert_double_quotes_on_log,
             uda_prefill_task_metadata,
+            uda_reset_filter_on_esc,
             uda_task_detail_prefetch,
             uda_task_report_show_info,
             uda_task_report_looping,
@@ -473,6 +476,13 @@ impl Config {
             .unwrap_or_default()
             .get_bool()
             .unwrap_or(false)
+    }
+
+    fn get_uda_reset_filter_on_esc(data: &str) -> bool {
+        Self::get_config("uda.taskwarrior-tui.task-report.reset-filter-on-esc", data)
+            .unwrap_or_default()
+            .get_bool()
+            .unwrap_or(true)
     }
 
     fn get_uda_tick_rate(data: &str) -> u64 {
