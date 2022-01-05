@@ -3181,7 +3181,13 @@ impl TaskwarriorTui {
                         } else {
                             self.mode = Mode::Tasks(Action::Report);
                             self.filter_history.add(self.filter.as_str());
+                            self.filter.update("", 0);
+                            for c in self.config.filter.chars() {
+                                self.filter.insert(c, 1);
+                            }
                             self.history_status = None;
+                            self.update_input_for_completion();
+                            self.dirty = true;
                             self.update(true)?;
                         }
                     }
