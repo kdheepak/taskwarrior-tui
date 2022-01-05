@@ -33,6 +33,7 @@ uda.taskwarrior-tui.task-report.next.filter=$(task show report.next.filter)
 uda.taskwarrior-tui.task-report.auto-insert-double-quotes-on-add=true
 uda.taskwarrior-tui.task-report.auto-insert-double-quotes-on-annotate=true
 uda.taskwarrior-tui.task-report.auto-insert-double-quotes-on-log=true
+uda.taskwarrior-tui.task-report.reset-filter-on-esc=true
 ```
 
 The `uda.taskwarrior-tui.task-report.next.filter` variable defines the default view at program startup. Set this to any preconfigured report (`task reports`), or create your own report in taskwarrior and specify its name here.
