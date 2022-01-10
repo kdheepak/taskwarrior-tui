@@ -55,8 +55,6 @@ If you are compiling from source, you'll need to most recent stable rust compile
 ### Configuration
 
 `taskwarrior-tui` uses `taskwarrior`'s `.taskrc` for configuration.
-`taskwarrior-tui` parses the output of `task show` to get configuration data.
-This allows `taskwarrior-tui` to use the same defaults as `taskwarrior` and configure additional options as required.
 
 Here is an example `.taskrc`
 
@@ -83,6 +81,9 @@ uda.taskwarrior-tui.keyconfig.delete=d
 uda.taskwarrior-tui.shortcuts.0=~/local/bin/task-sync.sh
 uda.taskwarrior-tui.report.next.filter=(status:pending or status:waiting)
 ```
+
+`taskwarrior-tui` parses the output of `task show` to get configuration data.
+This allows `taskwarrior-tui` to use the same defaults as `taskwarrior` and configure additional options as required.
 
 See the documentation for more information:
 
