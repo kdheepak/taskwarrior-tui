@@ -18,7 +18,7 @@ impl HistoryContext {
         let data_path = if let Ok(s) = std::env::var("TASKWARRIOR_TUI_DATA") {
             PathBuf::from(s)
         } else {
-            dirs::config_dir()
+            dirs::data_dir()
                 .map(|d| d.join("taskwarrior-tui"))
                 .expect("Unable to create configuration directory for taskwarrior-tui")
         };
