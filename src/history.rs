@@ -8,14 +8,14 @@ use std::path::{Path, PathBuf};
 pub struct HistoryContext {
     history: History,
     history_index: Option<usize>,
-    config_path: PathBuf,
+    data_path: PathBuf,
 }
 
 impl HistoryContext {
     pub fn new(filename: &str) -> Self {
         let history = History::new();
 
-        let config_path = if let Ok(s) = std::env::var("TASKWARRIOR_TUI_CONFIG") {
+        let data_path = if let Ok(s) = std::env::var("TASKWARRIOR_TUI_DATA") {
             PathBuf::from(s)
         } else {
             dirs::config_dir()
@@ -23,23 +23,23 @@ impl HistoryContext {
                 .expect("Unable to create configuration directory for taskwarrior-tui")
         };
 
-        std::fs::create_dir_all(&config_path)
-            .unwrap_or_else(|_| panic!("Unable to create configuration directory in {:?}", &config_path));
+        std::fs::create_dir_all(&data_path)
+            .unwrap_or_else(|_| panic!("Unable to create configuration directory in {:?}", &data_path));
 
-        let config_path = config_path.join(filename);
+        let data_path = data_path.join(filename);
 
         Self {
             history,
             history_index: None,
-            config_path,
+            data_path,
         }
     }
 
     pub fn load(&mut self) -> Result<()> {
-        if self.config_path.exists() {
-            self.history.load(&self.config_path)?;
+        if self.data_path.exists() {
+            self.history.load(&self.data_path)?;
         } else {
-            self.history.save(&self.config_path)?;
+            self.history.save(&self.data_path)?;
         }
         self.history_index = None;
         log::debug!("Loading history of length {}", self.history.len());
@@ -47,7 +47,7 @@ impl HistoryContext {
     }
 
     pub fn write(&mut self) -> Result<()> {
-        self.history.save(&self.config_path)?;
+        self.history.save(&self.data_path)?;
         Ok(())
     }
 
