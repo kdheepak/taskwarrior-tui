@@ -30,7 +30,7 @@ Showcase of features: <https://youtu.be/0ZdkfNrIAcw>
 
 ### Documentation
 
-<https://kdheepak.com/taskwarrior-tui>
+See <https://kdheepak.com/taskwarrior-tui> for documentation.
 
 See <https://kdheepak.com/taskwarrior-tui/installation/> for installation instructions for your platform.
 
@@ -61,6 +61,7 @@ Here is an example `.taskrc`
 ```taskwarrior
 ### taskwarrior configuration options
 
+# taskwarrior's configuration
 data.location=.task
 verbose=affected,blank,context,edit,header,footnote,label,new-id,project,special,sync,recur
 uda.priority.values=H,M,,L
@@ -76,6 +77,7 @@ report.next.columns=id,start.age,entry.age,depends,priority,project,tags,recur,s
 report.next.filter=(status:pending or status:waiting) page:limit
 
 ### taskwarrior-tui configuration options
+
 uda.taskwarrior-tui.keyconfig.done=x
 uda.taskwarrior-tui.keyconfig.delete=d
 uda.taskwarrior-tui.shortcuts.0=~/local/bin/task-sync.sh
