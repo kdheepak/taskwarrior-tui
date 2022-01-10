@@ -105,3 +105,4 @@ If you like `taskwarrior-tui`, please consider donating to [@GothenburgBitFactor
 - <https://github.com/async-rs/async-std>
 - <https://github.com/kkawakam/rustyline>
 - <https://github.com/vit-project/vit>
+- <https://github.com/taskchampion/taskchampion/>
