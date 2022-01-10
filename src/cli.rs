@@ -21,7 +21,7 @@ pub fn generate_cli_app() -> App<'static> {
                 .short('c')
                 .long("config")
                 .value_name("FOLDER")
-                .help("Sets the config folder for taskwarrior-tui")
+                .help("Sets the config folder for taskwarrior-tui (currently not used)")
                 .takes_value(true),
         )
         .arg(
