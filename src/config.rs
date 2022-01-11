@@ -79,6 +79,7 @@ pub struct Config {
     pub uda_quick_tag_name: String,
     pub uda_task_report_prompt_on_delete: bool,
     pub uda_task_report_prompt_on_done: bool,
+    pub uda_context_menu_select_on_move: bool,
 }
 
 impl Config {
@@ -137,6 +138,7 @@ impl Config {
         let uda_quick_tag_name = Self::get_uda_quick_tag_name(data);
         let uda_task_report_prompt_on_delete = Self::get_uda_task_report_prompt_on_delete(data);
         let uda_task_report_prompt_on_done = Self::get_uda_task_report_prompt_on_done(data);
+        let uda_context_menu_select_on_move = Self::get_uda_context_menu_select_on_move(data);
 
         Ok(Self {
             enabled,
@@ -180,6 +182,7 @@ impl Config {
             uda_quick_tag_name,
             uda_task_report_prompt_on_delete,
             uda_task_report_prompt_on_done,
+            uda_context_menu_select_on_move,
         })
     }
 
@@ -522,6 +525,13 @@ impl Config {
 
     fn get_uda_task_report_prompt_on_done(data: &str) -> bool {
         Self::get_config("uda.taskwarrior-tui.task-report.prompt-on-done", data)
+            .unwrap_or_default()
+            .get_bool()
+            .unwrap_or(false)
+    }
+
+    fn get_uda_context_menu_select_on_move(data: &str) -> bool {
+        Self::get_config("uda.taskwarrior-tui.context-menu.select-on-move", data)
             .unwrap_or_default()
             .get_bool()
             .unwrap_or(false)

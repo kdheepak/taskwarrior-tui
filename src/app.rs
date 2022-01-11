@@ -2699,12 +2699,46 @@ impl TaskwarriorTui {
                         self.mode = Mode::Tasks(Action::Report);
                     } else if input == Key::Down || input == self.keyconfig.down {
                         self.context_next();
+                        if self.config.uda_context_menu_select_on_move {
+                            if self.error.is_some() {
+                                self.previous_mode = Some(self.mode.clone());
+                                self.mode = Mode::Tasks(Action::Error);
+                            } else {
+                                match self.context_select() {
+                                    Ok(_) => {
+                                        self.get_context()?;
+                                        self.update(true)?;
+                                    }
+                                    Err(e) => {
+                                        self.error = Some(e.to_string());
+                                    }
+                                }
+                            }
+                        }
                     } else if input == Key::Up || input == self.keyconfig.up {
                         self.context_previous();
+                        if self.config.uda_context_menu_select_on_move {
+                            if self.error.is_some() {
+                                self.previous_mode = Some(self.mode.clone());
+                                self.mode = Mode::Tasks(Action::Error);
+                            } else {
+                                match self.context_select() {
+                                    Ok(_) => {
+                                        self.get_context()?;
+                                        self.update(true)?;
+                                    }
+                                    Err(e) => {
+                                        self.error = Some(e.to_string());
+                                    }
+                                }
+                            }
+                        }
                     } else if input == Key::Char('\n') {
                         if self.error.is_some() {
                             self.previous_mode = Some(self.mode.clone());
                             self.mode = Mode::Tasks(Action::Error);
+                        } else if self.config.uda_context_menu_select_on_move {
+                            self.mode = Mode::Tasks(Action::Report);
                         } else {
                             match self.context_select() {
                                 Ok(_) => {
