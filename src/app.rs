@@ -1633,7 +1633,9 @@ impl TaskwarriorTui {
                     self.previous_mode = None;
                 }
             } else {
-                debug!("Unable to import `{:?}`", data);
+                self.error = Some(format!("Unable to parse output of `{:?}`:\n`{:?}`", task, data));
+                self.mode = Mode::Tasks(Action::Error);
+                debug!("Unable to parse output: {:?}", data);
             }
         } else {
             self.error = Some(format!(
