@@ -1632,6 +1632,10 @@ impl TaskwarriorTui {
                     self.mode = self.previous_mode.clone().unwrap_or(Mode::Tasks(Action::Report));
                     self.previous_mode = None;
                 }
+            } else {
+                self.error = Some(format!("Unable to parse output of `{:?}`:\n`{:?}`", task, data));
+                self.mode = Mode::Tasks(Action::Error);
+                debug!("Unable to parse output: {:?}", data);
             }
         } else {
             self.error = Some(format!(
