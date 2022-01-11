@@ -1632,6 +1632,8 @@ impl TaskwarriorTui {
                     self.mode = self.previous_mode.clone().unwrap_or(Mode::Tasks(Action::Report));
                     self.previous_mode = None;
                 }
+            } else {
+                debug!("Unable to import `{:?}`", data);
             }
         } else {
             self.error = Some(format!(
