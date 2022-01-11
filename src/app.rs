@@ -3379,7 +3379,11 @@ impl TaskwarriorTui {
             }
             for task in &self.tasks {
                 if let Some(project) = task.project() {
-                    let p = format!("project:{}", &project);
+                    let p = if project.contains(' ') {
+                        format!(r#"project:"{}""#, &project)
+                    } else {
+                        format!("project:{}", &project)
+                    };
                     self.completion_list.insert(p);
                 }
             }
