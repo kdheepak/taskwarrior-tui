@@ -286,6 +286,15 @@ impl TaskwarriorTui {
         app.filter_history.add(app.filter.as_str());
         app.command_history.load()?;
         app.task_background();
+
+        if app.task_version < *TASKWARRIOR_VERSION_SUPPORTED {
+            app.error = Some(format!(
+                "Found taskwarrior version {} but taskwarrior-tui works with taskwarrior>={}",
+                app.task_version, *TASKWARRIOR_VERSION_SUPPORTED
+            ));
+            app.mode = Mode::Tasks(Action::Error);
+        }
+
         Ok(app)
     }
 
