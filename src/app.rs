@@ -546,7 +546,7 @@ impl TaskwarriorTui {
                 );
             }
             Mode::Tasks(Action::Jump) => {
-                let (position, cmd) = (0, "");
+                let position = Self::get_position(&self.command);
                 Self::draw_command(
                     f,
                     rects[1],
@@ -606,11 +606,11 @@ impl TaskwarriorTui {
                 );
             }
             Mode::Tasks(Action::Subprocess) => {
-                let (position, cmd) = (0, "");
+                let position = Self::get_position(&self.command);
                 Self::draw_command(
                     f,
                     rects[1],
-                    cmd,
+                    self.command.as_str(),
                     (
                         Span::styled("Shell Command", Style::default().add_modifier(Modifier::BOLD)),
                         None,
