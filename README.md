@@ -36,7 +36,7 @@ See <https://kdheepak.com/taskwarrior-tui/installation/> for installation instru
 
 See <https://kdheepak.com/taskwarrior-tui/quick_start/> to get started.
 
-See <https://kdheepak.com/taskwarrior-tui/configuration/> for customization options.
+See <https://kdheepak.com/taskwarrior-tui/configuration/keys> or <https://kdheepak.com/taskwarrior-tui/configuration/colors/> for customization options.
 
 ### Installation
 
