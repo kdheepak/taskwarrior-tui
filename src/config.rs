@@ -92,7 +92,11 @@ impl Config {
 
         let color = Self::get_color_collection(data);
         let filter = Self::get_filter(data, report)?;
-        let filter = format!("{} ", filter);
+        let filter = if filter.trim_start().trim_end().is_empty() {
+            filter
+        } else {
+            format!("{} ", filter)
+        };
         let data_location = Self::get_data_location(data);
         let due = Self::get_due(data);
         let rule_precedence_color = Self::get_rule_precedence_color(data);
@@ -439,8 +443,7 @@ impl Config {
         ) {
             Ok(s)
         } else {
-            Self::get_config(format!("report.{}.filter", report).as_str(), data)
-                .context(format!("Unable to parse `task show report.{}.filter`.", report))
+            Ok(Self::get_config(format!("report.{}.filter", report).as_str(), data).unwrap_or_default())
         }
     }
 
