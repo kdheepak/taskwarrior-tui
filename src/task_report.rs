@@ -8,6 +8,14 @@ use task_hookrs::uda::UDAValue;
 use unicode_truncate::UnicodeTruncateStr;
 use unicode_width::UnicodeWidthStr;
 
+pub fn format_date_time(dt: NaiveDateTime) -> String {
+    dt.format("%Y-%m-%d %H:%M:%S").to_string()
+}
+
+pub fn format_date(dt: NaiveDateTime) -> String {
+    dt.format("%Y-%m-%d").to_string()
+}
+
 pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime) -> String {
     let mut seconds = (to_dt - from_dt).num_seconds();
     let minus: &str;
@@ -216,16 +224,37 @@ impl TaskReportTable {
                 Some(v) => vague_format_date_time(Local::now().naive_utc(), NaiveDateTime::new(v.date(), v.time())),
                 None => "".to_string(),
             },
-            "until" | "until.remaining" => match task.until() {
+            "due" => match task.due() {
+                Some(v) => format_date(NaiveDateTime::new(v.date(), v.time())),
+                None => "".to_string(),
+            },
+            "until.remaining" => match task.until() {
                 Some(v) => vague_format_date_time(Local::now().naive_utc(), NaiveDateTime::new(v.date(), v.time())),
+                None => "".to_string(),
+            },
+            "until" => match task.until() {
+                Some(v) => format_date(NaiveDateTime::new(v.date(), v.time())),
                 None => "".to_string(),
             },
             "entry.age" => vague_format_date_time(
                 NaiveDateTime::new(task.entry().date(), task.entry().time()),
                 Local::now().naive_utc(),
             ),
+            "entry" => format_date(NaiveDateTime::new(task.entry().date(), task.entry().time())),
             "start.age" => match task.start() {
                 Some(v) => vague_format_date_time(NaiveDateTime::new(v.date(), v.time()), Local::now().naive_utc()),
+                None => "".to_string(),
+            },
+            "start" => match task.start() {
+                Some(v) => format_date(NaiveDateTime::new(v.date(), v.time())),
+                None => "".to_string(),
+            },
+            "end.age" => match task.end() {
+                Some(v) => vague_format_date_time(NaiveDateTime::new(v.date(), v.time()), Local::now().naive_utc()),
+                None => "".to_string(),
+            },
+            "end" => match task.end() {
+                Some(v) => format_date(NaiveDateTime::new(v.date(), v.time())),
                 None => "".to_string(),
             },
             "status.short" => task.status().to_string().chars().next().unwrap().to_string(),

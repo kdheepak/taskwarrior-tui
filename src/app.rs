@@ -1110,7 +1110,7 @@ impl TaskwarriorTui {
             }
         }
         for (i, header) in headers.iter().enumerate() {
-            if header == "ID" || header == "Name" {
+            if i == 0 {
                 // always give ID a couple of extra for indicator
                 widths[i] += self.config.uda_selection_indicator.as_str().width();
                 // if let TableMode::MultipleSelection = self.task_table_state.mode() {
