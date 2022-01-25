@@ -1607,6 +1607,7 @@ impl TaskwarriorTui {
 
         task.arg("rc.json.array=on");
         task.arg("rc.confirmation=off");
+        task.arg("rc.json.depends.array=on");
 
         if let Some(args) = shlex::split(&format!(
             r#"rc.report.{}.filter='{}'"#,
