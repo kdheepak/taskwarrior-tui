@@ -58,7 +58,7 @@ If you are compiling from source, you'll need to most recent stable rust compile
 
 Here is an example `.taskrc`
 
-```taskwarrior
+```.taskrc
 ### taskwarrior configuration options
 
 # taskwarrior's configuration
