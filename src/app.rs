@@ -150,7 +150,7 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
         .split(popup_layout[1])[1]
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Mode {
     Tasks(Action),
     Projects,
@@ -887,8 +887,14 @@ impl TaskwarriorTui {
             .candidates()
             .iter()
             .map(|p| {
-                let lines = vec![Spans::from(p.display.clone())];
-                ListItem::new(lines).style(Style::default().fg(Color::Black))
+                let lines = vec![Spans::from(vec![
+                    Span::styled(
+                        p.display.replace(p.replacement.clone().as_str(), ""),
+                        Style::default().add_modifier(Modifier::BOLD),
+                    ),
+                    Span::from(p.replacement.clone()),
+                ])];
+                ListItem::new(lines)
             })
             .collect();
 
@@ -896,7 +902,7 @@ impl TaskwarriorTui {
         let items = List::new(items)
             .block(Block::default().borders(Borders::NONE).title(""))
             .style(self.config.uda_style_report_completion_pane)
-            .highlight_style(Style::default().add_modifier(Modifier::BOLD))
+            .highlight_style(self.config.uda_style_report_completion_pane_highlight)
             .highlight_symbol(&self.config.uda_selection_indicator);
 
         let area = f.size();
@@ -1604,9 +1610,12 @@ impl TaskwarriorTui {
     pub fn export_tasks(&mut self) -> Result<()> {
         let mut task = Command::new("task");
 
-        task.arg("rc.json.array=on");
-        task.arg("rc.confirmation=off");
-        task.arg("rc.json.depends.array=on");
+        task.arg("rc.json.array=on")
+            .arg("rc.confirmation=off")
+            .arg("rc.json.depends.array=on")
+            .arg("rc.color=off")
+            .arg("rc._forcecolor=off");
+        // .arg("rc.verbose:override=false");
 
         if let Some(args) = shlex::split(&format!(
             r#"rc.report.{}.filter='{}'"#,
@@ -3387,9 +3396,8 @@ impl TaskwarriorTui {
     pub fn update_completion_list(&mut self) {
         self.completion_list.clear();
 
-        if let Mode::Tasks(Action::Modify | Action::Annotate | Action::Add | Action::Log) = self.mode {
+        if let Mode::Tasks(Action::Modify | Action::Filter | Action::Annotate | Action::Add | Action::Log) = self.mode {
             for s in vec![
-                "+".to_string(),
                 "project:".to_string(),
                 "priority:".to_string(),
                 "due:".to_string(),
@@ -3397,14 +3405,43 @@ impl TaskwarriorTui {
                 "wait:".to_string(),
                 "depends:".to_string(),
             ] {
-                self.completion_list.insert(s);
+                self.completion_list.insert(("attribute".to_string(), s));
+            }
+        }
+
+        if let Mode::Tasks(Action::Modify | Action::Filter | Action::Annotate | Action::Add | Action::Log) = self.mode {
+            for s in vec![
+                ".before:",
+                ".under:",
+                ".below:",
+                ".after:",
+                ".over:",
+                ".above:",
+                ".by:",
+                ".none:",
+                ".any:",
+                ".is:",
+                ".equals:",
+                ".isnt:",
+                ".not:",
+                ".has:",
+                ".contains:",
+                ".hasnt:",
+                ".startswith:",
+                ".left:",
+                ".endswith:",
+                ".right:",
+                ".word:",
+                ".noword:",
+            ] {
+                self.completion_list.insert(("modifier".to_string(), s.to_string()));
             }
         }
 
         if let Mode::Tasks(Action::Modify | Action::Filter | Action::Annotate | Action::Add | Action::Log) = self.mode {
             for priority in &self.config.uda_priority_values {
-                let p = format!("priority:{}", priority);
-                self.completion_list.insert(p);
+                let p = priority.to_string();
+                self.completion_list.insert(("priority".to_string(), p));
             }
             let virtual_tags = self.task_report_table.virtual_tags.clone();
             for task in &self.tasks {
@@ -3412,7 +3449,7 @@ impl TaskwarriorTui {
                     for tag in tags {
                         let t = format!("+{}", &tag);
                         if !virtual_tags.contains(tag) {
-                            self.completion_list.insert(t);
+                            self.completion_list.insert(("tag".to_string(), t));
                         }
                     }
                 }
@@ -3420,11 +3457,11 @@ impl TaskwarriorTui {
             for task in &self.tasks {
                 if let Some(project) = task.project() {
                     let p = if project.contains(' ') {
-                        format!(r#"project:"{}""#, &project)
+                        format!(r#""{}""#, &project)
                     } else {
-                        format!("project:{}", &project)
+                        project.to_string()
                     };
-                    self.completion_list.insert(p);
+                    self.completion_list.insert(("project".to_string(), p));
                 }
             }
             for task in &self.tasks {
@@ -3432,7 +3469,7 @@ impl TaskwarriorTui {
                     let now = Local::now();
                     let date = TimeZone::from_utc_datetime(now.offset(), date);
                     let s = format!(
-                        "due:'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}'",
+                        "'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}'",
                         date.year(),
                         date.month(),
                         date.day(),
@@ -3440,7 +3477,7 @@ impl TaskwarriorTui {
                         date.minute(),
                         date.second(),
                     );
-                    self.completion_list.insert(s);
+                    self.completion_list.insert(("due".to_string(), s));
                 }
             }
             for task in &self.tasks {
@@ -3448,7 +3485,7 @@ impl TaskwarriorTui {
                     let now = Local::now();
                     let date = TimeZone::from_utc_datetime(now.offset(), date);
                     let s = format!(
-                        "wait:'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}'",
+                        "'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}'",
                         date.year(),
                         date.month(),
                         date.day(),
@@ -3456,7 +3493,7 @@ impl TaskwarriorTui {
                         date.minute(),
                         date.second(),
                     );
-                    self.completion_list.insert(s);
+                    self.completion_list.insert(("wait".to_string(), s));
                 }
             }
             for task in &self.tasks {
@@ -3464,7 +3501,7 @@ impl TaskwarriorTui {
                     let now = Local::now();
                     let date = TimeZone::from_utc_datetime(now.offset(), date);
                     let s = format!(
-                        "scheduled:'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}'",
+                        "'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}'",
                         date.year(),
                         date.month(),
                         date.day(),
@@ -3472,7 +3509,7 @@ impl TaskwarriorTui {
                         date.minute(),
                         date.second(),
                     );
-                    self.completion_list.insert(s);
+                    self.completion_list.insert(("scheduled".to_string(), s));
                 }
             }
             for task in &self.tasks {
@@ -3480,7 +3517,7 @@ impl TaskwarriorTui {
                     let now = Local::now();
                     let date = TimeZone::from_utc_datetime(now.offset(), date);
                     let s = format!(
-                        "end:'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}'",
+                        "'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}'",
                         date.year(),
                         date.month(),
                         date.day(),
@@ -3488,18 +3525,19 @@ impl TaskwarriorTui {
                         date.minute(),
                         date.second(),
                     );
-                    self.completion_list.insert(s);
+                    self.completion_list.insert(("end".to_string(), s));
                 }
             }
         }
 
         if self.mode == Mode::Tasks(Action::Filter) {
-            self.completion_list.insert("status:pending".into());
-            self.completion_list.insert("status:completed".into());
-            self.completion_list.insert("status:deleted".into());
-            self.completion_list.insert("status:recurring".into());
+            self.completion_list.insert(("status".to_string(), "pending".into()));
+            self.completion_list.insert(("status".to_string(), "completed".into()));
+            self.completion_list.insert(("status".to_string(), "deleted".into()));
+            self.completion_list.insert(("status".to_string(), "recurring".into()));
         }
     }
+
     pub fn update_input_for_completion(&mut self) {
         match self.mode {
             Mode::Tasks(Action::Add | Action::Annotate | Action::Log) => {
@@ -4721,6 +4759,29 @@ mod tests {
         let backend = TestBackend::new(80, 20);
         let mut terminal = Terminal::new(backend).unwrap();
         app.render(&mut terminal).unwrap();
+        println!("{}", buffer_view(terminal.backend().buffer()));
+    }
+
+    // #[test]
+    fn test_taskwarrior_tui_completion() {
+        let mut app = TaskwarriorTui::new("next").unwrap();
+        app.mode = Mode::Tasks(Action::Add);
+        app.update_completion_list();
+        let input = "Wash car ";
+        for c in input.chars() {
+            app.handle_input(Key::Char(c)).unwrap();
+        }
+        app.mode = Mode::Tasks(Action::Add);
+        app.update_completion_list();
+        app.handle_input(Key::Tab).unwrap();
+        let backend = TestBackend::new(80, 50);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal
+            .draw(|f| {
+                app.draw(f);
+                app.draw(f);
+            })
+            .unwrap();
         println!("{}", buffer_view(terminal.backend().buffer()));
     }
 }
