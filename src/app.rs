@@ -279,8 +279,6 @@ impl TaskwarriorTui {
             app.filter.insert(c, 1);
         }
 
-        app.get_context()?;
-
         app.update(true)?;
 
         app.filter_history.load()?;
@@ -1271,6 +1269,7 @@ impl TaskwarriorTui {
     pub fn update(&mut self, force: bool) -> Result<()> {
         trace!("self.update({:?});", force);
         if force || self.dirty || self.tasks_changed_since(self.last_export).unwrap_or(true) {
+            self.get_context()?;
             let task_uuids = self.selected_task_uuids();
             if self.current_selection_uuid.is_none() && self.current_selection_id.is_none() && task_uuids.len() == 1 {
                 if let Some(uuid) = task_uuids.get(0) {
@@ -2721,10 +2720,7 @@ impl TaskwarriorTui {
                                 self.mode = Mode::Tasks(Action::Error);
                             } else {
                                 match self.context_select() {
-                                    Ok(_) => {
-                                        self.get_context()?;
-                                        self.update(true)?;
-                                    }
+                                    Ok(_) => self.update(true)?,
                                     Err(e) => {
                                         self.error = Some(e.to_string());
                                     }
@@ -2739,10 +2735,7 @@ impl TaskwarriorTui {
                                 self.mode = Mode::Tasks(Action::Error);
                             } else {
                                 match self.context_select() {
-                                    Ok(_) => {
-                                        self.get_context()?;
-                                        self.update(true)?;
-                                    }
+                                    Ok(_) => self.update(true)?,
                                     Err(e) => {
                                         self.error = Some(e.to_string());
                                     }
@@ -2757,10 +2750,7 @@ impl TaskwarriorTui {
                             self.mode = Mode::Tasks(Action::Report);
                         } else {
                             match self.context_select() {
-                                Ok(_) => {
-                                    self.get_context()?;
-                                    self.update(true)?;
-                                }
+                                Ok(_) => self.update(true)?,
                                 Err(e) => {
                                     self.error = Some(e.to_string());
                                 }
@@ -3863,7 +3853,6 @@ mod tests {
     fn test_task_context() {
         let mut app = TaskwarriorTui::new("next").unwrap();
 
-        assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
 
         app.context_select().unwrap();
@@ -3877,7 +3866,6 @@ mod tests {
         app.context_select().unwrap();
         assert_eq!(app.contexts.table_state.current_selection(), Some(2));
 
-        assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
 
         assert_eq!(app.tasks.len(), 1);
@@ -3889,7 +3877,6 @@ mod tests {
         app.context_select().unwrap();
         assert_eq!(app.contexts.table_state.current_selection(), Some(0));
 
-        assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
 
         assert_eq!(app.tasks.len(), 26);
@@ -3900,7 +3887,6 @@ mod tests {
         let total_tasks: u64 = 26;
 
         let mut app = TaskwarriorTui::new("next").unwrap();
-        assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
@@ -3931,7 +3917,6 @@ mod tests {
         let task_id = caps["task_id"].parse::<u64>().unwrap();
         assert_eq!(task_id, total_tasks + 1);
 
-        assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.len(), (total_tasks + 1) as usize);
         assert_eq!(app.current_context_filter, "");
@@ -3960,7 +3945,6 @@ mod tests {
             .unwrap();
 
         let mut app = TaskwarriorTui::new("next").unwrap();
-        assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
@@ -3970,7 +3954,6 @@ mod tests {
         let total_tasks: u64 = 26;
 
         let mut app = TaskwarriorTui::new("next").unwrap();
-        assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
@@ -3994,7 +3977,6 @@ mod tests {
         let task_id = caps["task_id"].parse::<u64>().unwrap();
         assert_eq!(task_id, total_tasks + 1);
 
-        assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.len(), (total_tasks + 1) as usize);
         assert_eq!(app.current_context_filter, "");
@@ -4022,7 +4004,6 @@ mod tests {
             .unwrap();
 
         let mut app = TaskwarriorTui::new("next").unwrap();
-        assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
@@ -4032,7 +4013,6 @@ mod tests {
         let total_tasks: u64 = 26;
 
         let mut app = TaskwarriorTui::new("next").unwrap();
-        assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
@@ -4064,7 +4044,6 @@ mod tests {
         let task_id = caps["task_id"].parse::<u64>().unwrap();
         assert_eq!(task_id, total_tasks + 1);
 
-        assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.len(), (total_tasks + 1) as usize);
         assert_eq!(app.current_context_filter, "");
@@ -4091,7 +4070,6 @@ mod tests {
             .unwrap();
 
         let mut app = TaskwarriorTui::new("next").unwrap();
-        assert!(app.get_context().is_ok());
         assert!(app.update(true).is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
@@ -4106,7 +4084,6 @@ mod tests {
 
             let total_tasks: u64 = 0;
 
-            assert!(app.get_context().is_ok());
             assert!(app.update(true).is_ok());
             assert_eq!(app.tasks.len(), total_tasks as usize);
             assert_eq!(app.current_context_filter, "");
@@ -4175,7 +4152,6 @@ mod tests {
 
             let total_tasks: u64 = 26;
 
-            assert!(app.get_context().is_ok());
             assert!(app.update(true).is_ok());
             assert_eq!(app.tasks.len(), total_tasks as usize);
             assert_eq!(app.current_context_filter, "");
@@ -4346,7 +4322,6 @@ mod tests {
 
             let total_tasks: u64 = 26;
 
-            assert!(app.get_context().is_ok());
             assert!(app.update(true).is_ok());
             assert_eq!(app.tasks.len(), total_tasks as usize);
             assert_eq!(app.current_context_filter, "");
