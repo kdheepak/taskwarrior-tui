@@ -15,9 +15,10 @@ A Terminal User Interface for [Taskwarrior](https://taskwarrior.org/) that you d
 ### Features
 
 - vim-like navigation
-- colors based on taskwarrior
+- add, delete, complete, log tasks from TUI
 - multiple selection
 - tab completion
+- colors based on taskwarrior
 
 ### Showcase
 
@@ -88,25 +89,22 @@ See the documentation for more information:
 - <https://kdheepak.com/taskwarrior-tui/configuration/colors>
 - <https://kdheepak.com/taskwarrior-tui/configuration/advanced/>
 
-<details>
-<summary>Here is an example <code>.taskrc</code></summary>
-<pre class=".taskrc"><code>### taskwarrior configuration options
+Here is an example `.taskrc`
 
-# taskwarrior&#39;s configuration
+```.taskrc
+### taskwarrior configuration options
 
+# taskwarrior's configuration
 data.location=.task
 verbose=affected,blank,context,edit,header,footnote,label,new-id,project,special,sync,recur
 uda.priority.values=H,M,,L
 color.alternate=
 
 # taskwarrior-tui reads color attributes from the following to display the same colors of tasks as the CLI
-
 color.tagged=black on rgb444
 
 # Remove age, tags from task next report.
-
 # taskwarrior-tui reads the labels and columns from these options to display tasks the same way taskwarrior does
-
 report.next.labels=ID,Active,Age,Deps,P,Project,Tag,Recur,S,Due,Until,Description,Urg
 report.next.columns=id,start.age,entry.age,depends,priority,project,tags,recur,scheduled.countdown,due.relative,until.remaining,description.truncated_count,urgency
 report.next.filter=(status:pending or status:waiting) page:limit
@@ -116,14 +114,11 @@ report.next.filter=(status:pending or status:waiting) page:limit
 uda.taskwarrior-tui.keyconfig.done=x
 uda.taskwarrior-tui.keyconfig.delete=d
 uda.taskwarrior-tui.shortcuts.0=~/local/bin/task-sync.sh
-uda.taskwarrior-tui.report.next.filter=(status:pending or status:waiting)</code></pre>
+uda.taskwarrior-tui.report.next.filter=(status:pending or status:waiting)
+```
 
-<p><code>taskwarrior-tui</code> parses the output of <code>task
-show</code> to get configuration data. This allows
-<code>taskwarrior-tui</code> to use the same defaults as
-<code>taskwarrior</code> and configure additional options as
-required.</p>
-</details>
+`taskwarrior-tui` parses the output of `task show` to get configuration data.
+This allows `taskwarrior-tui` to use the same defaults as `taskwarrior` and configure additional options as required.
 
 ### References / Resources
 
