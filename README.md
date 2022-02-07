@@ -14,7 +14,8 @@ A Terminal User Interface (TUI) for [Taskwarrior](https://taskwarrior.org/) that
 ### Features
 
 - vim-like navigation
-- add, delete, complete, log tasks from a TUI
+- live filter updates
+- add, delete, complete, log tasks
 - multiple selection
 - tab completion
 - colors based on taskwarrior
