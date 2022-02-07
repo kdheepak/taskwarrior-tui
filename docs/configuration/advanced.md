@@ -1,5 +1,8 @@
 # Advanced configuration
 
+`taskwarrior-tui` parses the output of `task show` to get configuration data.
+This allows `taskwarrior-tui` to use the same defaults as `taskwarrior` and configure additional options as required.
+
 ## `taskrc` config file options:
 
 Other `taskwarrior-tui` configuration options are possible using the user defined attribute feature of `taskwarrior`.
@@ -14,7 +17,7 @@ uda.taskwarrior-tui.selection.dim=no
 uda.taskwarrior-tui.selection.blink=no
 uda.taskwarrior-tui.selection.reverse=no
 uda.taskwarrior-tui.mark.indicator=✔
-uda.taskwarrior-tui.unmark.indicator= 
+uda.taskwarrior-tui.unmark.indicator=
 uda.taskwarrior-tui.mark-selection.indicator=⦿
 uda.taskwarrior-tui.unmark-selection.indicator=⦾
 uda.taskwarrior-tui.calendar.months-per-row=4

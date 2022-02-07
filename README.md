@@ -118,9 +118,6 @@ uda.taskwarrior-tui.shortcuts.0=~/local/bin/task-sync.sh
 uda.taskwarrior-tui.report.next.filter=(status:pending or status:waiting)
 ```
 
-`taskwarrior-tui` parses the output of `task show` to get configuration data.
-This allows `taskwarrior-tui` to use the same defaults as `taskwarrior` and configure additional options as required.
-
 </details>
 
 ### References / Resources
