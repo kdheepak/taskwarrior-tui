@@ -1704,11 +1704,11 @@ impl TaskwarriorTui {
     }
 
     pub fn task_subprocess(&mut self) -> Result<(), String> {
-        if self.tasks.is_empty() {
-            return Ok(());
-        }
-
-        let task_uuids = self.selected_task_uuids();
+        let task_uuids = if self.tasks.is_empty() {
+            vec![]
+        } else {
+            self.selected_task_uuids()
+        };
 
         let shell = self.command.as_str();
 
@@ -1742,10 +1742,6 @@ impl TaskwarriorTui {
     }
 
     pub fn task_log(&mut self) -> Result<(), String> {
-        if self.tasks.is_empty() {
-            return Ok(());
-        }
-
         let mut command = Command::new("task");
 
         command.arg("log");
@@ -1802,11 +1798,11 @@ impl TaskwarriorTui {
     }
 
     pub fn task_shortcut(&mut self, s: usize) -> Result<(), String> {
-        if self.tasks.is_empty() {
-            return Ok(());
-        }
-
-        let task_uuids = self.selected_task_uuids();
+        let task_uuids = if self.tasks.is_empty() {
+            vec![]
+        } else {
+            self.selected_task_uuids()
+        };
 
         let shell = &self.config.uda_shortcuts[s];
 
@@ -2179,9 +2175,6 @@ impl TaskwarriorTui {
     }
 
     pub fn task_undo(&mut self) -> Result<(), String> {
-        if self.tasks.is_empty() {
-            return Ok(());
-        }
         let output = Command::new("task").arg("rc.confirmation=off").arg("undo").output();
 
         match output {
