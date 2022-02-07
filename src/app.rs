@@ -1617,35 +1617,22 @@ impl TaskwarriorTui {
             .arg("rc._forcecolor=off");
         // .arg("rc.verbose:override=false");
 
+        if let Some(args) =
+            shlex::split(format!(r#"rc.report.{}.filter='{}'"#, self.report, self.filter.trim(),).trim())
+        {
+            for arg in args {
+                task.arg(arg);
+            }
+        }
+
         if !self.current_context_filter.trim().is_empty() && self.task_version >= *TASKWARRIOR_VERSION_SUPPORTED {
-            if let Some(args) = shlex::split(
-                format!(
-                    r#"rc.report.{}.filter='{} {}'"#,
-                    self.report,
-                    self.filter.trim(),
-                    self.current_context_filter.trim(),
-                )
-                .trim(),
-            ) {
+            if let Some(args) = shlex::split(&self.current_context_filter) {
                 for arg in args {
                     task.arg(arg);
                 }
             }
         } else if !self.current_context_filter.trim().is_empty() {
-            if let Some(args) =
-                shlex::split(format!(r#"rc.report.{}.filter='{}'"#, self.report, self.filter.trim()).trim())
-            {
-                for arg in args {
-                    task.arg(arg);
-                }
-            }
             task.arg(format!("'\\({}\\)'", self.current_context_filter));
-        } else if let Some(args) =
-            shlex::split(format!(r#"rc.report.{}.filter='{}'"#, self.report, self.filter.trim()).trim())
-        {
-            for arg in args {
-                task.arg(arg);
-            }
         }
 
         task.arg("export");
