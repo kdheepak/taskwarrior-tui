@@ -16,9 +16,10 @@ Showcase of features: <https://youtu.be/0ZdkfNrIAcw>
 
 [![](https://img.youtube.com/vi/0ZdkfNrIAcw/0.jpg)](https://www.youtube.com/watch?v=0ZdkfNrIAcw)
 
-**User Interface**
-
-![](https://user-images.githubusercontent.com/1813121/113251568-bdef2380-927f-11eb-8cb6-5d95b00eee53.gif)
+<details>
+ <summary><b>User Interface</b></summary>
+ ![](https://user-images.githubusercontent.com/1813121/113251568-bdef2380-927f-11eb-8cb6-5d95b00eee53.gif)
+</details>
 
 **Multiple selection**
 
