@@ -38,13 +38,24 @@ A Terminal User Interface for [Taskwarrior](https://taskwarrior.org/).
 
 ### Documentation
 
-See <https://kdheepak.com/taskwarrior-tui> for documentation.
-
-See <https://kdheepak.com/taskwarrior-tui/installation/> for installation instructions for your platform.
-
-See <https://kdheepak.com/taskwarrior-tui/quick_start/> to get started.
-
-See <https://kdheepak.com/taskwarrior-tui/configuration/keys> or <https://kdheepak.com/taskwarrior-tui/configuration/colors/> for customization options.
+<details>
+<summary>
+<p>See <a href="https://kdheepak.com/taskwarrior-tui"
+class="uri">https://kdheepak.com/taskwarrior-tui</a> for
+documentation.</p>
+</summary>
+<p>See <a href="https://kdheepak.com/taskwarrior-tui/installation/"
+class="uri">https://kdheepak.com/taskwarrior-tui/installation/</a> for
+installation instructions for your platform.</p>
+<p>See <a href="https://kdheepak.com/taskwarrior-tui/quick_start/"
+class="uri">https://kdheepak.com/taskwarrior-tui/quick_start/</a> to get
+started.</p>
+<p>See <a href="https://kdheepak.com/taskwarrior-tui/configuration/keys"
+class="uri">https://kdheepak.com/taskwarrior-tui/configuration/keys</a>
+or <a href="https://kdheepak.com/taskwarrior-tui/configuration/colors/"
+class="uri">https://kdheepak.com/taskwarrior-tui/configuration/colors/</a>
+for customization options.</p>
+</details>
 
 ### Installation
 
@@ -62,24 +73,39 @@ If you are compiling from source, you'll need to most recent stable rust compile
 
 ### Configuration
 
-`taskwarrior-tui` uses `taskwarrior`'s `.taskrc` for configuration.
+<details>
+<summary>
+<p><code>taskwarrior-tui</code> uses <code>taskwarrior</code>’s
+<code>.taskrc</code> for configuration.</p>
+<p>See the documentation for more information:</p>
+<ul>
+<li><a href="https://kdheepak.com/taskwarrior-tui/configuration/keys"
+class="uri">https://kdheepak.com/taskwarrior-tui/configuration/keys</a></li>
+<li><a href="https://kdheepak.com/taskwarrior-tui/configuration/colors"
+class="uri">https://kdheepak.com/taskwarrior-tui/configuration/colors</a></li>
+<li><a
+href="https://kdheepak.com/taskwarrior-tui/configuration/advanced/"
+class="uri">https://kdheepak.com/taskwarrior-tui/configuration/advanced/</a></li>
+</ul>
+</summary>
+<p>Here is an example <code>.taskrc</code></p>
+<pre class=".taskrc"><code>### taskwarrior configuration options
 
-Here is an example `.taskrc`
+# taskwarrior&#39;s configuration
 
-```.taskrc
-### taskwarrior configuration options
-
-# taskwarrior's configuration
 data.location=.task
 verbose=affected,blank,context,edit,header,footnote,label,new-id,project,special,sync,recur
 uda.priority.values=H,M,,L
 color.alternate=
 
 # taskwarrior-tui reads color attributes from the following to display the same colors of tasks as the CLI
+
 color.tagged=black on rgb444
 
 # Remove age, tags from task next report.
+
 # taskwarrior-tui reads the labels and columns from these options to display tasks the same way taskwarrior does
+
 report.next.labels=ID,Active,Age,Deps,P,Project,Tag,Recur,S,Due,Until,Description,Urg
 report.next.columns=id,start.age,entry.age,depends,priority,project,tags,recur,scheduled.countdown,due.relative,until.remaining,description.truncated_count,urgency
 report.next.filter=(status:pending or status:waiting) page:limit
@@ -89,28 +115,41 @@ report.next.filter=(status:pending or status:waiting) page:limit
 uda.taskwarrior-tui.keyconfig.done=x
 uda.taskwarrior-tui.keyconfig.delete=d
 uda.taskwarrior-tui.shortcuts.0=~/local/bin/task-sync.sh
-uda.taskwarrior-tui.report.next.filter=(status:pending or status:waiting)
-```
+uda.taskwarrior-tui.report.next.filter=(status:pending or status:waiting)</code></pre>
 
-`taskwarrior-tui` parses the output of `task show` to get configuration data.
-This allows `taskwarrior-tui` to use the same defaults as `taskwarrior` and configure additional options as required.
-
-See the documentation for more information:
-
-- <https://kdheepak.com/taskwarrior-tui/configuration/keys>
-- <https://kdheepak.com/taskwarrior-tui/configuration/colors>
-- <https://kdheepak.com/taskwarrior-tui/configuration/advanced/>
+<p><code>taskwarrior-tui</code> parses the output of <code>task
+show</code> to get configuration data. This allows
+<code>taskwarrior-tui</code> to use the same defaults as
+<code>taskwarrior</code> and configure additional options as
+required.</p>
+</details>
 
 ## References / Resources
 
-If you like `taskwarrior-tui`, please consider donating to [@GothenburgBitFactory](https://github.com/sponsors/GothenburgBitFactory).
-
-- <https://github.com/GothenburgBitFactory/taskwarrior>
-- <https://github.com/GothenburgBitFactory/libshared>
-- <https://github.com/GothenburgBitFactory/timewarrior>
-- <https://github.com/fdehau/tui-rs>
-- <https://github.com/crossterm-rs/crossterm/>
-- <https://github.com/async-rs/async-std>
-- <https://github.com/kkawakam/rustyline>
-- <https://github.com/vit-project/vit>
-- <https://github.com/taskchampion/taskchampion/>
+<details>
+<summary><p>If you like <code>taskwarrior-tui</code>, please consider donating to
+<a href="https://github.com/sponsors/GothenburgBitFactory"><span
+class="citation"
+data-cites="GothenburgBitFactory">@GothenburgBitFactory</span></a>.</p>
+</summary>
+<ul>
+<li><a href="https://github.com/GothenburgBitFactory/taskwarrior"
+class="uri">https://github.com/GothenburgBitFactory/taskwarrior</a></li>
+<li><a href="https://github.com/GothenburgBitFactory/libshared"
+class="uri">https://github.com/GothenburgBitFactory/libshared</a></li>
+<li><a href="https://github.com/GothenburgBitFactory/timewarrior"
+class="uri">https://github.com/GothenburgBitFactory/timewarrior</a></li>
+<li><a href="https://github.com/fdehau/tui-rs"
+class="uri">https://github.com/fdehau/tui-rs</a></li>
+<li><a href="https://github.com/crossterm-rs/crossterm/"
+class="uri">https://github.com/crossterm-rs/crossterm/</a></li>
+<li><a href="https://github.com/async-rs/async-std"
+class="uri">https://github.com/async-rs/async-std</a></li>
+<li><a href="https://github.com/kkawakam/rustyline"
+class="uri">https://github.com/kkawakam/rustyline</a></li>
+<li><a href="https://github.com/vit-project/vit"
+class="uri">https://github.com/vit-project/vit</a></li>
+<li><a href="https://github.com/taskchampion/taskchampion/"
+class="uri">https://github.com/taskchampion/taskchampion/</a></li>
+</ul>
+</details>
