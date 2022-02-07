@@ -25,7 +25,7 @@ A Terminal User Interface (TUI) for [Taskwarrior](https://taskwarrior.org/) that
 ### Showcase
 
 <details>
-<summary><b>Showcase</b>: <a href="https://youtu.be/0ZdkfNrIAcw">https://youtu.be/0ZdkfNrIAcw</a></summary>
+<summary><b>Demo</b>: <a href="https://youtu.be/0ZdkfNrIAcw">https://youtu.be/0ZdkfNrIAcw</a></summary>
 <a href="https://www.youtube.com/watch?v=0ZdkfNrIAcw"><img src="https://img.youtube.com/vi/0ZdkfNrIAcw/0.jpg" /></a>
 </details>
 
