@@ -3447,9 +3447,18 @@ impl TaskwarriorTui {
             for task in &self.tasks {
                 if let Some(tags) = task.tags() {
                     for tag in tags {
-                        let t = format!("+{}", &tag);
                         if !virtual_tags.contains(tag) {
-                            self.completion_list.insert(("tag".to_string(), t));
+                            self.completion_list
+                                .insert(("tag".to_string(), format!("tag:{}", &tag)));
+                        }
+                    }
+                }
+            }
+            for task in &self.tasks {
+                if let Some(tags) = task.tags() {
+                    for tag in tags {
+                        if !virtual_tags.contains(tag) {
+                            self.completion_list.insert(("+".to_string(), format!("+{}", &tag)));
                         }
                     }
                 }
