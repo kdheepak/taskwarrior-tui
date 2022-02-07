@@ -9,7 +9,7 @@
 [![](https://img.shields.io/badge/taskwarrior--tui-docs-red)](https://kdheepak.com/taskwarrior-tui)
 [![](https://img.shields.io/github/downloads/kdheepak/taskwarrior-tui/total)](https://github.com/kdheepak/taskwarrior-tui/releases/latest)
 
-A Terminal User Interface for [Taskwarrior](https://taskwarrior.org/) that you didn't know you wanted.
+A Terminal User Interface (TUI) for [Taskwarrior](https://taskwarrior.org/) that you didn't know you wanted.
 
 ### Features
 
