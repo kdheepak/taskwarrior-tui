@@ -11,8 +11,6 @@
 
 A Terminal User Interface for [Taskwarrior](https://taskwarrior.org/) that you didn't know you wanted.
 
-![](https://user-images.githubusercontent.com/1813121/113252474-21c61c00-9281-11eb-8292-bf6a3553251e.png)
-
 ### Features
 
 - vim-like navigation
@@ -20,6 +18,8 @@ A Terminal User Interface for [Taskwarrior](https://taskwarrior.org/) that you d
 - multiple selection
 - tab completion
 - colors based on taskwarrior
+
+![](https://user-images.githubusercontent.com/1813121/113252474-21c61c00-9281-11eb-8292-bf6a3553251e.png)
 
 ### Showcase
 
