@@ -39,11 +39,9 @@ A Terminal User Interface for [Taskwarrior](https://taskwarrior.org/).
 ### Documentation
 
 <details>
-<summary>
-<p>See <a href="https://kdheepak.com/taskwarrior-tui"
+<summary>See <a href="https://kdheepak.com/taskwarrior-tui"
 class="uri">https://kdheepak.com/taskwarrior-tui</a> for
-documentation.</p>
-</summary>
+documentation.</summary>
 <p>See <a href="https://kdheepak.com/taskwarrior-tui/installation/"
 class="uri">https://kdheepak.com/taskwarrior-tui/installation/</a> for
 installation instructions for your platform.</p>
@@ -73,22 +71,47 @@ If you are compiling from source, you'll need to most recent stable rust compile
 
 ### Configuration
 
+`taskwarrior-tui` uses `taskwarrior`'s `.taskrc` for configuration.
+
+See the documentation for more information:
+
+- <https://kdheepak.com/taskwarrior-tui/configuration/keys>
+- <https://kdheepak.com/taskwarrior-tui/configuration/colors>
+- <https://kdheepak.com/taskwarrior-tui/configuration/advanced/>
+
+Here is an example `.taskrc`
+
+```.taskrc
+### taskwarrior configuration options
+
+# taskwarrior's configuration
+data.location=.task
+verbose=affected,blank,context,edit,header,footnote,label,new-id,project,special,sync,recur
+uda.priority.values=H,M,,L
+color.alternate=
+
+# taskwarrior-tui reads color attributes from the following to display the same colors of tasks as the CLI
+color.tagged=black on rgb444
+
+# Remove age, tags from task next report.
+# taskwarrior-tui reads the labels and columns from these options to display tasks the same way taskwarrior does
+report.next.labels=ID,Active,Age,Deps,P,Project,Tag,Recur,S,Due,Until,Description,Urg
+report.next.columns=id,start.age,entry.age,depends,priority,project,tags,recur,scheduled.countdown,due.relative,until.remaining,description.truncated_count,urgency
+report.next.filter=(status:pending or status:waiting) page:limit
+
+### taskwarrior-tui configuration options
+
+uda.taskwarrior-tui.keyconfig.done=x
+uda.taskwarrior-tui.keyconfig.delete=d
+uda.taskwarrior-tui.shortcuts.0=~/local/bin/task-sync.sh
+uda.taskwarrior-tui.report.next.filter=(status:pending or status:waiting)
+```
+
+`taskwarrior-tui` parses the output of `task show` to get configuration data.
+This allows `taskwarrior-tui` to use the same defaults as `taskwarrior` and configure additional options as required.
+
 <details>
-<summary>
-<p><code>taskwarrior-tui</code> uses <code>taskwarrior</code>’s
-<code>.taskrc</code> for configuration.</p>
-<p>See the documentation for more information:</p>
-<ul>
-<li><a href="https://kdheepak.com/taskwarrior-tui/configuration/keys"
-class="uri">https://kdheepak.com/taskwarrior-tui/configuration/keys</a></li>
-<li><a href="https://kdheepak.com/taskwarrior-tui/configuration/colors"
-class="uri">https://kdheepak.com/taskwarrior-tui/configuration/colors</a></li>
-<li><a
-href="https://kdheepak.com/taskwarrior-tui/configuration/advanced/"
-class="uri">https://kdheepak.com/taskwarrior-tui/configuration/advanced/</a></li>
-</ul>
-</summary>
-<p>Here is an example <code>.taskrc</code></p>
+<summary>Here is an example <code>.taskrc</code></summary>
 <pre class=".taskrc"><code>### taskwarrior configuration options
 
 # taskwarrior&#39;s configuration
