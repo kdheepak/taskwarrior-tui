@@ -20,17 +20,17 @@ A Terminal User Interface for [Taskwarrior](https://taskwarrior.org/).
 </details>
 
 <details>
-  <summary><b>User Interface (gif)</b></summary>
+  <summary><b>User Interface</b>: (gif)</summary>
   <img src="https://user-images.githubusercontent.com/1813121/113251568-bdef2380-927f-11eb-8cb6-5d95b00eee53.gif"></img>
 </details>
 
 <details>
-  <summary><b>Multiple selection (gif)</b></summary>
+  <summary><b>Multiple selection</b>: (gif)</summary>
   <img src="https://user-images.githubusercontent.com/1813121/113252636-4e7a3380-9281-11eb-821d-874c86d11105.gif"></img>
 </details>
 
 <details>
-  <summary><b>Tab completion (gif)</b></summary>
+  <summary><b>Tab completion</b>: (gif)</summary>
   <img src="https://user-images.githubusercontent.com/1813121/113711977-cfcb2f00-96a2-11eb-8b06-9fd17903561d.gif"></img>
   <img src="https://user-images.githubusercontent.com/1813121/152730495-f0abd6b9-d710-44e6-a7f9-c15a68cc8233.png"></img>
   <img src="https://user-images.githubusercontent.com/1813121/152730497-44ce00d1-3a7c-4658-80d1-4df8d161cab8.png"></img>
