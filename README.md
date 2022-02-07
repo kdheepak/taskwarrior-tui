@@ -17,17 +17,19 @@ Showcase of features: <https://youtu.be/0ZdkfNrIAcw>
 [![](https://img.youtube.com/vi/0ZdkfNrIAcw/0.jpg)](https://www.youtube.com/watch?v=0ZdkfNrIAcw)
 
 <details>
- <summary><b>User Interface</b></summary>
- <img src="https://user-images.githubusercontent.com/1813121/113251568-bdef2380-927f-11eb-8cb6-5d95b00eee53.gif"></img>
+  <summary><b>User Interface</b></summary>
+  <img src="https://user-images.githubusercontent.com/1813121/113251568-bdef2380-927f-11eb-8cb6-5d95b00eee53.gif"></img>
 </details>
 
-**Multiple selection**
+<details>
+  <summary><b>Multiple selection</b></summary>
+  <img src="https://user-images.githubusercontent.com/1813121/113252636-4e7a3380-9281-11eb-821d-874c86d11105.gif"></img>
+</details>
 
-![](https://user-images.githubusercontent.com/1813121/113252636-4e7a3380-9281-11eb-821d-874c86d11105.gif)
-
-**Tab completion**
-
-![](https://user-images.githubusercontent.com/1813121/113711977-cfcb2f00-96a2-11eb-8b06-9fd17903561d.gif)
+<details>
+  <summary><b>Tab completion</b></summary>
+  <img src="https://user-images.githubusercontent.com/1813121/113711977-cfcb2f00-96a2-11eb-8b06-9fd17903561d.gif"></img>
+</details>
 
 ### Documentation
 
