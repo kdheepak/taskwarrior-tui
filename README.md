@@ -12,9 +12,10 @@ A Terminal User Interface for [Taskwarrior](https://taskwarrior.org/).
 
 ![](https://user-images.githubusercontent.com/1813121/113252474-21c61c00-9281-11eb-8292-bf6a3553251e.png)
 
-Showcase of features: <https://youtu.be/0ZdkfNrIAcw>
-
-[![](https://img.youtube.com/vi/0ZdkfNrIAcw/0.jpg)](https://www.youtube.com/watch?v=0ZdkfNrIAcw)
+<details>
+<summary>Showcase of features: <a href="https://youtu.be/0ZdkfNrIAcw">https://youtu.be/0ZdkfNrIAcw</a></summary>
+<a href="https://www.youtube.com/watch?v=0ZdkfNrIAcw"><img src="https://img.youtube.com/vi/0ZdkfNrIAcw/0.jpg" /></a>
+</details>
 
 <details>
   <summary><b>User Interface</b></summary>
@@ -29,6 +30,10 @@ Showcase of features: <https://youtu.be/0ZdkfNrIAcw>
 <details>
   <summary><b>Tab completion</b></summary>
   <img src="https://user-images.githubusercontent.com/1813121/113711977-cfcb2f00-96a2-11eb-8b06-9fd17903561d.gif"></img>
+  <img src="https://user-images.githubusercontent.com/1813121/152730495-f0abd6b9-d710-44e6-a7f9-c15a68cc8233.png"></img>
+  <img src="https://user-images.githubusercontent.com/1813121/152730497-44ce00d1-3a7c-4658-80d1-4df8d161cab8.png"></img>
+  <img src="https://user-images.githubusercontent.com/1813121/152730498-cd75efed-d2c0-48e6-b82f-594e0a2a5dff.png"></img>
+  <img src="https://user-images.githubusercontent.com/1813121/152731028-7ec9b388-37f6-4aa1-994c-0e4e8e0c205a.png"></img>
 </details>
 
 ### Documentation
