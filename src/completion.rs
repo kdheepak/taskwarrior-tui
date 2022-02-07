@@ -180,6 +180,9 @@ impl CompletionList {
         } else if input.contains(':') {
             self.input = input.split_once(':').unwrap().1.to_string();
             self.helper.context = input.split_once(':').unwrap().0.to_string();
+        } else if input.contains('+') {
+            self.input = format!("+{}", input.split_once('+').unwrap().1);
+            self.helper.context = "+".to_string();
         } else {
             self.input = input;
             self.helper.context = "attribute".to_string();
