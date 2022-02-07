@@ -1617,20 +1617,35 @@ impl TaskwarriorTui {
             .arg("rc._forcecolor=off");
         // .arg("rc.verbose:override=false");
 
-        if let Some(args) = shlex::split(&format!(
-            r#"rc.report.{}.filter='{}'"#,
-            self.report,
-            self.filter.as_str().trim()
-        )) {
+        if !self.current_context_filter.trim().is_empty() && self.task_version >= *TASKWARRIOR_VERSION_SUPPORTED {
+            if let Some(args) = shlex::split(
+                format!(
+                    r#"rc.report.{}.filter='{} {}'"#,
+                    self.report,
+                    self.filter.trim(),
+                    self.current_context_filter.trim(),
+                )
+                .trim(),
+            ) {
+                for arg in args {
+                    task.arg(arg);
+                }
+            }
+        } else if !self.current_context_filter.trim().is_empty() {
+            if let Some(args) =
+                shlex::split(format!(r#"rc.report.{}.filter='{}'"#, self.report, self.filter.trim()).trim())
+            {
+                for arg in args {
+                    task.arg(arg);
+                }
+            }
+            task.arg(format!("'\\({}\\)'", self.current_context_filter));
+        } else if let Some(args) =
+            shlex::split(format!(r#"rc.report.{}.filter='{}'"#, self.report, self.filter.trim()).trim())
+        {
             for arg in args {
                 task.arg(arg);
             }
-        }
-
-        if !self.current_context_filter.trim().is_empty() && self.task_version >= *TASKWARRIOR_VERSION_SUPPORTED {
-            task.arg(self.current_context_filter.trim());
-        } else if !self.current_context_filter.trim().is_empty() {
-            task.arg(format!("'\\({}\\)'", self.current_context_filter));
         }
 
         task.arg("export");
@@ -1647,6 +1662,7 @@ impl TaskwarriorTui {
         if output.status.success() {
             if let Ok(imported) = import(data.as_bytes()) {
                 self.tasks = imported;
+                info!("Imported {} tasks", self.tasks.len());
                 self.error = None;
                 if self.mode == Mode::Tasks(Action::Error) {
                     self.mode = self.previous_mode.clone().unwrap_or(Mode::Tasks(Action::Report));
