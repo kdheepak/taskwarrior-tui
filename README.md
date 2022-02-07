@@ -119,10 +119,10 @@ required.</p>
 ## References / Resources
 
 <details>
-<summary><p>If you like <code>taskwarrior-tui</code>, please consider donating to
+<summary>If you like <code>taskwarrior-tui</code>, please consider donating to
 <a href="https://github.com/sponsors/GothenburgBitFactory"><span
 class="citation"
-data-cites="GothenburgBitFactory">@GothenburgBitFactory</span></a>.</p>
+data-cites="GothenburgBitFactory">@GothenburgBitFactory</span></a>.
 </summary>
 <ul>
 <li><a href="https://github.com/GothenburgBitFactory/taskwarrior"
