@@ -1,3 +1,4 @@
+use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
 use std::{error::Error, io};
 use tui::{
     layout::{Constraint, Corner, Direction, Layout},
@@ -32,8 +33,8 @@ pub fn get_start_word_under_cursor(line: &str, cursor_pos: usize) -> usize {
 }
 
 pub struct TaskwarriorTuiCompletionHelper {
-    pub candidates: Vec<String>,
-    pub completer: rustyline::completion::FilenameCompleter,
+    pub candidates: Vec<(String, String)>,
+    pub context: String,
 }
 
 impl Completer for TaskwarriorTuiCompletionHelper {
@@ -43,8 +44,8 @@ impl Completer for TaskwarriorTuiCompletionHelper {
         let candidates: Vec<Pair> = self
             .candidates
             .iter()
-            .filter_map(|candidate| {
-                if candidate.starts_with(&word[..pos]) {
+            .filter_map(|(context, candidate)| {
+                if context == &self.context && candidate.starts_with(&word[..pos]) {
                     Some(Pair {
                         display: candidate.clone(),
                         replacement: candidate[pos..].to_string(),
@@ -67,35 +68,34 @@ pub struct CompletionList {
 
 impl CompletionList {
     pub fn new() -> CompletionList {
-        let completer = FilenameCompleter::new();
         CompletionList {
             state: ListState::default(),
             input: String::new(),
             pos: 0,
             helper: TaskwarriorTuiCompletionHelper {
                 candidates: vec![],
-                completer,
+                context: String::new(),
             },
         }
     }
 
-    pub fn with_items(items: Vec<String>) -> CompletionList {
-        let completer = FilenameCompleter::new();
+    pub fn with_items(items: Vec<(String, String)>) -> CompletionList {
         let mut candidates = vec![];
         for i in items {
             if !candidates.contains(&i) {
                 candidates.push(i);
             }
         }
+        let context = String::new();
         CompletionList {
             state: ListState::default(),
             input: String::new(),
             pos: 0,
-            helper: TaskwarriorTuiCompletionHelper { candidates, completer },
+            helper: TaskwarriorTuiCompletionHelper { candidates, context },
         }
     }
 
-    pub fn insert(&mut self, item: String) {
+    pub fn insert(&mut self, item: (String, String)) {
         if !self.helper.candidates.contains(&item) {
             self.helper.candidates.push(item);
         }
@@ -171,29 +171,19 @@ impl CompletionList {
     }
 
     pub fn input(&mut self, input: String) {
-        self.input = input;
-        self.pos = self.input.len();
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_completion() {
-        let mut completion_list = CompletionList::new();
-
-        completion_list.insert("+test".to_string());
-        completion_list.insert("+shortcut".to_string());
-        completion_list.insert("project:color".to_string());
-        completion_list.insert("due:'2021-04-07T00:00:00'".to_string());
-
-        completion_list.input("due:".to_string());
-
-        for p in completion_list.candidates().iter() {
-            dbg!(format!("{:?}", p.display));
-            dbg!(format!("{:?}", p.replacement));
+        if input.contains('.') && input.contains(':') {
+            self.input = input.split_once(':').unwrap().1.to_string();
+            self.helper.context = input.split_once('.').unwrap().0.to_string();
+        } else if input.contains('.') {
+            self.input = format!(".{}", input.split_once('.').unwrap().1);
+            self.helper.context = "modifier".to_string();
+        } else if input.contains(':') {
+            self.input = input.split_once(':').unwrap().1.to_string();
+            self.helper.context = input.split_once(':').unwrap().0.to_string();
+        } else {
+            self.input = input;
+            self.helper.context = "attribute".to_string();
         }
+        self.pos = self.input.len();
     }
 }
