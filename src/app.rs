@@ -1645,7 +1645,6 @@ impl TaskwarriorTui {
         let output = task.output()?;
         let data = String::from_utf8_lossy(&output.stdout);
         let error = String::from_utf8_lossy(&output.stderr);
-
         if output.status.success() {
             if let Ok(imported) = import(data.as_bytes()) {
                 self.tasks = imported;
@@ -1654,6 +1653,32 @@ impl TaskwarriorTui {
                 if self.mode == Mode::Tasks(Action::Error) {
                     self.mode = self.previous_mode.clone().unwrap_or(Mode::Tasks(Action::Report));
                     self.previous_mode = None;
+                }
+            } else if let Ok(mut tasks) = serde_json::from_str::<Vec<HashMap<String, serde_json::Value>>>(&data) {
+                for task in tasks.iter_mut() {
+                    if let Some(x) = task.get_mut("depends") {
+                        if x.as_array().unwrap().len() == 1
+                            && x.get(0).unwrap().as_str().unwrap().starts_with("[\"")
+                            && x.get(0).unwrap().as_str().unwrap().ends_with("\"]")
+                        {
+                            let d: Vec<String> = serde_json::from_str(x.get(0).unwrap().as_str().unwrap()).unwrap();
+                            *x = serde_json::to_value(d).unwrap();
+                        }
+                    }
+                }
+                let data = serde_json::to_string(&tasks).unwrap();
+                if let Ok(imported) = import(data.as_bytes()) {
+                    self.tasks = imported;
+                    info!("Imported {} tasks", self.tasks.len());
+                    self.error = None;
+                    if self.mode == Mode::Tasks(Action::Error) {
+                        self.mode = self.previous_mode.clone().unwrap_or(Mode::Tasks(Action::Report));
+                        self.previous_mode = None;
+                    }
+                } else {
+                    self.error = Some(format!("Unable to parse output of `{:?}`:\n`{:?}`", task, data));
+                    self.mode = Mode::Tasks(Action::Error);
+                    debug!("Unable to parse output: {:?}", data);
                 }
             } else {
                 self.error = Some(format!("Unable to parse output of `{:?}`:\n`{:?}`", task, data));
