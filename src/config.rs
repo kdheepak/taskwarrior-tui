@@ -127,8 +127,10 @@ impl Config {
         let uda_style_calendar_title = Self::get_uda_style("calendar.title", data);
         let uda_style_calendar_today = Self::get_uda_style("calendar.today", data);
         let uda_style_context_active = Self::get_uda_style("context.active", data);
-        let uda_style_report_completion_pane = Self::get_uda_style("report.completion-pane", data);
-        let uda_style_report_completion_pane_highlight = Self::get_uda_style("report.completion-pane-highlight", data);
+        let uda_style_report_completion_pane =
+            Self::get_uda_style("report.completion-pane", data).map(|s| s.fg(Color::Black));
+        let uda_style_report_completion_pane_highlight =
+            Self::get_uda_style("report.completion-pane-highlight", data).map(|s| s.fg(Color::Black));
         let uda_shortcuts = Self::get_uda_shortcuts(data);
         let uda_background_process = Self::get_uda_background_process(data);
         let uda_background_process_period = Self::get_uda_background_process_period(data);
