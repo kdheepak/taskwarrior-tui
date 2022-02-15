@@ -127,10 +127,8 @@ impl Config {
         let uda_style_calendar_title = Self::get_uda_style("calendar.title", data);
         let uda_style_calendar_today = Self::get_uda_style("calendar.today", data);
         let uda_style_context_active = Self::get_uda_style("context.active", data);
-        let uda_style_report_completion_pane =
-            Self::get_uda_style("report.completion-pane", data).map(|s| s.fg(Color::Black));
-        let uda_style_report_completion_pane_highlight =
-            Self::get_uda_style("report.completion-pane-highlight", data).map(|s| s.fg(Color::Black));
+        let uda_style_report_completion_pane = Self::get_uda_style("report.completion-pane", data);
+        let uda_style_report_completion_pane_highlight = Self::get_uda_style("report.completion-pane-highlight", data);
         let uda_shortcuts = Self::get_uda_shortcuts(data);
         let uda_background_process = Self::get_uda_background_process(data);
         let uda_background_process_period = Self::get_uda_background_process_period(data);
@@ -141,8 +139,8 @@ impl Config {
         let uda_style_calendar_today =
             uda_style_calendar_today.unwrap_or_else(|| Style::default().add_modifier(Modifier::BOLD));
         let uda_style_context_active = uda_style_context_active.unwrap_or_default();
-        let uda_style_report_completion_pane =
-            uda_style_report_completion_pane.unwrap_or_else(|| Style::default().bg(Color::Rgb(223, 223, 223)));
+        let uda_style_report_completion_pane = uda_style_report_completion_pane
+            .unwrap_or_else(|| Style::default().fg(Color::Black).bg(Color::Rgb(223, 223, 223)));
         let uda_style_report_completion_pane_highlight =
             uda_style_report_completion_pane_highlight.unwrap_or(uda_style_report_completion_pane);
         let uda_quick_tag_name = Self::get_uda_quick_tag_name(data);
