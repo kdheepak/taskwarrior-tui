@@ -54,6 +54,7 @@ pub struct Config {
     pub uda_prefill_task_metadata: bool,
     pub uda_reset_filter_on_esc: bool,
     pub uda_task_detail_prefetch: usize,
+    pub uda_task_report_use_all_tasks_for_completion: bool,
     pub uda_task_report_show_info: bool,
     pub uda_task_report_looping: bool,
     pub uda_task_report_jump_to_task_on_add: bool,
@@ -109,6 +110,7 @@ impl Config {
         let uda_prefill_task_metadata = Self::get_uda_prefill_task_metadata(data);
         let uda_reset_filter_on_esc = Self::get_uda_reset_filter_on_esc(data);
         let uda_task_detail_prefetch = Self::get_uda_task_detail_prefetch(data);
+        let uda_task_report_use_all_tasks_for_completion = Self::get_uda_task_report_use_all_tasks_for_completion(data);
         let uda_task_report_show_info = Self::get_uda_task_report_show_info(data);
         let uda_task_report_looping = Self::get_uda_task_report_looping(data);
         let uda_task_report_jump_to_task_on_add = Self::get_uda_task_report_jump_to_task_on_add(data);
@@ -165,6 +167,7 @@ impl Config {
             uda_prefill_task_metadata,
             uda_reset_filter_on_esc,
             uda_task_detail_prefetch,
+            uda_task_report_use_all_tasks_for_completion,
             uda_task_report_show_info,
             uda_task_report_looping,
             uda_task_report_jump_to_task_on_add,
@@ -508,6 +511,13 @@ impl Config {
             .unwrap_or_default()
             .parse::<usize>()
             .unwrap_or(10)
+    }
+
+    fn get_uda_task_report_use_all_tasks_for_completion(data: &str) -> bool {
+        Self::get_config("uda.taskwarrior-tui.task-report.use-all-tasks-for-completion", data)
+            .unwrap_or_default()
+            .get_bool()
+            .unwrap_or(false)
     }
 
     fn get_uda_task_report_show_info(data: &str) -> bool {
