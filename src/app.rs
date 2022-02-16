@@ -167,6 +167,7 @@ pub struct TaskwarriorTui {
     pub filter: LineBuffer,
     pub modify: LineBuffer,
     pub tasks: Vec<Task>,
+    pub all_tasks: Vec<Task>,
     pub task_details: HashMap<Uuid, String>,
     pub marked: HashSet<Uuid>,
     // stores index of current task that is highlighted
@@ -240,6 +241,7 @@ impl TaskwarriorTui {
             dirty: true,
             task_table_state: TableState::default(),
             tasks: vec![],
+            all_tasks: vec![],
             task_details: HashMap::new(),
             marked: HashSet::new(),
             current_selection: 0,
@@ -1286,6 +1288,9 @@ impl TaskwarriorTui {
             self.last_export = Some(std::time::SystemTime::now());
             self.task_report_table.export_headers(None, &self.report)?;
             self.export_tasks()?;
+            if self.config.uda_task_report_use_all_tasks_for_completion {
+                self.export_all_tasks()?;
+            }
             self.contexts.update_data()?;
             self.projects.update_data()?;
             self.update_tags();
@@ -1605,6 +1610,49 @@ impl TaskwarriorTui {
         } else {
             Ok(true)
         }
+    }
+
+    pub fn export_all_tasks(&mut self) -> Result<()> {
+        let mut task = Command::new("task");
+
+        task.arg("rc.json.array=on")
+            .arg("rc.confirmation=off")
+            .arg("rc.json.depends.array=on")
+            .arg("rc.color=off")
+            .arg("rc._forcecolor=off");
+        // .arg("rc.verbose:override=false");
+
+        task.arg("export");
+
+        task.arg("all");
+
+        info!("Running `{:?}`", task);
+        let output = task.output()?;
+        let data = String::from_utf8_lossy(&output.stdout);
+        let error = String::from_utf8_lossy(&output.stderr);
+
+        if output.status.success() {
+            if let Ok(imported) = import(data.as_bytes()) {
+                self.all_tasks = imported;
+                info!("Imported {} tasks", self.tasks.len());
+                self.error = None;
+                if self.mode == Mode::Tasks(Action::Error) {
+                    self.mode = self.previous_mode.clone().unwrap_or(Mode::Tasks(Action::Report));
+                    self.previous_mode = None;
+                }
+            } else {
+                self.error = Some(format!("Unable to parse output of `{:?}`:\n`{:?}`", task, data));
+                self.mode = Mode::Tasks(Action::Error);
+                debug!("Unable to parse output: {:?}", data);
+            }
+        } else {
+            self.error = Some(format!(
+                "Cannot run `{:?}` - ({}) error:\n{}",
+                &task, output.status, error
+            ));
+        }
+
+        Ok(())
     }
 
     pub fn export_tasks(&mut self) -> Result<()> {
@@ -3392,6 +3440,12 @@ impl TaskwarriorTui {
     pub fn update_completion_list(&mut self) {
         self.completion_list.clear();
 
+        let tasks = if self.config.uda_task_report_use_all_tasks_for_completion {
+            &self.all_tasks
+        } else {
+            &self.tasks
+        };
+
         if let Mode::Tasks(Action::Modify | Action::Filter | Action::Annotate | Action::Add | Action::Log) = self.mode {
             for s in vec![
                 "project:".to_string(),
@@ -3440,7 +3494,7 @@ impl TaskwarriorTui {
                 self.completion_list.insert(("priority".to_string(), p));
             }
             let virtual_tags = self.task_report_table.virtual_tags.clone();
-            for task in &self.tasks {
+            for task in tasks {
                 if let Some(tags) = task.tags() {
                     for tag in tags {
                         if !virtual_tags.contains(tag) {
@@ -3450,7 +3504,7 @@ impl TaskwarriorTui {
                     }
                 }
             }
-            for task in &self.tasks {
+            for task in tasks {
                 if let Some(tags) = task.tags() {
                     for tag in tags {
                         if !virtual_tags.contains(tag) {
@@ -3459,7 +3513,7 @@ impl TaskwarriorTui {
                     }
                 }
             }
-            for task in &self.tasks {
+            for task in tasks {
                 if let Some(project) = task.project() {
                     let p = if project.contains(' ') {
                         format!(r#""{}""#, &project)
@@ -3469,7 +3523,7 @@ impl TaskwarriorTui {
                     self.completion_list.insert(("project".to_string(), p));
                 }
             }
-            for task in &self.tasks {
+            for task in tasks {
                 if let Some(date) = task.due() {
                     let now = Local::now();
                     let date = TimeZone::from_utc_datetime(now.offset(), date);
@@ -3485,7 +3539,7 @@ impl TaskwarriorTui {
                     self.completion_list.insert(("due".to_string(), s));
                 }
             }
-            for task in &self.tasks {
+            for task in tasks {
                 if let Some(date) = task.wait() {
                     let now = Local::now();
                     let date = TimeZone::from_utc_datetime(now.offset(), date);
@@ -3501,7 +3555,7 @@ impl TaskwarriorTui {
                     self.completion_list.insert(("wait".to_string(), s));
                 }
             }
-            for task in &self.tasks {
+            for task in tasks {
                 if let Some(date) = task.scheduled() {
                     let now = Local::now();
                     let date = TimeZone::from_utc_datetime(now.offset(), date);
@@ -3517,7 +3571,7 @@ impl TaskwarriorTui {
                     self.completion_list.insert(("scheduled".to_string(), s));
                 }
             }
-            for task in &self.tasks {
+            for task in tasks {
                 if let Some(date) = task.end() {
                     let now = Local::now();
                     let date = TimeZone::from_utc_datetime(now.offset(), date);
@@ -3548,17 +3602,17 @@ impl TaskwarriorTui {
             Mode::Tasks(Action::Add | Action::Annotate | Action::Log) => {
                 let i = get_start_word_under_cursor(self.command.as_str(), self.command.pos());
                 let input = self.command.as_str()[i..self.command.pos()].to_string();
-                self.completion_list.input(input);
+                self.completion_list.input(input, "".to_string());
             }
             Mode::Tasks(Action::Modify) => {
                 let i = get_start_word_under_cursor(self.modify.as_str(), self.modify.pos());
                 let input = self.modify.as_str()[i..self.modify.pos()].to_string();
-                self.completion_list.input(input);
+                self.completion_list.input(input, "".to_string());
             }
             Mode::Tasks(Action::Filter) => {
                 let i = get_start_word_under_cursor(self.filter.as_str(), self.filter.pos());
                 let input = self.filter.as_str()[i..self.filter.pos()].to_string();
-                self.completion_list.input(input);
+                self.completion_list.input(input, "".to_string());
             }
             _ => {}
         }
@@ -4772,7 +4826,7 @@ mod tests {
         let mut app = TaskwarriorTui::new("next").unwrap();
         app.mode = Mode::Tasks(Action::Add);
         app.update_completion_list();
-        let input = "Wash car ";
+        let input = "Wash car project:packing project:p";
         for c in input.chars() {
             app.handle_input(Key::Char(c)).unwrap();
         }
