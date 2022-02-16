@@ -35,6 +35,7 @@ pub fn get_start_word_under_cursor(line: &str, cursor_pos: usize) -> usize {
 pub struct TaskwarriorTuiCompletionHelper {
     pub candidates: Vec<(String, String)>,
     pub context: String,
+    pub input: String,
 }
 
 impl Completer for TaskwarriorTuiCompletionHelper {
@@ -45,7 +46,7 @@ impl Completer for TaskwarriorTuiCompletionHelper {
             .candidates
             .iter()
             .filter_map(|(context, candidate)| {
-                if context == &self.context && candidate.starts_with(&word[..pos]) {
+                if context == &self.context && candidate.starts_with(&word[..pos]) && !self.input.contains(candidate) {
                     Some(Pair {
                         display: candidate.clone(),
                         replacement: candidate[pos..].to_string(),
@@ -61,7 +62,7 @@ impl Completer for TaskwarriorTuiCompletionHelper {
 
 pub struct CompletionList {
     pub state: ListState,
-    pub input: String,
+    pub current: String,
     pub pos: usize,
     pub helper: TaskwarriorTuiCompletionHelper,
 }
@@ -70,11 +71,12 @@ impl CompletionList {
     pub fn new() -> CompletionList {
         CompletionList {
             state: ListState::default(),
-            input: String::new(),
+            current: String::new(),
             pos: 0,
             helper: TaskwarriorTuiCompletionHelper {
                 candidates: vec![],
                 context: String::new(),
+                input: String::new(),
             },
         }
     }
@@ -87,11 +89,16 @@ impl CompletionList {
             }
         }
         let context = String::new();
+        let input = String::new();
         CompletionList {
             state: ListState::default(),
-            input: String::new(),
+            current: String::new(),
             pos: 0,
-            helper: TaskwarriorTuiCompletionHelper { candidates, context },
+            helper: TaskwarriorTuiCompletionHelper {
+                candidates,
+                context,
+                input,
+            },
         }
     }
 
@@ -166,27 +173,28 @@ impl CompletionList {
     pub fn candidates(&self) -> Vec<Pair> {
         let hist = rustyline::history::History::new();
         let ctx = rustyline::Context::new(&hist);
-        let (pos, candidates) = self.helper.complete(&self.input, self.pos, &ctx).unwrap();
+        let (pos, candidates) = self.helper.complete(&self.current, self.pos, &ctx).unwrap();
         candidates
     }
 
-    pub fn input(&mut self, input: String) {
-        if input.contains('.') && input.contains(':') {
-            self.input = input.split_once(':').unwrap().1.to_string();
-            self.helper.context = input.split_once('.').unwrap().0.to_string();
-        } else if input.contains('.') {
-            self.input = format!(".{}", input.split_once('.').unwrap().1);
+    pub fn input(&mut self, current: String, i: String) {
+        self.helper.input = i;
+        if current.contains('.') && current.contains(':') {
+            self.current = current.split_once(':').unwrap().1.to_string();
+            self.helper.context = current.split_once('.').unwrap().0.to_string();
+        } else if current.contains('.') {
+            self.current = format!(".{}", current.split_once('.').unwrap().1);
             self.helper.context = "modifier".to_string();
-        } else if input.contains(':') {
-            self.input = input.split_once(':').unwrap().1.to_string();
-            self.helper.context = input.split_once(':').unwrap().0.to_string();
-        } else if input.contains('+') {
-            self.input = format!("+{}", input.split_once('+').unwrap().1);
+        } else if current.contains(':') {
+            self.current = current.split_once(':').unwrap().1.to_string();
+            self.helper.context = current.split_once(':').unwrap().0.to_string();
+        } else if current.contains('+') {
+            self.current = format!("+{}", current.split_once('+').unwrap().1);
             self.helper.context = "+".to_string();
         } else {
-            self.input = input;
+            self.current = current;
             self.helper.context = "attribute".to_string();
         }
-        self.pos = self.input.len();
+        self.pos = self.current.len();
     }
 }

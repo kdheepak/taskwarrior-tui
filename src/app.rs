@@ -3548,17 +3548,17 @@ impl TaskwarriorTui {
             Mode::Tasks(Action::Add | Action::Annotate | Action::Log) => {
                 let i = get_start_word_under_cursor(self.command.as_str(), self.command.pos());
                 let input = self.command.as_str()[i..self.command.pos()].to_string();
-                self.completion_list.input(input);
+                self.completion_list.input(input, self.command.as_str().to_string());
             }
             Mode::Tasks(Action::Modify) => {
                 let i = get_start_word_under_cursor(self.modify.as_str(), self.modify.pos());
                 let input = self.modify.as_str()[i..self.modify.pos()].to_string();
-                self.completion_list.input(input);
+                self.completion_list.input(input, self.modify.as_str().to_string());
             }
             Mode::Tasks(Action::Filter) => {
                 let i = get_start_word_under_cursor(self.filter.as_str(), self.filter.pos());
                 let input = self.filter.as_str()[i..self.filter.pos()].to_string();
-                self.completion_list.input(input);
+                self.completion_list.input(input, self.filter.as_str().to_string());
             }
             _ => {}
         }
@@ -4772,7 +4772,7 @@ mod tests {
         let mut app = TaskwarriorTui::new("next").unwrap();
         app.mode = Mode::Tasks(Action::Add);
         app.update_completion_list();
-        let input = "Wash car ";
+        let input = "Wash car project:packing project:p";
         for c in input.chars() {
             app.handle_input(Key::Char(c)).unwrap();
         }
