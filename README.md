@@ -124,7 +124,7 @@ uda.taskwarrior-tui.report.next.filter=(status:pending or status:waiting)
 
 ### References / Resources
 
-If you like `taskwarrior-tui`, please consider donating to [@GothenburgBitFactory](https://github.com/GothenburgBitFactory): <https://github.com/sponsors/GothenburgBitFactory>
+If you like `taskwarrior-tui`, consider donating to [@GothenburgBitFactory](https://github.com/GothenburgBitFactory) at <https://github.com/sponsors/GothenburgBitFactory> or a charity of your choice.
 
 <details>
 <summary>Additional resources</summary>
