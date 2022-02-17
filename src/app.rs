@@ -890,11 +890,8 @@ impl TaskwarriorTui {
             .iter()
             .map(|p| {
                 let lines = vec![Spans::from(vec![
-                    Span::styled(
-                        p.display.replace(p.replacement.clone().as_str(), ""),
-                        Style::default().add_modifier(Modifier::BOLD),
-                    ),
-                    Span::from(p.replacement.clone()),
+                    Span::styled(p.3.clone(), Style::default().add_modifier(Modifier::BOLD)),
+                    Span::from(p.4.clone()),
                 ])];
                 ListItem::new(lines)
             })
@@ -2837,9 +2834,10 @@ impl TaskwarriorTui {
                     Key::Char('\n') => {
                         if self.show_completion_pane {
                             self.show_completion_pane = false;
-                            if let Some(s) = self.completion_list.selected() {
-                                let s = format!("{}{}", self.modify.as_str(), &s);
-                                self.modify.update(&s, s.len());
+                            if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
+                                let (before, after) = self.modify.as_str().split_at(self.modify.pos());
+                                let fs = format!("{}{}{}", before.trim_end_matches(&o), r, after);
+                                self.modify.update(&fs, self.modify.pos() + r.len() - o.len());
                             }
                             self.completion_list.unselect();
                         } else if self.error.is_some() {
@@ -2958,10 +2956,10 @@ impl TaskwarriorTui {
                     Key::Char('\n') => {
                         if self.show_completion_pane {
                             self.show_completion_pane = false;
-                            if let Some(s) = self.completion_list.selected() {
+                            if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
                                 let (before, after) = self.command.as_str().split_at(self.command.pos());
-                                let fs = format!("{}{}{}", before, s, after);
-                                self.command.update(&fs, self.command.pos() + s.len());
+                                let fs = format!("{}{}{}", before.trim_end_matches(&o), r, after);
+                                self.command.update(&fs, self.command.pos() + r.len() - o.len());
                             }
                             self.completion_list.unselect();
                         } else if self.error.is_some() {
@@ -3057,10 +3055,10 @@ impl TaskwarriorTui {
                     Key::Char('\n') => {
                         if self.show_completion_pane {
                             self.show_completion_pane = false;
-                            if let Some(s) = self.completion_list.selected() {
+                            if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
                                 let (before, after) = self.command.as_str().split_at(self.command.pos());
-                                let fs = format!("{}{}{}", before, s, after);
-                                self.command.update(&fs, self.command.pos() + s.len());
+                                let fs = format!("{}{}{}", before.trim_end_matches(&o), r, after);
+                                self.command.update(&fs, self.command.pos() + r.len() - o.len());
                             }
                             self.completion_list.unselect();
                         } else if self.error.is_some() {
@@ -3181,10 +3179,10 @@ impl TaskwarriorTui {
                     Key::Char('\n') => {
                         if self.show_completion_pane {
                             self.show_completion_pane = false;
-                            if let Some(s) = self.completion_list.selected() {
+                            if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
                                 let (before, after) = self.command.as_str().split_at(self.command.pos());
-                                let fs = format!("{}{}{}", before, s, after);
-                                self.command.update(&fs, self.command.pos() + s.len());
+                                let fs = format!("{}{}{}", before.trim_end_matches(&o), r, after);
+                                self.command.update(&fs, self.command.pos() + r.len() - o.len());
                             }
                             self.completion_list.unselect();
                         } else if self.error.is_some() {
@@ -3289,10 +3287,10 @@ impl TaskwarriorTui {
                     Key::Char('\n') => {
                         if self.show_completion_pane {
                             self.show_completion_pane = false;
-                            if let Some(s) = self.completion_list.selected() {
+                            if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
                                 let (before, after) = self.filter.as_str().split_at(self.filter.pos());
-                                let fs = format!("{}{}{}", before, s, after);
-                                self.filter.update(&fs, self.filter.pos() + s.len());
+                                let fs = format!("{}{}{}", before.trim_end_matches(&o), r, after);
+                                self.filter.update(&fs, self.filter.pos() + r.len() - o.len());
                             }
                             self.completion_list.unselect();
                             self.dirty = true;
@@ -4824,15 +4822,24 @@ mod tests {
     // #[test]
     fn test_taskwarrior_tui_completion() {
         let mut app = TaskwarriorTui::new("next").unwrap();
+        app.handle_input(Key::Char('z')).unwrap();
         app.mode = Mode::Tasks(Action::Add);
         app.update_completion_list();
-        let input = "Wash car project:packing project:p";
+        let input = "Wash car";
         for c in input.chars() {
             app.handle_input(Key::Char(c)).unwrap();
         }
+        app.handle_input(Key::Ctrl('e')).unwrap();
+
+        let input = " project:CO";
+        for c in input.chars() {
+            app.handle_input(Key::Char(c)).unwrap();
+        }
+
         app.mode = Mode::Tasks(Action::Add);
         app.update_completion_list();
         app.handle_input(Key::Tab).unwrap();
+        app.handle_input(Key::Char('\n')).unwrap();
         let backend = TestBackend::new(80, 50);
         let mut terminal = Terminal::new(backend).unwrap();
         terminal

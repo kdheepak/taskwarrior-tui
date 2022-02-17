@@ -8,7 +8,6 @@ use tui::{
     Terminal,
 };
 
-use rustyline::completion::{Completer, FilenameCompleter, Pair};
 use rustyline::error::ReadlineError;
 use rustyline::highlight::{Highlighter, MatchingBracketHighlighter};
 use rustyline::hint::Hinter;
@@ -38,19 +37,27 @@ pub struct TaskwarriorTuiCompletionHelper {
     pub input: String,
 }
 
-impl Completer for TaskwarriorTuiCompletionHelper {
-    type Candidate = Pair;
+type Completion = (String, String, String, String, String);
 
-    fn complete(&self, word: &str, pos: usize, _ctx: &Context) -> rustyline::Result<(usize, Vec<Self::Candidate>)> {
-        let candidates: Vec<Pair> = self
+impl TaskwarriorTuiCompletionHelper {
+    fn complete(&self, word: &str, pos: usize, _ctx: &Context) -> rustyline::Result<(usize, Vec<Completion>)> {
+        let candidates: Vec<Completion> = self
             .candidates
             .iter()
             .filter_map(|(context, candidate)| {
-                if context == &self.context && candidate.starts_with(&word[..pos]) && !self.input.contains(candidate) {
-                    Some(Pair {
-                        display: candidate.clone(),
-                        replacement: candidate[pos..].to_string(),
-                    })
+                if context == &self.context
+                    && (candidate.starts_with(&word[..pos])
+                        || candidate.to_lowercase().starts_with(&word[..pos].to_lowercase()))
+                    && (!self.input.contains(candidate)
+                        || !self.input.to_lowercase().contains(&candidate.to_lowercase()))
+                {
+                    Some((
+                        candidate.clone(),       // display
+                        candidate.to_string(),   // replacement
+                        word[..pos].to_string(), // original
+                        candidate[..pos].to_string(),
+                        candidate[pos..].to_string(),
+                    ))
                 } else {
                     None
                 }
@@ -150,27 +157,30 @@ impl CompletionList {
     }
 
     pub fn max_width(&self) -> Option<usize> {
-        self.candidates().iter().map(|p| p.display.width() + 4).max()
+        self.candidates().iter().map(|p| p.1.width() + 4).max()
     }
 
-    pub fn get(&self, i: usize) -> Option<String> {
+    pub fn get(&self, i: usize) -> Option<Completion> {
         let candidates = self.candidates();
         if i < candidates.len() {
-            Some(candidates[i].replacement.clone())
+            Some(candidates[i].clone())
         } else {
             None
         }
     }
 
-    pub fn selected(&self) -> Option<String> {
-        self.state.selected().and_then(|i| self.get(i))
+    pub fn selected(&self) -> Option<(usize, Completion)> {
+        self.state
+            .selected()
+            .and_then(|i| self.get(i))
+            .and_then(|s| Some((self.pos, s)))
     }
 
     pub fn is_empty(&self) -> bool {
         self.candidates().is_empty()
     }
 
-    pub fn candidates(&self) -> Vec<Pair> {
+    pub fn candidates(&self) -> Vec<Completion> {
         let hist = rustyline::history::History::new();
         let ctx = rustyline::Context::new(&hist);
         let (pos, candidates) = self.helper.complete(&self.current, self.pos, &ctx).unwrap();
