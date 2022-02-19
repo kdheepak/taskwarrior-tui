@@ -170,10 +170,7 @@ impl CompletionList {
     }
 
     pub fn selected(&self) -> Option<(usize, Completion)> {
-        self.state
-            .selected()
-            .and_then(|i| self.get(i))
-            .and_then(|s| Some((self.pos, s)))
+        self.state.selected().and_then(|i| self.get(i)).map(|s| (self.pos, s))
     }
 
     pub fn is_empty(&self) -> bool {
