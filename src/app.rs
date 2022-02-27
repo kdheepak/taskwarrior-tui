@@ -370,7 +370,7 @@ impl TaskwarriorTui {
         let context = Spans::from(vec![
             Span::from("["),
             Span::from(if self.current_context.is_empty() { "none" } else { &self.current_context }),
-            Span::from("]")
+            Span::from("]"),
         ]);
         let tabs = Tabs::new(tab_names)
             .block(tabs_block.clone())
@@ -424,15 +424,6 @@ impl TaskwarriorTui {
     }
 
     pub fn draw_calendar(&mut self, f: &mut Frame<impl Backend>, layout: Rect) {
-        // FIXME:
-        // if !self.current_context.is_empty() {
-        //     let context_style = Style::default();
-        //     context_style.add_modifier(Modifier::ITALIC);
-        //     title.insert(title.len(), Span::from(" ("));
-        //     title.insert(title.len(), Span::styled(&self.current_context, context_style));
-        //     title.insert(title.len(), Span::from(")"));
-        // }
-
         let mut c = Calendar::default()
             .today_style(self.config.uda_style_calendar_today)
             .year(self.calendar_year)
@@ -1174,7 +1165,6 @@ impl TaskwarriorTui {
             .collect();
 
 
-
         let t = Table::new(header, rows.into_iter())
             .header_style(
                 self.config
@@ -1609,7 +1599,7 @@ impl TaskwarriorTui {
         // .arg("rc.verbose:override=false");
 
         if let Some(args) =
-        shlex::split(format!(r#"rc.report.{}.filter='{}'"#, self.report, self.filter.trim(), ).trim())
+        shlex::split(format!(r#"rc.report.{}.filter='{}'"#, self.report, self.filter.trim()).trim())
         {
             for arg in args {
                 task.arg(arg);
@@ -1704,7 +1694,7 @@ impl TaskwarriorTui {
                 let output = command.output();
                 match output {
                     Ok(_) => Ok(()),
-                    Err(_) => Err(format!("Shell command `{}` exited with non-zero output", shell, )),
+                    Err(_) => Err(format!("Shell command `{}` exited with non-zero output", shell)),
                 }
             }
             None => Err(format!("Cannot run subprocess. Unable to shlex split `{}`", shell)),
@@ -1820,10 +1810,10 @@ impl TaskwarriorTui {
                                 ))
                             }
                         }
-                        Err(s) => Err(format!("`{}` failed: {}", shell, s, )),
+                        Err(s) => Err(format!("`{}` failed: {}", shell, s)),
                     }
                 } else {
-                    Err(format!("`{}` failed: {}", shell, s, ))
+                    Err(format!("`{}` failed: {}", shell, s))
                 }
             }
             None => Err(format!(
@@ -1871,7 +1861,7 @@ impl TaskwarriorTui {
                         if o.status.success() {
                             Ok(())
                         } else {
-                            Err(format!("Modify failed. {}", String::from_utf8_lossy(&o.stdout), ))
+                            Err(format!("Modify failed. {}", String::from_utf8_lossy(&o.stdout)))
                         }
                     }
                     Err(_) => Err(format!(
@@ -1880,7 +1870,7 @@ impl TaskwarriorTui {
                     )),
                 }
             }
-            None => Err(format!("Cannot shlex split `{}`", shell, )),
+            None => Err(format!("Cannot shlex split `{}`", shell)),
         };
 
         if task_uuids.len() == 1 {
@@ -1922,7 +1912,7 @@ impl TaskwarriorTui {
                         if o.status.success() {
                             Ok(())
                         } else {
-                            Err(format!("Annotate failed. {}", String::from_utf8_lossy(&o.stdout), ))
+                            Err(format!("Annotate failed. {}", String::from_utf8_lossy(&o.stdout)))
                         }
                     }
                     Err(_) => Err(format!(
@@ -1975,7 +1965,7 @@ impl TaskwarriorTui {
                             Err(format!("Error: {}", String::from_utf8_lossy(&output.stderr)))
                         }
                     }
-                    Err(e) => Err(format!("Cannot run `{:?}`: {}", command, e, )),
+                    Err(e) => Err(format!("Cannot run `{:?}`: {}", command, e)),
                 }
             }
             None => Err(format!(
@@ -2032,7 +2022,7 @@ impl TaskwarriorTui {
 
             let output = Command::new("task").arg(task_uuid.to_string()).arg(command).output();
             if output.is_err() {
-                return Err(format!("Error running `task {}` for task `{}`.", command, task_uuid, ));
+                return Err(format!("Error running `task {}` for task `{}`.", command, task_uuid));
             }
         }
 
@@ -4139,7 +4129,6 @@ mod tests {
             terminal
                 .draw(|f| {
                     app.draw(f);
-                    app.draw(f);
                 })
                 .unwrap();
 
@@ -4148,42 +4137,33 @@ mod tests {
         };
 
         let mut expected = Buffer::with_lines(vec![
-            "╭Task|Projects|Calendar──────────────────────────╮",
-            "│                                                │",
-            "│                                                │",
-            "│                                                │",
-            "│                                                │",
-            "╰────────────────────────────────────────────────╯",
+            " Tasks   Projects   Calendar                [none]",
+            "                                                  ",
+            "                                                  ",
+            "                                                  ",
+            "                                                  ",
+            "                                                  ",
+            "                                                  ",
             "╭Task not found──────────────────────────────────╮",
             "│                                                │",
             "│                                                │",
             "│                                                │",
             "│                                                │",
             "╰────────────────────────────────────────────────╯",
-            "╭Filter Tasks────────────────────────────────────╮",
-            "│(status:pending or status:waiting)              │",
-            "╰────────────────────────────────────────────────╯",
+            "Filter Tasks──────────────────────────────────────",
+            "(status:pending or status:waiting)                ",
         ]);
 
-        for i in 1..=4 {
-            // Task
+        for i in 0..=49 {
+            // First line
+            expected.get_mut(i, 0).set_style(Style::default().add_modifier(Modifier::REVERSED));
+        }
+        for i in 1..=5 {
+            // Tasks
             expected
                 .get_mut(i, 0)
-                .set_style(Style::default().add_modifier(Modifier::BOLD));
+                .set_style(Style::default().add_modifier(Modifier::BOLD).add_modifier(Modifier::REVERSED));
         }
-        for i in 6..=13 {
-            // Projects
-            expected
-                .get_mut(i, 0)
-                .set_style(Style::default().add_modifier(Modifier::DIM));
-        }
-        for i in 15..=22 {
-            // Calendar
-            expected
-                .get_mut(i, 0)
-                .set_style(Style::default().add_modifier(Modifier::DIM));
-        }
-
         test_case(&expected);
     }
 
@@ -4330,18 +4310,18 @@ mod tests {
         };
 
         let mut expected1 = Buffer::with_lines(vec![
-            "╭Modify Task 10─────────╮",
-            "│based on your .taskrc  │",
-            "╰───────────────────────╯",
+            "Modify Task 10───────────",
+            "based on your .taskrc    ",
+            "                         ",
         ]);
 
         let mut expected2 = Buffer::with_lines(vec![
-            "╭Modify Task 10─────────╮",
-            "│Support color for tasks│",
-            "╰───────────────────────╯",
+            "Modify Task 10───────────",
+            "Support color for tasks b",
+            "                         ",
         ]);
 
-        for i in 1..=14 {
+        for i in 0..=13 {
             // Task
             expected1
                 .get_mut(i, 0)
@@ -4534,43 +4514,35 @@ mod tests {
         };
 
         let mut expected = Buffer::with_lines(vec![
-            "╭Task|Projects|Calendar──────────────────────────╮",
-            "│                                                │",
-            "│                      2020                      │",
-            "│                                                │",
-            "│        January               February          │",
-            "│  Su Mo Tu We Th Fr Sa  Su Mo Tu We Th Fr Sa    │",
-            "│            1  2  3  4                     1    │",
-            "│   5  6  7  8  9 10 11   2  3  4  5  6  7  8    │",
-            "│  12 13 14 15 16 17 18   9 10 11 12 13 14 15    │",
-            "│  19 20 21 22 23 24 25  16 17 18 19 20 21 22    │",
-            "│  26 27 28 29 30 31     23 24 25 26 27 28 29    │",
-            "│                                                │",
-            "│                                                │",
-            "│                                                │",
-            "╰────────────────────────────────────────────────╯",
+            " Tasks   Projects   Calendar                [none]",
+            "                                                  ",
+            "                       2020                       ",
+            "                                                  ",
+            "         January               February           ",
+            "   Su Mo Tu We Th Fr Sa  Su Mo Tu We Th Fr Sa     ",
+            "             1  2  3  4                     1     ",
+            "    5  6  7  8  9 10 11   2  3  4  5  6  7  8     ",
+            "   12 13 14 15 16 17 18   9 10 11 12 13 14 15     ",
+            "   19 20 21 22 23 24 25  16 17 18 19 20 21 22     ",
+            "   26 27 28 29 30 31     23 24 25 26 27 28 29     ",
+            "                                                  ",
+            "                                                  ",
+            "                                                  ",
+            "                                                  ",
         ]);
 
-        for i in 1..=4 {
-            // Task
-            expected
-                .get_mut(i, 0)
-                .set_style(Style::default().add_modifier(Modifier::DIM));
+        for i in 0..=49 {
+            // First line
+            expected.get_mut(i, 0).set_style(Style::default().add_modifier(Modifier::REVERSED));
         }
-        for i in 6..=13 {
-            // Projects
-            expected
-                .get_mut(i, 0)
-                .set_style(Style::default().add_modifier(Modifier::DIM));
-        }
-        for i in 15..=22 {
+        for i in 20..=27 {
             // Calendar
             expected
                 .get_mut(i, 0)
-                .set_style(Style::default().add_modifier(Modifier::BOLD));
+                .set_style(Style::default().add_modifier(Modifier::BOLD).add_modifier(Modifier::REVERSED));
         }
 
-        for i in 1..=48 {
+        for i in 0..=49 {
             expected
                 .get_mut(i, 2)
                 .set_style(Style::default().add_modifier(Modifier::UNDERLINED));
