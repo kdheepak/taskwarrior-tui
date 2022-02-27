@@ -522,7 +522,7 @@ impl TaskwarriorTui {
                     self.filter.as_str(),
                     (
                         Span::raw("Filter Tasks"),
-                        Some(Span::raw(self.history_status.clone().unwrap_or_else(|| "".to_string()))),
+                        self.history_status.as_ref().map(|s| Span::raw(s)),
                     ),
                     Self::get_position(&self.filter),
                     false,
@@ -555,10 +555,7 @@ impl TaskwarriorTui {
                     self.filter.as_str(),
                     (
                         Span::styled("Filter Tasks", Style::default().add_modifier(Modifier::BOLD)),
-                        Some(Span::styled(
-                            self.history_status.clone().unwrap_or_else(|| "".to_string()),
-                            Style::default().add_modifier(Modifier::BOLD),
-                        )),
+                        self.history_status.as_ref().map(|s| Span::styled(s, Style::default().add_modifier(Modifier::BOLD))),
                     ),
                     position,
                     true,
@@ -579,10 +576,7 @@ impl TaskwarriorTui {
                     self.command.as_str(),
                     (
                         Span::styled("Log Task", Style::default().add_modifier(Modifier::BOLD)),
-                        Some(Span::styled(
-                            self.history_status.clone().unwrap_or_else(|| "".to_string()),
-                            Style::default().add_modifier(Modifier::BOLD),
-                        )),
+                        self.history_status.as_ref().map(|s| Span::styled(s, Style::default().add_modifier(Modifier::BOLD))),
                     ),
                     position,
                     true,
@@ -620,10 +614,7 @@ impl TaskwarriorTui {
                     self.modify.as_str(),
                     (
                         Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
-                        Some(Span::styled(
-                            self.history_status.clone().unwrap_or_else(|| "".to_string()),
-                            Style::default().add_modifier(Modifier::BOLD),
-                        )),
+                        self.history_status.as_ref().map(|s| Span::styled(s, Style::default().add_modifier(Modifier::BOLD))),
                     ),
                     position,
                     true,
@@ -649,10 +640,7 @@ impl TaskwarriorTui {
                     self.command.as_str(),
                     (
                         Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
-                        Some(Span::styled(
-                            self.history_status.clone().unwrap_or_else(|| "".to_string()),
-                            Style::default().add_modifier(Modifier::BOLD),
-                        )),
+                        self.history_status.as_ref().map(|s| Span::styled(s, Style::default().add_modifier(Modifier::BOLD)))
                     ),
                     position,
                     true,
@@ -673,10 +661,7 @@ impl TaskwarriorTui {
                     self.command.as_str(),
                     (
                         Span::styled("Add Task", Style::default().add_modifier(Modifier::BOLD)),
-                        Some(Span::styled(
-                            self.history_status.clone().unwrap_or_else(|| "".to_string()),
-                            Style::default().add_modifier(Modifier::BOLD),
-                        )),
+                        self.history_status.as_ref().map(|s| Span::styled(s, Style::default().add_modifier(Modifier::BOLD)))
                     ),
                     position,
                     true,
@@ -918,43 +903,47 @@ impl TaskwarriorTui {
         cursor: bool,
         error: Option<String>,
     ) {
-        f.render_widget(Clear, rect);
+        // f.render_widget(Clear, rect);
         if cursor {
             f.set_cursor(
                 std::cmp::min(rect.x + position as u16, rect.x + rect.width.saturating_sub(2)),
                 rect.y + 1,
             );
         }
-        let fg_color = if error.is_some() { Color::Red } else { Color::Reset };
+        let rects = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Length(1), Constraint::Min(0)].as_ref()) // FIXME: remove empty splits
+            .split(rect);
 
-        let title = if let Some(subtitle) = title.1 {
-            let w = (title.0.width() + subtitle.width()).try_into().unwrap();
-            let w = rect.width.saturating_sub(w).saturating_sub(2);
-            Spans::from(vec![title.0, Span::from("─".repeat(w.into())), subtitle])
+        // render command title
+        let fg_color = if error.is_some() { Color::Red } else { Color::Reset };
+        let title_spans = if let Some(subtitle) = title.1 {
+            Spans::from(vec![title.0, Span::from(" ["), subtitle, Span::from("]")])
         } else {
             Spans::from(vec![title.0])
         };
+        let title = Paragraph::new(Text::from(title_spans)).style(Style::default().fg(fg_color).add_modifier(Modifier::REVERSED));
+        f.render_widget(title, rects[0]);
 
+        // FIXME:
+        // let title = if let Some(subtitle) = title.1 {
+        //     let w = (title.0.width() + subtitle.width()).try_into().unwrap();
+        //     let w = rect.width.saturating_sub(w).saturating_sub(2);
+        //     Spans::from(vec![title.0, Span::from("─".repeat(w.into())), subtitle])
+        // } else {
+        //     Spans::from(vec![title.0])
+        // };
+
+        // render command
         let p = Paragraph::new(Text::from(text))
-            .block(
-                Block::default()
-                    .borders(Borders::TOP)
-                    .style(Style::default().fg(fg_color))
-                    .title(title),
-            )
             .scroll((0, ((position + 3) as u16).saturating_sub(rect.width)));
-        f.render_widget(p, rect);
+        f.render_widget(p, rects[1]);
     }
 
     fn draw_task_details(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
         if self.tasks.is_empty() {
-            f.render_widget(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_type(BorderType::Rounded)
-                    .title("Task not found"),
-                rect,
-            );
+            let p = Paragraph::new(Text::from("Task not found")).block(Block::default().borders(Borders::TOP));
+            f.render_widget(p, rect);
             return;
         }
         let selected = self.current_selection;
@@ -2512,7 +2501,7 @@ impl TaskwarriorTui {
                         self.mode = Mode::Tasks(Action::Modify);
                         self.command_history.reset();
                         self.history_status = Some(format!(
-                            " {} / {}",
+                            "{} / {}",
                             self.command_history
                                 .history_index()
                                 .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
@@ -2567,7 +2556,7 @@ impl TaskwarriorTui {
                         self.mode = Mode::Tasks(Action::Log);
                         self.command_history.reset();
                         self.history_status = Some(format!(
-                            " {} / {}",
+                            "{} / {}",
                             self.command_history
                                 .history_index()
                                 .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
@@ -2579,7 +2568,7 @@ impl TaskwarriorTui {
                         self.mode = Mode::Tasks(Action::Add);
                         self.command_history.reset();
                         self.history_status = Some(format!(
-                            " {} / {}",
+                            "{} / {}",
                             self.command_history
                                 .history_index()
                                 .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
@@ -2591,7 +2580,7 @@ impl TaskwarriorTui {
                         self.mode = Mode::Tasks(Action::Annotate);
                         self.command_history.reset();
                         self.history_status = Some(format!(
-                            " {} / {}",
+                            "{} / {}",
                             self.command_history
                                 .history_index()
                                 .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
@@ -2605,7 +2594,7 @@ impl TaskwarriorTui {
                         self.mode = Mode::Tasks(Action::Filter);
                         self.filter_history.reset();
                         self.history_status = Some(format!(
-                            " {} / {}",
+                            "{} / {}",
                             self.filter_history
                                 .history_index()
                                 .unwrap_or_else(|| self.filter_history.history_len().saturating_sub(1))
@@ -2819,7 +2808,7 @@ impl TaskwarriorTui {
                             self.modify.update("", 0);
                             self.modify.update(&s, std::cmp::min(s.len(), p));
                             self.history_status = Some(format!(
-                                " {} / {}",
+                                "{} / {}",
                                 self.command_history
                                     .history_index()
                                     .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
@@ -2839,7 +2828,7 @@ impl TaskwarriorTui {
                             self.modify.update("", 0);
                             self.modify.update(&s, std::cmp::min(s.len(), p));
                             self.history_status = Some(format!(
-                                " {} / {}",
+                                "{} / {}",
                                 self.command_history
                                     .history_index()
                                     .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
@@ -2942,7 +2931,7 @@ impl TaskwarriorTui {
                             self.command.update("", 0);
                             self.command.update(&s, std::cmp::min(s.len(), p));
                             self.history_status = Some(format!(
-                                " {} / {}",
+                                "{} / {}",
                                 self.command_history
                                     .history_index()
                                     .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
@@ -2962,7 +2951,7 @@ impl TaskwarriorTui {
                             self.command.update("", 0);
                             self.command.update(&s, std::cmp::min(s.len(), p));
                             self.history_status = Some(format!(
-                                " {} / {}",
+                                "{} / {}",
                                 self.command_history
                                     .history_index()
                                     .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
@@ -3040,7 +3029,7 @@ impl TaskwarriorTui {
                             self.command.update("", 0);
                             self.command.update(&s, std::cmp::min(s.len(), p));
                             self.history_status = Some(format!(
-                                " {} / {}",
+                                "{} / {}",
                                 self.command_history
                                     .history_index()
                                     .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
@@ -3060,7 +3049,7 @@ impl TaskwarriorTui {
                             self.command.update("", 0);
                             self.command.update(&s, std::cmp::min(s.len(), p));
                             self.history_status = Some(format!(
-                                " {} / {}",
+                                "{} / {}",
                                 self.command_history
                                     .history_index()
                                     .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
@@ -3164,7 +3153,7 @@ impl TaskwarriorTui {
                             self.command.update("", 0);
                             self.command.update(&s, std::cmp::min(s.len(), p));
                             self.history_status = Some(format!(
-                                " {} / {}",
+                                "{} / {}",
                                 self.command_history
                                     .history_index()
                                     .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
@@ -3185,7 +3174,7 @@ impl TaskwarriorTui {
                             self.command.update("", 0);
                             self.command.update(&s, std::cmp::min(s.len(), p));
                             self.history_status = Some(format!(
-                                " {} / {}",
+                                "{} / {}",
                                 self.command_history
                                     .history_index()
                                     .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
@@ -3251,7 +3240,7 @@ impl TaskwarriorTui {
                             self.filter.update("", 0);
                             self.filter.update(&s, std::cmp::min(p, s.len()));
                             self.history_status = Some(format!(
-                                " {} / {}",
+                                "{} / {}",
                                 self.filter_history
                                     .history_index()
                                     .unwrap_or_else(|| self.filter_history.history_len().saturating_sub(1))
@@ -3272,7 +3261,7 @@ impl TaskwarriorTui {
                             self.filter.update("", 0);
                             self.filter.update(&s, std::cmp::min(p, s.len()));
                             self.history_status = Some(format!(
-                                " {} / {}",
+                                "{} / {}",
                                 self.filter_history
                                     .history_index()
                                     .unwrap_or_else(|| self.filter_history.history_len().saturating_sub(1))
@@ -4144,13 +4133,13 @@ mod tests {
             "                                                  ",
             "                                                  ",
             "                                                  ",
-            "╭Task not found──────────────────────────────────╮",
-            "│                                                │",
-            "│                                                │",
-            "│                                                │",
-            "│                                                │",
-            "╰────────────────────────────────────────────────╯",
-            "Filter Tasks──────────────────────────────────────",
+            "──────────────────────────────────────────────────",
+            "Task not found                                    ",
+            "                                                  ",
+            "                                                  ",
+            "                                                  ",
+            "                                                  ",
+            "Filter Tasks                                      ",
             "(status:pending or status:waiting)                ",
         ]);
 
@@ -4163,6 +4152,12 @@ mod tests {
             expected
                 .get_mut(i, 0)
                 .set_style(Style::default().add_modifier(Modifier::BOLD).add_modifier(Modifier::REVERSED));
+        }
+        for i in 0..=49 {
+            // Command line
+            expected
+                .get_mut(i, 13)
+                .set_style(Style::default().add_modifier(Modifier::REVERSED));
         }
         test_case(&expected);
     }
@@ -4310,13 +4305,13 @@ mod tests {
         };
 
         let mut expected1 = Buffer::with_lines(vec![
-            "Modify Task 10───────────",
+            "Modify Task 10           ",
             "based on your .taskrc    ",
             "                         ",
         ]);
 
         let mut expected2 = Buffer::with_lines(vec![
-            "Modify Task 10───────────",
+            "Modify Task 10           ",
             "Support color for tasks b",
             "                         ",
         ]);
@@ -4329,6 +4324,15 @@ mod tests {
             expected2
                 .get_mut(i, 0)
                 .set_style(Style::default().add_modifier(Modifier::BOLD));
+        }
+        for i in 0..=24 {
+            // Command line
+            expected1
+                .get_mut(i, 0)
+                .set_style(Style::default().add_modifier(Modifier::REVERSED));
+            expected2
+                .get_mut(i, 0)
+                .set_style(Style::default().add_modifier(Modifier::REVERSED));
         }
 
         test_case(&expected1, &expected2);
