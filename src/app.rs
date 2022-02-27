@@ -134,7 +134,7 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
                 Constraint::Percentage(percent_y),
                 Constraint::Percentage((100 - percent_y) / 2),
             ]
-                .as_ref(),
+            .as_ref(),
         )
         .split(r);
 
@@ -146,7 +146,7 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
                 Constraint::Percentage(percent_x),
                 Constraint::Percentage((100 - percent_x) / 2),
             ]
-                .as_ref(),
+            .as_ref(),
         )
         .split(popup_layout[1])[1]
 }
@@ -330,8 +330,8 @@ impl TaskwarriorTui {
     }
 
     pub fn render<B>(&mut self, terminal: &mut Terminal<B>) -> Result<()>
-        where
-            B: Backend,
+    where
+        B: Backend,
     {
         terminal.draw(|f| self.draw(f))?;
         Ok(())
@@ -360,7 +360,7 @@ impl TaskwarriorTui {
 
     fn draw_tabs(&self, f: &mut Frame<impl Backend>, layout: Rect) {
         let titles: Vec<&str> = vec!["Tasks", "Projects", "Calendar"];
-        let tab_names: Vec<_> = titles.into_iter().map(|name| Spans::from(name)).collect();
+        let tab_names: Vec<_> = titles.into_iter().map(Spans::from).collect();
         let selected_tab = match self.mode {
             Mode::Tasks(_) => 0,
             Mode::Projects => 1,
@@ -369,16 +369,18 @@ impl TaskwarriorTui {
         let tabs_block = Block::default().style(Style::default().add_modifier(Modifier::REVERSED));
         let context = Spans::from(vec![
             Span::from("["),
-            Span::from(if self.current_context.is_empty() { "none" } else { &self.current_context }),
+            Span::from(if self.current_context.is_empty() {
+                "none"
+            } else {
+                &self.current_context
+            }),
             Span::from("]"),
         ]);
         let tabs = Tabs::new(tab_names)
             .block(tabs_block.clone())
             .select(selected_tab)
             .divider(" ")
-            .highlight_style(
-                Style::default().add_modifier(Modifier::BOLD)
-            );
+            .highlight_style(Style::default().add_modifier(Modifier::BOLD));
         let rects = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([Constraint::Min(0), Constraint::Length(context.width() as u16)])
@@ -477,7 +479,13 @@ impl TaskwarriorTui {
         self.handle_task_mode_action(f, &rects, &task_ids, action);
     }
 
-    fn handle_task_mode_action(&mut self, f: &mut Frame<impl Backend>, rects: &[Rect], task_ids: &[String], action: Action) {
+    fn handle_task_mode_action(
+        &mut self,
+        f: &mut Frame<impl Backend>,
+        rects: &[Rect],
+        task_ids: &[String],
+        action: Action,
+    ) {
         match action {
             Action::Error => {
                 Self::draw_command(
@@ -520,10 +528,7 @@ impl TaskwarriorTui {
                     f,
                     rects[1],
                     self.filter.as_str(),
-                    (
-                        Span::raw("Filter Tasks"),
-                        self.history_status.as_ref().map(|s| Span::raw(s)),
-                    ),
+                    (Span::raw("Filter Tasks"), self.history_status.as_ref().map(Span::raw)),
                     Self::get_position(&self.filter),
                     false,
                     self.error.clone(),
@@ -555,7 +560,9 @@ impl TaskwarriorTui {
                     self.filter.as_str(),
                     (
                         Span::styled("Filter Tasks", Style::default().add_modifier(Modifier::BOLD)),
-                        self.history_status.as_ref().map(|s| Span::styled(s, Style::default().add_modifier(Modifier::BOLD))),
+                        self.history_status
+                            .as_ref()
+                            .map(|s| Span::styled(s, Style::default().add_modifier(Modifier::BOLD))),
                     ),
                     position,
                     true,
@@ -576,7 +583,9 @@ impl TaskwarriorTui {
                     self.command.as_str(),
                     (
                         Span::styled("Log Task", Style::default().add_modifier(Modifier::BOLD)),
-                        self.history_status.as_ref().map(|s| Span::styled(s, Style::default().add_modifier(Modifier::BOLD))),
+                        self.history_status
+                            .as_ref()
+                            .map(|s| Span::styled(s, Style::default().add_modifier(Modifier::BOLD))),
                     ),
                     position,
                     true,
@@ -614,7 +623,9 @@ impl TaskwarriorTui {
                     self.modify.as_str(),
                     (
                         Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
-                        self.history_status.as_ref().map(|s| Span::styled(s, Style::default().add_modifier(Modifier::BOLD))),
+                        self.history_status
+                            .as_ref()
+                            .map(|s| Span::styled(s, Style::default().add_modifier(Modifier::BOLD))),
                     ),
                     position,
                     true,
@@ -640,7 +651,9 @@ impl TaskwarriorTui {
                     self.command.as_str(),
                     (
                         Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
-                        self.history_status.as_ref().map(|s| Span::styled(s, Style::default().add_modifier(Modifier::BOLD)))
+                        self.history_status
+                            .as_ref()
+                            .map(|s| Span::styled(s, Style::default().add_modifier(Modifier::BOLD))),
                     ),
                     position,
                     true,
@@ -661,7 +674,9 @@ impl TaskwarriorTui {
                     self.command.as_str(),
                     (
                         Span::styled("Add Task", Style::default().add_modifier(Modifier::BOLD)),
-                        self.history_status.as_ref().map(|s| Span::styled(s, Style::default().add_modifier(Modifier::BOLD)))
+                        self.history_status
+                            .as_ref()
+                            .map(|s| Span::styled(s, Style::default().add_modifier(Modifier::BOLD))),
                     ),
                     position,
                     true,
@@ -922,7 +937,8 @@ impl TaskwarriorTui {
         } else {
             Spans::from(vec![title.0])
         };
-        let title = Paragraph::new(Text::from(title_spans)).style(Style::default().fg(fg_color).add_modifier(Modifier::REVERSED));
+        let title = Paragraph::new(Text::from(title_spans))
+            .style(Style::default().fg(fg_color).add_modifier(Modifier::REVERSED));
         f.render_widget(title, rects[0]);
 
         // FIXME:
@@ -935,8 +951,7 @@ impl TaskwarriorTui {
         // };
 
         // render command
-        let p = Paragraph::new(Text::from(text))
-            .scroll((0, ((position + 3) as u16).saturating_sub(rect.width)));
+        let p = Paragraph::new(Text::from(text)).scroll((0, ((position + 3) as u16).saturating_sub(rect.width)));
         f.render_widget(p, rects[1]);
     }
 
@@ -1152,7 +1167,6 @@ impl TaskwarriorTui {
             .iter()
             .map(|i| Constraint::Length((*i).try_into().unwrap_or(maximum_column_width as u16)))
             .collect();
-
 
         let t = Table::new(header, rows.into_iter())
             .header_style(
@@ -1587,8 +1601,7 @@ impl TaskwarriorTui {
             .arg("rc._forcecolor=off");
         // .arg("rc.verbose:override=false");
 
-        if let Some(args) =
-        shlex::split(format!(r#"rc.report.{}.filter='{}'"#, self.report, self.filter.trim()).trim())
+        if let Some(args) = shlex::split(format!(r#"rc.report.{}.filter='{}'"#, self.report, self.filter.trim()).trim())
         {
             for arg in args {
                 task.arg(arg);
@@ -2140,7 +2153,7 @@ impl TaskwarriorTui {
                 let re = Regex::new(
                     r"(?P<task_uuid>[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})",
                 )
-                    .unwrap();
+                .unwrap();
                 if let Some(caps) = re.captures(&data) {
                     if let Ok(uuid) = Uuid::parse_str(&caps["task_uuid"]) {
                         self.current_selection_uuid = Some(uuid);
@@ -4145,13 +4158,17 @@ mod tests {
 
         for i in 0..=49 {
             // First line
-            expected.get_mut(i, 0).set_style(Style::default().add_modifier(Modifier::REVERSED));
+            expected
+                .get_mut(i, 0)
+                .set_style(Style::default().add_modifier(Modifier::REVERSED));
         }
         for i in 1..=5 {
             // Tasks
-            expected
-                .get_mut(i, 0)
-                .set_style(Style::default().add_modifier(Modifier::BOLD).add_modifier(Modifier::REVERSED));
+            expected.get_mut(i, 0).set_style(
+                Style::default()
+                    .add_modifier(Modifier::BOLD)
+                    .add_modifier(Modifier::REVERSED),
+            );
         }
         for i in 0..=49 {
             // Command line
@@ -4537,13 +4554,17 @@ mod tests {
 
         for i in 0..=49 {
             // First line
-            expected.get_mut(i, 0).set_style(Style::default().add_modifier(Modifier::REVERSED));
+            expected
+                .get_mut(i, 0)
+                .set_style(Style::default().add_modifier(Modifier::REVERSED));
         }
         for i in 20..=27 {
             // Calendar
-            expected
-                .get_mut(i, 0)
-                .set_style(Style::default().add_modifier(Modifier::BOLD).add_modifier(Modifier::REVERSED));
+            expected.get_mut(i, 0).set_style(
+                Style::default()
+                    .add_modifier(Modifier::BOLD)
+                    .add_modifier(Modifier::REVERSED),
+            );
         }
 
         for i in 0..=49 {
