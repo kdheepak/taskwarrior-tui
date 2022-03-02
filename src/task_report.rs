@@ -9,14 +9,18 @@ use unicode_truncate::UnicodeTruncateStr;
 use unicode_width::UnicodeWidthStr;
 
 pub fn format_date_time(dt: NaiveDateTime) -> String {
+    let dt = Local.from_local_datetime(&dt).unwrap();
     dt.format("%Y-%m-%d %H:%M:%S").to_string()
 }
 
 pub fn format_date(dt: NaiveDateTime) -> String {
+    let dt = Local.from_local_datetime(&dt).unwrap();
     dt.format("%Y-%m-%d").to_string()
 }
 
 pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime) -> String {
+    let to_dt = Local.from_local_datetime(&to_dt).unwrap();
+    let from_dt = Local.from_local_datetime(&from_dt).unwrap();
     let mut seconds = (to_dt - from_dt).num_seconds();
     let minus: &str;
 
