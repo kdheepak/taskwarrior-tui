@@ -18,14 +18,12 @@ pub fn format_date(dt: NaiveDateTime) -> String {
 
 pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime) -> String {
     let mut seconds = (to_dt - from_dt).num_seconds();
-    let minus: &str;
-
-    if seconds < 0 {
+    let minus = if seconds < 0 {
         seconds *= -1;
-        minus = "-";
+        "-"
     } else {
-        minus = "";
-    }
+        ""
+    };
 
     if seconds >= 60 * 60 * 24 * 365 {
         return format!("{}{}y", minus, seconds / 86400 / 365);
@@ -175,11 +173,10 @@ impl TaskReportTable {
 
     pub fn simplify_table(&mut self) -> (Vec<Vec<String>>, Vec<String>) {
         // find which columns are empty
-        let null_columns_len;
         if self.tasks.is_empty() {
             return (vec![], vec![]);
         }
-        null_columns_len = self.tasks[0].len();
+        let null_columns_len = self.tasks[0].len();
 
         let mut null_columns = vec![0; null_columns_len];
         for task in &self.tasks {

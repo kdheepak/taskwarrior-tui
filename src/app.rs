@@ -1059,7 +1059,7 @@ impl TaskwarriorTui {
             } else if task
                 .tags()
                 .unwrap_or(&vec![])
-                .contains(&tag_name.to_string().replace(".", "").to_uppercase())
+                .contains(&tag_name.to_string().replace('.', "").to_uppercase())
             {
                 let color_tag_name = format!("color.{}", tag_name);
                 let s = self.config.color.get(&color_tag_name).copied().unwrap_or_default();
@@ -1473,7 +1473,7 @@ impl TaskwarriorTui {
                 std::cmp::min(
                     self.current_selection
                         .checked_add(self.task_report_height as usize)
-                        .unwrap_or_else(|| self.tasks.len() - 1),
+                        .unwrap_or(self.tasks.len() - 1),
                     self.tasks.len() - 1,
                 )
             }
