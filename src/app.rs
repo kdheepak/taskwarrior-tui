@@ -927,7 +927,7 @@ impl TaskwarriorTui {
         }
         let rects = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Length(1), Constraint::Min(0)].as_ref()) // FIXME: remove empty splits
+            .constraints([Constraint::Length(1), Constraint::Min(0)].as_ref())
             .split(rect);
 
         // render command title
@@ -941,17 +941,8 @@ impl TaskwarriorTui {
             .style(Style::default().fg(fg_color).add_modifier(Modifier::REVERSED));
         f.render_widget(title, rects[0]);
 
-        // FIXME:
-        // let title = if let Some(subtitle) = title.1 {
-        //     let w = (title.0.width() + subtitle.width()).try_into().unwrap();
-        //     let w = rect.width.saturating_sub(w).saturating_sub(2);
-        //     Spans::from(vec![title.0, Span::from("─".repeat(w.into())), subtitle])
-        // } else {
-        //     Spans::from(vec![title.0])
-        // };
-
         // render command
-        let p = Paragraph::new(Text::from(text)).scroll((0, ((position + 3) as u16).saturating_sub(rect.width)));
+        let p = Paragraph::new(Text::from(text)).scroll((0, ((position + 2) as u16).saturating_sub(rects[1].width)));
         f.render_widget(p, rects[1]);
     }
 
