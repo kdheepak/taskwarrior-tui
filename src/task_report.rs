@@ -1,5 +1,5 @@
 use anyhow::Result;
-use chrono::{Datelike, Local, NaiveDate, NaiveDateTime, TimeZone};
+use chrono::{DateTime, Datelike, Local, NaiveDate, NaiveDateTime, TimeZone};
 use itertools::join;
 use std::error::Error;
 use std::process::Command;
@@ -9,14 +9,19 @@ use unicode_truncate::UnicodeTruncateStr;
 use unicode_width::UnicodeWidthStr;
 
 pub fn format_date_time(dt: NaiveDateTime) -> String {
+    let dt = Local.from_local_datetime(&dt).unwrap();
     dt.format("%Y-%m-%d %H:%M:%S").to_string()
 }
 
 pub fn format_date(dt: NaiveDateTime) -> String {
+    let offset = Local.offset_from_utc_datetime(&dt);
+    let dt = DateTime::<Local>::from_utc(dt, offset);
     dt.format("%Y-%m-%d").to_string()
 }
 
 pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime) -> String {
+    let to_dt = Local.from_local_datetime(&to_dt).unwrap();
+    let from_dt = Local.from_local_datetime(&from_dt).unwrap();
     let mut seconds = (to_dt - from_dt).num_seconds();
     let minus = if seconds < 0 {
         seconds *= -1;
@@ -176,9 +181,9 @@ impl TaskReportTable {
         if self.tasks.is_empty() {
             return (vec![], vec![]);
         }
-        let null_columns_len = self.tasks[0].len();
 
-        let mut null_columns = vec![0; null_columns_len];
+        let mut null_columns = vec![0; self.tasks[0].len()];
+
         for task in &self.tasks {
             for (i, s) in task.iter().enumerate() {
                 null_columns[i] += s.len();
