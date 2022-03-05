@@ -1,5 +1,5 @@
 use anyhow::Result;
-use chrono::{Datelike, Local, NaiveDate, NaiveDateTime, TimeZone, DateTime};
+use chrono::{DateTime, Datelike, Local, NaiveDate, NaiveDateTime, TimeZone};
 use itertools::join;
 use std::error::Error;
 use std::process::Command;
