@@ -1,5 +1,5 @@
 use anyhow::Result;
-use chrono::{Datelike, Local, NaiveDate, NaiveDateTime, TimeZone};
+use chrono::{Datelike, Local, NaiveDate, NaiveDateTime, TimeZone, DateTime};
 use itertools::join;
 use std::error::Error;
 use std::process::Command;
@@ -14,7 +14,8 @@ pub fn format_date_time(dt: NaiveDateTime) -> String {
 }
 
 pub fn format_date(dt: NaiveDateTime) -> String {
-    let dt = Local.from_local_datetime(&dt).unwrap();
+    let offset = Local.offset_from_utc_datetime(&dt);
+    let dt = DateTime::<Local>::from_utc(dt, offset);
     dt.format("%Y-%m-%d").to_string()
 }
 
