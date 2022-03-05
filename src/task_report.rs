@@ -23,7 +23,6 @@ pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime) -> S
     let to_dt = Local.from_local_datetime(&to_dt).unwrap();
     let from_dt = Local.from_local_datetime(&from_dt).unwrap();
     let mut seconds = (to_dt - from_dt).num_seconds();
-
     let minus = if seconds < 0 {
         seconds *= -1;
         "-"
@@ -182,7 +181,9 @@ impl TaskReportTable {
         if self.tasks.is_empty() {
             return (vec![], vec![]);
         }
+
         let mut null_columns = vec![0; self.tasks[0].len()];
+
         for task in &self.tasks {
             for (i, s) in task.iter().enumerate() {
                 null_columns[i] += s.len();

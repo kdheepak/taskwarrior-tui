@@ -83,6 +83,7 @@ use task_hookrs::project::Project;
 use versions::Versioning;
 
 use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
+use tui::widgets::Tabs;
 
 const MAX_LINE: usize = 4096;
 
@@ -340,54 +341,67 @@ impl TaskwarriorTui {
         let rect = f.size();
         self.terminal_width = rect.width;
         self.terminal_height = rect.height;
+
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Length(1), Constraint::Min(0)])
+            .split(f.size());
+
+        let tab_layout = chunks[0];
+        let main_layout = chunks[1];
+
+        self.draw_tabs(f, tab_layout);
         match self.mode {
-            Mode::Tasks(_) => self.draw_task(f),
-            Mode::Calendar => self.draw_calendar(f),
-            Mode::Projects => self.draw_projects(f),
+            Mode::Tasks(action) => self.draw_task(f, main_layout, action),
+            Mode::Calendar => self.draw_calendar(f, main_layout),
+            Mode::Projects => self.draw_projects(f, main_layout),
         }
+    }
+
+    fn draw_tabs(&self, f: &mut Frame<impl Backend>, layout: Rect) {
+        let titles: Vec<&str> = vec!["Tasks", "Projects", "Calendar"];
+        let tab_names: Vec<_> = titles.into_iter().map(Spans::from).collect();
+        let selected_tab = match self.mode {
+            Mode::Tasks(_) => 0,
+            Mode::Projects => 1,
+            Mode::Calendar => 2,
+        };
+        let tabs_block = Block::default().style(Style::default().add_modifier(Modifier::REVERSED));
+        let context = Spans::from(vec![
+            Span::from("["),
+            Span::from(if self.current_context.is_empty() {
+                "none"
+            } else {
+                &self.current_context
+            }),
+            Span::from("]"),
+        ]);
+        let tabs = Tabs::new(tab_names)
+            .block(tabs_block.clone())
+            .select(selected_tab)
+            .divider(" ")
+            .highlight_style(Style::default().add_modifier(Modifier::BOLD));
+        let rects = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Min(0), Constraint::Length(context.width() as u16)])
+            .split(layout);
+
+        f.render_widget(tabs, rects[0]);
+        f.render_widget(Paragraph::new(Text::from(context)).block(tabs_block), rects[1]);
     }
 
     pub fn draw_debug(&mut self, f: &mut Frame<impl Backend>) {
         let area = centered_rect(50, 50, f.size());
         f.render_widget(Clear, area);
-        let t = format!("{}", self.current_selection,);
+        let t = format!("{}", self.current_selection);
         let p = Paragraph::new(Text::from(t))
             .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded));
         f.render_widget(p, area);
     }
 
-    pub fn draw_projects(&mut self, f: &mut Frame<impl Backend>) {
-        let rects = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Min(0)].as_ref())
-            .split(f.size());
-
-        let today = Local::today();
-        let title = vec![
-            Span::styled("Task", Style::default().add_modifier(Modifier::DIM)),
-            Span::from("|"),
-            Span::styled("Projects", Style::default().add_modifier(Modifier::BOLD)),
-            Span::from("|"),
-            Span::styled("Calendar", Style::default().add_modifier(Modifier::DIM)),
-        ];
-
-        let split_task_layout = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Percentage(100)].as_ref())
-            .split(rects[0]);
-
-        self.projects.report_height = split_task_layout[0].height;
-        self.draw_projects_report_window(f, split_task_layout[0], title);
-    }
-
-    fn draw_projects_report_window(&mut self, f: &mut Frame<impl Backend>, rect: Rect, title: Vec<Span>) {
+    pub fn draw_projects(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
         let data = self.projects.data.clone();
-        let p = Paragraph::new(Text::from(&data[..])).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
-                .title(title),
-        );
+        let p = Paragraph::new(Text::from(&data[..]));
         f.render_widget(p, rect);
     }
 
@@ -411,50 +425,23 @@ impl TaskwarriorTui {
         style
     }
 
-    pub fn draw_calendar(&mut self, f: &mut Frame<impl Backend>) {
-        let dates_with_styles = self.get_dates_with_styles();
-        let rects = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Min(0)].as_ref())
-            .split(f.size());
-        let today = Local::today();
-        let mut title = vec![
-            Span::styled("Task", Style::default().add_modifier(Modifier::DIM)),
-            Span::from("|"),
-            Span::styled("Projects", Style::default().add_modifier(Modifier::DIM)),
-            Span::from("|"),
-            Span::styled("Calendar", Style::default().add_modifier(Modifier::BOLD)),
-        ];
-
-        if !self.current_context.is_empty() {
-            let context_style = Style::default();
-            context_style.add_modifier(Modifier::ITALIC);
-            title.insert(title.len(), Span::from(" ("));
-            title.insert(title.len(), Span::styled(&self.current_context, context_style));
-            title.insert(title.len(), Span::from(")"));
-        }
-
+    pub fn draw_calendar(&mut self, f: &mut Frame<impl Backend>, layout: Rect) {
         let mut c = Calendar::default()
-            .block(
-                Block::default()
-                    .title(Spans::from(title))
-                    .borders(Borders::ALL)
-                    .border_type(BorderType::Rounded),
-            )
             .today_style(self.config.uda_style_calendar_today)
             .year(self.calendar_year)
-            .date_style(dates_with_styles)
+            .date_style(self.get_dates_with_styles())
             .months_per_row(self.config.uda_calendar_months_per_row);
         c.title_background_color = self.config.uda_style_calendar_title.bg.unwrap_or(Color::Reset);
-        f.render_widget(c, rects[0]);
+        f.render_widget(c, layout);
     }
 
-    pub fn draw_task(&mut self, f: &mut Frame<impl Backend>) {
+    pub fn draw_task(&mut self, f: &mut Frame<impl Backend>, layout: Rect, action: Action) {
         let rects = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Min(0), Constraint::Length(3)].as_ref())
-            .split(f.size());
+            .constraints([Constraint::Min(0), Constraint::Length(2)].as_ref())
+            .split(layout);
 
+        // render task report and task details if required
         if self.task_report_show_info {
             let split_task_layout = Layout::default()
                 .direction(Direction::Vertical)
@@ -465,14 +452,11 @@ impl TaskwarriorTui {
             self.draw_task_report(f, split_task_layout[0]);
             self.draw_task_details(f, split_task_layout[1]);
         } else {
-            let full_table_layout = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([Constraint::Percentage(100)].as_ref())
-                .split(rects[0]);
-
-            self.task_report_height = full_table_layout[0].height;
-            self.draw_task_report(f, full_table_layout[0]);
+            self.task_report_height = rects[0].height;
+            self.draw_task_report(f, rects[0]);
         }
+
+        // calculate selected tasks
         let selected = self.current_selection;
         let task_ids = if self.tasks.is_empty() {
             vec!["0".to_string()]
@@ -490,12 +474,20 @@ impl TaskwarriorTui {
                 }
             }
         };
-        self.handle_task_mode_action(f, &rects, &task_ids);
+
+        // render task mode
+        self.handle_task_mode_action(f, &rects, &task_ids, action);
     }
 
-    fn handle_task_mode_action(&mut self, f: &mut Frame<impl Backend>, rects: &[Rect], task_ids: &[String]) {
-        match self.mode {
-            Mode::Tasks(Action::Error) => {
+    fn handle_task_mode_action(
+        &mut self,
+        f: &mut Frame<impl Backend>,
+        rects: &[Rect],
+        task_ids: &[String],
+        action: Action,
+    ) {
+        match action {
+            Action::Error => {
                 Self::draw_command(
                     f,
                     rects[1],
@@ -527,7 +519,7 @@ impl TaskwarriorTui {
                     .constraints([Constraint::Min(0)].as_ref())
                     .split(f.size());
             }
-            Mode::Tasks(Action::Report) => {
+            Action::Report => {
                 // reset error when entering Action::Report
                 self.previous_mode = None;
                 self.error = None;
@@ -536,16 +528,13 @@ impl TaskwarriorTui {
                     f,
                     rects[1],
                     self.filter.as_str(),
-                    (
-                        Span::raw("Filter Tasks"),
-                        Some(Span::raw(self.history_status.clone().unwrap_or_else(|| "".to_string()))),
-                    ),
+                    (Span::raw("Filter Tasks"), self.history_status.as_ref().map(Span::raw)),
                     Self::get_position(&self.filter),
                     false,
                     self.error.clone(),
                 );
             }
-            Mode::Tasks(Action::Jump) => {
+            Action::Jump => {
                 let position = Self::get_position(&self.command);
                 Self::draw_command(
                     f,
@@ -560,7 +549,7 @@ impl TaskwarriorTui {
                     self.error.clone(),
                 );
             }
-            Mode::Tasks(Action::Filter) => {
+            Action::Filter => {
                 let position = Self::get_position(&self.filter);
                 if self.show_completion_pane {
                     self.draw_completion_pop_up(f, rects[1], position);
@@ -571,17 +560,16 @@ impl TaskwarriorTui {
                     self.filter.as_str(),
                     (
                         Span::styled("Filter Tasks", Style::default().add_modifier(Modifier::BOLD)),
-                        Some(Span::styled(
-                            self.history_status.clone().unwrap_or_else(|| "".to_string()),
-                            Style::default().add_modifier(Modifier::BOLD),
-                        )),
+                        self.history_status
+                            .as_ref()
+                            .map(|s| Span::styled(s, Style::default().add_modifier(Modifier::BOLD))),
                     ),
                     position,
                     true,
                     self.error.clone(),
                 );
             }
-            Mode::Tasks(Action::Log) => {
+            Action::Log => {
                 if self.config.uda_auto_insert_double_quotes_on_log && self.command.is_empty() {
                     self.command.update(r#""""#, 1);
                 };
@@ -595,17 +583,16 @@ impl TaskwarriorTui {
                     self.command.as_str(),
                     (
                         Span::styled("Log Task", Style::default().add_modifier(Modifier::BOLD)),
-                        Some(Span::styled(
-                            self.history_status.clone().unwrap_or_else(|| "".to_string()),
-                            Style::default().add_modifier(Modifier::BOLD),
-                        )),
+                        self.history_status
+                            .as_ref()
+                            .map(|s| Span::styled(s, Style::default().add_modifier(Modifier::BOLD))),
                     ),
                     position,
                     true,
                     self.error.clone(),
                 );
             }
-            Mode::Tasks(Action::Subprocess) => {
+            Action::Subprocess => {
                 let position = Self::get_position(&self.command);
                 Self::draw_command(
                     f,
@@ -620,7 +607,7 @@ impl TaskwarriorTui {
                     self.error.clone(),
                 );
             }
-            Mode::Tasks(Action::Modify) => {
+            Action::Modify => {
                 let position = Self::get_position(&self.modify);
                 if self.show_completion_pane {
                     self.draw_completion_pop_up(f, rects[1], position);
@@ -636,17 +623,16 @@ impl TaskwarriorTui {
                     self.modify.as_str(),
                     (
                         Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
-                        Some(Span::styled(
-                            self.history_status.clone().unwrap_or_else(|| "".to_string()),
-                            Style::default().add_modifier(Modifier::BOLD),
-                        )),
+                        self.history_status
+                            .as_ref()
+                            .map(|s| Span::styled(s, Style::default().add_modifier(Modifier::BOLD))),
                     ),
                     position,
                     true,
                     self.error.clone(),
                 );
             }
-            Mode::Tasks(Action::Annotate) => {
+            Action::Annotate => {
                 if self.config.uda_auto_insert_double_quotes_on_annotate && self.command.is_empty() {
                     self.command.update(r#""""#, 1);
                 };
@@ -665,17 +651,16 @@ impl TaskwarriorTui {
                     self.command.as_str(),
                     (
                         Span::styled(label, Style::default().add_modifier(Modifier::BOLD)),
-                        Some(Span::styled(
-                            self.history_status.clone().unwrap_or_else(|| "".to_string()),
-                            Style::default().add_modifier(Modifier::BOLD),
-                        )),
+                        self.history_status
+                            .as_ref()
+                            .map(|s| Span::styled(s, Style::default().add_modifier(Modifier::BOLD))),
                     ),
                     position,
                     true,
                     self.error.clone(),
                 );
             }
-            Mode::Tasks(Action::Add) => {
+            Action::Add => {
                 if self.config.uda_auto_insert_double_quotes_on_add && self.command.is_empty() {
                     self.command.update(r#""""#, 1);
                 };
@@ -689,17 +674,16 @@ impl TaskwarriorTui {
                     self.command.as_str(),
                     (
                         Span::styled("Add Task", Style::default().add_modifier(Modifier::BOLD)),
-                        Some(Span::styled(
-                            self.history_status.clone().unwrap_or_else(|| "".to_string()),
-                            Style::default().add_modifier(Modifier::BOLD),
-                        )),
+                        self.history_status
+                            .as_ref()
+                            .map(|s| Span::styled(s, Style::default().add_modifier(Modifier::BOLD))),
                     ),
                     position,
                     true,
                     self.error.clone(),
                 );
             }
-            Mode::Tasks(Action::HelpPopup) => {
+            Action::HelpPopup => {
                 Self::draw_command(
                     f,
                     rects[1],
@@ -711,7 +695,7 @@ impl TaskwarriorTui {
                 );
                 self.draw_help_popup(f, 80, 90);
             }
-            Mode::Tasks(Action::ContextMenu) => {
+            Action::ContextMenu => {
                 Self::draw_command(
                     f,
                     rects[1],
@@ -723,7 +707,7 @@ impl TaskwarriorTui {
                 );
                 self.draw_context_menu(f, 80, 50);
             }
-            Mode::Tasks(Action::DonePrompt) => {
+            Action::DonePrompt => {
                 let label = if task_ids.len() > 1 {
                     format!("Done Tasks {}?", task_ids.join(","))
                 } else {
@@ -747,7 +731,7 @@ impl TaskwarriorTui {
                     self.error.clone(),
                 );
             }
-            Mode::Tasks(Action::DeletePrompt) => {
+            Action::DeletePrompt => {
                 let label = if task_ids.len() > 1 {
                     format!("Delete Tasks {}?", task_ids.join(","))
                 } else {
@@ -770,9 +754,6 @@ impl TaskwarriorTui {
                     false,
                     self.error.clone(),
                 );
-            }
-            _ => {
-                panic!("Reached unreachable code. Something went wrong");
             }
         }
     }
@@ -937,48 +918,47 @@ impl TaskwarriorTui {
         cursor: bool,
         error: Option<String>,
     ) {
-        f.render_widget(Clear, rect);
+        // f.render_widget(Clear, rect);
         if cursor {
             f.set_cursor(
-                std::cmp::min(rect.x + position as u16 + 1, rect.x + rect.width.saturating_sub(2)),
+                std::cmp::min(rect.x + position as u16, rect.x + rect.width.saturating_sub(2)),
                 rect.y + 1,
             );
         }
-        let border_style = if error.is_some() {
-            Style::default().fg(Color::Indexed(1)) // red color border for errors
-        } else {
-            Style::default()
-        };
+        let rects = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Length(1), Constraint::Min(0)].as_ref()) // FIXME: remove empty splits
+            .split(rect);
 
-        let title = if let Some(subtitle) = title.1 {
-            let w = (title.0.width() + subtitle.width()).try_into().unwrap();
-            let w = rect.width.saturating_sub(w).saturating_sub(2);
-            Spans::from(vec![title.0, Span::from("─".repeat(w.into())), subtitle])
+        // render command title
+        let fg_color = if error.is_some() { Color::Red } else { Color::Reset };
+        let title_spans = if let Some(subtitle) = title.1 {
+            Spans::from(vec![title.0, Span::from(" ["), subtitle, Span::from("]")])
         } else {
             Spans::from(vec![title.0])
         };
+        let title = Paragraph::new(Text::from(title_spans))
+            .style(Style::default().fg(fg_color).add_modifier(Modifier::REVERSED));
+        f.render_widget(title, rects[0]);
 
-        let p = Paragraph::new(Text::from(text))
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_type(BorderType::Rounded)
-                    .border_style(border_style)
-                    .title(title),
-            )
-            .scroll((0, ((position + 3) as u16).saturating_sub(rect.width)));
-        f.render_widget(p, rect);
+        // FIXME:
+        // let title = if let Some(subtitle) = title.1 {
+        //     let w = (title.0.width() + subtitle.width()).try_into().unwrap();
+        //     let w = rect.width.saturating_sub(w).saturating_sub(2);
+        //     Spans::from(vec![title.0, Span::from("─".repeat(w.into())), subtitle])
+        // } else {
+        //     Spans::from(vec![title.0])
+        // };
+
+        // render command
+        let p = Paragraph::new(Text::from(text)).scroll((0, ((position + 3) as u16).saturating_sub(rect.width)));
+        f.render_widget(p, rects[1]);
     }
 
     fn draw_task_details(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
         if self.tasks.is_empty() {
-            f.render_widget(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_type(BorderType::Rounded)
-                    .title("Task not found"),
-                rect,
-            );
+            let p = Paragraph::new(Text::from("Task not found")).block(Block::default().borders(Borders::TOP));
+            f.render_widget(p, rect);
             return;
         }
         let selected = self.current_selection;
@@ -996,12 +976,7 @@ impl TaskwarriorTui {
             self.task_details_scroll,
         );
         let p = Paragraph::new(Text::from(&data[..]))
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_type(BorderType::Rounded)
-                    .title(format!("Task {}", task_id)),
-            )
+            .block(Block::default().borders(Borders::TOP))
             .scroll((self.task_details_scroll, 0));
         f.render_widget(p, rect);
     }
@@ -1139,36 +1114,14 @@ impl TaskwarriorTui {
 
     fn draw_task_report(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
         let (tasks, headers) = self.get_task_report();
-        let mut style = Style::default();
-        match self.mode {
-            Mode::Tasks(Action::Report) => style = style.add_modifier(Modifier::BOLD),
-            _ => style = style.add_modifier(Modifier::DIM),
-        }
-
-        let mut title = vec![
-            Span::styled("Task", style),
-            Span::from("|"),
-            Span::styled("Projects", Style::default().add_modifier(Modifier::DIM)),
-            Span::from("|"),
-            Span::styled("Calendar", Style::default().add_modifier(Modifier::DIM)),
-        ];
 
         if tasks.is_empty() {
             if !self.current_context.is_empty() {
                 let context_style = Style::default();
                 context_style.add_modifier(Modifier::ITALIC);
-                title.insert(title.len(), Span::from(" ("));
-                title.insert(title.len(), Span::styled(&self.current_context, context_style));
-                title.insert(title.len(), Span::from(")"));
             }
 
-            f.render_widget(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_type(BorderType::Rounded)
-                    .title(Spans::from(title)),
-                rect,
-            );
+            f.render_widget(Block::default(), rect);
             return;
         }
 
@@ -1215,21 +1168,7 @@ impl TaskwarriorTui {
             .map(|i| Constraint::Length((*i).try_into().unwrap_or(maximum_column_width as u16)))
             .collect();
 
-        if !self.current_context.is_empty() {
-            let context_style = Style::default();
-            context_style.add_modifier(Modifier::ITALIC);
-            title.insert(title.len(), Span::from(" ("));
-            title.insert(title.len(), Span::styled(&self.current_context, context_style));
-            title.insert(title.len(), Span::from(")"));
-        }
-
         let t = Table::new(header, rows.into_iter())
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_type(BorderType::Rounded)
-                    .title(Spans::from(title)),
-            )
             .header_style(
                 self.config
                     .color
@@ -1253,7 +1192,7 @@ impl TaskwarriorTui {
         }
     }
 
-    pub fn get_all_contexts(&self) -> (Vec<Vec<String>>, Vec<String>) {
+    fn get_all_contexts(&self) -> (Vec<Vec<String>>, Vec<String>) {
         let contexts = self
             .contexts
             .rows
@@ -1265,7 +1204,7 @@ impl TaskwarriorTui {
         (contexts, headers)
     }
 
-    pub fn get_task_report(&mut self) -> (Vec<Vec<String>>, Vec<String>) {
+    fn get_task_report(&mut self) -> (Vec<Vec<String>>, Vec<String>) {
         self.task_report_table.generate_table(&self.tasks);
         let (tasks, headers) = self.task_report_table.simplify_table();
         (tasks, headers)
@@ -1662,8 +1601,7 @@ impl TaskwarriorTui {
             .arg("rc._forcecolor=off");
         // .arg("rc.verbose:override=false");
 
-        if let Some(args) =
-            shlex::split(format!(r#"rc.report.{}.filter='{}'"#, self.report, self.filter.trim(),).trim())
+        if let Some(args) = shlex::split(format!(r#"rc.report.{}.filter='{}'"#, self.report, self.filter.trim()).trim())
         {
             for arg in args {
                 task.arg(arg);
@@ -1758,7 +1696,7 @@ impl TaskwarriorTui {
                 let output = command.output();
                 match output {
                     Ok(_) => Ok(()),
-                    Err(_) => Err(format!("Shell command `{}` exited with non-zero output", shell,)),
+                    Err(_) => Err(format!("Shell command `{}` exited with non-zero output", shell)),
                 }
             }
             None => Err(format!("Cannot run subprocess. Unable to shlex split `{}`", shell)),
@@ -1874,10 +1812,10 @@ impl TaskwarriorTui {
                                 ))
                             }
                         }
-                        Err(s) => Err(format!("`{}` failed: {}", shell, s,)),
+                        Err(s) => Err(format!("`{}` failed: {}", shell, s)),
                     }
                 } else {
-                    Err(format!("`{}` failed: {}", shell, s,))
+                    Err(format!("`{}` failed: {}", shell, s))
                 }
             }
             None => Err(format!(
@@ -1925,7 +1863,7 @@ impl TaskwarriorTui {
                         if o.status.success() {
                             Ok(())
                         } else {
-                            Err(format!("Modify failed. {}", String::from_utf8_lossy(&o.stdout),))
+                            Err(format!("Modify failed. {}", String::from_utf8_lossy(&o.stdout)))
                         }
                     }
                     Err(_) => Err(format!(
@@ -1934,7 +1872,7 @@ impl TaskwarriorTui {
                     )),
                 }
             }
-            None => Err(format!("Cannot shlex split `{}`", shell,)),
+            None => Err(format!("Cannot shlex split `{}`", shell)),
         };
 
         if task_uuids.len() == 1 {
@@ -1976,7 +1914,7 @@ impl TaskwarriorTui {
                         if o.status.success() {
                             Ok(())
                         } else {
-                            Err(format!("Annotate failed. {}", String::from_utf8_lossy(&o.stdout),))
+                            Err(format!("Annotate failed. {}", String::from_utf8_lossy(&o.stdout)))
                         }
                     }
                     Err(_) => Err(format!(
@@ -2029,7 +1967,7 @@ impl TaskwarriorTui {
                             Err(format!("Error: {}", String::from_utf8_lossy(&output.stderr)))
                         }
                     }
-                    Err(e) => Err(format!("Cannot run `{:?}`: {}", command, e,)),
+                    Err(e) => Err(format!("Cannot run `{:?}`: {}", command, e)),
                 }
             }
             None => Err(format!(
@@ -2086,7 +2024,7 @@ impl TaskwarriorTui {
 
             let output = Command::new("task").arg(task_uuid.to_string()).arg(command).output();
             if output.is_err() {
-                return Err(format!("Error running `task {}` for task `{}`.", command, task_uuid,));
+                return Err(format!("Error running `task {}` for task `{}`.", command, task_uuid));
             }
         }
 
@@ -2576,7 +2514,7 @@ impl TaskwarriorTui {
                         self.mode = Mode::Tasks(Action::Modify);
                         self.command_history.reset();
                         self.history_status = Some(format!(
-                            " {} / {}",
+                            "{} / {}",
                             self.command_history
                                 .history_index()
                                 .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
@@ -2631,7 +2569,7 @@ impl TaskwarriorTui {
                         self.mode = Mode::Tasks(Action::Log);
                         self.command_history.reset();
                         self.history_status = Some(format!(
-                            " {} / {}",
+                            "{} / {}",
                             self.command_history
                                 .history_index()
                                 .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
@@ -2643,7 +2581,7 @@ impl TaskwarriorTui {
                         self.mode = Mode::Tasks(Action::Add);
                         self.command_history.reset();
                         self.history_status = Some(format!(
-                            " {} / {}",
+                            "{} / {}",
                             self.command_history
                                 .history_index()
                                 .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
@@ -2655,7 +2593,7 @@ impl TaskwarriorTui {
                         self.mode = Mode::Tasks(Action::Annotate);
                         self.command_history.reset();
                         self.history_status = Some(format!(
-                            " {} / {}",
+                            "{} / {}",
                             self.command_history
                                 .history_index()
                                 .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
@@ -2669,7 +2607,7 @@ impl TaskwarriorTui {
                         self.mode = Mode::Tasks(Action::Filter);
                         self.filter_history.reset();
                         self.history_status = Some(format!(
-                            " {} / {}",
+                            "{} / {}",
                             self.filter_history
                                 .history_index()
                                 .unwrap_or_else(|| self.filter_history.history_len().saturating_sub(1))
@@ -2883,7 +2821,7 @@ impl TaskwarriorTui {
                             self.modify.update("", 0);
                             self.modify.update(&s, std::cmp::min(s.len(), p));
                             self.history_status = Some(format!(
-                                " {} / {}",
+                                "{} / {}",
                                 self.command_history
                                     .history_index()
                                     .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
@@ -2903,7 +2841,7 @@ impl TaskwarriorTui {
                             self.modify.update("", 0);
                             self.modify.update(&s, std::cmp::min(s.len(), p));
                             self.history_status = Some(format!(
-                                " {} / {}",
+                                "{} / {}",
                                 self.command_history
                                     .history_index()
                                     .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
@@ -3006,7 +2944,7 @@ impl TaskwarriorTui {
                             self.command.update("", 0);
                             self.command.update(&s, std::cmp::min(s.len(), p));
                             self.history_status = Some(format!(
-                                " {} / {}",
+                                "{} / {}",
                                 self.command_history
                                     .history_index()
                                     .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
@@ -3026,7 +2964,7 @@ impl TaskwarriorTui {
                             self.command.update("", 0);
                             self.command.update(&s, std::cmp::min(s.len(), p));
                             self.history_status = Some(format!(
-                                " {} / {}",
+                                "{} / {}",
                                 self.command_history
                                     .history_index()
                                     .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
@@ -3104,7 +3042,7 @@ impl TaskwarriorTui {
                             self.command.update("", 0);
                             self.command.update(&s, std::cmp::min(s.len(), p));
                             self.history_status = Some(format!(
-                                " {} / {}",
+                                "{} / {}",
                                 self.command_history
                                     .history_index()
                                     .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
@@ -3124,7 +3062,7 @@ impl TaskwarriorTui {
                             self.command.update("", 0);
                             self.command.update(&s, std::cmp::min(s.len(), p));
                             self.history_status = Some(format!(
-                                " {} / {}",
+                                "{} / {}",
                                 self.command_history
                                     .history_index()
                                     .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
@@ -3228,7 +3166,7 @@ impl TaskwarriorTui {
                             self.command.update("", 0);
                             self.command.update(&s, std::cmp::min(s.len(), p));
                             self.history_status = Some(format!(
-                                " {} / {}",
+                                "{} / {}",
                                 self.command_history
                                     .history_index()
                                     .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
@@ -3249,7 +3187,7 @@ impl TaskwarriorTui {
                             self.command.update("", 0);
                             self.command.update(&s, std::cmp::min(s.len(), p));
                             self.history_status = Some(format!(
-                                " {} / {}",
+                                "{} / {}",
                                 self.command_history
                                     .history_index()
                                     .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
@@ -3315,7 +3253,7 @@ impl TaskwarriorTui {
                             self.filter.update("", 0);
                             self.filter.update(&s, std::cmp::min(p, s.len()));
                             self.history_status = Some(format!(
-                                " {} / {}",
+                                "{} / {}",
                                 self.filter_history
                                     .history_index()
                                     .unwrap_or_else(|| self.filter_history.history_len().saturating_sub(1))
@@ -3336,7 +3274,7 @@ impl TaskwarriorTui {
                             self.filter.update("", 0);
                             self.filter.update(&s, std::cmp::min(p, s.len()));
                             self.history_status = Some(format!(
-                                " {} / {}",
+                                "{} / {}",
                                 self.filter_history
                                     .history_index()
                                     .unwrap_or_else(|| self.filter_history.history_len().saturating_sub(1))
@@ -4193,7 +4131,6 @@ mod tests {
             terminal
                 .draw(|f| {
                     app.draw(f);
-                    app.draw(f);
                 })
                 .unwrap();
 
@@ -4202,42 +4139,43 @@ mod tests {
         };
 
         let mut expected = Buffer::with_lines(vec![
-            "╭Task|Projects|Calendar──────────────────────────╮",
-            "│                                                │",
-            "│                                                │",
-            "│                                                │",
-            "│                                                │",
-            "╰────────────────────────────────────────────────╯",
-            "╭Task not found──────────────────────────────────╮",
-            "│                                                │",
-            "│                                                │",
-            "│                                                │",
-            "│                                                │",
-            "╰────────────────────────────────────────────────╯",
-            "╭Filter Tasks────────────────────────────────────╮",
-            "│(status:pending or status:waiting)              │",
-            "╰────────────────────────────────────────────────╯",
+            " Tasks   Projects   Calendar                [none]",
+            "                                                  ",
+            "                                                  ",
+            "                                                  ",
+            "                                                  ",
+            "                                                  ",
+            "                                                  ",
+            "──────────────────────────────────────────────────",
+            "Task not found                                    ",
+            "                                                  ",
+            "                                                  ",
+            "                                                  ",
+            "                                                  ",
+            "Filter Tasks                                      ",
+            "(status:pending or status:waiting)                ",
         ]);
 
-        for i in 1..=4 {
-            // Task
+        for i in 0..=49 {
+            // First line
             expected
                 .get_mut(i, 0)
-                .set_style(Style::default().add_modifier(Modifier::BOLD));
+                .set_style(Style::default().add_modifier(Modifier::REVERSED));
         }
-        for i in 6..=13 {
-            // Projects
+        for i in 1..=5 {
+            // Tasks
+            expected.get_mut(i, 0).set_style(
+                Style::default()
+                    .add_modifier(Modifier::BOLD)
+                    .add_modifier(Modifier::REVERSED),
+            );
+        }
+        for i in 0..=49 {
+            // Command line
             expected
-                .get_mut(i, 0)
-                .set_style(Style::default().add_modifier(Modifier::DIM));
+                .get_mut(i, 13)
+                .set_style(Style::default().add_modifier(Modifier::REVERSED));
         }
-        for i in 15..=22 {
-            // Calendar
-            expected
-                .get_mut(i, 0)
-                .set_style(Style::default().add_modifier(Modifier::DIM));
-        }
-
         test_case(&expected);
     }
 
@@ -4280,7 +4218,7 @@ mod tests {
                     let position = TaskwarriorTui::get_position(&app.modify);
                     f.set_cursor(
                         std::cmp::min(
-                            rects[1].x + position as u16 + 1,
+                            rects[1].x + position as u16,
                             rects[1].x + rects[1].width.saturating_sub(2),
                         ),
                         rects[1].y + 1,
@@ -4337,7 +4275,7 @@ mod tests {
                     let position = TaskwarriorTui::get_position(&app.modify);
                     f.set_cursor(
                         std::cmp::min(
-                            rects[1].x + position as u16 + 1,
+                            rects[1].x + position as u16,
                             rects[1].x + rects[1].width.saturating_sub(2),
                         ),
                         rects[1].y + 1,
@@ -4384,18 +4322,18 @@ mod tests {
         };
 
         let mut expected1 = Buffer::with_lines(vec![
-            "╭Modify Task 10─────────╮",
-            "│based on your .taskrc  │",
-            "╰───────────────────────╯",
+            "Modify Task 10           ",
+            "based on your .taskrc    ",
+            "                         ",
         ]);
 
         let mut expected2 = Buffer::with_lines(vec![
-            "╭Modify Task 10─────────╮",
-            "│Support color for tasks│",
-            "╰───────────────────────╯",
+            "Modify Task 10           ",
+            "Support color for tasks b",
+            "                         ",
         ]);
 
-        for i in 1..=14 {
+        for i in 0..=13 {
             // Task
             expected1
                 .get_mut(i, 0)
@@ -4403,6 +4341,15 @@ mod tests {
             expected2
                 .get_mut(i, 0)
                 .set_style(Style::default().add_modifier(Modifier::BOLD));
+        }
+        for i in 0..=24 {
+            // Command line
+            expected1
+                .get_mut(i, 0)
+                .set_style(Style::default().add_modifier(Modifier::REVERSED));
+            expected2
+                .get_mut(i, 0)
+                .set_style(Style::default().add_modifier(Modifier::REVERSED));
         }
 
         test_case(&expected1, &expected2);
@@ -4588,43 +4535,39 @@ mod tests {
         };
 
         let mut expected = Buffer::with_lines(vec![
-            "╭Task|Projects|Calendar──────────────────────────╮",
-            "│                                                │",
-            "│                      2020                      │",
-            "│                                                │",
-            "│        January               February          │",
-            "│  Su Mo Tu We Th Fr Sa  Su Mo Tu We Th Fr Sa    │",
-            "│            1  2  3  4                     1    │",
-            "│   5  6  7  8  9 10 11   2  3  4  5  6  7  8    │",
-            "│  12 13 14 15 16 17 18   9 10 11 12 13 14 15    │",
-            "│  19 20 21 22 23 24 25  16 17 18 19 20 21 22    │",
-            "│  26 27 28 29 30 31     23 24 25 26 27 28 29    │",
-            "│                                                │",
-            "│                                                │",
-            "│                                                │",
-            "╰────────────────────────────────────────────────╯",
+            " Tasks   Projects   Calendar                [none]",
+            "                                                  ",
+            "                       2020                       ",
+            "                                                  ",
+            "         January               February           ",
+            "   Su Mo Tu We Th Fr Sa  Su Mo Tu We Th Fr Sa     ",
+            "             1  2  3  4                     1     ",
+            "    5  6  7  8  9 10 11   2  3  4  5  6  7  8     ",
+            "   12 13 14 15 16 17 18   9 10 11 12 13 14 15     ",
+            "   19 20 21 22 23 24 25  16 17 18 19 20 21 22     ",
+            "   26 27 28 29 30 31     23 24 25 26 27 28 29     ",
+            "                                                  ",
+            "                                                  ",
+            "                                                  ",
+            "                                                  ",
         ]);
 
-        for i in 1..=4 {
-            // Task
+        for i in 0..=49 {
+            // First line
             expected
                 .get_mut(i, 0)
-                .set_style(Style::default().add_modifier(Modifier::DIM));
+                .set_style(Style::default().add_modifier(Modifier::REVERSED));
         }
-        for i in 6..=13 {
-            // Projects
-            expected
-                .get_mut(i, 0)
-                .set_style(Style::default().add_modifier(Modifier::DIM));
-        }
-        for i in 15..=22 {
+        for i in 20..=27 {
             // Calendar
-            expected
-                .get_mut(i, 0)
-                .set_style(Style::default().add_modifier(Modifier::BOLD));
+            expected.get_mut(i, 0).set_style(
+                Style::default()
+                    .add_modifier(Modifier::BOLD)
+                    .add_modifier(Modifier::REVERSED),
+            );
         }
 
-        for i in 1..=48 {
+        for i in 0..=49 {
             expected
                 .get_mut(i, 2)
                 .set_style(Style::default().add_modifier(Modifier::UNDERLINED));

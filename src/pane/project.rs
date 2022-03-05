@@ -36,7 +36,6 @@ pub struct ProjectsState {
     pub table_state: TableState,
     pub current_selection: usize,
     pub marked: HashSet<Project>,
-    pub report_height: u16,
     pub columns: Vec<String>,
     pub rows: Vec<ProjectDetails>,
     pub data: String,
@@ -57,7 +56,6 @@ impl ProjectsState {
             table_state: TableState::default(),
             current_selection: 0,
             marked: HashSet::default(),
-            report_height: 0,
             columns: vec![
                 PROJECT_HEADER.to_string(),
                 REMAINING_TASK_HEADER.to_string(),
