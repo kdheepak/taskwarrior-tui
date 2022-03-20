@@ -81,6 +81,7 @@ pub struct Config {
     pub uda_quick_tag_name: String,
     pub uda_task_report_prompt_on_delete: bool,
     pub uda_task_report_prompt_on_done: bool,
+    pub uda_task_report_date_time_vague_more_precise: bool,
     pub uda_context_menu_select_on_move: bool,
 }
 
@@ -149,6 +150,7 @@ impl Config {
         let uda_task_report_prompt_on_delete = Self::get_uda_task_report_prompt_on_delete(data);
         let uda_task_report_prompt_on_done = Self::get_uda_task_report_prompt_on_done(data);
         let uda_context_menu_select_on_move = Self::get_uda_context_menu_select_on_move(data);
+        let uda_task_report_date_time_vague_more_precise = Self::get_uda_task_report_date_time_vague_more_precise(data);
 
         Ok(Self {
             enabled,
@@ -194,6 +196,7 @@ impl Config {
             uda_quick_tag_name,
             uda_task_report_prompt_on_delete,
             uda_task_report_prompt_on_done,
+            uda_task_report_date_time_vague_more_precise,
             uda_context_menu_select_on_move,
         })
     }
@@ -539,6 +542,13 @@ impl Config {
             .unwrap_or_default()
             .get_bool()
             .unwrap_or(true)
+    }
+
+    fn get_uda_task_report_date_time_vague_more_precise(data: &str) -> bool {
+        Self::get_config("uda.taskwarrior-tui.task-report.date-time-vague-more-precise", data)
+            .unwrap_or_default()
+            .get_bool()
+            .unwrap_or(false)
     }
 
     fn get_uda_task_report_prompt_on_done(data: &str) -> bool {
