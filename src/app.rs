@@ -33,7 +33,7 @@ use unicode_segmentation::Graphemes;
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
-use chrono::{Datelike, Local, NaiveDate, NaiveDateTime, TimeZone, Timelike};
+use chrono::{Datelike, FixedOffset, Local, NaiveDate, NaiveDateTime, TimeZone, Timelike};
 
 use anyhow::Context as AnyhowContext;
 use anyhow::{anyhow, Result};
@@ -777,17 +777,21 @@ impl TaskwarriorTui {
         }
     }
 
-    pub fn get_dates_with_styles(&self) -> Vec<(NaiveDate, Style)> {
-        let mut tasks_with_styles = vec![];
-
+    pub fn get_dates_with_styles(&self) -> Vec<(chrono::Date<FixedOffset>, Style)> {
         if !self.tasks.is_empty() {
             let tasks = &self.tasks;
-            let tasks_with_due_dates = tasks.iter().filter(|t| t.due().is_some());
-
-            tasks_with_styles
-                .extend(tasks_with_due_dates.map(|t| (t.due().unwrap().clone().date(), self.style_for_task(t))));
+            tasks
+                .iter()
+                .filter_map(|t| t.due().map(|d| (d.clone(), self.style_for_task(t))))
+                .map(|(d, t)| {
+                    let now = Local::now();
+                    let reference = TimeZone::from_utc_datetime(now.offset(), &d);
+                    (reference.date(), t)
+                })
+                .collect()
+        } else {
+            vec![]
         }
-        tasks_with_styles
     }
 
     pub fn get_position(lb: &LineBuffer) -> usize {
@@ -4815,7 +4819,9 @@ mod tests {
 
         let backend = TestBackend::new(80, 20);
         let mut terminal = Terminal::new(backend).unwrap();
+
         app.render(&mut terminal).unwrap();
+        dbg!(app.get_dates_with_styles());
         println!("{}", buffer_view(terminal.backend().buffer()));
     }
 
