@@ -5,7 +5,7 @@ use std::fmt;
 
 const COL_WIDTH: usize = 21;
 
-use chrono::{Datelike, Duration, Local, Month, NaiveDate, NaiveDateTime, TimeZone};
+use chrono::{format::Fixed, Date, Datelike, Duration, FixedOffset, Local, Month, NaiveDate, NaiveDateTime, TimeZone};
 
 use tui::{
     buffer::Buffer,
@@ -24,7 +24,7 @@ pub struct Calendar<'a> {
     pub month: u32,
     pub style: Style,
     pub months_per_row: usize,
-    pub date_style: Vec<(NaiveDate, Style)>,
+    pub date_style: Vec<(Date<FixedOffset>, Style)>,
     pub today_style: Style,
     pub title_background_color: Color,
 }
@@ -70,7 +70,7 @@ impl<'a> Calendar<'a> {
         self
     }
 
-    pub fn date_style(mut self, date_style: Vec<(NaiveDate, Style)>) -> Self {
+    pub fn date_style(mut self, date_style: Vec<(Date<FixedOffset>, Style)>) -> Self {
         self.date_style = date_style;
         self
     }
@@ -112,10 +112,10 @@ impl<'a> Widget for Calendar<'a> {
 
         let months: Vec<_> = (0..12).collect();
 
-        let mut days: Vec<_> = months
+        let mut days: Vec<(Date<FixedOffset>, Date<FixedOffset>)> = months
             .iter()
             .map(|i| {
-                let first = NaiveDate::from_ymd(year, i + 1, 1);
+                let first = Date::from_utc(NaiveDate::from_ymd(year, i + 1, 1), *Local::now().offset());
                 (
                     first,
                     first - Duration::days(i64::from(first.weekday().num_days_from_sunday())),
@@ -193,13 +193,13 @@ impl<'a> Widget for Calendar<'a> {
                         if let Some(i) = index {
                             style = self.date_style[i].1;
                         }
-                        if d.1 == Local::today().naive_local() {
+                        if d.1 == Local::today() {
                             buf.set_string(x, y, s, self.today_style);
                         } else {
                             buf.set_string(x, y, s, style);
                         }
                         x += 3;
-                        d.1 += Duration::days(1);
+                        d.1 = Date::from_utc(d.1.naive_local() + Duration::days(1), *Local::now().offset());
                     }
                     moredays |= d.0.month() == d.1.month() || d.1 < d.0;
                 }
@@ -219,7 +219,10 @@ impl<'a> Widget for Calendar<'a> {
                     &mut months
                         .iter()
                         .map(|i| {
-                            let first = NaiveDate::from_ymd(self.year + new_year as i32, i + 1, 1);
+                            let first = Date::from_utc(
+                                NaiveDate::from_ymd(self.year + new_year as i32, i + 1, 1),
+                                *Local::now().offset(),
+                            );
                             (
                                 first,
                                 first - Duration::days(i64::from(first.weekday().num_days_from_sunday())),
