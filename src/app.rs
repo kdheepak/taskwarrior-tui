@@ -4318,7 +4318,7 @@ mod tests {
 
         let mut expected1 = Buffer::with_lines(vec![
             "Modify Task 10           ",
-            "based on your .taskrc    ",
+            " based on your .taskrc   ",
             "                         ",
         ]);
 
