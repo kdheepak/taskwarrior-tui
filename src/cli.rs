@@ -1,10 +1,10 @@
-use clap::{App, Arg};
+use clap::Arg;
 
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
 
-pub fn generate_cli_app() -> App<'static> {
-    let mut app = App::new(APP_NAME)
+pub fn generate_cli_app() -> clap::Command<'static> {
+    let mut app = clap::Command::new(APP_NAME)
         .version(APP_VERSION)
         .author("Dheepak Krishnamurthy <@kdheepak>")
         .about("A taskwarrior terminal user interface")

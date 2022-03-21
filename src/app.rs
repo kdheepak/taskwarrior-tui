@@ -38,10 +38,7 @@ use chrono::{Datelike, FixedOffset, Local, NaiveDate, NaiveDateTime, TimeZone, T
 use anyhow::Context as AnyhowContext;
 use anyhow::{anyhow, Result};
 
-use async_std::prelude::*;
-use async_std::stream::StreamExt;
-use async_std::task;
-use futures::stream::FuturesOrdered;
+use std::sync::mpsc;
 
 use std::sync::{Arc, Mutex};
 
@@ -1234,7 +1231,7 @@ impl TaskwarriorTui {
         self.cursor_fix();
         self.update_task_table_state();
         if self.task_report_show_info {
-            task::block_on(self.update_task_details())?;
+            self.update_task_details()?;
         }
         self.selection_fix();
 
@@ -1273,7 +1270,7 @@ impl TaskwarriorTui {
         }
     }
 
-    pub async fn update_task_details(&mut self) -> Result<()> {
+    pub fn update_task_details(&mut self) -> Result<()> {
         if self.tasks.is_empty() {
             return Ok(());
         }
@@ -1304,7 +1301,7 @@ impl TaskwarriorTui {
 
         l.dedup();
 
-        let mut output_futs = FuturesOrdered::new();
+        let mut outputs = vec![];
         for s in &l {
             if self.tasks.is_empty() {
                 return Ok(());
@@ -1314,27 +1311,29 @@ impl TaskwarriorTui {
             }
             let task_uuid = *self.tasks[*s].uuid();
             if !self.task_details.contains_key(&task_uuid) || task_uuid == current_task_uuid {
-                let output_fut = async_std::process::Command::new("task")
-                    .arg("rc.color=off")
-                    .arg("rc._forcecolor=off")
-                    .arg(format!("rc.defaultwidth={}", self.terminal_width.saturating_sub(2)))
-                    .arg(format!("{}", task_uuid))
-                    .output();
-                output_futs.push(output_fut);
+                let (tx, rx) = mpsc::channel();
+                let defaultwidth = self.terminal_width.saturating_sub(2);
+                std::thread::spawn(move || {
+                    let output = Command::new("task")
+                        .arg("rc.color=off")
+                        .arg("rc._forcecolor=off")
+                        .arg(format!("rc.defaultwidth={}", defaultwidth))
+                        .arg(format!("{}", task_uuid))
+                        .output();
+                    if let Ok(output) = output {
+                        let data = String::from_utf8_lossy(&output.stdout).to_string();
+                        tx.send(Some((task_uuid, data))).unwrap();
+                    } else {
+                        tx.send(None).unwrap();
+                    }
+                });
+                outputs.push(rx);
             }
         }
 
-        for s in &l {
-            if s >= &self.tasks.len() {
-                break;
-            }
-            let task_id = self.tasks[*s].id().unwrap_or_default();
-            let task_uuid = *self.tasks[*s].uuid();
-            if !self.task_details.contains_key(&task_uuid) || task_uuid == current_task_uuid {
-                if let Some(Ok(output)) = output_futs.next().await {
-                    let data = String::from_utf8_lossy(&output.stdout).to_string();
-                    self.task_details.insert(task_uuid, data);
-                }
+        while !outputs.is_empty() {
+            if let Ok(Some((task_uuid, data))) = outputs.pop().unwrap().recv() {
+                self.task_details.insert(task_uuid, data);
             }
         }
         Ok(())
@@ -3754,10 +3753,6 @@ mod tests {
     fn test_taskwarrior_tui() {
         let app = TaskwarriorTui::new("next");
         if app.is_err() {
-            // TODO: Figure out why we are unable to run tests on github ci
-            // Resource temporarily unavailable
-            // Might have something to do with async
-            // Is there a way to increase memory on github ci?
             return;
         }
         let app = app.unwrap();

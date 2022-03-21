@@ -3,7 +3,6 @@ use anyhow::Result;
 use crate::action::Action;
 use crate::app::{Mode, TaskwarriorTui};
 use crate::event::Key;
-use clap::App;
 use std::ops::Index;
 
 pub mod context;
