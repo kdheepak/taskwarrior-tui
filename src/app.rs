@@ -282,6 +282,8 @@ impl TaskwarriorTui {
             app.filter.insert(c, 1);
         }
 
+        app.task_report_table.date_time_vague_precise = app.config.uda_task_report_date_time_vague_more_precise;
+
         app.update(true)?;
 
         app.filter_history.load()?;

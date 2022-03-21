@@ -19,7 +19,7 @@ pub fn format_date(dt: NaiveDateTime) -> String {
     dt.format("%Y-%m-%d").to_string()
 }
 
-pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime) -> String {
+pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime, with_remainder: bool) -> String {
     let to_dt = Local.from_local_datetime(&to_dt).unwrap();
     let from_dt = Local.from_local_datetime(&from_dt).unwrap();
     let mut seconds = (to_dt - from_dt).num_seconds();
@@ -30,18 +30,79 @@ pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime) -> S
         ""
     };
 
+    let year = 60 * 60 * 24 * 365;
+    let month = 60 * 60 * 24 * 30;
+    let week = 60 * 60 * 24 * 7;
+    let day = 60 * 60 * 24;
+    let hour = 60 * 60;
+    let minute = 60;
+
     if seconds >= 60 * 60 * 24 * 365 {
-        return format!("{}{}y", minus, seconds / 86400 / 365);
+        return if with_remainder {
+            format!(
+                "{}{}y{}mo",
+                minus,
+                seconds / year,
+                (seconds - year * (seconds / year)) / month
+            )
+        } else {
+            format!("{}{}y", minus, seconds / year)
+        };
     } else if seconds >= 60 * 60 * 24 * 90 {
-        return format!("{}{}mo", minus, seconds / 60 / 60 / 24 / 30);
+        return if with_remainder {
+            format!(
+                "{}{}mo{}w",
+                minus,
+                seconds / month,
+                (seconds - month * (seconds / month)) / week
+            )
+        } else {
+            format!("{}{}mo", minus, seconds / month)
+        };
     } else if seconds >= 60 * 60 * 24 * 14 {
-        return format!("{}{}w", minus, seconds / 60 / 60 / 24 / 7);
+        return if with_remainder {
+            format!(
+                "{}{}w{}d",
+                minus,
+                seconds / week,
+                (seconds - week * (seconds / week)) / day
+            )
+        } else {
+            format!("{}{}w", minus, seconds / week)
+        };
     } else if seconds >= 60 * 60 * 24 {
-        return format!("{}{}d", minus, seconds / 60 / 60 / 24);
+        return if with_remainder {
+            format!(
+                "{}{}d{}h",
+                minus,
+                seconds / day,
+                (seconds - day * (seconds / day)) / hour
+            )
+        } else {
+            format!("{}{}d", minus, seconds / day)
+        };
     } else if seconds >= 60 * 60 {
-        return format!("{}{}h", minus, seconds / 60 / 60);
+        return if with_remainder {
+            format!(
+                "{}{}h{}min",
+                minus,
+                seconds / hour,
+                (seconds - hour * (seconds / hour)) / minute
+            )
+        } else {
+            format!("{}{}h", minus, seconds / hour)
+        };
     } else if seconds >= 60 {
-        return format!("{}{}min", minus, seconds / 60);
+        return if with_remainder {
+            format!(
+                "{}{}min{}s",
+                minus,
+                seconds / minute,
+                (seconds - minute * (seconds / minute))
+            )
+        } else {
+            format!("{}{}min", minus, seconds / minute)
+        };
     }
     return format!("{}{}s", minus, seconds);
 }
@@ -52,6 +113,7 @@ pub struct TaskReportTable {
     pub tasks: Vec<Vec<String>>,
     pub virtual_tags: Vec<String>,
     pub description_width: usize,
+    pub date_time_vague_precise: bool,
 }
 
 impl TaskReportTable {
@@ -98,6 +160,7 @@ impl TaskReportTable {
             tasks: vec![vec![]],
             virtual_tags: virtual_tags.iter().map(ToString::to_string).collect::<Vec<_>>(),
             description_width: 100,
+            date_time_vague_precise: false,
         };
         task_report_table.export_headers(Some(data), report)?;
         Ok(task_report_table)
@@ -219,11 +282,19 @@ impl TaskReportTable {
         match attribute {
             "id" => task.id().unwrap_or_default().to_string(),
             "scheduled.relative" => match task.scheduled() {
-                Some(v) => vague_format_date_time(Local::now().naive_utc(), NaiveDateTime::new(v.date(), v.time())),
+                Some(v) => vague_format_date_time(
+                    Local::now().naive_utc(),
+                    NaiveDateTime::new(v.date(), v.time()),
+                    self.date_time_vague_precise,
+                ),
                 None => "".to_string(),
             },
             "due.relative" => match task.due() {
-                Some(v) => vague_format_date_time(Local::now().naive_utc(), NaiveDateTime::new(v.date(), v.time())),
+                Some(v) => vague_format_date_time(
+                    Local::now().naive_utc(),
+                    NaiveDateTime::new(v.date(), v.time()),
+                    self.date_time_vague_precise,
+                ),
                 None => "".to_string(),
             },
             "due" => match task.due() {
@@ -231,7 +302,11 @@ impl TaskReportTable {
                 None => "".to_string(),
             },
             "until.remaining" => match task.until() {
-                Some(v) => vague_format_date_time(Local::now().naive_utc(), NaiveDateTime::new(v.date(), v.time())),
+                Some(v) => vague_format_date_time(
+                    Local::now().naive_utc(),
+                    NaiveDateTime::new(v.date(), v.time()),
+                    self.date_time_vague_precise,
+                ),
                 None => "".to_string(),
             },
             "until" => match task.until() {
@@ -241,10 +316,15 @@ impl TaskReportTable {
             "entry.age" => vague_format_date_time(
                 NaiveDateTime::new(task.entry().date(), task.entry().time()),
                 Local::now().naive_utc(),
+                self.date_time_vague_precise,
             ),
             "entry" => format_date(NaiveDateTime::new(task.entry().date(), task.entry().time())),
             "start.age" => match task.start() {
-                Some(v) => vague_format_date_time(NaiveDateTime::new(v.date(), v.time()), Local::now().naive_utc()),
+                Some(v) => vague_format_date_time(
+                    NaiveDateTime::new(v.date(), v.time()),
+                    Local::now().naive_utc(),
+                    self.date_time_vague_precise,
+                ),
                 None => "".to_string(),
             },
             "start" => match task.start() {
@@ -252,7 +332,11 @@ impl TaskReportTable {
                 None => "".to_string(),
             },
             "end.age" => match task.end() {
-                Some(v) => vague_format_date_time(NaiveDateTime::new(v.date(), v.time()), Local::now().naive_utc()),
+                Some(v) => vague_format_date_time(
+                    NaiveDateTime::new(v.date(), v.time()),
+                    Local::now().naive_utc(),
+                    self.date_time_vague_precise,
+                ),
                 None => "".to_string(),
             },
             "end" => match task.end() {
@@ -320,11 +404,19 @@ impl TaskReportTable {
                 None => "".to_string(),
             },
             "wait" => match task.wait() {
-                Some(v) => vague_format_date_time(NaiveDateTime::new(v.date(), v.time()), Local::now().naive_utc()),
+                Some(v) => vague_format_date_time(
+                    NaiveDateTime::new(v.date(), v.time()),
+                    Local::now().naive_utc(),
+                    self.date_time_vague_precise,
+                ),
                 None => "".to_string(),
             },
             "wait.remaining" => match task.wait() {
-                Some(v) => vague_format_date_time(Local::now().naive_utc(), NaiveDateTime::new(v.date(), v.time())),
+                Some(v) => vague_format_date_time(
+                    Local::now().naive_utc(),
+                    NaiveDateTime::new(v.date(), v.time()),
+                    self.date_time_vague_precise,
+                ),
                 None => "".to_string(),
             },
             "description.count" => {
