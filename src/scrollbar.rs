@@ -13,6 +13,8 @@ pub struct Scrollbar {
     pub len: u16,
     pub pos_style: Style,
     pub pos_symbol: String,
+    pub area_style: Style,
+    pub area_symbol: String,
 }
 
 impl Scrollbar {
@@ -22,6 +24,8 @@ impl Scrollbar {
             len: len as u16,
             pos_style: Style::default(),
             pos_symbol: FULL.to_string(),
+            area_style: Style::default(),
+            area_symbol: DOUBLE_VERTICAL.to_string(),
         }
     }
 }
@@ -45,7 +49,7 @@ impl Widget for Scrollbar {
         let (top, height) = { (area.top() + 3, area.height.saturating_sub(4)) };
 
         for y in top..(top + height) {
-            buf.set_string(right, y, DOUBLE_VERTICAL, Style::default());
+            buf.set_string(right, y, self.area_symbol.clone(), self.area_style);
         }
 
         let progress = self.pos as f64 / self.len as f64;
