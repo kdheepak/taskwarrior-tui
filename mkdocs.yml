@@ -21,7 +21,7 @@ plugins:
   - search
   - exclude:
       glob:
-        - "*.1"
+        - '*.1'
 
 # Theme
 theme:
@@ -48,6 +48,7 @@ nav:
       - Installation: installation.md
       - Quick Start: quick_start.md
       - Keybindings: keybindings.md
+      - FAQs: faqs.md
   - Configuration:
       - Key configuration: configuration/keys.md
       - Color configuration: configuration/colors.md

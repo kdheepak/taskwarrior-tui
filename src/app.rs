@@ -1810,10 +1810,6 @@ impl TaskwarriorTui {
                     match output {
                         Ok(o) => {
                             if o.status.success() {
-                                let output = String::from_utf8_lossy(&o.stdout);
-                                if !output.is_empty() {
-                                    self.error = Some(format!("`{:?}`:\n{}", &command, output));
-                                }
                                 Ok(())
                             } else {
                                 Err(format!(
