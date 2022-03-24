@@ -16,7 +16,7 @@ If `taskwarrior-tui` encounters a prompt by the subprocess or the shortcut, `tas
 This means, if you want to run a `taskwarrior` command as a shell command, you may want to pass `rc.confirmation=off` in the command.
 See the following screencast as an example:
 
-![](https://user-images.githubusercontent.com/1813121/159824511-de66d4fc-0a59-4a65-9c74-7419c127481e.mov)
+<video src="https://user-images.githubusercontent.com/1813121/159824511-de66d4fc-0a59-4a65-9c74-7419c127481e.mov"></video>
 
 ```bash
 task rc.confirmation=off context define test project:work
