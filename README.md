@@ -20,7 +20,8 @@ A Terminal User Interface (TUI) for [Taskwarrior](https://taskwarrior.org/) that
 - tab completion
 - colors based on taskwarrior
 
-![](https://user-images.githubusercontent.com/1813121/113252474-21c61c00-9281-11eb-8292-bf6a3553251e.png)
+![](https://user-images.githubusercontent.com/1813121/159858280-3ca31e9a-fc38-4547-a92d-36a7758cf5dc.gif)
+
 
 ### Showcase
 
