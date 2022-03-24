@@ -1682,22 +1682,30 @@ impl TaskwarriorTui {
 
         let r = match shlex::split(shell) {
             Some(cmd) => {
-                // first argument must be a binary
-                let mut command = Command::new(&cmd[0]);
-                // remaining arguments are args
-                for (i, s) in cmd.iter().enumerate() {
-                    if i == 0 {
-                        continue;
+                if cmd.is_empty() {
+                    Err(format!("Shell command empty: {}", shell))
+                } else {
+                    // first argument must be a binary
+                    let mut command = Command::new(&cmd[0]);
+                    // remaining arguments are args
+                    for (i, s) in cmd.iter().enumerate() {
+                        if i == 0 {
+                            continue;
+                        }
+                        command.arg(&s);
                     }
-                    command.arg(&s);
-                }
-                let output = command.output();
-                match output {
-                    Ok(o) => {
-                        debug!("output: {}", String::from_utf8_lossy(&o.stdout));
-                        Ok(())
-                    },
-                    Err(_) => Err(format!("Shell command `{}` exited with non-zero output", shell)),
+                    let output = command.output();
+                    match output {
+                        Ok(o) => {
+                            let output = String::from_utf8_lossy(&o.stdout);
+                            if !output.is_empty() {
+                                Err(format!("Shell command `{}` ran successfully but printed the following output:\n\n{}\n\nSuppress output of shell commands to prevent the error prompt from showing up.", shell, output))
+                            } else {
+                                Ok(())
+                            }
+                        }
+                        Err(_) => Err(format!("Shell command `{}` exited with non-zero output", shell)),
+                    }
                 }
             }
             None => Err(format!("Cannot run subprocess. Unable to shlex split `{}`", shell)),
@@ -1802,7 +1810,10 @@ impl TaskwarriorTui {
                     match output {
                         Ok(o) => {
                             if o.status.success() {
-                                debug!("output: {}", String::from_utf8_lossy(&o.stdout));
+                                let output = String::from_utf8_lossy(&o.stdout);
+                                if !output.is_empty() {
+                                    self.error = Some(format!("`{:?}`:\n{}", &command, output));
+                                }
                                 Ok(())
                             } else {
                                 Err(format!(
