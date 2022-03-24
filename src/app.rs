@@ -1693,7 +1693,10 @@ impl TaskwarriorTui {
                 }
                 let output = command.output();
                 match output {
-                    Ok(_) => Ok(()),
+                    Ok(o) => {
+                        debug!("output: {}", String::from_utf8_lossy(&o.stdout));
+                        Ok(())
+                    },
                     Err(_) => Err(format!("Shell command `{}` exited with non-zero output", shell)),
                 }
             }
@@ -1799,6 +1802,7 @@ impl TaskwarriorTui {
                     match output {
                         Ok(o) => {
                             if o.status.success() {
+                                debug!("output: {}", String::from_utf8_lossy(&o.stdout));
                                 Ok(())
                             } else {
                                 Err(format!(
