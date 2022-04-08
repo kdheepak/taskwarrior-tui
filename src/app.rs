@@ -2587,7 +2587,7 @@ impl TaskwarriorTui {
                                             s = format!(
                                                 "{}due:{} ",
                                                 s,
-                                                get_formatted_datetime(date);
+                                                get_formatted_datetime(date)
                                             );
                                         }
                                     }
