@@ -1,5 +1,6 @@
 #![allow(clippy::eval_order_dependence)]
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
+use itertools::Itertools;
 use std::collections::HashMap;
 use std::error::Error;
 use std::str;
@@ -37,7 +38,7 @@ impl TaskWarriorBool for str {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct UDA {
     label: String,
     kind: String,
@@ -95,10 +96,37 @@ pub struct Config {
     pub uda_task_report_prompt_on_done: bool,
     pub uda_task_report_date_time_vague_more_precise: bool,
     pub uda_context_menu_select_on_move: bool,
-    pub uda: Vec<UDA>,
+    pub udas: HashMap<String, UDA>,
 }
 
 impl Config {
+    pub fn init() -> Result<Self> {
+        let output = std::process::Command::new("task")
+            .arg("rc.color=off")
+            .arg("rc._forcecolor=off")
+            .arg("rc.defaultwidth=0")
+            .arg("show")
+            .output()
+            .context("Unable to run `task show`.")
+            .unwrap();
+
+        if !output.status.success() {
+            let output = std::process::Command::new("task")
+                .arg("diagnostics")
+                .output()
+                .context("Unable to run `task diagnostics`.")
+                .unwrap();
+            return Err(anyhow!(
+                "Unable to run `task show`.\n{}\n{}\nPlease check your configuration or open a issue on github.",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            ));
+        }
+
+        let data = String::from_utf8_lossy(&output.stdout);
+        Self::new(&data, "next")
+    }
+
     pub fn new(data: &str, report: &str) -> Result<Self> {
         let bool_collection = Self::get_bool_collection();
 
@@ -167,6 +195,7 @@ impl Config {
         let uda_task_report_prompt_on_done = Self::get_uda_task_report_prompt_on_done(data);
         let uda_context_menu_select_on_move = Self::get_uda_context_menu_select_on_move(data);
         let uda_task_report_date_time_vague_more_precise = Self::get_uda_task_report_date_time_vague_more_precise(data);
+        let udas = Self::get_udas(data);
 
         Ok(Self {
             enabled,
@@ -216,8 +245,39 @@ impl Config {
             uda_task_report_prompt_on_done,
             uda_task_report_date_time_vague_more_precise,
             uda_context_menu_select_on_move,
-            uda: vec![],
+            udas,
         })
+    }
+    fn get_udas(data: &str) -> HashMap<String, UDA> {
+        let udas = data
+            .split("\n")
+            .filter(|s| !s.is_empty())
+            .filter(|s| !s.starts_with("  Default value"))
+            .filter(|s| s.starts_with("uda."))
+            .collect::<Vec<&str>>();
+        let mut map: HashMap<String, UDA> = HashMap::new();
+        for uda in udas.iter() {
+            let split = uda.split(".");
+            if uda.split(".").count() == 3 {
+                let (_, k, v) = split.collect_tuple().unwrap();
+                let (v, d) = v.split_once(" ").unwrap();
+                let d = d.trim_start().trim_end();
+                let mut e = map.entry(k.to_string()).or_insert(Default::default());
+                if v == "label" {
+                    (*e).label = d.to_string();
+                }
+                if v == "type" {
+                    (*e).kind = d.to_string();
+                }
+                if v == "values" {
+                    (*e).values = Some(d.split(",").map(|s| s.to_string()).collect::<Vec<String>>());
+                }
+                if v == "default" {
+                    (*e).default = Some(d.to_string());
+                }
+            }
+        }
+        map
     }
 
     fn get_bool_collection() -> HashMap<String, bool> {
@@ -839,6 +899,12 @@ mod tests {
         let c = Config::get_tcolor("bold blue");
         assert_eq!(c.fg.unwrap(), Color::Indexed(12));
         assert!(c.bg.is_none());
+    }
+
+    #[test]
+    fn test_get_config_init() {
+        let config = Config::init().unwrap();
+        dbg!(&config.udas);
     }
 
     #[test]
