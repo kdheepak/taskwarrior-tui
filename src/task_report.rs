@@ -19,6 +19,13 @@ pub fn format_date(dt: NaiveDateTime) -> String {
     dt.format("%Y-%m-%d").to_string()
 }
 
+fn split_once(in_string: &str) -> (&str, &str) {
+    let mut splitter = in_string.splitn(2, ' ');
+    let first = splitter.next().unwrap();
+    let second = splitter.next().unwrap();
+    (first, second)
+}
+
 pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime, with_remainder: bool) -> String {
     let to_dt = Local.from_local_datetime(&to_dt).unwrap();
     let from_dt = Local.from_local_datetime(&from_dt).unwrap();
@@ -175,6 +182,7 @@ impl TaskReportTable {
         } else {
             let output = Command::new("task")
                 .arg("show")
+                .arg("rc.defaultwidth=0")
                 .arg(format!("report.{}.columns", report))
                 .output()?;
             String::from_utf8_lossy(&output.stdout).into_owned()
@@ -182,7 +190,7 @@ impl TaskReportTable {
 
         for line in data.split('\n') {
             if line.starts_with(format!("report.{}.columns", report).as_str()) {
-                let column_names = line.split(' ').collect::<Vec<_>>()[1];
+                let column_names = split_once(line).1;
                 for column in column_names.split(',') {
                     self.columns.push(column.to_string());
                 }
@@ -191,13 +199,14 @@ impl TaskReportTable {
 
         let output = Command::new("task")
             .arg("show")
+            .arg("rc.defaultwidth=0")
             .arg(format!("report.{}.labels", report))
             .output()?;
         let data = String::from_utf8_lossy(&output.stdout);
 
         for line in data.split('\n') {
             if line.starts_with(format!("report.{}.labels", report).as_str()) {
-                let label_names = line.split(' ').collect::<Vec<_>>()[1];
+                let label_names = split_once(line).1;
                 for label in label_names.split(',') {
                     self.labels.push(label.to_string());
                 }

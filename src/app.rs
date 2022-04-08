@@ -202,6 +202,7 @@ impl TaskwarriorTui {
         let output = std::process::Command::new("task")
             .arg("rc.color=off")
             .arg("rc._forcecolor=off")
+            .arg("rc.defaultwidth=0")
             .arg("show")
             .output()
             .context("Unable to run `task show`.")
