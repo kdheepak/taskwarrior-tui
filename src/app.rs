@@ -122,6 +122,37 @@ pub fn get_date_state(reference: &Date, due: usize) -> DateState {
     }
 }
 
+fn get_offset_hour_minute() -> (&'static str, i32, i32) {
+    let off = Local::now().offset().local_minus_utc();
+    let sym = if off >= 0 { "+" } else { "-" };
+    let off = off.abs();
+    let h = if off > 60 * 60 { off / 60 / 60 } else { 0 };
+    let m = if (off - ((off / 60 / 60) * 60 * 60)) > 60 {
+        (off - ((off / 60 / 60) * 60 * 60)) / 60
+    } else {
+        0
+    };
+    (sym, h, m)
+}
+
+fn get_formatted_datetime(date: &Date) -> String {
+    let now = Local::now();
+    let date = TimeZone::from_utc_datetime(now.offset(), date);
+    let (sym, h, m) = get_offset_hour_minute();
+    format!(
+        "'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}{}{:02}:{:02}'",
+        date.year(),
+        date.month(),
+        date.day(),
+        date.hour(),
+        date.minute(),
+        date.second(),
+        sym,
+        h,
+        m,
+    )
+}
+
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
     let popup_layout = Layout::default()
         .direction(Direction::Vertical)
@@ -2553,18 +2584,7 @@ impl TaskwarriorTui {
                                         }
                                         if t.due().is_some() {
                                             let date = t.due().unwrap();
-                                            let now = Local::now();
-                                            let date = TimeZone::from_utc_datetime(now.offset(), date);
-                                            s = format!(
-                                                "{}due:'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}' ",
-                                                s,
-                                                date.year(),
-                                                date.month(),
-                                                date.day(),
-                                                date.hour(),
-                                                date.minute(),
-                                                date.second(),
-                                            );
+                                            s = format!("{}due:{} ", s, get_formatted_datetime(date));
                                         }
                                     }
                                     self.modify.update(&s, s.as_str().len());
@@ -3471,66 +3491,26 @@ impl TaskwarriorTui {
             }
             for task in tasks {
                 if let Some(date) = task.due() {
-                    let now = Local::now();
-                    let date = TimeZone::from_utc_datetime(now.offset(), date);
-                    let s = format!(
-                        "'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}'",
-                        date.year(),
-                        date.month(),
-                        date.day(),
-                        date.hour(),
-                        date.minute(),
-                        date.second(),
-                    );
-                    self.completion_list.insert(("due".to_string(), s));
+                    self.completion_list
+                        .insert(("due".to_string(), get_formatted_datetime(date)));
                 }
             }
             for task in tasks {
                 if let Some(date) = task.wait() {
-                    let now = Local::now();
-                    let date = TimeZone::from_utc_datetime(now.offset(), date);
-                    let s = format!(
-                        "'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}'",
-                        date.year(),
-                        date.month(),
-                        date.day(),
-                        date.hour(),
-                        date.minute(),
-                        date.second(),
-                    );
-                    self.completion_list.insert(("wait".to_string(), s));
+                    self.completion_list
+                        .insert(("wait".to_string(), get_formatted_datetime(date)));
                 }
             }
             for task in tasks {
                 if let Some(date) = task.scheduled() {
-                    let now = Local::now();
-                    let date = TimeZone::from_utc_datetime(now.offset(), date);
-                    let s = format!(
-                        "'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}'",
-                        date.year(),
-                        date.month(),
-                        date.day(),
-                        date.hour(),
-                        date.minute(),
-                        date.second(),
-                    );
-                    self.completion_list.insert(("scheduled".to_string(), s));
+                    self.completion_list
+                        .insert(("scheduled".to_string(), get_formatted_datetime(date)));
                 }
             }
             for task in tasks {
                 if let Some(date) = task.end() {
-                    let now = Local::now();
-                    let date = TimeZone::from_utc_datetime(now.offset(), date);
-                    let s = format!(
-                        "'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}'",
-                        date.year(),
-                        date.month(),
-                        date.day(),
-                        date.hour(),
-                        date.minute(),
-                        date.second(),
-                    );
-                    self.completion_list.insert(("end".to_string(), s));
+                    self.completion_list
+                        .insert(("end".to_string(), get_formatted_datetime(date)));
                 }
             }
         }
