@@ -38,6 +38,15 @@ impl TaskWarriorBool for str {
 }
 
 #[derive(Debug)]
+pub struct UDA {
+    label: String,
+    kind: String,
+    values: Option<Vec<String>>,
+    default: Option<String>,
+    urgency: Option<f64>,
+}
+
+#[derive(Debug)]
 pub struct Config {
     pub enabled: bool,
     pub color: HashMap<String, Style>,
@@ -86,6 +95,7 @@ pub struct Config {
     pub uda_task_report_prompt_on_done: bool,
     pub uda_task_report_date_time_vague_more_precise: bool,
     pub uda_context_menu_select_on_move: bool,
+    pub uda: Vec<UDA>,
 }
 
 impl Config {
@@ -206,6 +216,7 @@ impl Config {
             uda_task_report_prompt_on_done,
             uda_task_report_date_time_vague_more_precise,
             uda_context_menu_select_on_move,
+            uda: vec![],
         })
     }
 
