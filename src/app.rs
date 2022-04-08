@@ -2584,11 +2584,7 @@ impl TaskwarriorTui {
                                         }
                                         if t.due().is_some() {
                                             let date = t.due().unwrap();
-                                            s = format!(
-                                                "{}due:{} ",
-                                                s,
-                                                get_formatted_datetime(date)
-                                            );
+                                            s = format!("{}due:{} ", s, get_formatted_datetime(date));
                                         }
                                     }
                                     self.modify.update(&s, s.as_str().len());
