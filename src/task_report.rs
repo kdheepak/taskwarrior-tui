@@ -390,7 +390,7 @@ impl TaskReportTable {
             },
             "tags.count" => match task.tags() {
                 Some(v) => {
-                    let t = v.iter().filter(|t| !self.virtual_tags.contains(t)).cloned().count();
+                    let t = v.iter().filter(|t| !self.virtual_tags.contains(t)).count();
                     if t == 0 {
                         "".to_string()
                     } else {
