@@ -117,7 +117,10 @@ impl Config {
         let due = Self::get_due(data);
         let rule_precedence_color = Self::get_rule_precedence_color(data);
         let uda_priority_values = Self::get_uda_priority_values(data);
-        let uda_tick_rate = Self::get_uda_tick_rate(data);
+        let mut uda_tick_rate = Self::get_uda_tick_rate(data);
+        if uda_tick_rate == 0 {
+            uda_tick_rate = u64::MAX;
+        }
         let uda_auto_insert_double_quotes_on_add = Self::get_uda_auto_insert_double_quotes_on_add(data);
         let uda_auto_insert_double_quotes_on_annotate = Self::get_uda_auto_insert_double_quotes_on_annotate(data);
         let uda_auto_insert_double_quotes_on_log = Self::get_uda_auto_insert_double_quotes_on_log(data);
