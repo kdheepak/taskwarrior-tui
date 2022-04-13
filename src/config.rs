@@ -38,7 +38,7 @@ impl TaskWarriorBool for str {
 }
 
 #[derive(Debug)]
-pub struct UDA {
+pub struct Uda {
     label: String,
     kind: String,
     values: Option<Vec<String>>,
@@ -95,7 +95,7 @@ pub struct Config {
     pub uda_task_report_prompt_on_done: bool,
     pub uda_task_report_date_time_vague_more_precise: bool,
     pub uda_context_menu_select_on_move: bool,
-    pub uda: Vec<UDA>,
+    pub uda: Vec<Uda>,
 }
 
 impl Config {
