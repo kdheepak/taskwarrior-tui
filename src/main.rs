@@ -205,9 +205,15 @@ async fn tui_main(report: &str) -> Result<()> {
     app.render(&mut terminal).unwrap();
 
     // Setup event handlers
-    let events = Events::with_config(EventConfig {
-        tick_rate: Duration::from_millis(app.config.uda_tick_rate),
-    });
+    let events = if app.config.uda_tick_rate == 0 {
+        Events::with_config(EventConfig {
+            tick_rate: Duration::from_millis(100 * 60 * 60 * 24 * 30 * 12),
+        })
+    } else {
+        Events::with_config(EventConfig {
+            tick_rate: Duration::from_millis(app.config.uda_tick_rate),
+        })
+    };
 
     loop {
         app.render(&mut terminal).unwrap();
