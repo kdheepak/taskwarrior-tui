@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
 #![allow(unused_variables)]
+#![allow(clippy::too_many_arguments)]
 
 mod action;
 mod app;
@@ -16,6 +17,7 @@ mod pane;
 mod scrollbar;
 mod table;
 mod task_report;
+mod ui;
 
 use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
 use log4rs::append::file::FileAppender;
@@ -29,9 +31,6 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use anyhow::Result;
-use async_std::prelude::*;
-use async_std::sync::{Arc, Mutex};
-use async_std::task;
 use crossterm::{
     cursor,
     event::{DisableMouseCapture, EnableMouseCapture, EventStream},
@@ -46,19 +45,10 @@ use path_clean::PathClean;
 use app::{Mode, TaskwarriorTui};
 
 use crate::action::Action;
-use crate::event::{Event, EventConfig, Events, Key};
+use crate::event::Event;
 use crate::keyconfig::KeyConfig;
 
 const LOG_PATTERN: &str = "{d(%Y-%m-%d %H:%M:%S)} | {l} | {f}:{L} | {m}{n}";
-
-pub fn setup_terminal() -> Terminal<CrosstermBackend<io::Stdout>> {
-    enable_raw_mode().expect("Running not in terminal");
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen).unwrap();
-    execute!(stdout, Clear(ClearType::All)).unwrap();
-    let backend = CrosstermBackend::new(stdout);
-    Terminal::new(backend).unwrap()
-}
 
 pub fn destruct_terminal() {
     disable_raw_mode().unwrap();
@@ -116,7 +106,24 @@ pub fn absolute_path(path: impl AsRef<Path>) -> io::Result<PathBuf> {
     Ok(absolute_path)
 }
 
-fn main() {
+async fn tui_main(report: &str) -> Result<()> {
+    panic::set_hook(Box::new(|panic_info| {
+        destruct_terminal();
+        better_panic::Settings::auto().create_panic_handler()(panic_info);
+    }));
+
+    let mut app = app::TaskwarriorTui::new(report).await?;
+
+    let mut terminal = app.start_tui().await?;
+
+    let r = app.run(&mut terminal).await;
+
+    app.pause_tui().await?;
+
+    r
+}
+
+fn main() -> Result<()> {
     better_panic::install();
 
     let matches = cli::generate_cli_app().get_matches();
@@ -180,91 +187,14 @@ fn main() {
     debug!("getting matches from clap...");
     debug!("report = {:?}", &report);
     debug!("config = {:?}", &config);
-    let r = task::block_on(tui_main(report));
+
+    let r = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()?
+        .block_on(async { tui_main(report).await });
     if let Err(err) = r {
         eprintln!("\x1b[0;31m[taskwarrior-tui error]\x1b[0m: {}\n\nIf you need additional help, please report as a github issue on https://github.com/kdheepak/taskwarrior-tui", err);
         std::process::exit(1);
-    }
-}
-
-async fn tui_main(report: &str) -> Result<()> {
-    panic::set_hook(Box::new(|panic_info| {
-        destruct_terminal();
-        better_panic::Settings::auto().create_panic_handler()(panic_info);
-    }));
-
-    let maybeapp = TaskwarriorTui::new(report);
-    if maybeapp.is_err() {
-        destruct_terminal();
-        return Err(maybeapp.err().unwrap());
-    }
-
-    let mut app = maybeapp.unwrap();
-    let mut terminal = setup_terminal();
-
-    app.render(&mut terminal).unwrap();
-
-    // Setup event handlers
-    let events = Events::with_config(EventConfig {
-        tick_rate: Duration::from_millis(app.config.uda_tick_rate),
-    });
-
-    loop {
-        app.render(&mut terminal).unwrap();
-        // Handle input
-        match events.next().await? {
-            Event::Input(input) => {
-                debug!("Received input = {:?}", input);
-                if (input == app.keyconfig.edit
-                    || input == app.keyconfig.shortcut1
-                    || input == app.keyconfig.shortcut2
-                    || input == app.keyconfig.shortcut3
-                    || input == app.keyconfig.shortcut4
-                    || input == app.keyconfig.shortcut5
-                    || input == app.keyconfig.shortcut6
-                    || input == app.keyconfig.shortcut7
-                    || input == app.keyconfig.shortcut8
-                    || input == app.keyconfig.shortcut9)
-                    && app.mode == Mode::Tasks(Action::Report)
-                {
-                    Events::leave_tui_mode(&mut terminal);
-                }
-
-                let r = app.handle_input(input);
-
-                if (input == app.keyconfig.edit
-                    || input == app.keyconfig.shortcut1
-                    || input == app.keyconfig.shortcut2
-                    || input == app.keyconfig.shortcut3
-                    || input == app.keyconfig.shortcut4
-                    || input == app.keyconfig.shortcut5
-                    || input == app.keyconfig.shortcut6
-                    || input == app.keyconfig.shortcut7
-                    || input == app.keyconfig.shortcut8
-                    || input == app.keyconfig.shortcut9)
-                    && app.mode == Mode::Tasks(Action::Report)
-                {
-                    Events::enter_tui_mode(&mut terminal);
-                }
-                if r.is_err() {
-                    destruct_terminal();
-                    return r;
-                }
-            }
-            Event::Tick => {
-                trace!("Tick event");
-                let r = app.update(false);
-                if r.is_err() {
-                    destruct_terminal();
-                    return r;
-                }
-            }
-        }
-
-        if app.should_quit {
-            destruct_terminal();
-            break;
-        }
     }
     Ok(())
 }

@@ -2,13 +2,13 @@ use crate::calendar::Calendar;
 use crate::completion::{get_start_word_under_cursor, CompletionList};
 use crate::config;
 use crate::config::Config;
-use crate::event::Key;
-use crate::event::{Event, Events};
+use crate::event::Event;
 use crate::help::Help;
 use crate::keyconfig::KeyConfig;
 use crate::scrollbar::Scrollbar;
 use crate::table::{Row, Table, TableMode, TableState};
 use crate::task_report::TaskReportTable;
+use crate::ui;
 
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
@@ -68,10 +68,18 @@ use regex::Regex;
 use lazy_static::lazy_static;
 
 use crate::action::Action;
+use crate::event::KeyCode;
 use crate::pane::context::{ContextDetails, ContextsState};
 use crate::pane::project::ProjectsState;
 use crate::pane::Pane;
+
 use crossterm::style::style;
+use crossterm::{
+    event::{DisableMouseCapture, EnableMouseCapture},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
+
 use futures::SinkExt;
 use std::borrow::Borrow;
 use std::time::Instant;
@@ -226,10 +234,12 @@ pub struct TaskwarriorTui {
     pub contexts: ContextsState,
     pub task_version: Versioning,
     pub error: Option<String>,
+    pub event_loop: crate::event::EventLoop,
+    pub requires_redraw: bool,
 }
 
 impl TaskwarriorTui {
-    pub fn new(report: &str) -> Result<Self> {
+    pub async fn new(report: &str) -> Result<Self> {
         let output = std::process::Command::new("task")
             .arg("rc.color=off")
             .arg("rc._forcecolor=off")
@@ -265,6 +275,13 @@ impl TaskwarriorTui {
         let task_version = Versioning::new(String::from_utf8_lossy(&output.stdout).trim()).unwrap();
 
         let (w, h) = crossterm::terminal::size()?;
+
+        let tick_rate = if c.uda_tick_rate > 0 {
+            Some(std::time::Duration::from_millis(c.uda_tick_rate))
+        } else {
+            None
+        };
+        let event_loop = crate::event::EventLoop::new(tick_rate);
 
         let mut app = Self {
             should_quit: false,
@@ -305,6 +322,8 @@ impl TaskwarriorTui {
             contexts: ContextsState::new(),
             task_version,
             error: None,
+            event_loop,
+            requires_redraw: false,
         };
 
         for c in app.config.filter.chars() {
@@ -313,7 +332,7 @@ impl TaskwarriorTui {
 
         app.task_report_table.date_time_vague_precise = app.config.uda_task_report_date_time_vague_more_precise;
 
-        app.update(true)?;
+        app.update(true).await?;
 
         app.filter_history.load()?;
         app.filter_history.add(app.filter.as_str());
@@ -329,6 +348,84 @@ impl TaskwarriorTui {
         }
 
         Ok(app)
+    }
+
+    pub async fn start_tui(&mut self) -> Result<Terminal<CrosstermBackend<std::io::Stdout>>> {
+        enable_raw_mode()?;
+        let mut stdout = std::io::stdout();
+        execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+        let backend = CrosstermBackend::new(stdout);
+        let mut terminal = Terminal::new(backend)?;
+        terminal.hide_cursor()?;
+        Ok(terminal)
+    }
+
+    pub async fn resume_tui(&mut self) -> Result<()> {
+        self.resume_event_loop().await?;
+        let backend = CrosstermBackend::new(io::stdout());
+        let mut terminal = Terminal::new(backend)?;
+        execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture)?;
+        enable_raw_mode()?;
+        self.requires_redraw = true;
+        terminal.hide_cursor()?;
+        Ok(())
+    }
+
+    pub async fn abort_event_loop(&mut self) -> Result<()> {
+        self.event_loop.abort.send(())?;
+        self.event_loop.handle.abort();
+        Ok(())
+    }
+
+    pub async fn resume_event_loop(&mut self) -> Result<()> {
+        let tick_rate = if self.config.uda_tick_rate > 0 {
+            Some(std::time::Duration::from_millis(self.config.uda_tick_rate))
+        } else {
+            None
+        };
+        self.event_loop = crate::event::EventLoop::new(tick_rate);
+        Ok(())
+    }
+
+    pub async fn pause_tui(&mut self) -> Result<()> {
+        self.abort_event_loop().await?;
+        let backend = CrosstermBackend::new(io::stdout());
+        let mut terminal = Terminal::new(backend)?;
+        disable_raw_mode()?;
+        execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
+        terminal.show_cursor()?;
+        Ok(())
+    }
+
+    pub async fn next(&mut self) -> Option<Event<KeyCode>> {
+        self.event_loop.rx.recv().await
+    }
+
+    pub async fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> Result<()> {
+        loop {
+            if self.requires_redraw {
+                terminal.resize(terminal.size()?)?;
+                self.requires_redraw = false;
+            }
+            terminal.draw(|f| self.draw(f))?;
+            // Handle input
+            if let Some(event) = self.next().await {
+                match event {
+                    Event::Input(input) => {
+                        self.handle_input(input).await?;
+                    }
+                    Event::Tick => {
+                        trace!("Tick event");
+                        self.update(false).await?;
+                    }
+                }
+            }
+
+            if self.should_quit {
+                break;
+            }
+        }
+        Ok(())
     }
 
     pub fn reset_command(&mut self) {
@@ -357,14 +454,6 @@ impl TaskwarriorTui {
             self.current_context_filter = String::from_utf8_lossy(&output.stdout).to_string();
             self.current_context_filter = self.current_context_filter.strip_suffix('\n').unwrap_or("").to_string();
         }
-        Ok(())
-    }
-
-    pub fn render<B>(&mut self, terminal: &mut Terminal<B>) -> Result<()>
-    where
-        B: Backend,
-    {
-        terminal.draw(|f| self.draw(f))?;
         Ok(())
     }
 
@@ -397,7 +486,7 @@ impl TaskwarriorTui {
             Mode::Projects => 1,
             Mode::Calendar => 2,
         };
-        let tabs_block = Block::default().style(Style::default().add_modifier(Modifier::REVERSED));
+        let navbar_block = Block::default().style(self.config.uda_style_navbar);
         let context = Spans::from(vec![
             Span::from("["),
             Span::from(if self.current_context.is_empty() {
@@ -408,7 +497,7 @@ impl TaskwarriorTui {
             Span::from("]"),
         ]);
         let tabs = Tabs::new(tab_names)
-            .block(tabs_block.clone())
+            .block(navbar_block.clone())
             .select(selected_tab)
             .divider(" ")
             .highlight_style(Style::default().add_modifier(Modifier::BOLD));
@@ -418,7 +507,7 @@ impl TaskwarriorTui {
             .split(layout);
 
         f.render_widget(tabs, rects[0]);
-        f.render_widget(Paragraph::new(Text::from(context)).block(tabs_block), rects[1]);
+        f.render_widget(Paragraph::new(Text::from(context)).block(navbar_block), rects[1]);
     }
 
     pub fn draw_debug(&mut self, f: &mut Frame<impl Backend>) {
@@ -519,7 +608,7 @@ impl TaskwarriorTui {
     ) {
         match action {
             Action::Error => {
-                Self::draw_command(
+                self.draw_command(
                     f,
                     rects[1],
                     "Press any key to continue.",
@@ -555,7 +644,7 @@ impl TaskwarriorTui {
                 self.previous_mode = None;
                 self.error = None;
                 let position = Self::get_position(&self.command);
-                Self::draw_command(
+                self.draw_command(
                     f,
                     rects[1],
                     self.filter.as_str(),
@@ -567,7 +656,7 @@ impl TaskwarriorTui {
             }
             Action::Jump => {
                 let position = Self::get_position(&self.command);
-                Self::draw_command(
+                self.draw_command(
                     f,
                     rects[1],
                     self.command.as_str(),
@@ -585,7 +674,7 @@ impl TaskwarriorTui {
                 if self.show_completion_pane {
                     self.draw_completion_pop_up(f, rects[1], position);
                 }
-                Self::draw_command(
+                self.draw_command(
                     f,
                     rects[1],
                     self.filter.as_str(),
@@ -608,7 +697,7 @@ impl TaskwarriorTui {
                 if self.show_completion_pane {
                     self.draw_completion_pop_up(f, rects[1], position);
                 }
-                Self::draw_command(
+                self.draw_command(
                     f,
                     rects[1],
                     self.command.as_str(),
@@ -625,7 +714,7 @@ impl TaskwarriorTui {
             }
             Action::Subprocess => {
                 let position = Self::get_position(&self.command);
-                Self::draw_command(
+                self.draw_command(
                     f,
                     rects[1],
                     self.command.as_str(),
@@ -648,7 +737,7 @@ impl TaskwarriorTui {
                 } else {
                     format!("Modify Task {}", task_ids.join(","))
                 };
-                Self::draw_command(
+                self.draw_command(
                     f,
                     rects[1],
                     self.modify.as_str(),
@@ -676,7 +765,7 @@ impl TaskwarriorTui {
                 } else {
                     format!("Annotate Task {}", task_ids.join(","))
                 };
-                Self::draw_command(
+                self.draw_command(
                     f,
                     rects[1],
                     self.command.as_str(),
@@ -699,7 +788,7 @@ impl TaskwarriorTui {
                 if self.show_completion_pane {
                     self.draw_completion_pop_up(f, rects[1], position);
                 }
-                Self::draw_command(
+                self.draw_command(
                     f,
                     rects[1],
                     self.command.as_str(),
@@ -715,7 +804,7 @@ impl TaskwarriorTui {
                 );
             }
             Action::HelpPopup => {
-                Self::draw_command(
+                self.draw_command(
                     f,
                     rects[1],
                     self.filter.as_str(),
@@ -727,7 +816,7 @@ impl TaskwarriorTui {
                 self.draw_help_popup(f, 80, 90);
             }
             Action::ContextMenu => {
-                Self::draw_command(
+                self.draw_command(
                     f,
                     rects[1],
                     self.filter.as_str(),
@@ -745,14 +834,14 @@ impl TaskwarriorTui {
                     format!("Done Task {}?", task_ids.join(","))
                 };
                 let x = match self.keyconfig.done {
-                    Key::Char(c) => c.to_string(),
+                    KeyCode::Char(c) => c.to_string(),
                     _ => "Enter".to_string(),
                 };
                 let q = match self.keyconfig.quit {
-                    Key::Char(c) => c.to_string(),
+                    KeyCode::Char(c) => c.to_string(),
                     _ => "Esc".to_string(),
                 };
-                Self::draw_command(
+                self.draw_command(
                     f,
                     rects[1],
                     &format!("Press <{}> to confirm or <{}> to abort.", x, q),
@@ -769,14 +858,14 @@ impl TaskwarriorTui {
                     format!("Delete Task {}?", task_ids.join(","))
                 };
                 let x = match self.keyconfig.delete {
-                    Key::Char(c) => c.to_string(),
+                    KeyCode::Char(c) => c.to_string(),
                     _ => "Enter".to_string(),
                 };
                 let q = match self.keyconfig.quit {
-                    Key::Char(c) => c.to_string(),
+                    KeyCode::Char(c) => c.to_string(),
                     _ => "Esc".to_string(),
                 };
-                Self::draw_command(
+                self.draw_command(
                     f,
                     rects[1],
                     &format!("Press <{}> to confirm or <{}> to abort.", x, q),
@@ -945,6 +1034,7 @@ impl TaskwarriorTui {
     }
 
     fn draw_command(
+        &self,
         f: &mut Frame<impl Backend>,
         rect: Rect,
         text: &str,
@@ -966,14 +1056,16 @@ impl TaskwarriorTui {
             .split(rect);
 
         // render command title
-        let fg_color = if error.is_some() { Color::Red } else { Color::Reset };
+        let mut style = self.config.uda_style_command;
+        if error.is_some() {
+            style = style.fg(Color::Red);
+        };
         let title_spans = if let Some(subtitle) = title.1 {
             Spans::from(vec![title.0, Span::from(" ["), subtitle, Span::from("]")])
         } else {
             Spans::from(vec![title.0])
         };
-        let title = Paragraph::new(Text::from(title_spans))
-            .style(Style::default().fg(fg_color).add_modifier(Modifier::REVERSED));
+        let title = Paragraph::new(Text::from(title_spans)).style(style);
         f.render_widget(title, rects[0]);
 
         // render command
@@ -1238,7 +1330,7 @@ impl TaskwarriorTui {
         (tasks, headers)
     }
 
-    pub fn update(&mut self, force: bool) -> Result<()> {
+    pub async fn update(&mut self, force: bool) -> Result<()> {
         trace!("self.update({:?});", force);
         if force || self.dirty || self.tasks_changed_since(self.last_export).unwrap_or(true) {
             self.get_context()?;
@@ -1265,7 +1357,7 @@ impl TaskwarriorTui {
         self.cursor_fix();
         self.update_task_table_state();
         if self.task_report_show_info {
-            self.update_task_details()?;
+            self.update_task_details().await?;
         }
         self.selection_fix();
 
@@ -1304,7 +1396,7 @@ impl TaskwarriorTui {
         }
     }
 
-    pub fn update_task_details(&mut self) -> Result<()> {
+    pub async fn update_task_details(&mut self) -> Result<()> {
         if self.tasks.is_empty() {
             return Ok(());
         }
@@ -1335,40 +1427,38 @@ impl TaskwarriorTui {
 
         l.dedup();
 
-        let mut outputs = vec![];
-        for s in &l {
-            if self.tasks.is_empty() {
-                return Ok(());
-            }
-            if s >= &self.tasks.len() {
-                break;
-            }
-            let task_uuid = *self.tasks[*s].uuid();
-            if !self.task_details.contains_key(&task_uuid) || task_uuid == current_task_uuid {
-                let (tx, rx) = mpsc::channel();
-                let defaultwidth = self.terminal_width.saturating_sub(2);
-                std::thread::spawn(move || {
-                    let output = Command::new("task")
+        let (tx, mut rx) = tokio::sync::mpsc::channel(100);
+        let tasks = self.tasks.clone();
+        let mut task_details = self.task_details.clone();
+        let defaultwidth = self.terminal_width.saturating_sub(2);
+        tokio::spawn(async move {
+            for s in &l {
+                if tasks.is_empty() {
+                    return Ok(());
+                }
+                if s >= &tasks.len() {
+                    break;
+                }
+                let task_uuid = *tasks[*s].uuid();
+                if !task_details.contains_key(&task_uuid) || task_uuid == current_task_uuid {
+                    debug!("Running task details for {}", task_uuid);
+                    let output = tokio::process::Command::new("task")
                         .arg("rc.color=off")
                         .arg("rc._forcecolor=off")
                         .arg(format!("rc.defaultwidth={}", defaultwidth))
                         .arg(format!("{}", task_uuid))
-                        .output();
+                        .output()
+                        .await;
                     if let Ok(output) = output {
                         let data = String::from_utf8_lossy(&output.stdout).to_string();
-                        tx.send(Some((task_uuid, data))).unwrap();
-                    } else {
-                        tx.send(None).unwrap();
+                        task_details.insert(task_uuid, data);
                     }
-                });
-                outputs.push(rx);
+                }
             }
-        }
-
-        while !outputs.is_empty() {
-            if let Ok(Some((task_uuid, data))) = outputs.pop().unwrap().recv() {
-                self.task_details.insert(task_uuid, data);
-            }
+            tx.send(task_details).await
+        });
+        while let Some(td) = rx.recv().await {
+            self.task_details = td;
         }
         Ok(())
     }
@@ -1808,7 +1898,9 @@ impl TaskwarriorTui {
         });
     }
 
-    pub fn task_shortcut(&mut self, s: usize) -> Result<(), String> {
+    pub async fn task_shortcut(&mut self, s: usize) -> Result<(), String> {
+        self.pause_tui().await.unwrap();
+
         let task_uuids = if self.tasks.is_empty() {
             vec![]
         } else {
@@ -1820,7 +1912,6 @@ impl TaskwarriorTui {
         if shell.is_empty() {
             return Err("Trying to run empty shortcut.".to_string());
         }
-
         let shell = format!(
             "{} {}",
             shell,
@@ -1830,6 +1921,7 @@ impl TaskwarriorTui {
                 .collect::<Vec<String>>()
                 .join(" ")
         );
+
         let shell = shellexpand::tilde(&shell).into_owned();
         let r = match shlex::split(&shell) {
             Some(cmd) => {
@@ -1871,6 +1963,7 @@ impl TaskwarriorTui {
             }
         }
 
+        self.resume_tui().await.unwrap();
         r
     }
 
@@ -2206,13 +2299,17 @@ impl TaskwarriorTui {
         }
     }
 
-    pub fn task_edit(&mut self) -> Result<(), String> {
+    pub async fn task_edit(&mut self) -> Result<(), String> {
         if self.tasks.is_empty() {
             return Ok(());
         }
+
+        self.pause_tui().await.unwrap();
+
         let selected = self.current_selection;
         let task_id = self.tasks[selected].id().unwrap_or_default();
         let task_uuid = *self.tasks[selected].uuid();
+
         let r = Command::new("task").arg(format!("{}", task_uuid)).arg("edit").spawn();
 
         let r = match r {
@@ -2241,6 +2338,8 @@ impl TaskwarriorTui {
         };
 
         self.current_selection_uuid = Some(task_uuid);
+
+        self.resume_tui().await.unwrap();
 
         r
     }
@@ -2412,32 +2511,33 @@ impl TaskwarriorTui {
         es
     }
 
-    pub fn handle_input(&mut self, input: Key) -> Result<()> {
+    pub async fn handle_input(&mut self, input: KeyCode) -> Result<()> {
         match self.mode {
             Mode::Tasks(_) => {
-                self.handle_input_by_task_mode(input)?;
+                self.handle_input_by_task_mode(input).await?;
             }
             Mode::Projects => {
                 ProjectsState::handle_input(self, input)?;
+                self.update(false).await?;
             }
             Mode::Calendar => {
-                if input == self.keyconfig.quit || input == Key::Ctrl('c') {
+                if input == self.keyconfig.quit || input == KeyCode::Ctrl('c') {
                     self.should_quit = true;
                 } else if input == self.keyconfig.previous_tab {
                     self.mode = Mode::Projects;
-                } else if input == Key::Up || input == self.keyconfig.up {
+                } else if input == KeyCode::Up || input == self.keyconfig.up {
                     if self.calendar_year > 0 {
                         self.calendar_year -= 1;
                     }
-                } else if input == Key::Down || input == self.keyconfig.down {
+                } else if input == KeyCode::Down || input == self.keyconfig.down {
                     self.calendar_year += 1;
-                } else if input == Key::PageUp || input == self.keyconfig.page_up {
+                } else if input == KeyCode::PageUp || input == self.keyconfig.page_up {
                     self.task_report_previous_page();
-                } else if input == Key::PageDown || input == self.keyconfig.page_down {
+                } else if input == KeyCode::PageDown || input == self.keyconfig.page_down {
                     self.calendar_year += 10;
-                } else if input == Key::Ctrl('e') {
+                } else if input == KeyCode::Ctrl('e') {
                     self.task_details_scroll_down();
-                } else if input == Key::Ctrl('y') {
+                } else if input == KeyCode::Ctrl('y') {
                     self.task_details_scroll_up();
                 } else if input == self.keyconfig.done {
                     if self.config.uda_task_report_prompt_on_done {
@@ -2447,7 +2547,7 @@ impl TaskwarriorTui {
                         }
                     } else {
                         match self.task_done() {
-                            Ok(_) => self.update(true)?,
+                            Ok(_) => self.update(true).await?,
                             Err(e) => {
                                 self.error = Some(e);
                             }
@@ -2463,13 +2563,13 @@ impl TaskwarriorTui {
         Ok(())
     }
 
-    fn handle_input_by_task_mode(&mut self, input: Key) -> Result<()> {
+    async fn handle_input_by_task_mode(&mut self, input: KeyCode) -> Result<()> {
         if let Mode::Tasks(task_mode) = &self.mode {
             match task_mode {
                 Action::Report => {
-                    if input == Key::Esc {
+                    if input == KeyCode::Esc {
                         self.marked.clear();
-                    } else if input == self.keyconfig.quit || input == Key::Ctrl('c') {
+                    } else if input == self.keyconfig.quit || input == KeyCode::Ctrl('c') {
                         self.should_quit = true;
                     } else if input == self.keyconfig.select {
                         self.task_table_state.multiple_selection();
@@ -2478,22 +2578,22 @@ impl TaskwarriorTui {
                         self.task_table_state.multiple_selection();
                         self.toggle_mark_all();
                     } else if input == self.keyconfig.refresh {
-                        self.update(true)?;
-                    } else if input == self.keyconfig.go_to_bottom || input == Key::End {
+                        self.update(true).await?;
+                    } else if input == self.keyconfig.go_to_bottom || input == KeyCode::End {
                         self.task_report_bottom();
-                    } else if input == self.keyconfig.go_to_top || input == Key::Home {
+                    } else if input == self.keyconfig.go_to_top || input == KeyCode::Home {
                         self.task_report_top();
-                    } else if input == Key::Down || input == self.keyconfig.down {
+                    } else if input == KeyCode::Down || input == self.keyconfig.down {
                         self.task_report_next();
-                    } else if input == Key::Up || input == self.keyconfig.up {
+                    } else if input == KeyCode::Up || input == self.keyconfig.up {
                         self.task_report_previous();
-                    } else if input == Key::PageDown || input == self.keyconfig.page_down {
+                    } else if input == KeyCode::PageDown || input == self.keyconfig.page_down {
                         self.task_report_next_page();
-                    } else if input == Key::PageUp || input == self.keyconfig.page_up {
+                    } else if input == KeyCode::PageUp || input == self.keyconfig.page_up {
                         self.task_report_previous_page();
-                    } else if input == Key::Ctrl('e') {
+                    } else if input == KeyCode::Ctrl('e') {
                         self.task_details_scroll_down();
-                    } else if input == Key::Ctrl('y') {
+                    } else if input == KeyCode::Ctrl('y') {
                         self.task_details_scroll_up();
                     } else if input == self.keyconfig.done {
                         if self.config.uda_task_report_prompt_on_done {
@@ -2503,7 +2603,7 @@ impl TaskwarriorTui {
                             }
                         } else {
                             match self.task_done() {
-                                Ok(_) => self.update(true)?,
+                                Ok(_) => self.update(true).await?,
                                 Err(e) => {
                                     self.error = Some(e);
                                 }
@@ -2517,7 +2617,7 @@ impl TaskwarriorTui {
                             }
                         } else {
                             match self.task_delete() {
-                                Ok(_) => self.update(true)?,
+                                Ok(_) => self.update(true).await?,
                                 Err(e) => {
                                     self.error = Some(e);
                                 }
@@ -2525,28 +2625,28 @@ impl TaskwarriorTui {
                         }
                     } else if input == self.keyconfig.start_stop {
                         match self.task_start_stop() {
-                            Ok(_) => self.update(true)?,
+                            Ok(_) => self.update(true).await?,
                             Err(e) => {
                                 self.error = Some(e);
                             }
                         }
                     } else if input == self.keyconfig.quick_tag {
                         match self.task_quick_tag() {
-                            Ok(_) => self.update(true)?,
+                            Ok(_) => self.update(true).await?,
                             Err(e) => {
                                 self.error = Some(e);
                             }
                         }
                     } else if input == self.keyconfig.edit {
-                        match self.task_edit() {
-                            Ok(_) => self.update(true)?,
+                        match self.task_edit().await {
+                            Ok(_) => self.update(true).await?,
                             Err(e) => {
                                 self.error = Some(e);
                             }
                         }
                     } else if input == self.keyconfig.undo {
                         match self.task_undo() {
-                            Ok(_) => self.update(true)?,
+                            Ok(_) => self.update(true).await?,
                             Err(e) => {
                                 self.error = Some(e);
                             }
@@ -2645,77 +2745,77 @@ impl TaskwarriorTui {
                             self.filter_history.history_len()
                         ));
                         self.update_completion_list();
-                    } else if input == Key::Char(':') {
+                    } else if input == KeyCode::Char(':') {
                         self.mode = Mode::Tasks(Action::Jump);
                     } else if input == self.keyconfig.shortcut1 {
-                        match self.task_shortcut(1) {
-                            Ok(_) => self.update(true)?,
+                        match self.task_shortcut(1).await {
+                            Ok(_) => self.update(true).await?,
                             Err(e) => {
-                                self.update(true)?;
+                                self.update(true).await?;
                                 self.error = Some(e);
                             }
                         }
                     } else if input == self.keyconfig.shortcut2 {
-                        match self.task_shortcut(2) {
-                            Ok(_) => self.update(true)?,
+                        match self.task_shortcut(2).await {
+                            Ok(_) => self.update(true).await?,
                             Err(e) => {
-                                self.update(true)?;
+                                self.update(true).await?;
                                 self.error = Some(e);
                             }
                         }
                     } else if input == self.keyconfig.shortcut3 {
-                        match self.task_shortcut(3) {
-                            Ok(_) => self.update(true)?,
+                        match self.task_shortcut(3).await {
+                            Ok(_) => self.update(true).await?,
                             Err(e) => {
-                                self.update(true)?;
+                                self.update(true).await?;
                                 self.error = Some(e);
                             }
                         }
                     } else if input == self.keyconfig.shortcut4 {
-                        match self.task_shortcut(4) {
-                            Ok(_) => self.update(true)?,
+                        match self.task_shortcut(4).await {
+                            Ok(_) => self.update(true).await?,
                             Err(e) => {
-                                self.update(true)?;
+                                self.update(true).await?;
                                 self.error = Some(e);
                             }
                         }
                     } else if input == self.keyconfig.shortcut5 {
-                        match self.task_shortcut(5) {
-                            Ok(_) => self.update(true)?,
+                        match self.task_shortcut(5).await {
+                            Ok(_) => self.update(true).await?,
                             Err(e) => {
-                                self.update(true)?;
+                                self.update(true).await?;
                                 self.error = Some(e);
                             }
                         }
                     } else if input == self.keyconfig.shortcut6 {
-                        match self.task_shortcut(6) {
-                            Ok(_) => self.update(true)?,
+                        match self.task_shortcut(6).await {
+                            Ok(_) => self.update(true).await?,
                             Err(e) => {
-                                self.update(true)?;
+                                self.update(true).await?;
                                 self.error = Some(e);
                             }
                         }
                     } else if input == self.keyconfig.shortcut7 {
-                        match self.task_shortcut(7) {
-                            Ok(_) => self.update(true)?,
+                        match self.task_shortcut(7).await {
+                            Ok(_) => self.update(true).await?,
                             Err(e) => {
-                                self.update(true)?;
+                                self.update(true).await?;
                                 self.error = Some(e);
                             }
                         }
                     } else if input == self.keyconfig.shortcut8 {
-                        match self.task_shortcut(8) {
-                            Ok(_) => self.update(true)?,
+                        match self.task_shortcut(8).await {
+                            Ok(_) => self.update(true).await?,
                             Err(e) => {
-                                self.update(true)?;
+                                self.update(true).await?;
                                 self.error = Some(e);
                             }
                         }
                     } else if input == self.keyconfig.shortcut9 {
-                        match self.task_shortcut(9) {
-                            Ok(_) => self.update(true)?,
+                        match self.task_shortcut(9).await {
+                            Ok(_) => self.update(true).await?,
                             Err(e) => {
-                                self.update(true)?;
+                                self.update(true).await?;
                                 self.error = Some(e);
                             }
                         }
@@ -2728,9 +2828,9 @@ impl TaskwarriorTui {
                     }
                 }
                 Action::ContextMenu => {
-                    if input == self.keyconfig.quit || input == Key::Esc {
+                    if input == self.keyconfig.quit || input == KeyCode::Esc {
                         self.mode = Mode::Tasks(Action::Report);
-                    } else if input == Key::Down || input == self.keyconfig.down {
+                    } else if input == KeyCode::Down || input == self.keyconfig.down {
                         self.context_next();
                         if self.config.uda_context_menu_select_on_move {
                             if self.error.is_some() {
@@ -2738,14 +2838,14 @@ impl TaskwarriorTui {
                                 self.mode = Mode::Tasks(Action::Error);
                             } else {
                                 match self.context_select() {
-                                    Ok(_) => self.update(true)?,
+                                    Ok(_) => self.update(true).await?,
                                     Err(e) => {
                                         self.error = Some(e.to_string());
                                     }
                                 }
                             }
                         }
-                    } else if input == Key::Up || input == self.keyconfig.up {
+                    } else if input == KeyCode::Up || input == self.keyconfig.up {
                         self.context_previous();
                         if self.config.uda_context_menu_select_on_move {
                             if self.error.is_some() {
@@ -2753,14 +2853,14 @@ impl TaskwarriorTui {
                                 self.mode = Mode::Tasks(Action::Error);
                             } else {
                                 match self.context_select() {
-                                    Ok(_) => self.update(true)?,
+                                    Ok(_) => self.update(true).await?,
                                     Err(e) => {
                                         self.error = Some(e.to_string());
                                     }
                                 }
                             }
                         }
-                    } else if input == Key::Char('\n') {
+                    } else if input == KeyCode::Char('\n') {
                         if self.error.is_some() {
                             self.previous_mode = Some(self.mode.clone());
                             self.mode = Mode::Tasks(Action::Error);
@@ -2768,7 +2868,7 @@ impl TaskwarriorTui {
                             self.mode = Mode::Tasks(Action::Report);
                         } else {
                             match self.context_select() {
-                                Ok(_) => self.update(true)?,
+                                Ok(_) => self.update(true).await?,
                                 Err(e) => {
                                     self.error = Some(e.to_string());
                                 }
@@ -2777,7 +2877,7 @@ impl TaskwarriorTui {
                     }
                 }
                 Action::HelpPopup => {
-                    if input == self.keyconfig.quit || input == Key::Esc {
+                    if input == self.keyconfig.quit || input == KeyCode::Esc {
                         self.mode = Mode::Tasks(Action::Report);
                     } else if input == self.keyconfig.down {
                         self.help_popup.scroll = self.help_popup.scroll.checked_add(1).unwrap_or(0);
@@ -2790,7 +2890,7 @@ impl TaskwarriorTui {
                     }
                 }
                 Action::Modify => match input {
-                    Key::Esc => {
+                    KeyCode::Esc => {
                         if self.show_completion_pane {
                             self.show_completion_pane = false;
                             self.completion_list.unselect();
@@ -2799,7 +2899,7 @@ impl TaskwarriorTui {
                             self.mode = Mode::Tasks(Action::Report);
                         }
                     }
-                    Key::Char('\n') => {
+                    KeyCode::Char('\n') => {
                         if self.show_completion_pane {
                             self.show_completion_pane = false;
                             if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
@@ -2817,7 +2917,7 @@ impl TaskwarriorTui {
                                     self.mode = Mode::Tasks(Action::Report);
                                     self.command_history.add(self.modify.as_str());
                                     self.modify.update("", 0);
-                                    self.update(true)?;
+                                    self.update(true).await?;
                                 }
                                 Err(e) => {
                                     self.error = Some(e);
@@ -2825,7 +2925,7 @@ impl TaskwarriorTui {
                             }
                         }
                     }
-                    Key::Tab | Key::Ctrl('n') => {
+                    KeyCode::Tab | KeyCode::Ctrl('n') => {
                         if !self.completion_list.is_empty() {
                             self.update_input_for_completion();
                             if !self.show_completion_pane {
@@ -2834,13 +2934,13 @@ impl TaskwarriorTui {
                             self.completion_list.next();
                         }
                     }
-                    Key::BackTab | Key::Ctrl('p') => {
+                    KeyCode::BackTab | KeyCode::Ctrl('p') => {
                         if self.show_completion_pane && !self.completion_list.is_empty() {
                             self.completion_list.previous();
                         }
                     }
 
-                    Key::Up => {
+                    KeyCode::Up => {
                         if self.show_completion_pane && !self.completion_list.is_empty() {
                             self.completion_list.previous();
                         } else if let Some(s) = self
@@ -2860,7 +2960,7 @@ impl TaskwarriorTui {
                             ));
                         }
                     }
-                    Key::Down => {
+                    KeyCode::Down => {
                         if self.show_completion_pane && !self.completion_list.is_empty() {
                             self.completion_list.next();
                         } else if let Some(s) = self
@@ -2887,7 +2987,7 @@ impl TaskwarriorTui {
                     }
                 },
                 Action::Subprocess => match input {
-                    Key::Char('\n') => {
+                    KeyCode::Char('\n') => {
                         if self.error.is_some() {
                             self.previous_mode = Some(self.mode.clone());
                             self.mode = Mode::Tasks(Action::Error);
@@ -2896,7 +2996,7 @@ impl TaskwarriorTui {
                                 Ok(_) => {
                                     self.mode = Mode::Tasks(Action::Report);
                                     self.reset_command();
-                                    self.update(true)?;
+                                    self.update(true).await?;
                                 }
                                 Err(e) => {
                                     self.error = Some(e);
@@ -2904,14 +3004,14 @@ impl TaskwarriorTui {
                             }
                         }
                     }
-                    Key::Esc => {
+                    KeyCode::Esc => {
                         self.reset_command();
                         self.mode = Mode::Tasks(Action::Report);
                     }
                     _ => handle_movement(&mut self.command, input),
                 },
                 Action::Log => match input {
-                    Key::Esc => {
+                    KeyCode::Esc => {
                         if self.show_completion_pane {
                             self.show_completion_pane = false;
                             self.completion_list.unselect();
@@ -2921,7 +3021,7 @@ impl TaskwarriorTui {
                             self.mode = Mode::Tasks(Action::Report);
                         }
                     }
-                    Key::Char('\n') => {
+                    KeyCode::Char('\n') => {
                         if self.show_completion_pane {
                             self.show_completion_pane = false;
                             if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
@@ -2940,7 +3040,7 @@ impl TaskwarriorTui {
                                     self.command_history.add(self.command.as_str());
                                     self.reset_command();
                                     self.history_status = None;
-                                    self.update(true)?;
+                                    self.update(true).await?;
                                 }
                                 Err(e) => {
                                     self.error = Some(e);
@@ -2948,7 +3048,7 @@ impl TaskwarriorTui {
                             }
                         }
                     }
-                    Key::Tab | Key::Ctrl('n') => {
+                    KeyCode::Tab | KeyCode::Ctrl('n') => {
                         if !self.completion_list.is_empty() {
                             self.update_input_for_completion();
                             if !self.show_completion_pane {
@@ -2957,13 +3057,13 @@ impl TaskwarriorTui {
                             self.completion_list.next();
                         }
                     }
-                    Key::BackTab | Key::Ctrl('p') => {
+                    KeyCode::BackTab | KeyCode::Ctrl('p') => {
                         if self.show_completion_pane && !self.completion_list.is_empty() {
                             self.completion_list.previous();
                         }
                     }
 
-                    Key::Up => {
+                    KeyCode::Up => {
                         if self.show_completion_pane && !self.completion_list.is_empty() {
                             self.completion_list.previous();
                         } else if let Some(s) = self
@@ -2983,7 +3083,7 @@ impl TaskwarriorTui {
                             ));
                         }
                     }
-                    Key::Down => {
+                    KeyCode::Down => {
                         if self.show_completion_pane && !self.completion_list.is_empty() {
                             self.completion_list.next();
                         } else if let Some(s) = self
@@ -3010,7 +3110,7 @@ impl TaskwarriorTui {
                     }
                 },
                 Action::Annotate => match input {
-                    Key::Esc => {
+                    KeyCode::Esc => {
                         if self.show_completion_pane {
                             self.show_completion_pane = false;
                             self.completion_list.unselect();
@@ -3020,7 +3120,7 @@ impl TaskwarriorTui {
                             self.history_status = None;
                         }
                     }
-                    Key::Char('\n') => {
+                    KeyCode::Char('\n') => {
                         if self.show_completion_pane {
                             self.show_completion_pane = false;
                             if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
@@ -3039,7 +3139,7 @@ impl TaskwarriorTui {
                                     self.command_history.add(self.command.as_str());
                                     self.reset_command();
                                     self.history_status = None;
-                                    self.update(true)?;
+                                    self.update(true).await?;
                                 }
                                 Err(e) => {
                                     self.error = Some(e);
@@ -3047,7 +3147,7 @@ impl TaskwarriorTui {
                             }
                         }
                     }
-                    Key::Tab | Key::Ctrl('n') => {
+                    KeyCode::Tab | KeyCode::Ctrl('n') => {
                         if !self.completion_list.is_empty() {
                             self.update_input_for_completion();
                             if !self.show_completion_pane {
@@ -3056,12 +3156,12 @@ impl TaskwarriorTui {
                             self.completion_list.next();
                         }
                     }
-                    Key::BackTab | Key::Ctrl('p') => {
+                    KeyCode::BackTab | KeyCode::Ctrl('p') => {
                         if self.show_completion_pane && !self.completion_list.is_empty() {
                             self.completion_list.previous();
                         }
                     }
-                    Key::Up => {
+                    KeyCode::Up => {
                         if self.show_completion_pane && !self.completion_list.is_empty() {
                             self.completion_list.previous();
                         } else if let Some(s) = self
@@ -3081,7 +3181,7 @@ impl TaskwarriorTui {
                             ));
                         }
                     }
-                    Key::Down => {
+                    KeyCode::Down => {
                         if self.show_completion_pane && !self.completion_list.is_empty() {
                             self.completion_list.next();
                         } else if let Some(s) = self
@@ -3109,7 +3209,7 @@ impl TaskwarriorTui {
                     }
                 },
                 Action::Jump => match input {
-                    Key::Char('\n') => {
+                    KeyCode::Char('\n') => {
                         if self.error.is_some() {
                             self.previous_mode = Some(self.mode.clone());
                             self.mode = Mode::Tasks(Action::Error);
@@ -3118,7 +3218,7 @@ impl TaskwarriorTui {
                                 Ok(_) => {
                                     self.mode = Mode::Tasks(Action::Report);
                                     self.reset_command();
-                                    self.update(true)?;
+                                    self.update(true).await?;
                                 }
                                 Err(e) => {
                                     self.reset_command();
@@ -3127,14 +3227,14 @@ impl TaskwarriorTui {
                             }
                         }
                     }
-                    Key::Esc => {
+                    KeyCode::Esc => {
                         self.reset_command();
                         self.mode = Mode::Tasks(Action::Report);
                     }
                     _ => handle_movement(&mut self.command, input),
                 },
                 Action::Add => match input {
-                    Key::Esc => {
+                    KeyCode::Esc => {
                         if self.show_completion_pane {
                             self.show_completion_pane = false;
                             self.completion_list.unselect();
@@ -3144,7 +3244,7 @@ impl TaskwarriorTui {
                             self.mode = Mode::Tasks(Action::Report);
                         }
                     }
-                    Key::Char('\n') => {
+                    KeyCode::Char('\n') => {
                         if self.show_completion_pane {
                             self.show_completion_pane = false;
                             if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
@@ -3163,7 +3263,7 @@ impl TaskwarriorTui {
                                     self.command_history.add(self.command.as_str());
                                     self.reset_command();
                                     self.history_status = None;
-                                    self.update(true)?;
+                                    self.update(true).await?;
                                 }
                                 Err(e) => {
                                     self.error = Some(e);
@@ -3171,7 +3271,7 @@ impl TaskwarriorTui {
                             }
                         }
                     }
-                    Key::Tab | Key::Ctrl('n') => {
+                    KeyCode::Tab | KeyCode::Ctrl('n') => {
                         if !self.completion_list.is_empty() {
                             self.update_input_for_completion();
                             if !self.show_completion_pane {
@@ -3180,12 +3280,12 @@ impl TaskwarriorTui {
                             self.completion_list.next();
                         }
                     }
-                    Key::BackTab | Key::Ctrl('p') => {
+                    KeyCode::BackTab | KeyCode::Ctrl('p') => {
                         if self.show_completion_pane && !self.completion_list.is_empty() {
                             self.completion_list.previous();
                         }
                     }
-                    Key::Up => {
+                    KeyCode::Up => {
                         if self.show_completion_pane && !self.completion_list.is_empty() {
                             self.completion_list.previous();
                         } else if let Some(s) = self
@@ -3206,7 +3306,7 @@ impl TaskwarriorTui {
                         }
                     }
 
-                    Key::Down => {
+                    KeyCode::Down => {
                         if self.show_completion_pane && !self.completion_list.is_empty() {
                             self.completion_list.next();
                         } else if let Some(s) = self
@@ -3233,7 +3333,7 @@ impl TaskwarriorTui {
                     }
                 },
                 Action::Filter => match input {
-                    Key::Esc => {
+                    KeyCode::Esc => {
                         if self.show_completion_pane {
                             self.show_completion_pane = false;
                             self.completion_list.unselect();
@@ -3249,10 +3349,10 @@ impl TaskwarriorTui {
                                 self.dirty = true;
                             }
                             self.history_status = None;
-                            self.update(true)?;
+                            self.update(true).await?;
                         }
                     }
-                    Key::Char('\n') => {
+                    KeyCode::Char('\n') => {
                         if self.show_completion_pane {
                             self.show_completion_pane = false;
                             if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
@@ -3269,10 +3369,10 @@ impl TaskwarriorTui {
                             self.mode = Mode::Tasks(Action::Report);
                             self.filter_history.add(self.filter.as_str());
                             self.history_status = None;
-                            self.update(true)?;
+                            self.update(true).await?;
                         }
                     }
-                    Key::Up => {
+                    KeyCode::Up => {
                         if self.show_completion_pane && !self.completion_list.is_empty() {
                             self.completion_list.previous();
                         } else if let Some(s) = self
@@ -3293,7 +3393,7 @@ impl TaskwarriorTui {
                             self.dirty = true;
                         }
                     }
-                    Key::Down => {
+                    KeyCode::Down => {
                         if self.show_completion_pane && !self.completion_list.is_empty() {
                             self.completion_list.next();
                         } else if let Some(s) = self
@@ -3314,7 +3414,7 @@ impl TaskwarriorTui {
                             self.dirty = true;
                         }
                     }
-                    Key::Tab | Key::Ctrl('n') => {
+                    KeyCode::Tab | KeyCode::Ctrl('n') => {
                         if !self.completion_list.is_empty() {
                             self.update_input_for_completion();
                             if !self.show_completion_pane {
@@ -3323,12 +3423,12 @@ impl TaskwarriorTui {
                             self.completion_list.next();
                         }
                     }
-                    Key::BackTab | Key::Ctrl('p') => {
+                    KeyCode::BackTab | KeyCode::Ctrl('p') => {
                         if self.show_completion_pane && !self.completion_list.is_empty() {
                             self.completion_list.previous();
                         }
                     }
-                    Key::Ctrl('r') => {
+                    KeyCode::Ctrl('r') => {
                         self.filter.update("", 0);
                         for c in self.config.filter.chars() {
                             self.filter.insert(c, 1);
@@ -3344,7 +3444,7 @@ impl TaskwarriorTui {
                     }
                 },
                 Action::DonePrompt => {
-                    if input == self.keyconfig.done || input == Key::Char('\n') {
+                    if input == self.keyconfig.done || input == KeyCode::Char('\n') {
                         if self.error.is_some() {
                             self.previous_mode = Some(self.mode.clone());
                             self.mode = Mode::Tasks(Action::Error);
@@ -3352,21 +3452,21 @@ impl TaskwarriorTui {
                             match self.task_done() {
                                 Ok(_) => {
                                     self.mode = Mode::Tasks(Action::Report);
-                                    self.update(true)?;
+                                    self.update(true).await?;
                                 }
                                 Err(e) => {
                                     self.error = Some(e);
                                 }
                             }
                         }
-                    } else if input == self.keyconfig.quit || input == Key::Esc {
+                    } else if input == self.keyconfig.quit || input == KeyCode::Esc {
                         self.mode = Mode::Tasks(Action::Report);
                     } else {
                         handle_movement(&mut self.command, input);
                     }
                 }
                 Action::DeletePrompt => {
-                    if input == self.keyconfig.delete || input == Key::Char('\n') {
+                    if input == self.keyconfig.delete || input == KeyCode::Char('\n') {
                         if self.error.is_some() {
                             self.previous_mode = Some(self.mode.clone());
                             self.mode = Mode::Tasks(Action::Error);
@@ -3374,14 +3474,14 @@ impl TaskwarriorTui {
                             match self.task_delete() {
                                 Ok(_) => {
                                     self.mode = Mode::Tasks(Action::Report);
-                                    self.update(true)?;
+                                    self.update(true).await?;
                                 }
                                 Err(e) => {
                                     self.error = Some(e);
                                 }
                             }
                         }
-                    } else if input == self.keyconfig.quit || input == Key::Esc {
+                    } else if input == self.keyconfig.quit || input == KeyCode::Esc {
                         self.mode = Mode::Tasks(Action::Report);
                     } else {
                         handle_movement(&mut self.command, input);
@@ -3545,48 +3645,48 @@ impl TaskwarriorTui {
     }
 }
 
-pub fn handle_movement(linebuffer: &mut LineBuffer, input: Key) {
+pub fn handle_movement(linebuffer: &mut LineBuffer, input: KeyCode) {
     match input {
-        Key::Ctrl('f') | Key::Right => {
+        KeyCode::Ctrl('f') | KeyCode::Right => {
             linebuffer.move_forward(1);
         }
-        Key::Ctrl('b') | Key::Left => {
+        KeyCode::Ctrl('b') | KeyCode::Left => {
             linebuffer.move_backward(1);
         }
-        Key::Ctrl('h') | Key::Backspace => {
+        KeyCode::Ctrl('h') | KeyCode::Backspace => {
             linebuffer.backspace(1);
         }
-        Key::Ctrl('d') | Key::Delete => {
+        KeyCode::Ctrl('d') | KeyCode::Delete => {
             linebuffer.delete(1);
         }
-        Key::Ctrl('a') | Key::Home => {
+        KeyCode::Ctrl('a') | KeyCode::Home => {
             linebuffer.move_home();
         }
-        Key::Ctrl('e') | Key::End => {
+        KeyCode::Ctrl('e') | KeyCode::End => {
             linebuffer.move_end();
         }
-        Key::Ctrl('k') => {
+        KeyCode::Ctrl('k') => {
             linebuffer.kill_line();
         }
-        Key::Ctrl('u') => {
+        KeyCode::Ctrl('u') => {
             linebuffer.discard_line();
         }
-        Key::Ctrl('w') | Key::AltBackspace | Key::CtrlBackspace => {
+        KeyCode::Ctrl('w') | KeyCode::AltBackspace | KeyCode::CtrlBackspace => {
             linebuffer.delete_prev_word(Word::Emacs, 1);
         }
-        Key::Alt('d') | Key::AltDelete | Key::CtrlDelete => {
+        KeyCode::Alt('d') | KeyCode::AltDelete | KeyCode::CtrlDelete => {
             linebuffer.delete_word(At::AfterEnd, Word::Emacs, 1);
         }
-        Key::Alt('f') => {
+        KeyCode::Alt('f') => {
             linebuffer.move_to_next_word(At::AfterEnd, Word::Emacs, 1);
         }
-        Key::Alt('b') => {
+        KeyCode::Alt('b') => {
             linebuffer.move_to_prev_word(Word::Emacs, 1);
         }
-        Key::Alt('t') => {
+        KeyCode::Alt('t') => {
             linebuffer.transpose_words(1);
         }
-        Key::Char(c) => {
+        KeyCode::Char(c) => {
             linebuffer.insert(c, 1);
         }
         _ => {}
@@ -3667,21 +3767,21 @@ mod tests {
         std::fs::remove_dir_all(cd).unwrap();
     }
 
-    fn test_taskwarrior_tui_history() {
-        let mut app = TaskwarriorTui::new("next").unwrap();
+    async fn test_taskwarrior_tui_history() {
+        let mut app = TaskwarriorTui::new("next").await.unwrap();
         // setup();
         app.mode = Mode::Tasks(Action::Add);
         app.update_completion_list();
         let input = "Wash car";
         for c in input.chars() {
-            app.handle_input(Key::Char(c)).unwrap();
+            app.handle_input(KeyCode::Char(c)).await.unwrap();
         }
-        app.handle_input(Key::Right).unwrap();
+        app.handle_input(KeyCode::Right).await.unwrap();
         let input = " +test";
         for c in input.chars() {
-            app.handle_input(Key::Char(c)).unwrap();
+            app.handle_input(KeyCode::Char(c)).await.unwrap();
         }
-        app.handle_input(Key::Char('\n')).unwrap();
+        app.handle_input(KeyCode::Char('\n')).await.unwrap();
 
         app.mode = Mode::Tasks(Action::Add);
 
@@ -3698,19 +3798,19 @@ mod tests {
 
         let input = "Buy groceries";
         for c in input.chars() {
-            app.handle_input(Key::Char(c)).unwrap();
+            app.handle_input(KeyCode::Char(c)).await.unwrap();
         }
-        app.handle_input(Key::Right).unwrap();
+        app.handle_input(KeyCode::Right).await.unwrap();
         let input = " +test";
         for c in input.chars() {
-            app.handle_input(Key::Char(c)).unwrap();
+            app.handle_input(KeyCode::Char(c)).await.unwrap();
         }
-        app.update(true).unwrap();
-        app.handle_input(Key::Down).unwrap();
+        app.update(true).await.unwrap();
+        app.handle_input(KeyCode::Down).await.unwrap();
 
         assert_eq!("\"Buy groceries\" +test", app.command.as_str());
 
-        app.handle_input(Key::Char('\n')).unwrap();
+        app.handle_input(KeyCode::Char('\n')).await.unwrap();
 
         app.mode = Mode::Tasks(Action::Add);
         app.update_completion_list();
@@ -3726,26 +3826,26 @@ mod tests {
 
         let input = "Buy groceries";
         for c in input.chars() {
-            app.handle_input(Key::Char(c)).unwrap();
+            app.handle_input(KeyCode::Char(c)).await.unwrap();
         }
-        app.handle_input(Key::Right).unwrap();
-        app.handle_input(Key::Backspace).unwrap();
-        app.update(true).unwrap();
-        app.handle_input(Key::Down).unwrap();
+        app.handle_input(KeyCode::Right).await.unwrap();
+        app.handle_input(KeyCode::Backspace).await.unwrap();
+        app.update(true).await.unwrap();
+        app.handle_input(KeyCode::Down).await.unwrap();
 
         assert_eq!("\"Buy groceries", app.command.as_str());
 
-        app.update(true).unwrap();
+        app.update(true).await.unwrap();
 
-        app.handle_input(Key::Up).unwrap();
+        app.handle_input(KeyCode::Up).await.unwrap();
 
         assert_eq!("\"Buy groceries\" +test", app.command.as_str());
         // teardown();
     }
 
-    #[test]
-    fn test_taskwarrior_tui() {
-        let app = TaskwarriorTui::new("next");
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn test_taskwarrior_tui() {
+        let app = TaskwarriorTui::new("next").await;
         if app.is_err() {
             return;
         }
@@ -3753,42 +3853,42 @@ mod tests {
 
         assert!(app.task_by_index(0).is_none(), "Expected task data to be empty but found {} tasks. Delete contents of {:?} and {:?} and run the tests again.", app.tasks.len(), Path::new(env!("TASKDATA")), Path::new(env!("TASKDATA")).parent().unwrap().join(".config"));
 
-        let app = TaskwarriorTui::new("next").unwrap();
+        let app = TaskwarriorTui::new("next").await.unwrap();
         assert!(app
             .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
             .is_none());
 
-        test_draw_empty_task_report();
+        test_draw_empty_task_report().await;
 
-        test_draw_calendar();
-        test_draw_help_popup();
+        test_draw_calendar().await;
+        test_draw_help_popup().await;
 
         setup();
 
-        let app = TaskwarriorTui::new("next").unwrap();
+        let app = TaskwarriorTui::new("next").await.unwrap();
         assert!(app.task_by_index(0).is_some());
 
-        let app = TaskwarriorTui::new("next").unwrap();
+        let app = TaskwarriorTui::new("next").await.unwrap();
         assert!(app
             .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
             .is_some());
 
-        test_draw_task_report_with_extended_modify_command();
+        test_draw_task_report_with_extended_modify_command().await;
         // test_draw_task_report();
-        test_task_tags();
-        test_task_style();
-        test_task_context();
-        test_task_tomorrow();
-        test_task_earlier_today();
-        test_task_later_today();
-        test_taskwarrior_tui_history();
+        test_task_tags().await;
+        test_task_style().await;
+        test_task_context().await;
+        test_task_tomorrow().await;
+        test_task_earlier_today().await;
+        test_task_later_today().await;
+        test_taskwarrior_tui_history().await;
 
         teardown();
     }
 
-    fn test_task_tags() {
+    async fn test_task_tags() {
         // testing tags
-        let app = TaskwarriorTui::new("next").unwrap();
+        let app = TaskwarriorTui::new("next").await.unwrap();
         let task = app.task_by_id(1).unwrap();
 
         let tags = vec!["PENDING".to_string(), "PRIORITY".to_string()];
@@ -3797,7 +3897,7 @@ mod tests {
             assert!(task.tags().unwrap().contains(&tag));
         }
 
-        let mut app = TaskwarriorTui::new("next").unwrap();
+        let mut app = TaskwarriorTui::new("next").await.unwrap();
         let task = app.task_by_id(11).unwrap();
         let tags = vec!["finance", "UNBLOCKED", "PENDING", "TAGGED", "UDA"]
             .iter()
@@ -3815,7 +3915,7 @@ mod tests {
         }
 
         app.task_quick_tag().unwrap();
-        app.update(true).unwrap();
+        app.update(true).await.unwrap();
 
         let task = app.task_by_id(11).unwrap();
         let tags = vec!["next", "finance", "UNBLOCKED", "PENDING", "TAGGED", "UDA"]
@@ -3827,7 +3927,7 @@ mod tests {
         }
 
         app.task_quick_tag().unwrap();
-        app.update(true).unwrap();
+        app.update(true).await.unwrap();
 
         let task = app.task_by_id(11).unwrap();
         let tags = vec!["finance", "UNBLOCKED", "PENDING", "TAGGED", "UDA"]
@@ -3839,8 +3939,8 @@ mod tests {
         }
     }
 
-    fn test_task_style() {
-        let app = TaskwarriorTui::new("next").unwrap();
+    async fn test_task_style() {
+        let app = TaskwarriorTui::new("next").await.unwrap();
         let task = app.task_by_id(1).unwrap();
         for r in vec![
             "active",
@@ -3869,10 +3969,10 @@ mod tests {
         let style = app.style_for_task(&task);
     }
 
-    fn test_task_context() {
-        let mut app = TaskwarriorTui::new("next").unwrap();
+    async fn test_task_context() {
+        let mut app = TaskwarriorTui::new("next").await.unwrap();
 
-        assert!(app.update(true).is_ok());
+        assert!(app.update(true).await.is_ok());
 
         app.context_select().unwrap();
 
@@ -3885,7 +3985,7 @@ mod tests {
         app.context_select().unwrap();
         assert_eq!(app.contexts.table_state.current_selection(), Some(2));
 
-        assert!(app.update(true).is_ok());
+        assert!(app.update(true).await.is_ok());
 
         assert_eq!(app.tasks.len(), 1);
         assert_eq!(app.current_context_filter, "+finance -private");
@@ -3896,17 +3996,17 @@ mod tests {
         app.context_select().unwrap();
         assert_eq!(app.contexts.table_state.current_selection(), Some(0));
 
-        assert!(app.update(true).is_ok());
+        assert!(app.update(true).await.is_ok());
 
         assert_eq!(app.tasks.len(), 26);
         assert_eq!(app.current_context_filter, "");
     }
 
-    fn test_task_tomorrow() {
+    async fn test_task_tomorrow() {
         let total_tasks: u64 = 26;
 
-        let mut app = TaskwarriorTui::new("next").unwrap();
-        assert!(app.update(true).is_ok());
+        let mut app = TaskwarriorTui::new("next").await.unwrap();
+        assert!(app.update(true).await.is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -3936,7 +4036,7 @@ mod tests {
         let task_id = caps["task_id"].parse::<u64>().unwrap();
         assert_eq!(task_id, total_tasks + 1);
 
-        assert!(app.update(true).is_ok());
+        assert!(app.update(true).await.is_ok());
         assert_eq!(app.tasks.len(), (total_tasks + 1) as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -3963,17 +4063,17 @@ mod tests {
             .output()
             .unwrap();
 
-        let mut app = TaskwarriorTui::new("next").unwrap();
-        assert!(app.update(true).is_ok());
+        let mut app = TaskwarriorTui::new("next").await.unwrap();
+        assert!(app.update(true).await.is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
     }
 
-    fn test_task_earlier_today() {
+    async fn test_task_earlier_today() {
         let total_tasks: u64 = 26;
 
-        let mut app = TaskwarriorTui::new("next").unwrap();
-        assert!(app.update(true).is_ok());
+        let mut app = TaskwarriorTui::new("next").await.unwrap();
+        assert!(app.update(true).await.is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -3996,7 +4096,7 @@ mod tests {
         let task_id = caps["task_id"].parse::<u64>().unwrap();
         assert_eq!(task_id, total_tasks + 1);
 
-        assert!(app.update(true).is_ok());
+        assert!(app.update(true).await.is_ok());
         assert_eq!(app.tasks.len(), (total_tasks + 1) as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -4022,17 +4122,17 @@ mod tests {
             .output()
             .unwrap();
 
-        let mut app = TaskwarriorTui::new("next").unwrap();
-        assert!(app.update(true).is_ok());
+        let mut app = TaskwarriorTui::new("next").await.unwrap();
+        assert!(app.update(true).await.is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
     }
 
-    fn test_task_later_today() {
+    async fn test_task_later_today() {
         let total_tasks: u64 = 26;
 
-        let mut app = TaskwarriorTui::new("next").unwrap();
-        assert!(app.update(true).is_ok());
+        let mut app = TaskwarriorTui::new("next").await.unwrap();
+        assert!(app.update(true).await.is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -4063,7 +4163,7 @@ mod tests {
         let task_id = caps["task_id"].parse::<u64>().unwrap();
         assert_eq!(task_id, total_tasks + 1);
 
-        assert!(app.update(true).is_ok());
+        assert!(app.update(true).await.is_ok());
         assert_eq!(app.tasks.len(), (total_tasks + 1) as usize);
         assert_eq!(app.current_context_filter, "");
 
@@ -4088,42 +4188,13 @@ mod tests {
             .output()
             .unwrap();
 
-        let mut app = TaskwarriorTui::new("next").unwrap();
-        assert!(app.update(true).is_ok());
+        let mut app = TaskwarriorTui::new("next").await.unwrap();
+        assert!(app.update(true).await.is_ok());
         assert_eq!(app.tasks.len(), total_tasks as usize);
         assert_eq!(app.current_context_filter, "");
     }
 
-    fn test_draw_empty_task_report() {
-        let test_case = |expected: &Buffer| {
-            let mut app = TaskwarriorTui::new("next").unwrap();
-
-            app.task_report_next();
-            app.context_next();
-
-            let total_tasks: u64 = 0;
-
-            assert!(app.update(true).is_ok());
-            assert_eq!(app.tasks.len(), total_tasks as usize);
-            assert_eq!(app.current_context_filter, "");
-
-            let now = Local::now();
-            let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
-
-            app.update(true).unwrap();
-
-            let backend = TestBackend::new(50, 15);
-            let mut terminal = Terminal::new(backend).unwrap();
-            terminal
-                .draw(|f| {
-                    app.draw(f);
-                })
-                .unwrap();
-
-            assert_eq!(terminal.backend().size().unwrap(), expected.area);
-            terminal.backend().assert_buffer(expected);
-        };
-
+    async fn test_draw_empty_task_report() {
         let mut expected = Buffer::with_lines(vec![
             " Tasks   Projects   Calendar                [none]",
             "                                                  ",
@@ -4162,151 +4233,36 @@ mod tests {
                 .get_mut(i, 13)
                 .set_style(Style::default().add_modifier(Modifier::REVERSED));
         }
-        test_case(&expected);
+
+        let mut app = TaskwarriorTui::new("next").await.unwrap();
+
+        app.task_report_next();
+        app.context_next();
+
+        let total_tasks: u64 = 0;
+
+        assert!(app.update(true).await.is_ok());
+        assert_eq!(app.tasks.len(), total_tasks as usize);
+        assert_eq!(app.current_context_filter, "");
+
+        let now = Local::now();
+        let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
+
+        app.update(true).await.unwrap();
+
+        let backend = TestBackend::new(50, 15);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal
+            .draw(|f| {
+                app.draw(f);
+            })
+            .unwrap();
+
+        assert_eq!(terminal.backend().size().unwrap(), expected.area);
+        terminal.backend().assert_buffer(&expected);
     }
 
-    fn test_draw_task_report_with_extended_modify_command() {
-        let test_case = |expected1: &Buffer, expected2: &Buffer| {
-            let mut app = TaskwarriorTui::new("next").unwrap();
-
-            let total_tasks: u64 = 26;
-
-            assert!(app.update(true).is_ok());
-            assert_eq!(app.tasks.len(), total_tasks as usize);
-            assert_eq!(app.current_context_filter, "");
-
-            let now = Local::now();
-            let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
-
-            app.mode = Mode::Tasks(Action::Modify);
-            match app.task_table_state.mode() {
-                TableMode::SingleSelection => match app.task_current() {
-                    Some(t) => {
-                        let s = format!("{} ", t.description());
-                        app.modify.update(&s, s.as_str().len())
-                    }
-                    None => app.modify.update("", 0),
-                },
-                TableMode::MultipleSelection => app.modify.update("", 0),
-            }
-
-            app.update(true).unwrap();
-
-            let backend = TestBackend::new(25, 3);
-            let mut terminal = Terminal::new(backend).unwrap();
-            terminal
-                .draw(|f| {
-                    let rects = Layout::default()
-                        .direction(Direction::Vertical)
-                        .constraints([Constraint::Min(0), Constraint::Length(3)].as_ref())
-                        .split(f.size());
-
-                    let position = TaskwarriorTui::get_position(&app.modify);
-                    f.set_cursor(
-                        std::cmp::min(
-                            rects[1].x + position as u16,
-                            rects[1].x + rects[1].width.saturating_sub(2),
-                        ),
-                        rects[1].y + 1,
-                    );
-                    f.render_widget(Clear, rects[1]);
-                    let selected = app.current_selection;
-                    let task_ids = if app.tasks.is_empty() {
-                        vec!["0".to_string()]
-                    } else {
-                        match app.task_table_state.mode() {
-                            TableMode::SingleSelection => {
-                                vec![app.tasks[selected].id().unwrap_or_default().to_string()]
-                            }
-                            TableMode::MultipleSelection => {
-                                let mut tids = vec![];
-                                for uuid in app.marked.iter() {
-                                    if let Some(t) = app.task_by_uuid(*uuid) {
-                                        tids.push(t.id().unwrap_or_default().to_string());
-                                    }
-                                }
-                                tids
-                            }
-                        }
-                    };
-                    let label = if task_ids.len() > 1 {
-                        format!("Modify Tasks {}", task_ids.join(","))
-                    } else {
-                        format!("Modify Task {}", task_ids.join(","))
-                    };
-                    TaskwarriorTui::draw_command(
-                        f,
-                        rects[1],
-                        app.modify.as_str(),
-                        (Span::styled(label, Style::default().add_modifier(Modifier::BOLD)), None),
-                        position,
-                        true,
-                        app.error.clone(),
-                    );
-                })
-                .unwrap();
-
-            assert_eq!(terminal.backend().size().unwrap(), expected1.area);
-            terminal.backend().assert_buffer(expected1);
-
-            app.modify.move_home();
-
-            terminal
-                .draw(|f| {
-                    let rects = Layout::default()
-                        .direction(Direction::Vertical)
-                        .constraints([Constraint::Min(0), Constraint::Length(3)].as_ref())
-                        .split(f.size());
-
-                    let position = TaskwarriorTui::get_position(&app.modify);
-                    f.set_cursor(
-                        std::cmp::min(
-                            rects[1].x + position as u16,
-                            rects[1].x + rects[1].width.saturating_sub(2),
-                        ),
-                        rects[1].y + 1,
-                    );
-                    f.render_widget(Clear, rects[1]);
-                    let selected = app.current_selection;
-                    let task_ids = if app.tasks.is_empty() {
-                        vec!["0".to_string()]
-                    } else {
-                        match app.task_table_state.mode() {
-                            TableMode::SingleSelection => {
-                                vec![app.tasks[selected].id().unwrap_or_default().to_string()]
-                            }
-                            TableMode::MultipleSelection => {
-                                let mut tids = vec![];
-                                for uuid in app.marked.iter() {
-                                    if let Some(t) = app.task_by_uuid(*uuid) {
-                                        tids.push(t.id().unwrap_or_default().to_string());
-                                    }
-                                }
-                                tids
-                            }
-                        }
-                    };
-                    let label = if task_ids.len() > 1 {
-                        format!("Modify Tasks {}", task_ids.join(","))
-                    } else {
-                        format!("Modify Task {}", task_ids.join(","))
-                    };
-                    TaskwarriorTui::draw_command(
-                        f,
-                        rects[1],
-                        app.modify.as_str(),
-                        (Span::styled(label, Style::default().add_modifier(Modifier::BOLD)), None),
-                        position,
-                        true,
-                        app.error.clone(),
-                    );
-                })
-                .unwrap();
-
-            assert_eq!(terminal.backend().size().unwrap(), expected2.area);
-            terminal.backend().assert_buffer(expected2);
-        };
-
+    async fn test_draw_task_report_with_extended_modify_command() {
         let mut expected1 = Buffer::with_lines(vec![
             "Modify Task 10           ",
             " based on your .taskrc   ",
@@ -4338,97 +4294,147 @@ mod tests {
                 .set_style(Style::default().add_modifier(Modifier::REVERSED));
         }
 
-        test_case(&expected1, &expected2);
+        let mut app = TaskwarriorTui::new("next").await.unwrap();
+
+        let total_tasks: u64 = 26;
+
+        assert!(app.update(true).await.is_ok());
+        assert_eq!(app.tasks.len(), total_tasks as usize);
+        assert_eq!(app.current_context_filter, "");
+
+        let now = Local::now();
+        let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
+
+        app.mode = Mode::Tasks(Action::Modify);
+        match app.task_table_state.mode() {
+            TableMode::SingleSelection => match app.task_current() {
+                Some(t) => {
+                    let s = format!("{} ", t.description());
+                    app.modify.update(&s, s.as_str().len())
+                }
+                None => app.modify.update("", 0),
+            },
+            TableMode::MultipleSelection => app.modify.update("", 0),
+        }
+
+        app.update(true).await.unwrap();
+
+        let backend = TestBackend::new(25, 3);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal
+            .draw(|f| {
+                let rects = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints([Constraint::Min(0), Constraint::Length(3)].as_ref())
+                    .split(f.size());
+
+                let position = TaskwarriorTui::get_position(&app.modify);
+                f.set_cursor(
+                    std::cmp::min(
+                        rects[1].x + position as u16,
+                        rects[1].x + rects[1].width.saturating_sub(2),
+                    ),
+                    rects[1].y + 1,
+                );
+                f.render_widget(Clear, rects[1]);
+                let selected = app.current_selection;
+                let task_ids = if app.tasks.is_empty() {
+                    vec!["0".to_string()]
+                } else {
+                    match app.task_table_state.mode() {
+                        TableMode::SingleSelection => {
+                            vec![app.tasks[selected].id().unwrap_or_default().to_string()]
+                        }
+                        TableMode::MultipleSelection => {
+                            let mut tids = vec![];
+                            for uuid in app.marked.iter() {
+                                if let Some(t) = app.task_by_uuid(*uuid) {
+                                    tids.push(t.id().unwrap_or_default().to_string());
+                                }
+                            }
+                            tids
+                        }
+                    }
+                };
+                let label = if task_ids.len() > 1 {
+                    format!("Modify Tasks {}", task_ids.join(","))
+                } else {
+                    format!("Modify Task {}", task_ids.join(","))
+                };
+                app.draw_command(
+                    f,
+                    rects[1],
+                    app.modify.as_str(),
+                    (Span::styled(label, Style::default().add_modifier(Modifier::BOLD)), None),
+                    position,
+                    true,
+                    app.error.clone(),
+                );
+            })
+            .unwrap();
+
+        assert_eq!(terminal.backend().size().unwrap(), expected1.area);
+        terminal.backend().assert_buffer(&expected1);
+
+        app.modify.move_home();
+
+        terminal
+            .draw(|f| {
+                let rects = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints([Constraint::Min(0), Constraint::Length(3)].as_ref())
+                    .split(f.size());
+
+                let position = TaskwarriorTui::get_position(&app.modify);
+                f.set_cursor(
+                    std::cmp::min(
+                        rects[1].x + position as u16,
+                        rects[1].x + rects[1].width.saturating_sub(2),
+                    ),
+                    rects[1].y + 1,
+                );
+                f.render_widget(Clear, rects[1]);
+                let selected = app.current_selection;
+                let task_ids = if app.tasks.is_empty() {
+                    vec!["0".to_string()]
+                } else {
+                    match app.task_table_state.mode() {
+                        TableMode::SingleSelection => {
+                            vec![app.tasks[selected].id().unwrap_or_default().to_string()]
+                        }
+                        TableMode::MultipleSelection => {
+                            let mut tids = vec![];
+                            for uuid in app.marked.iter() {
+                                if let Some(t) = app.task_by_uuid(*uuid) {
+                                    tids.push(t.id().unwrap_or_default().to_string());
+                                }
+                            }
+                            tids
+                        }
+                    }
+                };
+                let label = if task_ids.len() > 1 {
+                    format!("Modify Tasks {}", task_ids.join(","))
+                } else {
+                    format!("Modify Task {}", task_ids.join(","))
+                };
+                app.draw_command(
+                    f,
+                    rects[1],
+                    app.modify.as_str(),
+                    (Span::styled(label, Style::default().add_modifier(Modifier::BOLD)), None),
+                    position,
+                    true,
+                    app.error.clone(),
+                );
+            })
+            .unwrap();
+
+        assert_eq!(terminal.backend().size().unwrap(), expected2.area);
+        terminal.backend().assert_buffer(&expected2);
     }
 
-    fn test_draw_task_report() {
-        let test_case = |expected: &Buffer| {
-            let mut app = TaskwarriorTui::new("next").unwrap();
-
-            app.task_report_next();
-            app.context_next();
-
-            let total_tasks: u64 = 26;
-
-            assert!(app.update(true).is_ok());
-            assert_eq!(app.tasks.len(), total_tasks as usize);
-            assert_eq!(app.current_context_filter, "");
-
-            let now = Local::now();
-            let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
-
-            let mut command = Command::new("task");
-            command.arg("add");
-            let message = "'new task 1 for testing draw' priority:U";
-
-            let shell = message.replace("'", "\\'");
-            let cmd = shlex::split(&shell).unwrap();
-            for s in cmd {
-                command.arg(&s);
-            }
-            let output = command.output().unwrap();
-            let s = String::from_utf8_lossy(&output.stdout);
-            let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
-            let caps = re.captures(&s).unwrap();
-            let task_id = caps["task_id"].parse::<u64>().unwrap();
-            assert_eq!(task_id, total_tasks + 1);
-
-            let mut command = Command::new("task");
-            command.arg("add");
-            let message = "'new task 2 for testing draw' priority:U +none";
-
-            let shell = message.replace("'", "\\'");
-            let cmd = shlex::split(&shell).unwrap();
-            for s in cmd {
-                command.arg(&s);
-            }
-            let output = command.output().unwrap();
-            let s = String::from_utf8_lossy(&output.stdout);
-            let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
-            let caps = re.captures(&s).unwrap();
-            let task_id = caps["task_id"].parse::<u64>().unwrap();
-            assert_eq!(task_id, total_tasks + 2);
-
-            app.task_report_next();
-            app.task_report_previous();
-            app.task_report_next_page();
-            app.task_report_previous_page();
-            app.task_report_bottom();
-            app.task_report_top();
-            app.update(true).unwrap();
-
-            let backend = TestBackend::new(50, 15);
-            let mut terminal = Terminal::new(backend).unwrap();
-            app.task_report_show_info = !app.task_report_show_info;
-            terminal
-                .draw(|f| {
-                    app.draw(f);
-                    app.draw(f);
-                })
-                .unwrap();
-            app.task_report_show_info = !app.task_report_show_info;
-            terminal
-                .draw(|f| {
-                    app.draw(f);
-                    app.draw(f);
-                })
-                .unwrap();
-
-            let output = Command::new("task")
-                .arg("rc.confirmation=off")
-                .arg("undo")
-                .output()
-                .unwrap();
-            let output = Command::new("task")
-                .arg("rc.confirmation=off")
-                .arg("undo")
-                .output()
-                .unwrap();
-
-            assert_eq!(terminal.backend().size().unwrap(), expected.area);
-            terminal.backend().assert_buffer(expected);
-        };
-
+    async fn test_draw_task_report() {
         let mut expected = Buffer::with_lines(vec![
             "╭Task|Calendar───────────────────────────────────╮",
             "│  ID Age Deps P Projec Tag     Due Descrip Urg  │",
@@ -4493,33 +4499,93 @@ mod tests {
                 .set_style(Style::default().fg(Color::Indexed(1)).bg(Color::Indexed(4)));
         }
 
-        test_case(&expected);
+        let mut app = TaskwarriorTui::new("next").await.unwrap();
+
+        app.task_report_next();
+        app.context_next();
+
+        let total_tasks: u64 = 26;
+
+        assert!(app.update(true).await.is_ok());
+        assert_eq!(app.tasks.len(), total_tasks as usize);
+        assert_eq!(app.current_context_filter, "");
+
+        let now = Local::now();
+        let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
+
+        let mut command = Command::new("task");
+        command.arg("add");
+        let message = "'new task 1 for testing draw' priority:U";
+
+        let shell = message.replace("'", "\\'");
+        let cmd = shlex::split(&shell).unwrap();
+        for s in cmd {
+            command.arg(&s);
+        }
+        let output = command.output().unwrap();
+        let s = String::from_utf8_lossy(&output.stdout);
+        let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
+        let caps = re.captures(&s).unwrap();
+        let task_id = caps["task_id"].parse::<u64>().unwrap();
+        assert_eq!(task_id, total_tasks + 1);
+
+        let mut command = Command::new("task");
+        command.arg("add");
+        let message = "'new task 2 for testing draw' priority:U +none";
+
+        let shell = message.replace("'", "\\'");
+        let cmd = shlex::split(&shell).unwrap();
+        for s in cmd {
+            command.arg(&s);
+        }
+        let output = command.output().unwrap();
+        let s = String::from_utf8_lossy(&output.stdout);
+        let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
+        let caps = re.captures(&s).unwrap();
+        let task_id = caps["task_id"].parse::<u64>().unwrap();
+        assert_eq!(task_id, total_tasks + 2);
+
+        app.task_report_next();
+        app.task_report_previous();
+        app.task_report_next_page();
+        app.task_report_previous_page();
+        app.task_report_bottom();
+        app.task_report_top();
+        app.update(true).await.unwrap();
+
+        let backend = TestBackend::new(50, 15);
+        let mut terminal = Terminal::new(backend).unwrap();
+        app.task_report_show_info = !app.task_report_show_info;
+        terminal
+            .draw(|f| {
+                app.draw(f);
+                app.draw(f);
+            })
+            .unwrap();
+        app.task_report_show_info = !app.task_report_show_info;
+        terminal
+            .draw(|f| {
+                app.draw(f);
+                app.draw(f);
+            })
+            .unwrap();
+
+        let output = Command::new("task")
+            .arg("rc.confirmation=off")
+            .arg("undo")
+            .output()
+            .unwrap();
+        let output = Command::new("task")
+            .arg("rc.confirmation=off")
+            .arg("undo")
+            .output()
+            .unwrap();
+
+        assert_eq!(terminal.backend().size().unwrap(), expected.area);
+        terminal.backend().assert_buffer(&expected);
     }
 
-    fn test_draw_calendar() {
-        let test_case = |expected: &Buffer| {
-            let mut app = TaskwarriorTui::new("next").unwrap();
-
-            app.task_report_next();
-            app.context_next();
-            app.update(true).unwrap();
-
-            app.calendar_year = 2020;
-            app.mode = Mode::Calendar;
-
-            let backend = TestBackend::new(50, 15);
-            let mut terminal = Terminal::new(backend).unwrap();
-            terminal
-                .draw(|f| {
-                    app.draw(f);
-                    app.draw(f);
-                })
-                .unwrap();
-
-            assert_eq!(terminal.backend().size().unwrap(), expected.area);
-            terminal.backend().assert_buffer(expected);
-        };
-
+    async fn test_draw_calendar() {
         let mut expected = Buffer::with_lines(vec![
             " Tasks   Projects   Calendar                [none]",
             "                                                  ",
@@ -4579,30 +4645,29 @@ mod tests {
                 .set_style(Style::default().bg(Color::Reset).add_modifier(Modifier::UNDERLINED));
         }
 
-        test_case(&expected);
+        let mut app = TaskwarriorTui::new("next").await.unwrap();
+
+        app.task_report_next();
+        app.context_next();
+        app.update(true).await.unwrap();
+
+        app.calendar_year = 2020;
+        app.mode = Mode::Calendar;
+
+        let backend = TestBackend::new(50, 15);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal
+            .draw(|f| {
+                app.draw(f);
+                app.draw(f);
+            })
+            .unwrap();
+
+        assert_eq!(terminal.backend().size().unwrap(), expected.area);
+        terminal.backend().assert_buffer(&expected);
     }
 
-    fn test_draw_help_popup() {
-        let test_case = |expected: &Buffer| {
-            let mut app = TaskwarriorTui::new("next").unwrap();
-
-            app.mode = Mode::Tasks(Action::HelpPopup);
-            app.task_report_next();
-            app.context_next();
-            app.update(true).unwrap();
-
-            let backend = TestBackend::new(40, 12);
-            let mut terminal = Terminal::new(backend).unwrap();
-            terminal
-                .draw(|f| {
-                    app.draw_help_popup(f, 100, 100);
-                })
-                .unwrap();
-
-            assert_eq!(terminal.backend().size().unwrap(), expected.area);
-            terminal.backend().assert_buffer(expected);
-        };
-
+    async fn test_draw_help_popup() {
         let mut expected = Buffer::with_lines(vec![
             "╭Help──────────────────────────────────╮",
             "│# Default Keybindings                 │",
@@ -4625,31 +4690,27 @@ mod tests {
                 .set_style(Style::default().add_modifier(Modifier::BOLD));
         }
 
-        test_case(&expected);
+        let mut app = TaskwarriorTui::new("next").await.unwrap();
+
+        app.mode = Mode::Tasks(Action::HelpPopup);
+        app.task_report_next();
+        app.context_next();
+        app.update(true).await.unwrap();
+
+        let backend = TestBackend::new(40, 12);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal
+            .draw(|f| {
+                app.draw_help_popup(f, 100, 100);
+            })
+            .unwrap();
+
+        assert_eq!(terminal.backend().size().unwrap(), expected.area);
+        terminal.backend().assert_buffer(&expected);
     }
 
     // #[test]
-    fn test_draw_context_menu() {
-        let test_case = |expected: &Buffer| {
-            let mut app = TaskwarriorTui::new("next").unwrap();
-
-            app.mode = Mode::Tasks(Action::ContextMenu);
-            app.task_report_next();
-            app.update(true).unwrap();
-
-            let backend = TestBackend::new(80, 10);
-            let mut terminal = Terminal::new(backend).unwrap();
-            terminal
-                .draw(|f| {
-                    app.draw_context_menu(f, 100, 100);
-                    app.draw_context_menu(f, 100, 100);
-                })
-                .unwrap();
-
-            assert_eq!(terminal.backend().size().unwrap(), expected.area);
-            terminal.backend().assert_buffer(expected);
-        };
-
+    async fn test_draw_context_menu() {
         let mut expected = Buffer::with_lines(vec![
             "╭Context───────────────────────────────────────────────────────────────────────╮",
             "│Name       Description                                                  Active│",
@@ -4698,16 +4759,32 @@ mod tests {
                 .set_style(Style::default().add_modifier(Modifier::BOLD));
         }
 
-        test_case(&expected);
+        let mut app = TaskwarriorTui::new("next").await.unwrap();
+
+        app.mode = Mode::Tasks(Action::ContextMenu);
+        app.task_report_next();
+        app.update(true).await.unwrap();
+
+        let backend = TestBackend::new(80, 10);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal
+            .draw(|f| {
+                app.draw_context_menu(f, 100, 100);
+                app.draw_context_menu(f, 100, 100);
+            })
+            .unwrap();
+
+        assert_eq!(terminal.backend().size().unwrap(), expected.area);
+        terminal.backend().assert_buffer(&expected);
     }
 
     // #[test]
-    fn test_graphemes() {
+    async fn test_graphemes() {
         dbg!("写作业".graphemes(true).count());
         dbg!(UnicodeWidthStr::width("写作业"));
         dbg!(UnicodeWidthStr::width("abc"));
 
-        let mut app = TaskwarriorTui::new("next").unwrap();
+        let mut app = TaskwarriorTui::new("next").await.unwrap();
 
         if let Some(task) = app.task_by_id(27) {
             let i = app.task_index_by_uuid(*task.uuid()).unwrap_or_default();
@@ -4715,7 +4792,7 @@ mod tests {
             app.current_selection_id = None;
             app.current_selection_uuid = None;
         }
-        app.update(true).unwrap();
+        app.update(true).await.unwrap();
         app.mode = Mode::Tasks(Action::Modify);
         match app.task_current() {
             Some(t) => {
@@ -4724,7 +4801,7 @@ mod tests {
             }
             None => app.modify.update("", 0),
         }
-        app.update(true).unwrap();
+        app.update(true).await.unwrap();
 
         dbg!(app.modify.as_str());
         dbg!(app.modify.as_str().len());
@@ -4734,43 +4811,27 @@ mod tests {
         dbg!(position);
     }
 
-    #[test]
-    fn test_app() {
-        let app = TaskwarriorTui::new("next");
-        if app.is_err() {
-            return;
-        }
-        let mut app = app.unwrap();
-
-        let backend = TestBackend::new(80, 20);
-        let mut terminal = Terminal::new(backend).unwrap();
-
-        app.render(&mut terminal).unwrap();
-        dbg!(app.get_dates_with_styles());
-        println!("{}", buffer_view(terminal.backend().buffer()));
-    }
-
     // #[test]
-    fn test_taskwarrior_tui_completion() {
-        let mut app = TaskwarriorTui::new("next").unwrap();
-        app.handle_input(Key::Char('z')).unwrap();
+    async fn test_taskwarrior_tui_completion() {
+        let mut app = TaskwarriorTui::new("next").await.unwrap();
+        app.handle_input(KeyCode::Char('z')).await.unwrap();
         app.mode = Mode::Tasks(Action::Add);
         app.update_completion_list();
         let input = "Wash car";
         for c in input.chars() {
-            app.handle_input(Key::Char(c)).unwrap();
+            app.handle_input(KeyCode::Char(c)).await.unwrap();
         }
-        app.handle_input(Key::Ctrl('e')).unwrap();
+        app.handle_input(KeyCode::Ctrl('e')).await.unwrap();
 
         let input = " project:CO";
         for c in input.chars() {
-            app.handle_input(Key::Char(c)).unwrap();
+            app.handle_input(KeyCode::Char(c)).await.unwrap();
         }
 
         app.mode = Mode::Tasks(Action::Add);
         app.update_completion_list();
-        app.handle_input(Key::Tab).unwrap();
-        app.handle_input(Key::Char('\n')).unwrap();
+        app.handle_input(KeyCode::Tab).await.unwrap();
+        app.handle_input(KeyCode::Char('\n')).await.unwrap();
         let backend = TestBackend::new(80, 50);
         let mut terminal = Terminal::new(backend).unwrap();
         terminal
