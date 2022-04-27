@@ -1,6 +1,6 @@
 [package]
 name = "taskwarrior-tui"
-version = "0.23.0"
+version = "0.23.1"
 license = "MIT"
 description = "A Taskwarrior Terminal User Interface"
 repository = "https://github.com/kdheepak/taskwarrior-tui/"
@@ -12,7 +12,6 @@ keywords = ["taskwarrior", "tui"]
 categories = ["command-line-utilities"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [features]
 default = ["crossterm-backend"]
 crossterm-backend = ["tui/crossterm", "crossterm"]
@@ -23,7 +22,9 @@ better-panic = "0.3.0"
 cassowary = "0.3.0"
 chrono = "0.4.19"
 clap = { version = "3.1.6", features = ["derive"] }
-crossterm = { version = "0.23.2", optional = true, default-features = false, features = ["event-stream"] }
+crossterm = { version = "0.23.2", optional = true, default-features = false, features = [
+  "event-stream"
+] }
 dirs = "4.0.0"
 futures = "0.3.21"
 itertools = "0.10.3"
