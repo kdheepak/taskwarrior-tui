@@ -15,6 +15,7 @@ use crossterm::event::{
 pub enum Event<I> {
     Input(I),
     Tick,
+    Closed,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, PartialOrd, Eq)]
@@ -48,81 +49,85 @@ pub struct EventLoop {
     pub rx: mpsc::UnboundedReceiver<Event<KeyCode>>,
     pub tx: mpsc::UnboundedSender<Event<KeyCode>>,
     pub abort: mpsc::UnboundedSender<()>,
-    pub handle: JoinHandle<()>,
     pub tick_rate: std::time::Duration,
 }
 
 impl EventLoop {
-    pub fn new(tick_rate: Option<std::time::Duration>) -> Self {
+    pub fn new(tick_rate: Option<std::time::Duration>, init: bool) -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
         let _tx = tx.clone();
         let mut reader = crossterm::event::EventStream::new();
         let should_tick = tick_rate.is_some();
         let tick_rate = tick_rate.unwrap_or(std::time::Duration::from_millis(250));
 
-        let (abort, mut recv) = mpsc::unbounded_channel();
+        let (abort, mut abort_recv) = mpsc::unbounded_channel();
 
-        let handle = tokio::spawn(async move {
-            loop {
-                let delay = tokio::time::sleep(tick_rate);
-                let event = reader.next();
+        if init {
+            tokio::spawn(async move {
+                loop {
+                    let delay = tokio::time::sleep(tick_rate);
+                    let event = reader.next();
 
-                tokio::select! {
-                    _ = recv.recv() => break,
-                    _ = delay, if should_tick => {
-                        _tx.send(Event::Tick).unwrap();
-                    },
-                    _ = _tx.closed() => break,
-                    maybe_event = event => {
-                        if let Some(Ok(crossterm::event::Event::Key(key))) = maybe_event {
-                            let key = match key.code {
-                                Backspace => {
-                                    match key.modifiers {
-                                        KeyModifiers::CONTROL => KeyCode::CtrlBackspace,
-                                        KeyModifiers::ALT => KeyCode::AltBackspace,
-                                        _ => KeyCode::Backspace,
-                                    }
-                                },
-                                Delete => {
-                                    match key.modifiers {
-                                        KeyModifiers::CONTROL => KeyCode::CtrlDelete,
-                                        KeyModifiers::ALT => KeyCode::AltDelete,
-                                        _ => KeyCode::Delete,
-                                    }
-                                },
-                                Enter => KeyCode::Char('\n'),
-                                Left => KeyCode::Left,
-                                Right => KeyCode::Right,
-                                Up => KeyCode::Up,
-                                Down => KeyCode::Down,
-                                Home => KeyCode::Home,
-                                End => KeyCode::End,
-                                PageUp => KeyCode::PageUp,
-                                PageDown => KeyCode::PageDown,
-                                Tab => KeyCode::Tab,
-                                BackTab => KeyCode::BackTab,
-                                Insert => KeyCode::Insert,
-                                F(k) => KeyCode::F(k),
-                                Null => KeyCode::Null,
-                                Esc => KeyCode::Esc,
-                                Char(c) => match key.modifiers {
-                                    KeyModifiers::NONE | KeyModifiers::SHIFT => KeyCode::Char(c),
-                                    KeyModifiers::CONTROL => KeyCode::Ctrl(c),
-                                    KeyModifiers::ALT => KeyCode::Alt(c),
-                                    _ => KeyCode::Null,
-                                },
-                            };
-                            _tx.send(Event::Input(key)).unwrap();
+                    tokio::select! {
+                        _ = abort_recv.recv() => {
+                            _tx.send(Event::Closed).unwrap();
+                            _tx.send(Event::Tick).unwrap();
+                            break;
+                        },
+                        _ = delay, if should_tick => {
+                            _tx.send(Event::Tick).unwrap();
+                        },
+                        _ = _tx.closed() => break,
+                        maybe_event = event => {
+                            if let Some(Ok(crossterm::event::Event::Key(key))) = maybe_event {
+                                let key = match key.code {
+                                    Backspace => {
+                                        match key.modifiers {
+                                            KeyModifiers::CONTROL => KeyCode::CtrlBackspace,
+                                            KeyModifiers::ALT => KeyCode::AltBackspace,
+                                            _ => KeyCode::Backspace,
+                                        }
+                                    },
+                                    Delete => {
+                                        match key.modifiers {
+                                            KeyModifiers::CONTROL => KeyCode::CtrlDelete,
+                                            KeyModifiers::ALT => KeyCode::AltDelete,
+                                            _ => KeyCode::Delete,
+                                        }
+                                    },
+                                    Enter => KeyCode::Char('\n'),
+                                    Left => KeyCode::Left,
+                                    Right => KeyCode::Right,
+                                    Up => KeyCode::Up,
+                                    Down => KeyCode::Down,
+                                    Home => KeyCode::Home,
+                                    End => KeyCode::End,
+                                    PageUp => KeyCode::PageUp,
+                                    PageDown => KeyCode::PageDown,
+                                    Tab => KeyCode::Tab,
+                                    BackTab => KeyCode::BackTab,
+                                    Insert => KeyCode::Insert,
+                                    F(k) => KeyCode::F(k),
+                                    Null => KeyCode::Null,
+                                    Esc => KeyCode::Esc,
+                                    Char(c) => match key.modifiers {
+                                        KeyModifiers::NONE | KeyModifiers::SHIFT => KeyCode::Char(c),
+                                        KeyModifiers::CONTROL => KeyCode::Ctrl(c),
+                                        KeyModifiers::ALT => KeyCode::Alt(c),
+                                        _ => KeyCode::Null,
+                                    },
+                                };
+                                _tx.send(Event::Input(key)).unwrap();
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
 
         Self {
             tx,
             rx,
-            handle,
             tick_rate,
             abort,
         }
