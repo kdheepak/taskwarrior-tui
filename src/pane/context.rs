@@ -20,7 +20,7 @@ use tui::{
 
 use crate::action::Action;
 use crate::app::{Mode, TaskwarriorTui};
-use crate::event::Key;
+use crate::event::KeyCode;
 use crate::pane::Pane;
 use crate::table::TableState;
 use itertools::Itertools;

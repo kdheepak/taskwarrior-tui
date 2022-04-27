@@ -1,24 +1,24 @@
-use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, EventStream},
-    execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-};
-use tui::{backend::CrosstermBackend, Terminal};
-
-use async_std::channel::unbounded;
-use async_std::sync::Arc;
-use async_std::task;
-use futures::prelude::*;
-use futures::{future::FutureExt, select, StreamExt};
-use futures_timer::Delay;
-use std::io::{self, Write};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::{Duration, Instant};
-
+use crossterm::event::KeyEvent;
+use futures::StreamExt;
 use serde::{Deserialize, Serialize};
+use tokio::{sync::mpsc, sync::oneshot, task::JoinHandle};
+
+use crossterm::event::{
+    KeyCode::{
+        BackTab, Backspace, Char, Delete, Down, End, Enter, Esc, Home, Insert, Left, Null, PageDown, PageUp, Right,
+        Tab, Up, F,
+    },
+    KeyModifiers,
+};
+
+#[derive(Debug, Clone, Copy)]
+pub enum Event<I> {
+    Input(I),
+    Tick,
+}
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, PartialOrd, Eq)]
-pub enum Key {
+pub enum KeyCode {
     CtrlBackspace,
     CtrlDelete,
     AltBackspace,
@@ -44,108 +44,87 @@ pub enum Key {
     Tab,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct EventConfig {
-    pub tick_rate: Duration,
+pub struct EventLoop {
+    pub rx: mpsc::UnboundedReceiver<Event<KeyCode>>,
+    pub tx: mpsc::UnboundedSender<Event<KeyCode>>,
+    pub abort: mpsc::UnboundedSender<()>,
+    pub handle: JoinHandle<()>,
+    pub tick_rate: std::time::Duration,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum Event<I> {
-    Input(I),
-    Tick,
-}
+impl EventLoop {
+    pub fn new(tick_rate: Option<std::time::Duration>) -> Self {
+        let (tx, rx) = mpsc::unbounded_channel();
+        let _tx = tx.clone();
+        let mut reader = crossterm::event::EventStream::new();
+        let should_tick = tick_rate.is_some();
+        let tick_rate = tick_rate.unwrap_or(std::time::Duration::from_millis(250));
 
-pub struct Events {
-    pub rx: async_std::channel::Receiver<Event<Key>>,
-}
+        let (abort, mut recv) = mpsc::unbounded_channel();
 
-impl Events {
-    pub fn with_config(config: EventConfig) -> Events {
-        use crossterm::event::{
-            KeyCode::{
-                BackTab, Backspace, Char, Delete, Down, End, Enter, Esc, Home, Insert, Left, Null, PageDown, PageUp,
-                Right, Tab, Up, F,
-            },
-            KeyModifiers,
-        };
-        let tick_rate = config.tick_rate;
-        let (tx, rx) = unbounded::<Event<Key>>();
-        task::spawn_local(async move {
-            let mut reader = EventStream::new();
-
+        let handle = tokio::spawn(async move {
             loop {
-                let mut delay = Delay::new(tick_rate).fuse();
-                let mut event = reader.next().fuse();
+                let delay = tokio::time::sleep(tick_rate);
+                let event = reader.next();
 
-                select! {
-                    _ = delay => {
-                        tx.send(Event::Tick).await.ok();
+                tokio::select! {
+                    _ = recv.recv() => break,
+                    _ = delay, if should_tick => {
+                        _tx.send(Event::Tick).unwrap();
                     },
+                    _ = _tx.closed() => break,
                     maybe_event = event => {
-                        if let Some(Ok(event::Event::Key(key))) = maybe_event {
+                        if let Some(Ok(crossterm::event::Event::Key(key))) = maybe_event {
                             let key = match key.code {
                                 Backspace => {
                                     match key.modifiers {
-                                        KeyModifiers::CONTROL => Key::CtrlBackspace,
-                                        KeyModifiers::ALT => Key::AltBackspace,
-                                        _ => Key::Backspace,
+                                        KeyModifiers::CONTROL => KeyCode::CtrlBackspace,
+                                        KeyModifiers::ALT => KeyCode::AltBackspace,
+                                        _ => KeyCode::Backspace,
                                     }
                                 },
                                 Delete => {
                                     match key.modifiers {
-                                        KeyModifiers::CONTROL => Key::CtrlDelete,
-                                        KeyModifiers::ALT => Key::AltDelete,
-                                        _ => Key::Delete,
+                                        KeyModifiers::CONTROL => KeyCode::CtrlDelete,
+                                        KeyModifiers::ALT => KeyCode::AltDelete,
+                                        _ => KeyCode::Delete,
                                     }
                                 },
-                                Enter => Key::Char('\n'),
-                                Left => Key::Left,
-                                Right => Key::Right,
-                                Up => Key::Up,
-                                Down => Key::Down,
-                                Home => Key::Home,
-                                End => Key::End,
-                                PageUp => Key::PageUp,
-                                PageDown => Key::PageDown,
-                                Tab => Key::Tab,
-                                BackTab => Key::BackTab,
-                                Insert => Key::Insert,
-                                F(k) => Key::F(k),
-                                Null => Key::Null,
-                                Esc => Key::Esc,
+                                Enter => KeyCode::Char('\n'),
+                                Left => KeyCode::Left,
+                                Right => KeyCode::Right,
+                                Up => KeyCode::Up,
+                                Down => KeyCode::Down,
+                                Home => KeyCode::Home,
+                                End => KeyCode::End,
+                                PageUp => KeyCode::PageUp,
+                                PageDown => KeyCode::PageDown,
+                                Tab => KeyCode::Tab,
+                                BackTab => KeyCode::BackTab,
+                                Insert => KeyCode::Insert,
+                                F(k) => KeyCode::F(k),
+                                Null => KeyCode::Null,
+                                Esc => KeyCode::Esc,
                                 Char(c) => match key.modifiers {
-                                    KeyModifiers::NONE | KeyModifiers::SHIFT => Key::Char(c),
-                                    KeyModifiers::CONTROL => Key::Ctrl(c),
-                                    KeyModifiers::ALT => Key::Alt(c),
-                                    _ => Key::Null,
+                                    KeyModifiers::NONE | KeyModifiers::SHIFT => KeyCode::Char(c),
+                                    KeyModifiers::CONTROL => KeyCode::Ctrl(c),
+                                    KeyModifiers::ALT => KeyCode::Alt(c),
+                                    _ => KeyCode::Null,
                                 },
                             };
-                            tx.send(Event::Input(key)).await.unwrap();
-                            task::sleep(Duration::from_millis(1)).await;
-                            task::yield_now().await;
-                        };
+                            _tx.send(Event::Input(key)).unwrap();
+                        }
                     }
                 }
             }
         });
-        Events { rx }
-    }
 
-    /// Attempts to read an event.
-    /// This function will block the current thread.
-    pub async fn next(&self) -> Result<Event<Key>, async_std::channel::RecvError> {
-        self.rx.recv().await
-    }
-
-    pub fn leave_tui_mode(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
-        disable_raw_mode().unwrap();
-        execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture).unwrap();
-        terminal.show_cursor().unwrap();
-    }
-
-    pub fn enter_tui_mode(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
-        execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture).unwrap();
-        enable_raw_mode().unwrap();
-        terminal.resize(terminal.size().unwrap()).unwrap();
+        Self {
+            tx,
+            rx,
+            handle,
+            tick_rate,
+            abort,
+        }
     }
 }

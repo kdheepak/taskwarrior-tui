@@ -2,14 +2,14 @@ use anyhow::Result;
 
 use crate::action::Action;
 use crate::app::{Mode, TaskwarriorTui};
-use crate::event::Key;
+use crate::event::KeyCode;
 use std::ops::Index;
 
 pub mod context;
 pub mod project;
 
 pub trait Pane {
-    fn handle_input(app: &mut TaskwarriorTui, input: Key) -> Result<()>;
+    fn handle_input(app: &mut TaskwarriorTui, input: KeyCode) -> Result<()>;
     fn change_focus_to_left_pane(app: &mut TaskwarriorTui) {
         match app.mode {
             Mode::Tasks(_) => {}
