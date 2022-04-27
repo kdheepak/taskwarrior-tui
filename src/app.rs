@@ -373,9 +373,8 @@ impl TaskwarriorTui {
     pub async fn abort_event_loop(&mut self) -> Result<()> {
         self.event_loop.abort.send(())?;
         while let Some(event) = self.next().await {
-            match event {
-                Event::Closed => break,
-                _ => (),
+            if let Event::Closed = event {
+                break;
             }
         }
         Ok(())
