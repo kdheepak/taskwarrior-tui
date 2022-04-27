@@ -540,14 +540,3 @@ where
         StatefulWidget::render(self, area, buf, &mut state);
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    #[should_panic]
-    fn table_invalid_percentages() {
-        Table::new([""].iter(), vec![Row::Data([""].iter())].into_iter()).widths(&[Constraint::Percentage(110)]);
-    }
-}
