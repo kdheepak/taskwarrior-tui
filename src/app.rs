@@ -245,15 +245,13 @@ impl TaskwarriorTui {
             .arg("rc.defaultwidth=0")
             .arg("show")
             .output()
-            .context("Unable to run `task show`.")
-            .unwrap();
+            .context("Unable to run `task show`.")?;
 
         if !output.status.success() {
             let output = std::process::Command::new("task")
                 .arg("diagnostics")
                 .output()
-                .context("Unable to run `task diagnostics`.")
-                .unwrap();
+                .context("Unable to run `task diagnostics`.")?;
             return Err(anyhow!(
                 "Unable to run `task show`.\n{}\n{}\nPlease check your configuration or open a issue on github.",
                 String::from_utf8_lossy(&output.stdout),
@@ -268,12 +266,12 @@ impl TaskwarriorTui {
         let output = std::process::Command::new("task")
             .arg("--version")
             .output()
-            .context("Unable to run `task --version`")
-            .unwrap();
+            .context("Unable to run `task --version`")?;
 
-        let task_version = Versioning::new(String::from_utf8_lossy(&output.stdout).trim()).unwrap();
+        let task_version =
+            Versioning::new(String::from_utf8_lossy(&output.stdout).trim()).context("Unable to get version string")?;
 
-        let (w, h) = crossterm::terminal::size()?;
+        let (w, h) = crossterm::terminal::size().unwrap_or((50, 15));
 
         let tick_rate = if c.uda_tick_rate > 0 {
             Some(std::time::Duration::from_millis(c.uda_tick_rate))
@@ -3874,11 +3872,7 @@ mod tests {
     }
 
     async fn _test_taskwarrior_tui() {
-        let app = TaskwarriorTui::new("next", false).await;
-        if app.is_err() {
-            return;
-        }
-        let app = app.unwrap();
+        let app = TaskwarriorTui::new("next", false).await.unwrap();
 
         assert!(app.task_by_index(0).is_none(), "Expected task data to be empty but found {} tasks. Delete contents of {:?} and {:?} and run the tests again.", app.tasks.len(), Path::new(env!("TASKDATA")), Path::new(env!("TASKDATA")).parent().unwrap().join(".config"));
 

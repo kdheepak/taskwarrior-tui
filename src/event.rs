@@ -56,13 +56,13 @@ impl EventLoop {
     pub fn new(tick_rate: Option<std::time::Duration>, init: bool) -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
         let _tx = tx.clone();
-        let mut reader = crossterm::event::EventStream::new();
         let should_tick = tick_rate.is_some();
         let tick_rate = tick_rate.unwrap_or(std::time::Duration::from_millis(250));
 
         let (abort, mut abort_recv) = mpsc::unbounded_channel();
 
         if init {
+            let mut reader = crossterm::event::EventStream::new();
             tokio::spawn(async move {
                 loop {
                     let delay = tokio::time::sleep(tick_rate);
