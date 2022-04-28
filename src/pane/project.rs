@@ -20,7 +20,7 @@ use tui::{
 
 use crate::action::Action;
 use crate::app::{Mode, TaskwarriorTui};
-use crate::event::Key;
+use crate::event::KeyCode;
 use crate::pane::Pane;
 use crate::table::TableState;
 use itertools::Itertools;
@@ -148,16 +148,16 @@ impl ProjectsState {
 }
 
 impl Pane for ProjectsState {
-    fn handle_input(app: &mut TaskwarriorTui, input: Key) -> Result<()> {
-        if input == app.keyconfig.quit || input == Key::Ctrl('c') {
+    fn handle_input(app: &mut TaskwarriorTui, input: KeyCode) -> Result<()> {
+        if input == app.keyconfig.quit || input == KeyCode::Ctrl('c') {
             app.should_quit = true;
         } else if input == app.keyconfig.next_tab {
             Self::change_focus_to_right_pane(app);
         } else if input == app.keyconfig.previous_tab {
             Self::change_focus_to_left_pane(app);
-        } else if input == Key::Down || input == app.keyconfig.down {
+        } else if input == KeyCode::Down || input == app.keyconfig.down {
             self::focus_on_next_project(app);
-        } else if input == Key::Up || input == app.keyconfig.up {
+        } else if input == KeyCode::Up || input == app.keyconfig.up {
             self::focus_on_previous_project(app);
         } else if input == app.keyconfig.select {
             self::update_task_filter_by_selection(app)?;
@@ -192,25 +192,5 @@ fn update_task_filter_by_selection(app: &mut TaskwarriorTui) -> Result<()> {
     let mut filter = current_filter.replace(&last_project_pattern, "");
     filter = format!("{}{}", filter, new_project_pattern);
     app.filter.update(filter.as_str(), filter.len());
-    app.update(true)?;
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_project_summary() {
-        let app = TaskwarriorTui::new("next");
-        if app.is_err() {
-            return;
-        }
-        let mut app = app.unwrap();
-
-        app.update(true).unwrap();
-
-        dbg!(&app.projects.rows);
-        dbg!(&app.projects.list);
-    }
 }

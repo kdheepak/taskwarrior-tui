@@ -39,7 +39,7 @@ impl TaskWarriorBool for str {
 }
 
 #[derive(Debug, Default)]
-pub struct UDA {
+pub struct Uda {
     label: String,
     kind: String,
     values: Option<Vec<String>>,
@@ -86,6 +86,8 @@ pub struct Config {
     pub uda_style_report_selection: Style,
     pub uda_style_calendar_title: Style,
     pub uda_style_calendar_today: Style,
+    pub uda_style_navbar: Style,
+    pub uda_style_command: Style,
     pub uda_style_report_completion_pane: Style,
     pub uda_style_report_completion_pane_highlight: Style,
     pub uda_shortcuts: Vec<String>,
@@ -96,7 +98,7 @@ pub struct Config {
     pub uda_task_report_prompt_on_done: bool,
     pub uda_task_report_date_time_vague_more_precise: bool,
     pub uda_context_menu_select_on_move: bool,
-    pub udas: HashMap<String, UDA>,
+    pub udas: HashMap<String, Uda>,
 }
 
 impl Config {
@@ -172,6 +174,8 @@ impl Config {
         let uda_style_report_scrollbar_area = Self::get_uda_style("report.scrollbar.area", data);
         let uda_style_calendar_title = Self::get_uda_style("calendar.title", data);
         let uda_style_calendar_today = Self::get_uda_style("calendar.today", data);
+        let uda_style_navbar = Self::get_uda_style("navbar", data);
+        let uda_style_command = Self::get_uda_style("command", data);
         let uda_style_context_active = Self::get_uda_style("context.active", data);
         let uda_style_report_completion_pane = Self::get_uda_style("report.completion-pane", data);
         let uda_style_report_completion_pane_highlight = Self::get_uda_style("report.completion-pane-highlight", data);
@@ -185,6 +189,8 @@ impl Config {
         let uda_style_calendar_title = uda_style_calendar_title.unwrap_or_default();
         let uda_style_calendar_today =
             uda_style_calendar_today.unwrap_or_else(|| Style::default().add_modifier(Modifier::BOLD));
+        let uda_style_navbar = uda_style_navbar.unwrap_or_else(|| Style::default().add_modifier(Modifier::REVERSED));
+        let uda_style_command = uda_style_command.unwrap_or_else(|| Style::default().add_modifier(Modifier::REVERSED));
         let uda_style_context_active = uda_style_context_active.unwrap_or_default();
         let uda_style_report_completion_pane = uda_style_report_completion_pane
             .unwrap_or_else(|| Style::default().fg(Color::Black).bg(Color::Rgb(223, 223, 223)));
@@ -233,6 +239,8 @@ impl Config {
             uda_style_context_active,
             uda_style_calendar_title,
             uda_style_calendar_today,
+            uda_style_navbar,
+            uda_style_command,
             uda_style_report_completion_pane,
             uda_style_report_completion_pane_highlight,
             uda_style_report_scrollbar,
