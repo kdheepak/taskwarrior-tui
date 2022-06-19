@@ -114,7 +114,7 @@ async fn tui_main(report: &str) -> Result<()> {
 
     let mut app = app::TaskwarriorTui::new(report, true).await?;
 
-    let mut terminal = app.start_tui().await?;
+    let mut terminal = app.start_tui()?;
 
     let r = app.run(&mut terminal).await;
 
