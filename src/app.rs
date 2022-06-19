@@ -347,7 +347,7 @@ impl TaskwarriorTui {
         Ok(app)
     }
 
-    pub async fn start_tui(&mut self) -> Result<Terminal<CrosstermBackend<std::io::Stdout>>> {
+    pub fn start_tui(&mut self) -> Result<Terminal<CrosstermBackend<std::io::Stdout>>> {
         enable_raw_mode()?;
         let mut stdout = std::io::stdout();
         execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
