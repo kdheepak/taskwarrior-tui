@@ -2542,6 +2542,10 @@ impl TaskwarriorTui {
             Mode::Calendar => {
                 if input == self.keyconfig.quit || input == KeyCode::Ctrl('c') {
                     self.should_quit = true;
+                } else if input == self.keyconfig.next_tab {
+                    if self.config.uda_change_focus_rotate {
+                        self.mode = Mode::Tasks(Action::Report);
+                    }
                 } else if input == self.keyconfig.previous_tab {
                     self.mode = Mode::Projects;
                 } else if input == KeyCode::Up || input == self.keyconfig.up {
@@ -2842,6 +2846,10 @@ impl TaskwarriorTui {
                         self.task_report_show_info = !self.task_report_show_info;
                     } else if input == self.keyconfig.context_menu {
                         self.mode = Mode::Tasks(Action::ContextMenu);
+                    } else if input == self.keyconfig.previous_tab {
+                        if self.config.uda_change_focus_rotate {
+                            self.mode = Mode::Calendar;
+                        }
                     } else if input == self.keyconfig.next_tab {
                         self.mode = Mode::Projects;
                     }

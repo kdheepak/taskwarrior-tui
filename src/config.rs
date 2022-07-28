@@ -90,6 +90,7 @@ pub struct Config {
     pub uda_style_report_completion_pane: Style,
     pub uda_style_report_completion_pane_highlight: Style,
     pub uda_shortcuts: Vec<String>,
+    pub uda_change_focus_rotate: bool,
     pub uda_background_process: String,
     pub uda_background_process_period: usize,
     pub uda_quick_tag_name: String,
@@ -120,6 +121,7 @@ impl Config {
         let rule_precedence_color = Self::get_rule_precedence_color(data);
         let uda_priority_values = Self::get_uda_priority_values(data);
         let uda_tick_rate = Self::get_uda_tick_rate(data);
+        let uda_change_focus_rotate = Self::get_uda_change_focus_rotate(data);
         let uda_auto_insert_double_quotes_on_add = Self::get_uda_auto_insert_double_quotes_on_add(data);
         let uda_auto_insert_double_quotes_on_annotate = Self::get_uda_auto_insert_double_quotes_on_annotate(data);
         let uda_auto_insert_double_quotes_on_log = Self::get_uda_auto_insert_double_quotes_on_log(data);
@@ -185,6 +187,7 @@ impl Config {
             rule_precedence_color,
             uda_priority_values,
             uda_tick_rate,
+            uda_change_focus_rotate,
             uda_auto_insert_double_quotes_on_add,
             uda_auto_insert_double_quotes_on_annotate,
             uda_auto_insert_double_quotes_on_log,
@@ -527,6 +530,13 @@ impl Config {
             .unwrap_or_default()
             .get_bool()
             .unwrap_or(true)
+    }
+
+    fn get_uda_change_focus_rotate(data: &str) -> bool {
+        Self::get_config("uda.taskwarrior-tui.tabs.change-focus-rotate", data)
+            .unwrap_or_default()
+            .get_bool()
+            .unwrap_or(false)
     }
 
     fn get_uda_tick_rate(data: &str) -> u64 {
