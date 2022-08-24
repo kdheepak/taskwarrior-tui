@@ -128,10 +128,7 @@ impl<'a> Widget for Calendar<'a> {
                 } else {
                     first.weekday().num_days_from_sunday()
                 };
-                (
-                    first,
-                    first - Duration::days(i64::from(num_days)),
-                )
+                (first, first - Duration::days(i64::from(num_days)))
             })
             .collect();
 
@@ -182,12 +179,7 @@ impl<'a> Widget for Calendar<'a> {
                 } else {
                     "Su Mo Tu We Th Fr Sa"
                 };
-                buf.set_string(
-                    x as u16,
-                    y,
-                    days_string,
-                    style.add_modifier(Modifier::UNDERLINED),
-                );
+                buf.set_string(x as u16, y, days_string, style.add_modifier(Modifier::UNDERLINED));
                 x += 21 + 1;
             }
             y += 1;
