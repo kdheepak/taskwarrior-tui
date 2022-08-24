@@ -116,6 +116,7 @@ impl EventLoop {
                                         KeyModifiers::ALT => KeyCode::Alt(c),
                                         _ => KeyCode::Null,
                                     },
+                                    _ => KeyCode::Null,
                                 };
                                 _tx.send(Event::Input(key)).unwrap();
                             }
