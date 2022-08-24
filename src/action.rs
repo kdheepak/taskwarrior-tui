@@ -1,4 +1,4 @@
-#[derive(Clone, PartialEq, Debug, Copy)]
+#[derive(Clone, PartialEq, Eq, Debug, Copy)]
 pub enum Action {
     Report,
     Filter,

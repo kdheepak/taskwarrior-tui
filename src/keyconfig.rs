@@ -1,4 +1,3 @@
-#![allow(clippy::eval_order_dependence)]
 use crate::event::KeyCode;
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};

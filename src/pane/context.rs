@@ -98,7 +98,7 @@ impl ContextsState {
             if line.starts_with("  ") && !(line.trim().ends_with("yes") || line.trim().ends_with("no")) {
                 let definition = line.trim();
                 if let Some(c) = self.rows.last_mut() {
-                    (*c).definition = format!("{} {}", c.definition, definition);
+                    c.definition = format!("{} {}", c.definition, definition);
                 }
                 continue;
             }
