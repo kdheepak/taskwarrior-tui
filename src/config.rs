@@ -55,6 +55,7 @@ pub struct Config {
     pub obfuscate: bool,
     pub print_empty_columns: bool,
     pub due: usize,
+    pub weekstart: bool,
     pub rule_precedence_color: Vec<String>,
     pub uda_priority_values: Vec<String>,
     pub uda_tick_rate: u64,
@@ -118,6 +119,7 @@ impl Config {
         };
         let data_location = Self::get_data_location(data);
         let due = Self::get_due(data);
+        let weekstart = Self::get_weekstart(data);
         let rule_precedence_color = Self::get_rule_precedence_color(data);
         let uda_priority_values = Self::get_uda_priority_values(data);
         let uda_tick_rate = Self::get_uda_tick_rate(data);
@@ -184,6 +186,7 @@ impl Config {
             obfuscate,
             print_empty_columns,
             due,
+            weekstart,
             rule_precedence_color,
             uda_priority_values,
             uda_tick_rate,
@@ -459,6 +462,15 @@ impl Config {
             .unwrap_or_default()
             .parse::<usize>()
             .unwrap_or(7)
+    }
+
+    fn get_weekstart(data: &str) -> bool {
+        let data = Self::get_config("weekstart", data).unwrap_or_default();
+        if data.eq_ignore_ascii_case("Monday") {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     fn get_rule_precedence_color(data: &str) -> Vec<String> {
