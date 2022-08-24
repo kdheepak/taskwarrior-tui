@@ -186,7 +186,7 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
         .split(popup_layout[1])[1]
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Mode {
     Tasks(Action),
     Projects,
@@ -558,7 +558,8 @@ impl TaskwarriorTui {
             .today_style(self.config.uda_style_calendar_today)
             .year(self.calendar_year)
             .date_style(self.get_dates_with_styles())
-            .months_per_row(self.config.uda_calendar_months_per_row);
+            .months_per_row(self.config.uda_calendar_months_per_row)
+            .start_on_monday(self.config.weekstart);
         c.title_background_color = self.config.uda_style_calendar_title.bg.unwrap_or(Color::Reset);
         f.render_widget(c, layout);
     }

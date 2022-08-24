@@ -26,6 +26,7 @@ pub struct Calendar<'a> {
     pub months_per_row: usize,
     pub date_style: Vec<(Date<FixedOffset>, Style)>,
     pub today_style: Style,
+    pub start_on_monday: bool,
     pub title_background_color: Color,
 }
 
@@ -41,6 +42,7 @@ impl<'a> Default for Calendar<'a> {
             month,
             date_style: vec![],
             today_style: Style::default(),
+            start_on_monday: false,
             title_background_color: Color::Reset,
         }
     }
@@ -84,6 +86,11 @@ impl<'a> Calendar<'a> {
         self.months_per_row = months_per_row;
         self
     }
+
+    pub fn start_on_monday(mut self, start_on_monday: bool) -> Self {
+        self.start_on_monday = start_on_monday;
+        self
+    }
 }
 
 impl<'a> Widget for Calendar<'a> {
@@ -116,10 +123,12 @@ impl<'a> Widget for Calendar<'a> {
             .iter()
             .map(|i| {
                 let first = Date::from_utc(NaiveDate::from_ymd(year, i + 1, 1), *Local::now().offset());
-                (
-                    first,
-                    first - Duration::days(i64::from(first.weekday().num_days_from_sunday())),
-                )
+                let num_days = if self.start_on_monday {
+                    first.weekday().num_days_from_monday()
+                } else {
+                    first.weekday().num_days_from_sunday()
+                };
+                (first, first - Duration::days(i64::from(num_days)))
             })
             .collect();
 
@@ -165,12 +174,12 @@ impl<'a> Widget for Calendar<'a> {
             for d in days.iter_mut().take(endm).skip(start_m) {
                 let m = d.0.month() as usize;
                 let style = Style::default().bg(self.title_background_color);
-                buf.set_string(
-                    x as u16,
-                    y,
-                    "Su Mo Tu We Th Fr Sa",
-                    style.add_modifier(Modifier::UNDERLINED),
-                );
+                let days_string = if self.start_on_monday {
+                    "Mo Tu We Th Fr Sa Su"
+                } else {
+                    "Su Mo Tu We Th Fr Sa"
+                };
+                buf.set_string(x as u16, y, days_string, style.add_modifier(Modifier::UNDERLINED));
                 x += 21 + 1;
             }
             y += 1;
