@@ -935,11 +935,8 @@ impl TaskwarriorTui {
             (self.help_popup.text_height as u16).saturating_sub(chunks[0].height-3),
         );
         
-        let mut ratio = (self.help_popup.scroll + chunks[0].height) as f64 / self.help_popup.text_height as f64;
-        
-        if ratio > 1.0 {
-            ratio = 1.0;
-        } 
+        let ratio = 
+            ((self.help_popup.scroll + chunks[0].height) as f64 / self.help_popup.text_height as f64).min(1.0); 
 
         let gauge = LineGauge::default()
             .block(Block::default())
