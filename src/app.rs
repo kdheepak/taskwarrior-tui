@@ -1845,7 +1845,7 @@ impl TaskwarriorTui {
                         if i == 0 {
                             continue;
                         }
-                        command.arg(&s);
+                        command.arg(s);
                     }
                     let output = command.output();
                     match output {
@@ -1914,7 +1914,7 @@ impl TaskwarriorTui {
                 Some(cmd) => {
                     let mut command = std::process::Command::new(&cmd[0]);
                     for s in cmd.iter().skip(1) {
-                        command.arg(&s);
+                        command.arg(s);
                     }
                     if let Ok(output) = command.output() {
                         if !output.status.success() {
@@ -1958,7 +1958,7 @@ impl TaskwarriorTui {
             Some(cmd) => {
                 let mut command = std::process::Command::new(&cmd[0]);
                 for s in cmd.iter().skip(1) {
-                    command.arg(&s);
+                    command.arg(s);
                 }
                 if let Ok(child) = command.spawn() {
                     let output = child.wait_with_output();
