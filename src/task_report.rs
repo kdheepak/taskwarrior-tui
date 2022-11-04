@@ -220,6 +220,9 @@ impl TaskReportTable {
                 }
             }
         }
+        let num_labels = self.labels.len();
+        let num_columns = self.columns.len();
+        assert!(num_labels == num_columns, "Must have the same number of labels (currently {}) and columns (currently {}). Compare their values as shown by \"task show report.{}.\" and fix your taskwarrior config.", num_labels, num_columns, report);
 
         Ok(())
     }
