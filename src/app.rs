@@ -48,7 +48,7 @@ use tui::{
     style::{Color, Modifier, Style},
     terminal::Frame,
     text::{Span, Spans, Text},
-    widgets::{LineGauge, Block, BorderType, Borders, Clear, List, ListItem, Paragraph, Wrap, Gauge},
+    widgets::{Block, BorderType, Borders, Clear, Gauge, LineGauge, List, ListItem, Paragraph, Wrap},
 };
 
 use rustyline::history::SearchDirection as HistoryDirection;
@@ -918,25 +918,18 @@ impl TaskwarriorTui {
     fn draw_help_popup(&mut self, f: &mut Frame<impl Backend>, percent_x: u16, percent_y: u16) {
         let area = centered_rect(percent_x, percent_y, f.size());
         f.render_widget(Clear, area);
-        
+
         let chunks = Layout::default()
-            .constraints(
-            [
-                Constraint::Max(area.height-1),
-                Constraint::Max(1),
-            ]
-            .as_ref()
-        )
-        .margin(0)
-        .split(area);
+            .constraints([Constraint::Max(area.height - 1), Constraint::Max(1)].as_ref())
+            .margin(0)
+            .split(area);
 
         self.help_popup.scroll = std::cmp::min(
             self.help_popup.scroll,
-            (self.help_popup.text_height as u16).saturating_sub(chunks[0].height-3),
+            (self.help_popup.text_height as u16).saturating_sub(chunks[0].height - 3),
         );
-        
-        let ratio = 
-            ((self.help_popup.scroll + chunks[0].height) as f64 / self.help_popup.text_height as f64).min(1.0); 
+
+        let ratio = ((self.help_popup.scroll + chunks[0].height) as f64 / self.help_popup.text_height as f64).min(1.0);
 
         let gauge = LineGauge::default()
             .block(Block::default())
