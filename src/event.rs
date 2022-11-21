@@ -1,5 +1,6 @@
 use crossterm::event::KeyEvent;
 use futures::StreamExt;
+use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
 use serde::{Deserialize, Serialize};
 use tokio::{sync::mpsc, sync::oneshot, task::JoinHandle};
 
@@ -70,12 +71,12 @@ impl EventLoop {
 
                     tokio::select! {
                         _ = abort_recv.recv() => {
-                            _tx.send(Event::Closed).unwrap();
-                            _tx.send(Event::Tick).unwrap();
+                            _tx.send(Event::Closed).unwrap_or_else(|_| warn!("Unable to send Closed event"));
+                            _tx.send(Event::Tick).unwrap_or_else(|_| warn!("Unable to send Tick event"));
                             break;
                         },
                         _ = delay, if should_tick => {
-                            _tx.send(Event::Tick).unwrap();
+                            _tx.send(Event::Tick).unwrap_or_else(|_| warn!("Unable to send Tick event"));
                         },
                         _ = _tx.closed() => break,
                         maybe_event = event => {
@@ -118,7 +119,7 @@ impl EventLoop {
                                     },
                                     _ => KeyCode::Null,
                                 };
-                                _tx.send(Event::Input(key)).unwrap();
+                                _tx.send(Event::Input(key)).unwrap_or_else(|_| warn!("Unable to send {:?} event", key));
                             }
                         }
                     }
