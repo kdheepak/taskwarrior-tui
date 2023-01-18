@@ -62,7 +62,7 @@ uda.taskwarrior-tui.shortcuts.2=~/.config/taskwarrior-tui/shortcut-scripts/sync.
 The file can have any name in any location, but must be executable.
 By default, keys `1`-`9` are available to run shortcuts.
 
-When you hit the shortcut, the script will be executed with the `selected_task_uuid` as an argument:
+When you hit the shortcut, the script will be executed with the `selected_tasks_uuid` as an argument:
 
 ```bash
 ~/.config/taskwarrior-tui/shortcut-scripts/add-personal-tag.sh $selected_tasks_uuid
