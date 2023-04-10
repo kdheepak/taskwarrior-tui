@@ -1,5 +1,5 @@
 _taskwarrior-tui() {
-    local i cur prev opts cmds
+    local i cur prev opts cmd
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
@@ -8,8 +8,8 @@ _taskwarrior-tui() {
 
     for i in ${COMP_WORDS[@]}
     do
-        case "${i}" in
-            "$1")
+        case "${cmd},${i}" in
+            ",$1")
                 cmd="taskwarrior__tui"
                 ;;
             *)
@@ -19,7 +19,7 @@ _taskwarrior-tui() {
 
     case "${cmd}" in
         taskwarrior__tui)
-            opts="-h -V -d -c -r --help --version --data --config --taskdata --taskrc --report"
+            opts="-d -c -r -h -V --data --config --taskdata --taskrc --report --help --version"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
