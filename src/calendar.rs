@@ -179,7 +179,7 @@ impl<'a> Widget for Calendar<'a> {
         } else {
           "Su Mo Tu We Th Fr Sa"
         };
-        buf.set_string(x as u16, y, days_string, style.add_modifier(Modifier::UNDERLINED));
+        buf.set_string(x, y, days_string, style.add_modifier(Modifier::UNDERLINED));
         x += 21 + 1;
       }
       y += 1;
@@ -208,7 +208,7 @@ impl<'a> Widget for Calendar<'a> {
               buf.set_string(x, y, s, style);
             }
             x += 3;
-            d.1 = d.1 + Duration::days(1);
+            d.1 += Duration::days(1);
           }
           moredays |= d.0.month() == d.1.month() || d.1 < d.0;
         }
