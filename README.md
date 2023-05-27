@@ -22,7 +22,6 @@ A Terminal User Interface (TUI) for [Taskwarrior](https://taskwarrior.org/) that
 
 ![](https://user-images.githubusercontent.com/1813121/159858280-3ca31e9a-fc38-4547-a92d-36a7758cf5dc.gif)
 
-
 ### Showcase
 
 <details>
@@ -125,7 +124,11 @@ uda.taskwarrior-tui.report.next.filter=(status:pending or status:waiting)
 
 ### References / Resources
 
-If you like `taskwarrior-tui`, please consider donating to [me](https://github.com/sponsors/kdheepak), [`@GothenburgBitFactory`](https://github.com/sponsors/GothenburgBitFactory) or a charity of your choice.
+If you like `taskwarrior-tui`, please consider donating to
+
+- [`kdheepak`](https://github.com/sponsors/kdheepak)
+- [`@GothenburgBitFactory`](https://github.com/sponsors/GothenburgBitFactory)
+- and/or a charity of your choice.
 
 <details>
 <summary>Additional resources</summary>
