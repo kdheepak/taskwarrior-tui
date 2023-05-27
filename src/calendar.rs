@@ -180,7 +180,7 @@ impl<'a> Widget for Calendar<'a> {
         } else {
           "Su Mo Tu We Th Fr Sa"
         };
-        buf.set_string(x as u16, y, days_string, style.add_modifier(Modifier::UNDERLINED));
+        buf.set_string(x, y, days_string, style.add_modifier(Modifier::UNDERLINED));
         x += 21 + 1;
       }
       y += 1;

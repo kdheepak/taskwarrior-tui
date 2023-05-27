@@ -879,7 +879,7 @@ impl TaskwarriorTui {
         .map(|(d, t)| {
           let now = Local::now();
           let reference = TimeZone::from_utc_datetime(now.offset(), &d);
-          let datetime: DateTime<FixedOffset> = reference.with_timezone(&now.offset()); // convert DateTime<Local> to DateTime<FixedOffset>
+          let datetime: DateTime<FixedOffset> = reference.with_timezone(now.offset()); // convert DateTime<Local> to DateTime<FixedOffset>
           (datetime, t)
         })
         .collect()
@@ -956,7 +956,7 @@ impl TaskwarriorTui {
 
     let constraints: Vec<Constraint> = widths
       .iter()
-      .map(|i| Constraint::Length((*i).try_into().unwrap_or(maximum_column_width as u16)))
+      .map(|i| Constraint::Length((*i).try_into().unwrap_or(maximum_column_width)))
       .collect();
 
     let highlight_style = highlight_style.add_modifier(Modifier::BOLD);
@@ -1261,7 +1261,7 @@ impl TaskwarriorTui {
 
     let constraints: Vec<Constraint> = widths
       .iter()
-      .map(|i| Constraint::Length((*i).try_into().unwrap_or(maximum_column_width as u16)))
+      .map(|i| Constraint::Length((*i).try_into().unwrap_or(maximum_column_width)))
       .collect();
 
     let t = Table::new(header, rows.into_iter())
