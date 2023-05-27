@@ -870,7 +870,7 @@ impl TaskwarriorTui {
     }
   }
 
-  pub fn get_dates_with_styles(&self) -> Vec<(chrono::DateTime<FixedOffset>, Style)> {
+  pub fn get_dates_with_styles(&self) -> Vec<(chrono::NaiveDate, Style)> {
     if !self.tasks.is_empty() {
       let tasks = &self.tasks;
       tasks
@@ -879,8 +879,7 @@ impl TaskwarriorTui {
         .map(|(d, t)| {
           let now = Local::now();
           let reference = TimeZone::from_utc_datetime(now.offset(), &d);
-          let datetime: DateTime<FixedOffset> = reference.with_timezone(now.offset()); // convert DateTime<Local> to DateTime<FixedOffset>
-          (datetime, t)
+          (reference.date_naive(), t)
         })
         .collect()
     } else {
@@ -4550,6 +4549,8 @@ mod tests {
     app.calendar_year = 2020;
     app.mode = Mode::Calendar;
 
+    app.update(true).await.unwrap();
+
     let backend = TestBackend::new(50, 15);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal
@@ -4575,14 +4576,17 @@ mod tests {
       "│    ]: Next view                      │",
       "│                                      │",
       "│    [: Previous view                  │",
-      "│                                      │",
       "╰──────────────────────────────────────╯",
+      "9% ─────────────────────────────────────",
     ]);
 
     for i in 1..=4 {
       // Calendar
       expected.get_mut(i, 0).set_style(Style::default().add_modifier(Modifier::BOLD));
     }
+    expected.get_mut(3, 11).set_style(Style::default().fg(Color::Gray));
+    expected.get_mut(4, 11).set_style(Style::default().fg(Color::Gray));
+    expected.get_mut(5, 11).set_style(Style::default().fg(Color::Gray));
 
     let mut app = TaskwarriorTui::new("next", false).await.unwrap();
 
