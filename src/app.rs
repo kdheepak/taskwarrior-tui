@@ -4227,11 +4227,11 @@ mod tests {
       TableMode::SingleSelection => match app.task_current() {
         Some(t) => {
           let s = format!("{} ", t.description());
-          app.modify.update(&s, s.as_str().len())
+          app.modify.update(&s, s.as_str().len(), &mut app.changes)
         }
-        None => app.modify.update("", 0),
+        None => app.modify.update("", 0, &mut app.changes),
       },
-      TableMode::MultipleSelection => app.modify.update("", 0),
+      TableMode::MultipleSelection => app.modify.update("", 0, &mut app.changes),
     }
 
     app.update(true).await.unwrap();
@@ -4681,9 +4681,9 @@ mod tests {
     match app.task_current() {
       Some(t) => {
         let s = format!("{} ", t.description());
-        app.modify.update(&s, s.as_str().len())
+        app.modify.update(&s, s.as_str().len(), &mut app.changes)
       }
-      None => app.modify.update("", 0),
+      None => app.modify.update("", 0, &mut app.changes),
     }
     app.update(true).await.unwrap();
 
