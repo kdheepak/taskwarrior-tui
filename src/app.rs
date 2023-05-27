@@ -1870,8 +1870,10 @@ impl TaskwarriorTui {
     let shell = &self.config.uda_shortcuts[s];
 
     if shell.is_empty() {
+      self.resume_tui().await.unwrap();
       return Err("Trying to run empty shortcut.".to_string());
     }
+
     let shell = format!(
       "{} {}",
       shell,
@@ -1917,6 +1919,7 @@ impl TaskwarriorTui {
     }
 
     self.resume_tui().await.unwrap();
+
     r
   }
 
@@ -2478,6 +2481,7 @@ impl TaskwarriorTui {
               Ok(_) => self.update(true).await?,
               Err(e) => {
                 self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
               }
             }
             if self.calendar_year > 0 {
@@ -2534,6 +2538,7 @@ impl TaskwarriorTui {
                 Ok(_) => self.update(true).await?,
                 Err(e) => {
                   self.error = Some(e);
+                  self.mode = Mode::Tasks(Action::Error);
                 }
               }
             }
@@ -2548,6 +2553,7 @@ impl TaskwarriorTui {
                 Ok(_) => self.update(true).await?,
                 Err(e) => {
                   self.error = Some(e);
+                  self.mode = Mode::Tasks(Action::Error);
                 }
               }
             }
@@ -2556,6 +2562,7 @@ impl TaskwarriorTui {
               Ok(_) => self.update(true).await?,
               Err(e) => {
                 self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
               }
             }
           } else if input == self.keyconfig.quick_tag {
@@ -2563,6 +2570,7 @@ impl TaskwarriorTui {
               Ok(_) => self.update(true).await?,
               Err(e) => {
                 self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
               }
             }
           } else if input == self.keyconfig.edit {
@@ -2570,6 +2578,7 @@ impl TaskwarriorTui {
               Ok(_) => self.update(true).await?,
               Err(e) => {
                 self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
               }
             }
           } else if input == self.keyconfig.undo {
@@ -2577,6 +2586,7 @@ impl TaskwarriorTui {
               Ok(_) => self.update(true).await?,
               Err(e) => {
                 self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
               }
             }
           } else if input == self.keyconfig.modify {
@@ -2686,6 +2696,7 @@ impl TaskwarriorTui {
               Err(e) => {
                 self.update(true).await?;
                 self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
               }
             }
           } else if input == self.keyconfig.shortcut2 {
@@ -2694,6 +2705,7 @@ impl TaskwarriorTui {
               Err(e) => {
                 self.update(true).await?;
                 self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
               }
             }
           } else if input == self.keyconfig.shortcut3 {
@@ -2702,6 +2714,7 @@ impl TaskwarriorTui {
               Err(e) => {
                 self.update(true).await?;
                 self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
               }
             }
           } else if input == self.keyconfig.shortcut4 {
@@ -2710,6 +2723,7 @@ impl TaskwarriorTui {
               Err(e) => {
                 self.update(true).await?;
                 self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
               }
             }
           } else if input == self.keyconfig.shortcut5 {
@@ -2718,6 +2732,7 @@ impl TaskwarriorTui {
               Err(e) => {
                 self.update(true).await?;
                 self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
               }
             }
           } else if input == self.keyconfig.shortcut6 {
@@ -2726,6 +2741,7 @@ impl TaskwarriorTui {
               Err(e) => {
                 self.update(true).await?;
                 self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
               }
             }
           } else if input == self.keyconfig.shortcut7 {
@@ -2734,6 +2750,7 @@ impl TaskwarriorTui {
               Err(e) => {
                 self.update(true).await?;
                 self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
               }
             }
           } else if input == self.keyconfig.shortcut8 {
@@ -2742,6 +2759,7 @@ impl TaskwarriorTui {
               Err(e) => {
                 self.update(true).await?;
                 self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
               }
             }
           } else if input == self.keyconfig.shortcut9 {
@@ -2750,6 +2768,7 @@ impl TaskwarriorTui {
               Err(e) => {
                 self.update(true).await?;
                 self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
               }
             }
           } else if input == self.keyconfig.zoom {
@@ -2808,6 +2827,7 @@ impl TaskwarriorTui {
                 Ok(_) => self.update(true).await?,
                 Err(e) => {
                   self.error = Some(e.to_string());
+                  self.mode = Mode::Tasks(Action::Error);
                 }
               }
             }
@@ -2858,6 +2878,7 @@ impl TaskwarriorTui {
                 }
                 Err(e) => {
                   self.error = Some(e);
+                  self.mode = Mode::Tasks(Action::Error);
                 }
               }
             }
@@ -2939,6 +2960,7 @@ impl TaskwarriorTui {
                 }
                 Err(e) => {
                   self.error = Some(e);
+                  self.mode = Mode::Tasks(Action::Error);
                 }
               }
             }
@@ -2983,6 +3005,7 @@ impl TaskwarriorTui {
                 }
                 Err(e) => {
                   self.error = Some(e);
+                  self.mode = Mode::Tasks(Action::Error);
                 }
               }
             }
@@ -3084,6 +3107,7 @@ impl TaskwarriorTui {
                 }
                 Err(e) => {
                   self.error = Some(e);
+                  self.mode = Mode::Tasks(Action::Error);
                 }
               }
             }
@@ -3166,6 +3190,7 @@ impl TaskwarriorTui {
                 Err(e) => {
                   self.reset_command();
                   self.error = Some(e.to_string());
+                  self.mode = Mode::Tasks(Action::Error);
                 }
               }
             }
@@ -3210,6 +3235,7 @@ impl TaskwarriorTui {
                 }
                 Err(e) => {
                   self.error = Some(e);
+                  self.mode = Mode::Tasks(Action::Error);
                 }
               }
             }
@@ -3403,6 +3429,7 @@ impl TaskwarriorTui {
                 }
                 Err(e) => {
                   self.error = Some(e);
+                  self.mode = Mode::Tasks(Action::Error);
                 }
               }
             }
@@ -3425,6 +3452,7 @@ impl TaskwarriorTui {
                 }
                 Err(e) => {
                   self.error = Some(e);
+                  self.mode = Mode::Tasks(Action::Error);
                 }
               }
             }
