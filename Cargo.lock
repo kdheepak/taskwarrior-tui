@@ -1306,7 +1306,7 @@ dependencies = [
 
 [[package]]
 name = "taskwarrior-tui"
-version = "0.23.7"
+version = "0.24.0"
 dependencies = [
  "anyhow",
  "better-panic",
