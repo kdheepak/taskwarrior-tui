@@ -29,10 +29,10 @@ Register-ArgumentCompleter -Native -CommandName 'taskwarrior-tui' -ScriptBlock {
             [CompletionResult]::new('--taskrc', 'taskrc', [CompletionResultType]::ParameterName, 'Sets the .taskrc file using the TASKRC environment variable for taskwarrior')
             [CompletionResult]::new('-r', 'r', [CompletionResultType]::ParameterName, 'Sets default report')
             [CompletionResult]::new('--report', 'report', [CompletionResultType]::ParameterName, 'Sets default report')
-            [CompletionResult]::new('-h', 'h', [CompletionResultType]::ParameterName, 'Print help information')
-            [CompletionResult]::new('--help', 'help', [CompletionResultType]::ParameterName, 'Print help information')
-            [CompletionResult]::new('-V', 'V', [CompletionResultType]::ParameterName, 'Print version information')
-            [CompletionResult]::new('--version', 'version', [CompletionResultType]::ParameterName, 'Print version information')
+            [CompletionResult]::new('-h', 'h', [CompletionResultType]::ParameterName, 'Print help')
+            [CompletionResult]::new('--help', 'help', [CompletionResultType]::ParameterName, 'Print help')
+            [CompletionResult]::new('-V', 'V', [CompletionResultType]::ParameterName, 'Print version')
+            [CompletionResult]::new('--version', 'version', [CompletionResultType]::ParameterName, 'Print version')
             break
         }
     })

@@ -23,10 +23,10 @@ _taskwarrior-tui() {
 '--taskrc=[Sets the .taskrc file using the TASKRC environment variable for taskwarrior]:FILE: ' \
 '-r+[Sets default report]:STRING: ' \
 '--report=[Sets default report]:STRING: ' \
-'-h[Print help information]' \
-'--help[Print help information]' \
-'-V[Print version information]' \
-'--version[Print version information]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'-V[Print version]' \
+'--version[Print version]' \
 && ret=0
 }
 
@@ -36,4 +36,8 @@ _taskwarrior-tui_commands() {
     _describe -t commands 'taskwarrior-tui commands' commands "$@"
 }
 
-_taskwarrior-tui "$@"
+if [ "$funcstack[1]" = "_taskwarrior-tui" ]; then
+    _taskwarrior-tui "$@"
+else
+    compdef _taskwarrior-tui taskwarrior-tui
+fi
