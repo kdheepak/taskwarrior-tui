@@ -2481,6 +2481,7 @@ impl TaskwarriorTui {
               Ok(_) => self.update(true).await?,
               Err(e) => {
                 self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
               }
             }
             if self.calendar_year > 0 {
@@ -2537,6 +2538,7 @@ impl TaskwarriorTui {
                 Ok(_) => self.update(true).await?,
                 Err(e) => {
                   self.error = Some(e);
+                  self.mode = Mode::Tasks(Action::Error);
                 }
               }
             }
@@ -2551,6 +2553,7 @@ impl TaskwarriorTui {
                 Ok(_) => self.update(true).await?,
                 Err(e) => {
                   self.error = Some(e);
+                  self.mode = Mode::Tasks(Action::Error);
                 }
               }
             }
@@ -2559,6 +2562,7 @@ impl TaskwarriorTui {
               Ok(_) => self.update(true).await?,
               Err(e) => {
                 self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
               }
             }
           } else if input == self.keyconfig.quick_tag {
@@ -2566,6 +2570,7 @@ impl TaskwarriorTui {
               Ok(_) => self.update(true).await?,
               Err(e) => {
                 self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
               }
             }
           } else if input == self.keyconfig.edit {
@@ -2573,6 +2578,7 @@ impl TaskwarriorTui {
               Ok(_) => self.update(true).await?,
               Err(e) => {
                 self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
               }
             }
           } else if input == self.keyconfig.undo {
@@ -2580,6 +2586,7 @@ impl TaskwarriorTui {
               Ok(_) => self.update(true).await?,
               Err(e) => {
                 self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
               }
             }
           } else if input == self.keyconfig.modify {
@@ -2820,6 +2827,7 @@ impl TaskwarriorTui {
                 Ok(_) => self.update(true).await?,
                 Err(e) => {
                   self.error = Some(e.to_string());
+                  self.mode = Mode::Tasks(Action::Error);
                 }
               }
             }
@@ -2870,6 +2878,7 @@ impl TaskwarriorTui {
                 }
                 Err(e) => {
                   self.error = Some(e);
+                  self.mode = Mode::Tasks(Action::Error);
                 }
               }
             }
@@ -2951,6 +2960,7 @@ impl TaskwarriorTui {
                 }
                 Err(e) => {
                   self.error = Some(e);
+                  self.mode = Mode::Tasks(Action::Error);
                 }
               }
             }
@@ -2995,6 +3005,7 @@ impl TaskwarriorTui {
                 }
                 Err(e) => {
                   self.error = Some(e);
+                  self.mode = Mode::Tasks(Action::Error);
                 }
               }
             }
@@ -3096,6 +3107,7 @@ impl TaskwarriorTui {
                 }
                 Err(e) => {
                   self.error = Some(e);
+                  self.mode = Mode::Tasks(Action::Error);
                 }
               }
             }
@@ -3178,6 +3190,7 @@ impl TaskwarriorTui {
                 Err(e) => {
                   self.reset_command();
                   self.error = Some(e.to_string());
+                  self.mode = Mode::Tasks(Action::Error);
                 }
               }
             }
@@ -3222,6 +3235,7 @@ impl TaskwarriorTui {
                 }
                 Err(e) => {
                   self.error = Some(e);
+                  self.mode = Mode::Tasks(Action::Error);
                 }
               }
             }
@@ -3415,6 +3429,7 @@ impl TaskwarriorTui {
                 }
                 Err(e) => {
                   self.error = Some(e);
+                  self.mode = Mode::Tasks(Action::Error);
                 }
               }
             }
@@ -3437,6 +3452,7 @@ impl TaskwarriorTui {
                 }
                 Err(e) => {
                   self.error = Some(e);
+                  self.mode = Mode::Tasks(Action::Error);
                 }
               }
             }
