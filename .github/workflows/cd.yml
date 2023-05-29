@@ -207,45 +207,45 @@ jobs:
       - name: Build aur package
         run: cargo aur
 
-  appimage:
-    name: Publish appimage package
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release
-      - name: Build AppImage
-        run: |
-          wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
-          chmod +x linuxdeploy-x86_64.AppImage
-          mkdir -p AppDir/usr/bin
-          cp target/release/taskwarrior-tui AppDir/usr/bin/taskwarrior-tui
-          cat <<EOF > AppDir/taskwarrior-tui.desktop
-          [Desktop Entry]
-          Name=taskwarrior-tui
-          Exec=taskwarrior-tui
-          Icon=icon
-          Type=Application
-          Categories=Utility;
-          EOF
-          wget https://user-images.githubusercontent.com/1813121/97495331-1dda4a80-192d-11eb-94eb-c276f538cfa8.png
-          mv 97495331-1dda4a80-192d-11eb-94eb-c276f538cfa8.png AppDir/icon.png
-          ./linuxdeploy-x86_64.AppImage -d AppDir/taskwarrior-tui.desktop -i AppDir/icon.png --appdir AppDir --output appimage
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: taskwarrior-tui
-          path: taskwarrior-tui-*.AppImage
-      - name: Releasing assets
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            taskwarrior-tui-*.AppImage
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # appimage:
+  #   name: Publish appimage package
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - uses: actions-rs/cargo@v1
+  #       with:
+  #         command: build
+  #         args: --release
+  #     - name: Build AppImage
+  #       run: |
+  #         wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+  #         chmod +x linuxdeploy-x86_64.AppImage
+  #         mkdir -p AppDir/usr/bin
+  #         cp target/release/taskwarrior-tui AppDir/usr/bin/taskwarrior-tui
+  #         cat <<EOF > AppDir/taskwarrior-tui.desktop
+  #         [Desktop Entry]
+  #         Name=taskwarrior-tui
+  #         Exec=taskwarrior-tui
+  #         Icon=icon
+  #         Type=Application
+  #         Categories=Utility;
+  #         EOF
+  #         wget https://user-images.githubusercontent.com/1813121/97495331-1dda4a80-192d-11eb-94eb-c276f538cfa8.png
+  #         mv 97495331-1dda4a80-192d-11eb-94eb-c276f538cfa8.png AppDir/icon.png
+  #         ./linuxdeploy-x86_64.AppImage -d AppDir/taskwarrior-tui.desktop -i AppDir/icon.png --appdir AppDir --output appimage
+  #     - name: Upload artifacts
+  #       uses: actions/upload-artifact@v2
+  #       with:
+  #         name: taskwarrior-tui
+  #         path: taskwarrior-tui-*.AppImage
+  #     - name: Releasing assets
+  #       if: startsWith(github.ref, 'refs/tags/')
+  #       uses: softprops/action-gh-release@v1
+  #       with:
+  #         files: |
+  #           taskwarrior-tui-*.AppImage
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   snap:
     name: Push to snap
