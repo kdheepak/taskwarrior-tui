@@ -3,7 +3,7 @@ use std::{error::Error, io};
 use tui::{
   layout::{Constraint, Corner, Direction, Layout},
   style::{Color, Modifier, Style},
-  text::{Span, Spans},
+  text::{Span, Line},
   widgets::{Block, Borders, List, ListItem, ListState},
   Terminal,
 };
