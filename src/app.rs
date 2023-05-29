@@ -48,7 +48,7 @@ use tui::{
   layout::{Alignment, Constraint, Direction, Layout, Margin, Rect},
   style::{Color, Modifier, Style},
   terminal::Frame,
-  text::{Span, Spans, Text},
+  text::{Span, Line, Text},
   widgets::{Block, BorderType, Borders, Clear, Gauge, LineGauge, List, ListItem, Paragraph, Wrap},
 };
 
@@ -487,14 +487,14 @@ impl TaskwarriorTui {
 
   fn draw_tabs(&self, f: &mut Frame<impl Backend>, layout: Rect) {
     let titles: Vec<&str> = vec!["Tasks", "Projects", "Calendar"];
-    let tab_names: Vec<_> = titles.into_iter().map(Spans::from).collect();
+    let tab_names: Vec<_> = titles.into_iter().map(Line::from).collect();
     let selected_tab = match self.mode {
       Mode::Tasks(_) => 0,
       Mode::Projects => 1,
       Mode::Calendar => 2,
     };
     let navbar_block = Block::default().style(self.config.uda_style_navbar);
-    let context = Spans::from(vec![
+    let context = Line::from(vec![
       Span::from("["),
       Span::from(if self.current_context.is_empty() {
         "none"
@@ -964,7 +964,7 @@ impl TaskwarriorTui {
         Block::default()
           .borders(Borders::ALL)
           .border_type(BorderType::Rounded)
-          .title(Spans::from(vec![Span::styled("Context", Style::default().add_modifier(Modifier::BOLD))])),
+          .title(Line::from(vec![Span::styled("Context", Style::default().add_modifier(Modifier::BOLD))])),
       )
       .header_style(
         self
@@ -993,7 +993,7 @@ impl TaskwarriorTui {
       .candidates()
       .iter()
       .map(|p| {
-        let lines = vec![Spans::from(vec![
+        let lines = vec![Line::from(vec![
           Span::styled(p.3.clone(), Style::default().add_modifier(Modifier::BOLD)),
           Span::from(p.4.clone()),
         ])];
@@ -1053,9 +1053,9 @@ impl TaskwarriorTui {
       style = style.fg(Color::Red);
     };
     let title_spans = if let Some(subtitle) = title.1 {
-      Spans::from(vec![title.0, Span::from(" ["), subtitle, Span::from("]")])
+      Line::from(vec![title.0, Span::from(" ["), subtitle, Span::from("]")])
     } else {
-      Spans::from(vec![title.0])
+      Line::from(vec![title.0])
     };
     let title = Paragraph::new(Text::from(title_spans)).style(style);
     f.render_widget(title, rects[0]);
