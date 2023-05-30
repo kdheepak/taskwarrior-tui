@@ -59,7 +59,13 @@ uda.taskwarrior-tui.shortcuts.2=~/.config/taskwarrior-tui/shortcut-scripts/sync.
 ...
 ```
 
-The file can have any name in any location, but must be executable.
+The executable file can be placed in any location.
+
+To make a file executable:
+
+1. Run `chmod +x /path/to/script` to modify the executable flag.
+2. Add `#!/usr/bin/env bash`, `#!/usr/bin/env python` or whatever is appropriate for your script.
+
 By default, keys `1`-`9` are available to run shortcuts.
 
 When you hit the shortcut, the script will be executed with the `selected_tasks_uuid` as an argument:
