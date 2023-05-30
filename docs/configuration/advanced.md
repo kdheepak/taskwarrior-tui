@@ -63,7 +63,7 @@ The executable file can be placed in any location.
 
 To make a file executable:
 
-1. chmod +x /path/to/script
+1. Run `chmod +x /path/to/script` to modify the executable flag.
 2. Add `#!/usr/bin/env bash`, `#!/usr/bin/env python` or whatever is appropriate for your script.
 
 By default, keys `1`-`9` are available to run shortcuts.
