@@ -4,7 +4,7 @@ use tui::{
   buffer::Buffer,
   layout::{Alignment, Rect},
   style::{Modifier, Style},
-  text::{Span, Line, Text},
+  text::{Line, Span, Text},
   widgets::{Block, BorderType, Borders, Clear, Paragraph, Widget},
 };
 

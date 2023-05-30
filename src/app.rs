@@ -48,7 +48,7 @@ use tui::{
   layout::{Alignment, Constraint, Direction, Layout, Margin, Rect},
   style::{Color, Modifier, Style},
   terminal::Frame,
-  text::{Span, Line, Text},
+  text::{Line, Span, Text},
   widgets::{Block, BorderType, Borders, Clear, Gauge, LineGauge, List, ListItem, Paragraph, Wrap},
 };
 
@@ -1887,26 +1887,27 @@ impl TaskwarriorTui {
         for i in cmd.iter().skip(1) {
           command.arg(i);
         }
-        if let Ok(child) = command.spawn() {
-          let output = child.wait_with_output();
-          match output {
-            Ok(o) => {
-              if o.status.success() {
-                Ok(())
-              } else {
-                Err(format!(
-                  "Unable to run shortcut {}. Status Code: {} - stdout: {} stderr: {}",
-                  s,
-                  o.status.code().unwrap_or_default(),
-                  String::from_utf8_lossy(&o.stdout),
-                  String::from_utf8_lossy(&o.stderr),
-                ))
+        match command.spawn() {
+          Ok(child) => {
+            let output = child.wait_with_output();
+            match output {
+              Ok(o) => {
+                if o.status.success() {
+                  Ok(())
+                } else {
+                  Err(format!(
+                    "Unable to run shortcut {}. Status Code: {} - stdout: {} stderr: {}",
+                    s,
+                    o.status.code().unwrap_or_default(),
+                    String::from_utf8_lossy(&o.stdout),
+                    String::from_utf8_lossy(&o.stderr),
+                  ))
+                }
               }
+              Err(s) => Err(format!("`{}` failed to wait with output: {}", shell, s)),
             }
-            Err(s) => Err(format!("`{}` failed to wait with output: {}", shell, s)),
           }
-        } else {
-          Err(format!("`{}` failed: Unable to spawn shortcut number {}", shell, s))
+          Err(err) => Err(format!("`{}` failed: Unable to spawn shortcut number {} - Error: {}", shell, s, err)),
         }
       }
       None => Err(format!("Unable to run shortcut number {}: shlex::split(`{}`) failed.", s, shell)),
