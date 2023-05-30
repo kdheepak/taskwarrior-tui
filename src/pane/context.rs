@@ -14,7 +14,7 @@ use tui::{
   layout::{Alignment, Rect},
   style::{Color, Modifier, Style},
   symbols,
-  text::{Span, Line, Text},
+  text::{Line, Span, Text},
   widgets::{Block, BorderType, Borders, Clear, Paragraph, StatefulWidget, Widget},
 };
 
