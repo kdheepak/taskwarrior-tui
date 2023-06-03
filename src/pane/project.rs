@@ -19,11 +19,11 @@ use tui::{
 };
 
 use crate::action::Action;
-use crate::app::{Mode, TaskwarriorTui};
-use crate::event::KeyCode;
+use crate::app::{App, Mode};
 use crate::pane::Pane;
 use crate::table::TableState;
 use crate::utils::Changeset;
+use crossterm::event::KeyCode;
 use itertools::Itertools;
 use std::cmp::min;
 use std::collections::{HashMap, HashSet};
@@ -68,7 +68,7 @@ impl ProjectsState {
     }
   }
 
-  fn pattern_by_marked(app: &mut TaskwarriorTui) -> String {
+  fn pattern_by_marked(app: &mut App) -> String {
     let mut project_pattern = String::new();
     if !app.projects.marked.is_empty() {
       for (idx, project) in app.projects.marked.clone().iter().enumerate() {
@@ -140,8 +140,8 @@ impl ProjectsState {
 }
 
 impl Pane for ProjectsState {
-  fn handle_input(app: &mut TaskwarriorTui, input: KeyCode) -> Result<()> {
-    if input == app.keyconfig.quit || input == KeyCode::Ctrl('c') {
+  fn handle_input(app: &mut App, input: KeyCode) -> Result<()> {
+    if input == app.keyconfig.quit || input == KeyCode::Char('c') {
       app.should_quit = true;
     } else if input == app.keyconfig.next_tab {
       Self::change_focus_to_right_pane(app);
@@ -159,21 +159,21 @@ impl Pane for ProjectsState {
   }
 }
 
-fn focus_on_next_project(app: &mut TaskwarriorTui) {
+fn focus_on_next_project(app: &mut App) {
   if app.projects.current_selection < app.projects.list.len().saturating_sub(1) {
     app.projects.current_selection += 1;
     app.projects.table_state.select(Some(app.projects.current_selection));
   }
 }
 
-fn focus_on_previous_project(app: &mut TaskwarriorTui) {
+fn focus_on_previous_project(app: &mut App) {
   if app.projects.current_selection >= 1 {
     app.projects.current_selection -= 1;
     app.projects.table_state.select(Some(app.projects.current_selection));
   }
 }
 
-fn update_task_filter_by_selection(app: &mut TaskwarriorTui) -> Result<()> {
+fn update_task_filter_by_selection(app: &mut App) -> Result<()> {
   app.projects.table_state.multiple_selection();
   let last_project_pattern = ProjectsState::pattern_by_marked(app);
   app.projects.toggle_mark();

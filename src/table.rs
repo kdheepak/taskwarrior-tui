@@ -108,30 +108,6 @@ where
   StyledData(D, Style),
 }
 
-/// A widget to display data in formatted columns
-///
-/// # Examples
-///
-/// ```rust
-/// # use tui::widgets::{Block, Borders, Table, Row};
-/// # use tui::layout::Constraint;
-/// # use tui::style::{Style, Color};
-/// let row_style = Style::default().fg(Color::White);
-/// Table::new(
-///         ["Col1", "Col2", "Col3"].into_iter(),
-///         vec![
-///             Row::StyledData(["Row11", "Row12", "Row13"].into_iter(), row_style),
-///             Row::StyledData(["Row21", "Row22", "Row23"].into_iter(), row_style),
-///             Row::StyledData(["Row31", "Row32", "Row33"].into_iter(), row_style),
-///             Row::Data(["Row41", "Row42", "Row43"].into_iter())
-///         ].into_iter()
-///     )
-///     .block(Block::default().title("Table"))
-///     .header_style(Style::default().fg(Color::Yellow))
-///     .widths(&[Constraint::Length(5), Constraint::Length(5), Constraint::Length(10)])
-///     .style(Style::default().fg(Color::White))
-///     .column_spacing(1);
-/// ```
 #[derive(Debug, Clone)]
 pub struct Table<'a, H, R> {
   /// A block to wrap the widget in

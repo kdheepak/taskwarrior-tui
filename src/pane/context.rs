@@ -19,10 +19,10 @@ use tui::{
 };
 
 use crate::action::Action;
-use crate::app::{Mode, TaskwarriorTui};
-use crate::event::KeyCode;
+use crate::app::{App, Mode};
 use crate::pane::Pane;
 use crate::table::TableState;
+use crossterm::event::KeyCode;
 use itertools::Itertools;
 use std::cmp;
 use std::cmp::min;

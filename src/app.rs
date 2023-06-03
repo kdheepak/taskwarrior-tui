@@ -1,48 +1,60 @@
+use crate::action::Action;
 use crate::calendar::Calendar;
 use crate::completion::{get_start_word_under_cursor, CompletionList};
 use crate::config;
 use crate::config::Config;
-use crate::event::Event;
+use crate::event::{Event, EventHandler};
 use crate::help::Help;
+use crate::history::HistoryContext;
 use crate::keyconfig::KeyConfig;
+use crate::pane::context::{ContextDetails, ContextsState};
+use crate::pane::project::ProjectsState;
+use crate::pane::Pane;
 use crate::scrollbar::Scrollbar;
 use crate::table::{Row, Table, TableMode, TableState};
 use crate::task_report::TaskReportTable;
 use crate::ui;
 use crate::utils;
-
+use anyhow::Context as AnyhowContext;
+use anyhow::{anyhow, Result};
+use chrono::{DateTime, Datelike, FixedOffset, Local, NaiveDate, NaiveDateTime, TimeZone, Timelike};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crossterm::style::style;
+use crossterm::{
+  event::{DisableMouseCapture, EnableMouseCapture},
+  execute,
+  terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
+use futures::SinkExt;
+use lazy_static::lazy_static;
+use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
+use regex::Regex;
+use rustyline::history::SearchDirection as HistoryDirection;
+use rustyline::line_buffer::LineBuffer;
+use rustyline::At;
+use rustyline::Editor;
+use rustyline::Word;
+use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::fs;
-use std::path::Path;
-
+use std::io;
 use std::io::Read;
 use std::io::Write;
-
+use std::path::Path;
+use std::sync::mpsc;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+use std::time::Instant;
 use std::time::SystemTime;
-
 use task_hookrs::date::Date;
 use task_hookrs::import::import;
+use task_hookrs::project::Project;
 use task_hookrs::status::TaskStatus;
 use task_hookrs::task::Task;
 use tui::symbols::bar::FULL;
-use uuid::Uuid;
-
-use unicode_segmentation::Graphemes;
-use unicode_segmentation::UnicodeSegmentation;
-use unicode_width::UnicodeWidthStr;
-
-use chrono::{DateTime, Datelike, FixedOffset, Local, NaiveDate, NaiveDateTime, TimeZone, Timelike};
-
-use anyhow::Context as AnyhowContext;
-use anyhow::{anyhow, Result};
-
-use std::sync::mpsc;
-
-use std::sync::{Arc, Mutex};
-
-use std::time::Duration;
+use tui::widgets::Tabs;
 use tui::{
   backend::Backend,
   layout::{Alignment, Constraint, Direction, Layout, Margin, Rect},
@@ -51,44 +63,12 @@ use tui::{
   text::{Line, Span, Text},
   widgets::{Block, BorderType, Borders, Clear, Gauge, LineGauge, List, ListItem, Paragraph, Wrap},
 };
-
-use rustyline::history::SearchDirection as HistoryDirection;
-use rustyline::line_buffer::LineBuffer;
-use rustyline::At;
-use rustyline::Editor;
-use rustyline::Word;
-
-use crate::history::HistoryContext;
-
-use std::io;
 use tui::{backend::CrosstermBackend, Terminal};
-
-use regex::Regex;
-
-use lazy_static::lazy_static;
-
-use crate::action::Action;
-use crate::event::KeyCode;
-use crate::pane::context::{ContextDetails, ContextsState};
-use crate::pane::project::ProjectsState;
-use crate::pane::Pane;
-
-use crossterm::style::style;
-use crossterm::{
-  event::{DisableMouseCapture, EnableMouseCapture},
-  execute,
-  terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-};
-
-use futures::SinkExt;
-use std::borrow::Borrow;
-use std::time::Instant;
-use task_hookrs::project::Project;
-
+use unicode_segmentation::Graphemes;
+use unicode_segmentation::UnicodeSegmentation;
+use unicode_width::UnicodeWidthStr;
+use uuid::Uuid;
 use versions::Versioning;
-
-use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
-use tui::widgets::Tabs;
 
 const MAX_LINE: usize = 4096;
 
@@ -194,7 +174,7 @@ pub enum Mode {
   Calendar,
 }
 
-pub struct TaskwarriorTui {
+pub struct App {
   pub should_quit: bool,
   pub dirty: bool,
   pub task_table_state: TableState,
@@ -234,13 +214,13 @@ pub struct TaskwarriorTui {
   pub contexts: ContextsState,
   pub task_version: Versioning,
   pub error: Option<String>,
-  pub event_loop: crate::event::EventLoop,
+  pub event_handler: EventHandler,
   pub requires_redraw: bool,
   pub changes: utils::Changeset,
 }
 
-impl TaskwarriorTui {
-  pub async fn new(report: &str, init_event_loop: bool) -> Result<Self> {
+impl App {
+  pub async fn new(report: &str) -> Result<Self> {
     let output = std::process::Command::new("task")
       .arg("rc.color=off")
       .arg("rc._forcecolor=off")
@@ -274,12 +254,7 @@ impl TaskwarriorTui {
 
     let (w, h) = crossterm::terminal::size().unwrap_or((50, 15));
 
-    let tick_rate = if c.uda_tick_rate > 0 {
-      Some(std::time::Duration::from_millis(c.uda_tick_rate))
-    } else {
-      None
-    };
-    let event_loop = crate::event::EventLoop::new(tick_rate, init_event_loop);
+    let event_handler = EventHandler::new(c.uda_tick_rate);
 
     let mut app = Self {
       should_quit: false,
@@ -320,7 +295,7 @@ impl TaskwarriorTui {
       contexts: ContextsState::new(),
       task_version,
       error: None,
-      event_loop,
+      event_handler,
       requires_redraw: false,
       changes: utils::Changeset::default(),
     };
@@ -371,7 +346,7 @@ impl TaskwarriorTui {
   }
 
   pub async fn abort_event_loop(&mut self) -> Result<()> {
-    self.event_loop.abort.send(())?;
+    self.event_handler.abort.send(())?;
     while let Some(event) = self.next().await {
       if let Event::Closed = event {
         break;
@@ -386,7 +361,7 @@ impl TaskwarriorTui {
     } else {
       None
     };
-    self.event_loop = crate::event::EventLoop::new(tick_rate, true);
+    self.event_handler = EventHandler::new(self.config.uda_tick_rate);
     Ok(())
   }
 
@@ -400,39 +375,8 @@ impl TaskwarriorTui {
     Ok(())
   }
 
-  pub async fn next(&mut self) -> Option<Event<KeyCode>> {
-    self.event_loop.rx.recv().await
-  }
-
-  pub async fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> Result<()> {
-    loop {
-      if self.requires_redraw {
-        terminal.resize(terminal.size()?)?;
-        self.requires_redraw = false;
-      }
-      terminal.draw(|f| self.draw(f))?;
-      // Handle input
-      if let Some(event) = self.next().await {
-        match event {
-          Event::Input(input) => {
-            debug!("Received input = {:?}", input);
-            self.handle_input(input).await?;
-          }
-          Event::Tick => {
-            debug!("Tick event");
-            self.update(false).await?;
-          }
-          Event::Closed => {
-            debug!("Event loop closed");
-          }
-        }
-      }
-
-      if self.should_quit {
-        break;
-      }
-    }
-    Ok(())
+  pub async fn next(&mut self) -> Option<Event> {
+    self.event_handler.receiver.recv().await
   }
 
   pub fn reset_command(&mut self) {
@@ -2093,7 +2037,7 @@ impl TaskwarriorTui {
 
     for task_uuid in &task_uuids {
       let mut command = "start";
-      for tag in TaskwarriorTui::task_virtual_tags(*task_uuid).unwrap_or_default().split(' ') {
+      for tag in App::task_virtual_tags(*task_uuid).unwrap_or_default().split(' ') {
         if tag == "ACTIVE" {
           command = "stop";
         }
@@ -2238,7 +2182,7 @@ impl TaskwarriorTui {
     self.pause_tui().await.unwrap();
 
     let selected = self.current_selection;
-    let task_id = self.tasks[selected].id().unwrap_or_default();
+    let _task_id = self.tasks[selected].id().unwrap_or_default();
     let task_uuid = *self.tasks[selected].uuid();
 
     let r = std::process::Command::new("task").arg(format!("{}", task_uuid)).arg("edit").spawn();
@@ -2439,1043 +2383,1047 @@ impl TaskwarriorTui {
     es
   }
 
+  pub fn quit(&mut self) {
+    self.should_quit = true;
+  }
+
   pub async fn handle_input(&mut self, input: KeyCode) -> Result<()> {
-    match self.mode {
-      Mode::Tasks(_) => {
-        self.handle_input_by_task_mode(input).await?;
-      }
-      Mode::Projects => {
-        ProjectsState::handle_input(self, input)?;
-        self.update(false).await?;
-      }
-      Mode::Calendar => {
-        if input == self.keyconfig.quit || input == KeyCode::Ctrl('c') {
-          self.should_quit = true;
-        } else if input == self.keyconfig.next_tab {
-          if self.config.uda_change_focus_rotate {
-            self.mode = Mode::Tasks(Action::Report);
-          }
-        } else if input == self.keyconfig.previous_tab {
-          self.mode = Mode::Projects;
-        } else if input == KeyCode::Up || input == self.keyconfig.up {
-          if self.calendar_year > 0 {
-            self.calendar_year -= 1;
-          }
-        } else if input == KeyCode::Down || input == self.keyconfig.down {
-          self.calendar_year += 1;
-        } else if input == KeyCode::PageUp || input == self.keyconfig.page_up {
-          self.task_report_previous_page();
-        } else if input == KeyCode::PageDown || input == self.keyconfig.page_down {
-          self.calendar_year += 10;
-        } else if input == KeyCode::Ctrl('e') {
-          self.task_details_scroll_down();
-        } else if input == KeyCode::Ctrl('y') {
-          self.task_details_scroll_up();
-        } else if input == self.keyconfig.done {
-          if self.config.uda_task_report_prompt_on_done {
-            self.mode = Mode::Tasks(Action::DonePrompt);
-            if self.task_current().is_none() {
-              self.mode = Mode::Tasks(Action::Report);
-            }
-          } else {
-            match self.task_done() {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
-              }
-            }
-            if self.calendar_year > 0 {
-              self.calendar_year -= 10;
-            }
-          }
-        }
-      }
-    }
-    self.update_task_table_state();
+    // match self.mode {
+    //   Mode::Tasks(_) => {
+    //     self.handle_input_by_task_mode(input).await?;
+    //   }
+    //   Mode::Projects => {
+    //     ProjectsState::handle_input(self, input)?;
+    //     self.update(false).await?;
+    //   }
+    //   Mode::Calendar => {
+    //     if input == self.keyconfig.quit || input == KeyCode::Ctrl('c') {
+    //       self.should_quit = true;
+    //     } else if input == self.keyconfig.next_tab {
+    //       if self.config.uda_change_focus_rotate {
+    //         self.mode = Mode::Tasks(Action::Report);
+    //       }
+    //     } else if input == self.keyconfig.previous_tab {
+    //       self.mode = Mode::Projects;
+    //     } else if input == KeyCode::Up || input == self.keyconfig.up {
+    //       if self.calendar_year > 0 {
+    //         self.calendar_year -= 1;
+    //       }
+    //     } else if input == KeyCode::Down || input == self.keyconfig.down {
+    //       self.calendar_year += 1;
+    //     } else if input == KeyCode::PageUp || input == self.keyconfig.page_up {
+    //       self.task_report_previous_page();
+    //     } else if input == KeyCode::PageDown || input == self.keyconfig.page_down {
+    //       self.calendar_year += 10;
+    //     } else if input == KeyCode::Ctrl('e') {
+    //       self.task_details_scroll_down();
+    //     } else if input == KeyCode::Ctrl('y') {
+    //       self.task_details_scroll_up();
+    //     } else if input == self.keyconfig.done {
+    //       if self.config.uda_task_report_prompt_on_done {
+    //         self.mode = Mode::Tasks(Action::DonePrompt);
+    //         if self.task_current().is_none() {
+    //           self.mode = Mode::Tasks(Action::Report);
+    //         }
+    //       } else {
+    //         match self.task_done() {
+    //           Ok(_) => self.update(true).await?,
+    //           Err(e) => {
+    //             self.error = Some(e);
+    //             self.mode = Mode::Tasks(Action::Error);
+    //           }
+    //         }
+    //         if self.calendar_year > 0 {
+    //           self.calendar_year -= 10;
+    //         }
+    //       }
+    //     }
+    //   }
+    // }
+    // self.update_task_table_state();
     Ok(())
   }
 
   async fn handle_input_by_task_mode(&mut self, input: KeyCode) -> Result<()> {
-    if let Mode::Tasks(task_mode) = &self.mode {
-      match task_mode {
-        Action::Report => {
-          if input == KeyCode::Esc {
-            self.marked.clear();
-          } else if input == self.keyconfig.quit || input == KeyCode::Ctrl('c') {
-            self.should_quit = true;
-          } else if input == self.keyconfig.select {
-            self.task_table_state.multiple_selection();
-            self.toggle_mark();
-          } else if input == self.keyconfig.select_all {
-            self.task_table_state.multiple_selection();
-            self.toggle_mark_all();
-          } else if input == self.keyconfig.refresh {
-            self.update(true).await?;
-          } else if input == self.keyconfig.go_to_bottom || input == KeyCode::End {
-            self.task_report_bottom();
-          } else if input == self.keyconfig.go_to_top || input == KeyCode::Home {
-            self.task_report_top();
-          } else if input == KeyCode::Down || input == self.keyconfig.down {
-            self.task_report_next();
-          } else if input == KeyCode::Up || input == self.keyconfig.up {
-            self.task_report_previous();
-          } else if input == KeyCode::PageDown || input == self.keyconfig.page_down {
-            self.task_report_next_page();
-          } else if input == KeyCode::PageUp || input == self.keyconfig.page_up {
-            self.task_report_previous_page();
-          } else if input == KeyCode::Ctrl('e') {
-            self.task_details_scroll_down();
-          } else if input == KeyCode::Ctrl('y') {
-            self.task_details_scroll_up();
-          } else if input == self.keyconfig.done {
-            if self.config.uda_task_report_prompt_on_done {
-              self.mode = Mode::Tasks(Action::DonePrompt);
-              if self.task_current().is_none() {
-                self.mode = Mode::Tasks(Action::Report);
-              }
-            } else {
-              match self.task_done() {
-                Ok(_) => self.update(true).await?,
-                Err(e) => {
-                  self.error = Some(e);
-                  self.mode = Mode::Tasks(Action::Error);
-                }
-              }
-            }
-          } else if input == self.keyconfig.delete {
-            if self.config.uda_task_report_prompt_on_delete {
-              self.mode = Mode::Tasks(Action::DeletePrompt);
-              if self.task_current().is_none() {
-                self.mode = Mode::Tasks(Action::Report);
-              }
-            } else {
-              match self.task_delete() {
-                Ok(_) => self.update(true).await?,
-                Err(e) => {
-                  self.error = Some(e);
-                  self.mode = Mode::Tasks(Action::Error);
-                }
-              }
-            }
-          } else if input == self.keyconfig.start_stop {
-            match self.task_start_stop() {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
-              }
-            }
-          } else if input == self.keyconfig.quick_tag {
-            match self.task_quick_tag() {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
-              }
-            }
-          } else if input == self.keyconfig.edit {
-            match self.task_edit().await {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
-              }
-            }
-          } else if input == self.keyconfig.undo {
-            match self.task_undo() {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
-              }
-            }
-          } else if input == self.keyconfig.modify {
-            self.mode = Mode::Tasks(Action::Modify);
-            self.command_history.reset();
-            self.history_status = Some(format!(
-              "{} / {}",
-              self
-                .command_history
-                .history_index()
-                .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
-                .saturating_add(1),
-              self.command_history.history_len()
-            ));
-            self.update_completion_list();
-            match self.task_table_state.mode() {
-              TableMode::SingleSelection => match self.task_current() {
-                Some(t) => {
-                  let mut s = format!("{} ", Self::escape(t.description()));
-                  if self.config.uda_prefill_task_metadata {
-                    if t.tags().is_some() {
-                      let virtual_tags = self.task_report_table.virtual_tags.clone();
-                      for tag in t.tags().unwrap() {
-                        if !virtual_tags.contains(tag) {
-                          s = format!("{}+{} ", s, tag);
-                        }
-                      }
-                    }
-                    if t.project().is_some() {
-                      s = format!("{}project:{} ", s, t.project().unwrap());
-                    }
-                    if t.priority().is_some() {
-                      s = format!("{}priority:{} ", s, t.priority().unwrap());
-                    }
-                    if t.due().is_some() {
-                      let date = t.due().unwrap();
-                      s = format!("{}due:{} ", s, get_formatted_datetime(date));
-                    }
-                  }
-                  self.modify.update(&s, s.as_str().len(), &mut self.changes);
-                }
-                None => self.modify.update("", 0, &mut self.changes),
-              },
-              TableMode::MultipleSelection => self.modify.update("", 0, &mut self.changes),
-            }
-          } else if input == self.keyconfig.shell {
-            self.mode = Mode::Tasks(Action::Subprocess);
-          } else if input == self.keyconfig.log {
-            self.mode = Mode::Tasks(Action::Log);
-            self.command_history.reset();
-            self.history_status = Some(format!(
-              "{} / {}",
-              self
-                .command_history
-                .history_index()
-                .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
-                .saturating_add(1),
-              self.command_history.history_len()
-            ));
-            self.update_completion_list();
-          } else if input == self.keyconfig.add {
-            self.mode = Mode::Tasks(Action::Add);
-            self.command_history.reset();
-            self.history_status = Some(format!(
-              "{} / {}",
-              self
-                .command_history
-                .history_index()
-                .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
-                .saturating_add(1),
-              self.command_history.history_len()
-            ));
-            self.update_completion_list();
-          } else if input == self.keyconfig.annotate {
-            self.mode = Mode::Tasks(Action::Annotate);
-            self.command_history.reset();
-            self.history_status = Some(format!(
-              "{} / {}",
-              self
-                .command_history
-                .history_index()
-                .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
-                .saturating_add(1),
-              self.command_history.history_len()
-            ));
-            self.update_completion_list();
-          } else if input == self.keyconfig.help {
-            self.mode = Mode::Tasks(Action::HelpPopup);
-          } else if input == self.keyconfig.filter {
-            self.mode = Mode::Tasks(Action::Filter);
-            self.filter_history.reset();
-            self.history_status = Some(format!(
-              "{} / {}",
-              self
-                .filter_history
-                .history_index()
-                .unwrap_or_else(|| self.filter_history.history_len().saturating_sub(1))
-                .saturating_add(1),
-              self.filter_history.history_len()
-            ));
-            self.update_completion_list();
-          } else if input == KeyCode::Char(':') {
-            self.mode = Mode::Tasks(Action::Jump);
-          } else if input == self.keyconfig.shortcut1 {
-            match self.task_shortcut(1).await {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.update(true).await?;
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
-              }
-            }
-          } else if input == self.keyconfig.shortcut2 {
-            match self.task_shortcut(2).await {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.update(true).await?;
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
-              }
-            }
-          } else if input == self.keyconfig.shortcut3 {
-            match self.task_shortcut(3).await {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.update(true).await?;
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
-              }
-            }
-          } else if input == self.keyconfig.shortcut4 {
-            match self.task_shortcut(4).await {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.update(true).await?;
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
-              }
-            }
-          } else if input == self.keyconfig.shortcut5 {
-            match self.task_shortcut(5).await {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.update(true).await?;
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
-              }
-            }
-          } else if input == self.keyconfig.shortcut6 {
-            match self.task_shortcut(6).await {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.update(true).await?;
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
-              }
-            }
-          } else if input == self.keyconfig.shortcut7 {
-            match self.task_shortcut(7).await {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.update(true).await?;
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
-              }
-            }
-          } else if input == self.keyconfig.shortcut8 {
-            match self.task_shortcut(8).await {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.update(true).await?;
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
-              }
-            }
-          } else if input == self.keyconfig.shortcut9 {
-            match self.task_shortcut(9).await {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.update(true).await?;
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
-              }
-            }
-          } else if input == self.keyconfig.zoom {
-            self.task_report_show_info = !self.task_report_show_info;
-          } else if input == self.keyconfig.context_menu {
-            self.mode = Mode::Tasks(Action::ContextMenu);
-          } else if input == self.keyconfig.previous_tab {
-            if self.config.uda_change_focus_rotate {
-              self.mode = Mode::Calendar;
-            }
-          } else if input == self.keyconfig.next_tab {
-            self.mode = Mode::Projects;
-          }
-        }
-        Action::ContextMenu => {
-          if input == self.keyconfig.quit || input == KeyCode::Esc {
-            self.mode = Mode::Tasks(Action::Report);
-          } else if input == KeyCode::Down || input == self.keyconfig.down {
-            self.context_next();
-            if self.config.uda_context_menu_select_on_move {
-              if self.error.is_some() {
-                self.previous_mode = Some(self.mode.clone());
-                self.mode = Mode::Tasks(Action::Error);
-              } else {
-                match self.context_select() {
-                  Ok(_) => self.update(true).await?,
-                  Err(e) => {
-                    self.error = Some(e.to_string());
-                  }
-                }
-              }
-            }
-          } else if input == KeyCode::Up || input == self.keyconfig.up {
-            self.context_previous();
-            if self.config.uda_context_menu_select_on_move {
-              if self.error.is_some() {
-                self.previous_mode = Some(self.mode.clone());
-                self.mode = Mode::Tasks(Action::Error);
-              } else {
-                match self.context_select() {
-                  Ok(_) => self.update(true).await?,
-                  Err(e) => {
-                    self.error = Some(e.to_string());
-                  }
-                }
-              }
-            }
-          } else if input == KeyCode::Char('\n') {
-            if self.error.is_some() {
-              self.previous_mode = Some(self.mode.clone());
-              self.mode = Mode::Tasks(Action::Error);
-            } else if self.config.uda_context_menu_select_on_move {
-              self.mode = Mode::Tasks(Action::Report);
-            } else {
-              match self.context_select() {
-                Ok(_) => self.update(true).await?,
-                Err(e) => {
-                  self.error = Some(e.to_string());
-                  self.mode = Mode::Tasks(Action::Error);
-                }
-              }
-            }
-          }
-        }
-        Action::HelpPopup => {
-          if input == self.keyconfig.quit || input == KeyCode::Esc {
-            self.mode = Mode::Tasks(Action::Report);
-          } else if input == self.keyconfig.down {
-            self.help_popup.scroll = self.help_popup.scroll.checked_add(1).unwrap_or(0);
-            let th = (self.help_popup.text_height as u16).saturating_sub(1);
-            if self.help_popup.scroll > th {
-              self.help_popup.scroll = th;
-            }
-          } else if input == self.keyconfig.up {
-            self.help_popup.scroll = self.help_popup.scroll.saturating_sub(1);
-          }
-        }
-        Action::Modify => match input {
-          KeyCode::Esc => {
-            if self.show_completion_pane {
-              self.show_completion_pane = false;
-              self.completion_list.unselect();
-            } else {
-              self.modify.update("", 0, &mut self.changes);
-              self.mode = Mode::Tasks(Action::Report);
-            }
-          }
-          KeyCode::Char('\n') => {
-            if self.show_completion_pane {
-              self.show_completion_pane = false;
-              if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
-                let (before, after) = self.modify.as_str().split_at(self.modify.pos());
-                let fs = format!("{}{}{}", before.trim_end_matches(&o), r, after);
-                self.modify.update(&fs, self.modify.pos() + r.len() - o.len(), &mut self.changes);
-              }
-              self.completion_list.unselect();
-            } else if self.error.is_some() {
-              self.previous_mode = Some(self.mode.clone());
-              self.mode = Mode::Tasks(Action::Error);
-            } else {
-              match self.task_modify() {
-                Ok(_) => {
-                  self.mode = Mode::Tasks(Action::Report);
-                  self.command_history.add(self.modify.as_str());
-                  self.modify.update("", 0, &mut self.changes);
-                  self.update(true).await?;
-                }
-                Err(e) => {
-                  self.error = Some(e);
-                  self.mode = Mode::Tasks(Action::Error);
-                }
-              }
-            }
-          }
-          KeyCode::Tab | KeyCode::Ctrl('n') => {
-            if !self.completion_list.is_empty() {
-              self.update_input_for_completion();
-              if !self.show_completion_pane {
-                self.show_completion_pane = true;
-              }
-              self.completion_list.next();
-            }
-          }
-          KeyCode::BackTab | KeyCode::Ctrl('p') => {
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.previous();
-            }
-          }
-
-          KeyCode::Up => {
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.previous();
-            } else if let Some(s) = self
-              .command_history
-              .history_search(&self.modify.as_str()[..self.modify.pos()], HistoryDirection::Reverse)
-            {
-              let p = self.modify.pos();
-              self.modify.update("", 0, &mut self.changes);
-              self.modify.update(&s, std::cmp::min(s.len(), p), &mut self.changes);
-              self.history_status = Some(format!(
-                "{} / {}",
-                self
-                  .command_history
-                  .history_index()
-                  .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
-                  .saturating_add(1),
-                self.command_history.history_len()
-              ));
-            }
-          }
-          KeyCode::Down => {
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.next();
-            } else if let Some(s) = self
-              .command_history
-              .history_search(&self.modify.as_str()[..self.modify.pos()], HistoryDirection::Forward)
-            {
-              let p = self.modify.pos();
-              self.modify.update("", 0, &mut self.changes);
-              self.modify.update(&s, std::cmp::min(s.len(), p), &mut self.changes);
-              self.history_status = Some(format!(
-                "{} / {}",
-                self
-                  .command_history
-                  .history_index()
-                  .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
-                  .saturating_add(1),
-                self.command_history.history_len()
-              ));
-            }
-          }
-          _ => {
-            self.command_history.reset();
-            handle_movement(&mut self.modify, input, &mut self.changes);
-            self.update_input_for_completion();
-          }
-        },
-        Action::Subprocess => match input {
-          KeyCode::Char('\n') => {
-            if self.error.is_some() {
-              self.previous_mode = Some(self.mode.clone());
-              self.mode = Mode::Tasks(Action::Error);
-            } else {
-              match self.task_subprocess() {
-                Ok(_) => {
-                  self.mode = Mode::Tasks(Action::Report);
-                  self.reset_command();
-                  self.update(true).await?;
-                }
-                Err(e) => {
-                  self.error = Some(e);
-                  self.mode = Mode::Tasks(Action::Error);
-                }
-              }
-            }
-          }
-          KeyCode::Esc => {
-            self.reset_command();
-            self.mode = Mode::Tasks(Action::Report);
-          }
-          _ => handle_movement(&mut self.command, input, &mut self.changes),
-        },
-        Action::Log => match input {
-          KeyCode::Esc => {
-            if self.show_completion_pane {
-              self.show_completion_pane = false;
-              self.completion_list.unselect();
-            } else {
-              self.reset_command();
-              self.history_status = None;
-              self.mode = Mode::Tasks(Action::Report);
-            }
-          }
-          KeyCode::Char('\n') => {
-            if self.show_completion_pane {
-              self.show_completion_pane = false;
-              if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
-                let (before, after) = self.command.as_str().split_at(self.command.pos());
-                let fs = format!("{}{}{}", before.trim_end_matches(&o), r, after);
-                self.command.update(&fs, self.command.pos() + r.len() - o.len(), &mut self.changes);
-              }
-              self.completion_list.unselect();
-            } else if self.error.is_some() {
-              self.previous_mode = Some(self.mode.clone());
-              self.mode = Mode::Tasks(Action::Error);
-            } else {
-              match self.task_log() {
-                Ok(_) => {
-                  self.mode = Mode::Tasks(Action::Report);
-                  self.command_history.add(self.command.as_str());
-                  self.reset_command();
-                  self.history_status = None;
-                  self.update(true).await?;
-                }
-                Err(e) => {
-                  self.error = Some(e);
-                  self.mode = Mode::Tasks(Action::Error);
-                }
-              }
-            }
-          }
-          KeyCode::Tab | KeyCode::Ctrl('n') => {
-            if !self.completion_list.is_empty() {
-              self.update_input_for_completion();
-              if !self.show_completion_pane {
-                self.show_completion_pane = true;
-              }
-              self.completion_list.next();
-            }
-          }
-          KeyCode::BackTab | KeyCode::Ctrl('p') => {
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.previous();
-            }
-          }
-
-          KeyCode::Up => {
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.previous();
-            } else if let Some(s) = self
-              .command_history
-              .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Reverse)
-            {
-              let p = self.command.pos();
-              self.command.update("", 0, &mut self.changes);
-              self.command.update(&s, std::cmp::min(s.len(), p), &mut self.changes);
-              self.history_status = Some(format!(
-                "{} / {}",
-                self
-                  .command_history
-                  .history_index()
-                  .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
-                  .saturating_add(1),
-                self.command_history.history_len()
-              ));
-            }
-          }
-          KeyCode::Down => {
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.next();
-            } else if let Some(s) = self
-              .command_history
-              .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Forward)
-            {
-              let p = self.command.pos();
-              self.command.update("", 0, &mut self.changes);
-              self.command.update(&s, std::cmp::min(s.len(), p), &mut self.changes);
-              self.history_status = Some(format!(
-                "{} / {}",
-                self
-                  .command_history
-                  .history_index()
-                  .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
-                  .saturating_add(1),
-                self.command_history.history_len()
-              ));
-            }
-          }
-          _ => {
-            self.command_history.reset();
-            handle_movement(&mut self.command, input, &mut self.changes);
-            self.update_input_for_completion();
-          }
-        },
-        Action::Annotate => match input {
-          KeyCode::Esc => {
-            if self.show_completion_pane {
-              self.show_completion_pane = false;
-              self.completion_list.unselect();
-            } else {
-              self.reset_command();
-              self.mode = Mode::Tasks(Action::Report);
-              self.history_status = None;
-            }
-          }
-          KeyCode::Char('\n') => {
-            if self.show_completion_pane {
-              self.show_completion_pane = false;
-              if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
-                let (before, after) = self.command.as_str().split_at(self.command.pos());
-                let fs = format!("{}{}{}", before.trim_end_matches(&o), r, after);
-                self.command.update(&fs, self.command.pos() + r.len() - o.len(), &mut self.changes);
-              }
-              self.completion_list.unselect();
-            } else if self.error.is_some() {
-              self.previous_mode = Some(self.mode.clone());
-              self.mode = Mode::Tasks(Action::Error);
-            } else {
-              match self.task_annotate() {
-                Ok(_) => {
-                  self.mode = Mode::Tasks(Action::Report);
-                  self.command_history.add(self.command.as_str());
-                  self.reset_command();
-                  self.history_status = None;
-                  self.update(true).await?;
-                }
-                Err(e) => {
-                  self.error = Some(e);
-                  self.mode = Mode::Tasks(Action::Error);
-                }
-              }
-            }
-          }
-          KeyCode::Tab | KeyCode::Ctrl('n') => {
-            if !self.completion_list.is_empty() {
-              self.update_input_for_completion();
-              if !self.show_completion_pane {
-                self.show_completion_pane = true;
-              }
-              self.completion_list.next();
-            }
-          }
-          KeyCode::BackTab | KeyCode::Ctrl('p') => {
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.previous();
-            }
-          }
-          KeyCode::Up => {
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.previous();
-            } else if let Some(s) = self
-              .command_history
-              .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Reverse)
-            {
-              let p = self.command.pos();
-              self.command.update("", 0, &mut self.changes);
-              self.command.update(&s, std::cmp::min(s.len(), p), &mut self.changes);
-              self.history_status = Some(format!(
-                "{} / {}",
-                self
-                  .command_history
-                  .history_index()
-                  .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
-                  .saturating_add(1),
-                self.command_history.history_len()
-              ));
-            }
-          }
-          KeyCode::Down => {
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.next();
-            } else if let Some(s) = self
-              .command_history
-              .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Forward)
-            {
-              let p = self.command.pos();
-              self.command.update("", 0, &mut self.changes);
-              self.command.update(&s, std::cmp::min(s.len(), p), &mut self.changes);
-              self.history_status = Some(format!(
-                "{} / {}",
-                self
-                  .command_history
-                  .history_index()
-                  .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
-                  .saturating_add(1),
-                self.command_history.history_len()
-              ));
-            }
-          }
-
-          _ => {
-            self.command_history.reset();
-            handle_movement(&mut self.command, input, &mut self.changes);
-            self.update_input_for_completion();
-          }
-        },
-        Action::Jump => match input {
-          KeyCode::Char('\n') => {
-            if self.error.is_some() {
-              self.previous_mode = Some(self.mode.clone());
-              self.mode = Mode::Tasks(Action::Error);
-            } else {
-              match self.task_report_jump() {
-                Ok(_) => {
-                  self.mode = Mode::Tasks(Action::Report);
-                  self.reset_command();
-                  self.update(true).await?;
-                }
-                Err(e) => {
-                  self.reset_command();
-                  self.error = Some(e.to_string());
-                  self.mode = Mode::Tasks(Action::Error);
-                }
-              }
-            }
-          }
-          KeyCode::Esc => {
-            self.reset_command();
-            self.mode = Mode::Tasks(Action::Report);
-          }
-          _ => handle_movement(&mut self.command, input, &mut self.changes),
-        },
-        Action::Add => match input {
-          KeyCode::Esc => {
-            if self.show_completion_pane {
-              self.show_completion_pane = false;
-              self.completion_list.unselect();
-            } else {
-              self.reset_command();
-              self.history_status = None;
-              self.mode = Mode::Tasks(Action::Report);
-            }
-          }
-          KeyCode::Char('\n') => {
-            if self.show_completion_pane {
-              self.show_completion_pane = false;
-              if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
-                let (before, after) = self.command.as_str().split_at(self.command.pos());
-                let fs = format!("{}{}{}", before.trim_end_matches(&o), r, after);
-                self.command.update(&fs, self.command.pos() + r.len() - o.len(), &mut self.changes);
-              }
-              self.completion_list.unselect();
-            } else if self.error.is_some() {
-              self.previous_mode = Some(self.mode.clone());
-              self.mode = Mode::Tasks(Action::Error);
-            } else {
-              match self.task_add() {
-                Ok(_) => {
-                  self.mode = Mode::Tasks(Action::Report);
-                  self.command_history.add(self.command.as_str());
-                  self.reset_command();
-                  self.history_status = None;
-                  self.update(true).await?;
-                }
-                Err(e) => {
-                  self.error = Some(e);
-                  self.mode = Mode::Tasks(Action::Error);
-                }
-              }
-            }
-          }
-          KeyCode::Tab | KeyCode::Ctrl('n') => {
-            if !self.completion_list.is_empty() {
-              self.update_input_for_completion();
-              if !self.show_completion_pane {
-                self.show_completion_pane = true;
-              }
-              self.completion_list.next();
-            }
-          }
-          KeyCode::BackTab | KeyCode::Ctrl('p') => {
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.previous();
-            }
-          }
-          KeyCode::Up => {
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.previous();
-            } else if let Some(s) = self
-              .command_history
-              .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Reverse)
-            {
-              let p = self.command.pos();
-              self.command.update("", 0, &mut self.changes);
-              self.command.update(&s, std::cmp::min(s.len(), p), &mut self.changes);
-              self.history_status = Some(format!(
-                "{} / {}",
-                self
-                  .command_history
-                  .history_index()
-                  .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
-                  .saturating_add(1),
-                self.command_history.history_len()
-              ));
-            }
-          }
-
-          KeyCode::Down => {
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.next();
-            } else if let Some(s) = self
-              .command_history
-              .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Forward)
-            {
-              let p = self.command.pos();
-              self.command.update("", 0, &mut self.changes);
-              self.command.update(&s, std::cmp::min(s.len(), p), &mut self.changes);
-              self.history_status = Some(format!(
-                "{} / {}",
-                self
-                  .command_history
-                  .history_index()
-                  .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
-                  .saturating_add(1),
-                self.command_history.history_len()
-              ));
-            }
-          }
-          _ => {
-            self.command_history.reset();
-            handle_movement(&mut self.command, input, &mut self.changes);
-            self.update_input_for_completion();
-          }
-        },
-        Action::Filter => match input {
-          KeyCode::Esc => {
-            if self.show_completion_pane {
-              self.show_completion_pane = false;
-              self.completion_list.unselect();
-            } else {
-              self.mode = Mode::Tasks(Action::Report);
-              self.filter_history.add(self.filter.as_str());
-              if self.config.uda_reset_filter_on_esc {
-                self.filter.update("", 0, &mut self.changes);
-                for c in self.config.filter.chars() {
-                  self.filter.insert(c, 1, &mut self.changes);
-                }
-                self.update_input_for_completion();
-                self.dirty = true;
-              }
-              self.history_status = None;
-              self.update(true).await?;
-            }
-          }
-          KeyCode::Char('\n') => {
-            if self.show_completion_pane {
-              self.show_completion_pane = false;
-              if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
-                let (before, after) = self.filter.as_str().split_at(self.filter.pos());
-                let fs = format!("{}{}{}", before.trim_end_matches(&o), r, after);
-                self.filter.update(&fs, self.filter.pos() + r.len() - o.len(), &mut self.changes);
-              }
-              self.completion_list.unselect();
-              self.dirty = true;
-            } else if self.error.is_some() {
-              self.previous_mode = Some(self.mode.clone());
-              self.mode = Mode::Tasks(Action::Error);
-            } else {
-              self.mode = Mode::Tasks(Action::Report);
-              self.filter_history.add(self.filter.as_str());
-              self.history_status = None;
-              self.update(true).await?;
-            }
-          }
-          KeyCode::Up => {
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.previous();
-            } else if let Some(s) = self
-              .filter_history
-              .history_search(&self.filter.as_str()[..self.filter.pos()], HistoryDirection::Reverse)
-            {
-              let p = self.filter.pos();
-              self.filter.update("", 0, &mut self.changes);
-              self.filter.update(&s, std::cmp::min(p, s.len()), &mut self.changes);
-              self.history_status = Some(format!(
-                "{} / {}",
-                self
-                  .filter_history
-                  .history_index()
-                  .unwrap_or_else(|| self.filter_history.history_len().saturating_sub(1))
-                  .saturating_add(1),
-                self.filter_history.history_len()
-              ));
-              self.dirty = true;
-            }
-          }
-          KeyCode::Down => {
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.next();
-            } else if let Some(s) = self
-              .filter_history
-              .history_search(&self.filter.as_str()[..self.filter.pos()], HistoryDirection::Forward)
-            {
-              let p = self.filter.pos();
-              self.filter.update("", 0, &mut self.changes);
-              self.filter.update(&s, std::cmp::min(p, s.len()), &mut self.changes);
-              self.history_status = Some(format!(
-                "{} / {}",
-                self
-                  .filter_history
-                  .history_index()
-                  .unwrap_or_else(|| self.filter_history.history_len().saturating_sub(1))
-                  .saturating_add(1),
-                self.filter_history.history_len()
-              ));
-              self.dirty = true;
-            }
-          }
-          KeyCode::Tab | KeyCode::Ctrl('n') => {
-            if !self.completion_list.is_empty() {
-              self.update_input_for_completion();
-              if !self.show_completion_pane {
-                self.show_completion_pane = true;
-              }
-              self.completion_list.next();
-            }
-          }
-          KeyCode::BackTab | KeyCode::Ctrl('p') => {
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.previous();
-            }
-          }
-          KeyCode::Ctrl('r') => {
-            self.filter.update("", 0, &mut self.changes);
-            for c in self.config.filter.chars() {
-              self.filter.insert(c, 1, &mut self.changes);
-            }
-            self.history_status = None;
-            self.update_input_for_completion();
-            self.dirty = true;
-          }
-          _ => {
-            handle_movement(&mut self.filter, input, &mut self.changes);
-            self.update_input_for_completion();
-            self.dirty = true;
-          }
-        },
-        Action::DonePrompt => {
-          if input == self.keyconfig.done || input == KeyCode::Char('\n') {
-            if self.error.is_some() {
-              self.previous_mode = Some(self.mode.clone());
-              self.mode = Mode::Tasks(Action::Error);
-            } else {
-              match self.task_done() {
-                Ok(_) => {
-                  self.mode = Mode::Tasks(Action::Report);
-                  self.update(true).await?;
-                }
-                Err(e) => {
-                  self.error = Some(e);
-                  self.mode = Mode::Tasks(Action::Error);
-                }
-              }
-            }
-          } else if input == self.keyconfig.quit || input == KeyCode::Esc {
-            self.mode = Mode::Tasks(Action::Report);
-          } else {
-            handle_movement(&mut self.command, input, &mut self.changes);
-          }
-        }
-        Action::DeletePrompt => {
-          if input == self.keyconfig.delete || input == KeyCode::Char('\n') {
-            if self.error.is_some() {
-              self.previous_mode = Some(self.mode.clone());
-              self.mode = Mode::Tasks(Action::Error);
-            } else {
-              match self.task_delete() {
-                Ok(_) => {
-                  self.mode = Mode::Tasks(Action::Report);
-                  self.update(true).await?;
-                }
-                Err(e) => {
-                  self.error = Some(e);
-                  self.mode = Mode::Tasks(Action::Error);
-                }
-              }
-            }
-          } else if input == self.keyconfig.quit || input == KeyCode::Esc {
-            self.mode = Mode::Tasks(Action::Report);
-          } else {
-            handle_movement(&mut self.command, input, &mut self.changes);
-          }
-        }
-        Action::Error => {
-          // since filter live updates, don't reset error status
-          // for other actions, resetting error to None is required otherwise user cannot
-          // ever successfully execute mode.
-          if self.previous_mode != Some(Mode::Tasks(Action::Filter)) {
-            self.error = None;
-          }
-          self.mode = self.previous_mode.clone().unwrap_or(Mode::Tasks(Action::Report));
-          self.previous_mode = None;
-        }
-      }
-    }
-    self.update_task_table_state();
+    // if let Mode::Tasks(task_mode) = &self.mode {
+    //   match task_mode {
+    //     Action::Report => {
+    //       if input == KeyCode::Esc {
+    //         self.marked.clear();
+    //       } else if input == self.keyconfig.quit || input == KeyCode::Ctrl('c') {
+    //         self.should_quit = true;
+    //       } else if input == self.keyconfig.select {
+    //         self.task_table_state.multiple_selection();
+    //         self.toggle_mark();
+    //       } else if input == self.keyconfig.select_all {
+    //         self.task_table_state.multiple_selection();
+    //         self.toggle_mark_all();
+    //       } else if input == self.keyconfig.refresh {
+    //         self.update(true).await?;
+    //       } else if input == self.keyconfig.go_to_bottom || input == KeyCode::End {
+    //         self.task_report_bottom();
+    //       } else if input == self.keyconfig.go_to_top || input == KeyCode::Home {
+    //         self.task_report_top();
+    //       } else if input == KeyCode::Down || input == self.keyconfig.down {
+    //         self.task_report_next();
+    //       } else if input == KeyCode::Up || input == self.keyconfig.up {
+    //         self.task_report_previous();
+    //       } else if input == KeyCode::PageDown || input == self.keyconfig.page_down {
+    //         self.task_report_next_page();
+    //       } else if input == KeyCode::PageUp || input == self.keyconfig.page_up {
+    //         self.task_report_previous_page();
+    //       } else if input == KeyCode::Ctrl('e') {
+    //         self.task_details_scroll_down();
+    //       } else if input == KeyCode::Ctrl('y') {
+    //         self.task_details_scroll_up();
+    //       } else if input == self.keyconfig.done {
+    //         if self.config.uda_task_report_prompt_on_done {
+    //           self.mode = Mode::Tasks(Action::DonePrompt);
+    //           if self.task_current().is_none() {
+    //             self.mode = Mode::Tasks(Action::Report);
+    //           }
+    //         } else {
+    //           match self.task_done() {
+    //             Ok(_) => self.update(true).await?,
+    //             Err(e) => {
+    //               self.error = Some(e);
+    //               self.mode = Mode::Tasks(Action::Error);
+    //             }
+    //           }
+    //         }
+    //       } else if input == self.keyconfig.delete {
+    //         if self.config.uda_task_report_prompt_on_delete {
+    //           self.mode = Mode::Tasks(Action::DeletePrompt);
+    //           if self.task_current().is_none() {
+    //             self.mode = Mode::Tasks(Action::Report);
+    //           }
+    //         } else {
+    //           match self.task_delete() {
+    //             Ok(_) => self.update(true).await?,
+    //             Err(e) => {
+    //               self.error = Some(e);
+    //               self.mode = Mode::Tasks(Action::Error);
+    //             }
+    //           }
+    //         }
+    //       } else if input == self.keyconfig.start_stop {
+    //         match self.task_start_stop() {
+    //           Ok(_) => self.update(true).await?,
+    //           Err(e) => {
+    //             self.error = Some(e);
+    //             self.mode = Mode::Tasks(Action::Error);
+    //           }
+    //         }
+    //       } else if input == self.keyconfig.quick_tag {
+    //         match self.task_quick_tag() {
+    //           Ok(_) => self.update(true).await?,
+    //           Err(e) => {
+    //             self.error = Some(e);
+    //             self.mode = Mode::Tasks(Action::Error);
+    //           }
+    //         }
+    //       } else if input == self.keyconfig.edit {
+    //         match self.task_edit().await {
+    //           Ok(_) => self.update(true).await?,
+    //           Err(e) => {
+    //             self.error = Some(e);
+    //             self.mode = Mode::Tasks(Action::Error);
+    //           }
+    //         }
+    //       } else if input == self.keyconfig.undo {
+    //         match self.task_undo() {
+    //           Ok(_) => self.update(true).await?,
+    //           Err(e) => {
+    //             self.error = Some(e);
+    //             self.mode = Mode::Tasks(Action::Error);
+    //           }
+    //         }
+    //       } else if input == self.keyconfig.modify {
+    //         self.mode = Mode::Tasks(Action::Modify);
+    //         self.command_history.reset();
+    //         self.history_status = Some(format!(
+    //           "{} / {}",
+    //           self
+    //             .command_history
+    //             .history_index()
+    //             .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
+    //             .saturating_add(1),
+    //           self.command_history.history_len()
+    //         ));
+    //         self.update_completion_list();
+    //         match self.task_table_state.mode() {
+    //           TableMode::SingleSelection => match self.task_current() {
+    //             Some(t) => {
+    //               let mut s = format!("{} ", Self::escape(t.description()));
+    //               if self.config.uda_prefill_task_metadata {
+    //                 if t.tags().is_some() {
+    //                   let virtual_tags = self.task_report_table.virtual_tags.clone();
+    //                   for tag in t.tags().unwrap() {
+    //                     if !virtual_tags.contains(tag) {
+    //                       s = format!("{}+{} ", s, tag);
+    //                     }
+    //                   }
+    //                 }
+    //                 if t.project().is_some() {
+    //                   s = format!("{}project:{} ", s, t.project().unwrap());
+    //                 }
+    //                 if t.priority().is_some() {
+    //                   s = format!("{}priority:{} ", s, t.priority().unwrap());
+    //                 }
+    //                 if t.due().is_some() {
+    //                   let date = t.due().unwrap();
+    //                   s = format!("{}due:{} ", s, get_formatted_datetime(date));
+    //                 }
+    //               }
+    //               self.modify.update(&s, s.as_str().len(), &mut self.changes);
+    //             }
+    //             None => self.modify.update("", 0, &mut self.changes),
+    //           },
+    //           TableMode::MultipleSelection => self.modify.update("", 0, &mut self.changes),
+    //         }
+    //       } else if input == self.keyconfig.shell {
+    //         self.mode = Mode::Tasks(Action::Subprocess);
+    //       } else if input == self.keyconfig.log {
+    //         self.mode = Mode::Tasks(Action::Log);
+    //         self.command_history.reset();
+    //         self.history_status = Some(format!(
+    //           "{} / {}",
+    //           self
+    //             .command_history
+    //             .history_index()
+    //             .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
+    //             .saturating_add(1),
+    //           self.command_history.history_len()
+    //         ));
+    //         self.update_completion_list();
+    //       } else if input == self.keyconfig.add {
+    //         self.mode = Mode::Tasks(Action::Add);
+    //         self.command_history.reset();
+    //         self.history_status = Some(format!(
+    //           "{} / {}",
+    //           self
+    //             .command_history
+    //             .history_index()
+    //             .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
+    //             .saturating_add(1),
+    //           self.command_history.history_len()
+    //         ));
+    //         self.update_completion_list();
+    //       } else if input == self.keyconfig.annotate {
+    //         self.mode = Mode::Tasks(Action::Annotate);
+    //         self.command_history.reset();
+    //         self.history_status = Some(format!(
+    //           "{} / {}",
+    //           self
+    //             .command_history
+    //             .history_index()
+    //             .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
+    //             .saturating_add(1),
+    //           self.command_history.history_len()
+    //         ));
+    //         self.update_completion_list();
+    //       } else if input == self.keyconfig.help {
+    //         self.mode = Mode::Tasks(Action::HelpPopup);
+    //       } else if input == self.keyconfig.filter {
+    //         self.mode = Mode::Tasks(Action::Filter);
+    //         self.filter_history.reset();
+    //         self.history_status = Some(format!(
+    //           "{} / {}",
+    //           self
+    //             .filter_history
+    //             .history_index()
+    //             .unwrap_or_else(|| self.filter_history.history_len().saturating_sub(1))
+    //             .saturating_add(1),
+    //           self.filter_history.history_len()
+    //         ));
+    //         self.update_completion_list();
+    //       } else if input == KeyCode::Char(':') {
+    //         self.mode = Mode::Tasks(Action::Jump);
+    //       } else if input == self.keyconfig.shortcut1 {
+    //         match self.task_shortcut(1).await {
+    //           Ok(_) => self.update(true).await?,
+    //           Err(e) => {
+    //             self.update(true).await?;
+    //             self.error = Some(e);
+    //             self.mode = Mode::Tasks(Action::Error);
+    //           }
+    //         }
+    //       } else if input == self.keyconfig.shortcut2 {
+    //         match self.task_shortcut(2).await {
+    //           Ok(_) => self.update(true).await?,
+    //           Err(e) => {
+    //             self.update(true).await?;
+    //             self.error = Some(e);
+    //             self.mode = Mode::Tasks(Action::Error);
+    //           }
+    //         }
+    //       } else if input == self.keyconfig.shortcut3 {
+    //         match self.task_shortcut(3).await {
+    //           Ok(_) => self.update(true).await?,
+    //           Err(e) => {
+    //             self.update(true).await?;
+    //             self.error = Some(e);
+    //             self.mode = Mode::Tasks(Action::Error);
+    //           }
+    //         }
+    //       } else if input == self.keyconfig.shortcut4 {
+    //         match self.task_shortcut(4).await {
+    //           Ok(_) => self.update(true).await?,
+    //           Err(e) => {
+    //             self.update(true).await?;
+    //             self.error = Some(e);
+    //             self.mode = Mode::Tasks(Action::Error);
+    //           }
+    //         }
+    //       } else if input == self.keyconfig.shortcut5 {
+    //         match self.task_shortcut(5).await {
+    //           Ok(_) => self.update(true).await?,
+    //           Err(e) => {
+    //             self.update(true).await?;
+    //             self.error = Some(e);
+    //             self.mode = Mode::Tasks(Action::Error);
+    //           }
+    //         }
+    //       } else if input == self.keyconfig.shortcut6 {
+    //         match self.task_shortcut(6).await {
+    //           Ok(_) => self.update(true).await?,
+    //           Err(e) => {
+    //             self.update(true).await?;
+    //             self.error = Some(e);
+    //             self.mode = Mode::Tasks(Action::Error);
+    //           }
+    //         }
+    //       } else if input == self.keyconfig.shortcut7 {
+    //         match self.task_shortcut(7).await {
+    //           Ok(_) => self.update(true).await?,
+    //           Err(e) => {
+    //             self.update(true).await?;
+    //             self.error = Some(e);
+    //             self.mode = Mode::Tasks(Action::Error);
+    //           }
+    //         }
+    //       } else if input == self.keyconfig.shortcut8 {
+    //         match self.task_shortcut(8).await {
+    //           Ok(_) => self.update(true).await?,
+    //           Err(e) => {
+    //             self.update(true).await?;
+    //             self.error = Some(e);
+    //             self.mode = Mode::Tasks(Action::Error);
+    //           }
+    //         }
+    //       } else if input == self.keyconfig.shortcut9 {
+    //         match self.task_shortcut(9).await {
+    //           Ok(_) => self.update(true).await?,
+    //           Err(e) => {
+    //             self.update(true).await?;
+    //             self.error = Some(e);
+    //             self.mode = Mode::Tasks(Action::Error);
+    //           }
+    //         }
+    //       } else if input == self.keyconfig.zoom {
+    //         self.task_report_show_info = !self.task_report_show_info;
+    //       } else if input == self.keyconfig.context_menu {
+    //         self.mode = Mode::Tasks(Action::ContextMenu);
+    //       } else if input == self.keyconfig.previous_tab {
+    //         if self.config.uda_change_focus_rotate {
+    //           self.mode = Mode::Calendar;
+    //         }
+    //       } else if input == self.keyconfig.next_tab {
+    //         self.mode = Mode::Projects;
+    //       }
+    //     }
+    //     Action::ContextMenu => {
+    //       if input == self.keyconfig.quit || input == KeyCode::Esc {
+    //         self.mode = Mode::Tasks(Action::Report);
+    //       } else if input == KeyCode::Down || input == self.keyconfig.down {
+    //         self.context_next();
+    //         if self.config.uda_context_menu_select_on_move {
+    //           if self.error.is_some() {
+    //             self.previous_mode = Some(self.mode.clone());
+    //             self.mode = Mode::Tasks(Action::Error);
+    //           } else {
+    //             match self.context_select() {
+    //               Ok(_) => self.update(true).await?,
+    //               Err(e) => {
+    //                 self.error = Some(e.to_string());
+    //               }
+    //             }
+    //           }
+    //         }
+    //       } else if input == KeyCode::Up || input == self.keyconfig.up {
+    //         self.context_previous();
+    //         if self.config.uda_context_menu_select_on_move {
+    //           if self.error.is_some() {
+    //             self.previous_mode = Some(self.mode.clone());
+    //             self.mode = Mode::Tasks(Action::Error);
+    //           } else {
+    //             match self.context_select() {
+    //               Ok(_) => self.update(true).await?,
+    //               Err(e) => {
+    //                 self.error = Some(e.to_string());
+    //               }
+    //             }
+    //           }
+    //         }
+    //       } else if input == KeyCode::Char('\n') {
+    //         if self.error.is_some() {
+    //           self.previous_mode = Some(self.mode.clone());
+    //           self.mode = Mode::Tasks(Action::Error);
+    //         } else if self.config.uda_context_menu_select_on_move {
+    //           self.mode = Mode::Tasks(Action::Report);
+    //         } else {
+    //           match self.context_select() {
+    //             Ok(_) => self.update(true).await?,
+    //             Err(e) => {
+    //               self.error = Some(e.to_string());
+    //               self.mode = Mode::Tasks(Action::Error);
+    //             }
+    //           }
+    //         }
+    //       }
+    //     }
+    //     Action::HelpPopup => {
+    //       if input == self.keyconfig.quit || input == KeyCode::Esc {
+    //         self.mode = Mode::Tasks(Action::Report);
+    //       } else if input == self.keyconfig.down {
+    //         self.help_popup.scroll = self.help_popup.scroll.checked_add(1).unwrap_or(0);
+    //         let th = (self.help_popup.text_height as u16).saturating_sub(1);
+    //         if self.help_popup.scroll > th {
+    //           self.help_popup.scroll = th;
+    //         }
+    //       } else if input == self.keyconfig.up {
+    //         self.help_popup.scroll = self.help_popup.scroll.saturating_sub(1);
+    //       }
+    //     }
+    //     Action::Modify => match input {
+    //       KeyCode::Esc => {
+    //         if self.show_completion_pane {
+    //           self.show_completion_pane = false;
+    //           self.completion_list.unselect();
+    //         } else {
+    //           self.modify.update("", 0, &mut self.changes);
+    //           self.mode = Mode::Tasks(Action::Report);
+    //         }
+    //       }
+    //       KeyCode::Char('\n') => {
+    //         if self.show_completion_pane {
+    //           self.show_completion_pane = false;
+    //           if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
+    //             let (before, after) = self.modify.as_str().split_at(self.modify.pos());
+    //             let fs = format!("{}{}{}", before.trim_end_matches(&o), r, after);
+    //             self.modify.update(&fs, self.modify.pos() + r.len() - o.len(), &mut self.changes);
+    //           }
+    //           self.completion_list.unselect();
+    //         } else if self.error.is_some() {
+    //           self.previous_mode = Some(self.mode.clone());
+    //           self.mode = Mode::Tasks(Action::Error);
+    //         } else {
+    //           match self.task_modify() {
+    //             Ok(_) => {
+    //               self.mode = Mode::Tasks(Action::Report);
+    //               self.command_history.add(self.modify.as_str());
+    //               self.modify.update("", 0, &mut self.changes);
+    //               self.update(true).await?;
+    //             }
+    //             Err(e) => {
+    //               self.error = Some(e);
+    //               self.mode = Mode::Tasks(Action::Error);
+    //             }
+    //           }
+    //         }
+    //       }
+    //       KeyCode::Tab | KeyCode::Ctrl('n') => {
+    //         if !self.completion_list.is_empty() {
+    //           self.update_input_for_completion();
+    //           if !self.show_completion_pane {
+    //             self.show_completion_pane = true;
+    //           }
+    //           self.completion_list.next();
+    //         }
+    //       }
+    //       KeyCode::BackTab | KeyCode::Ctrl('p') => {
+    //         if self.show_completion_pane && !self.completion_list.is_empty() {
+    //           self.completion_list.previous();
+    //         }
+    //       }
+    //
+    //       KeyCode::Up => {
+    //         if self.show_completion_pane && !self.completion_list.is_empty() {
+    //           self.completion_list.previous();
+    //         } else if let Some(s) = self
+    //           .command_history
+    //           .history_search(&self.modify.as_str()[..self.modify.pos()], HistoryDirection::Reverse)
+    //         {
+    //           let p = self.modify.pos();
+    //           self.modify.update("", 0, &mut self.changes);
+    //           self.modify.update(&s, std::cmp::min(s.len(), p), &mut self.changes);
+    //           self.history_status = Some(format!(
+    //             "{} / {}",
+    //             self
+    //               .command_history
+    //               .history_index()
+    //               .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
+    //               .saturating_add(1),
+    //             self.command_history.history_len()
+    //           ));
+    //         }
+    //       }
+    //       KeyCode::Down => {
+    //         if self.show_completion_pane && !self.completion_list.is_empty() {
+    //           self.completion_list.next();
+    //         } else if let Some(s) = self
+    //           .command_history
+    //           .history_search(&self.modify.as_str()[..self.modify.pos()], HistoryDirection::Forward)
+    //         {
+    //           let p = self.modify.pos();
+    //           self.modify.update("", 0, &mut self.changes);
+    //           self.modify.update(&s, std::cmp::min(s.len(), p), &mut self.changes);
+    //           self.history_status = Some(format!(
+    //             "{} / {}",
+    //             self
+    //               .command_history
+    //               .history_index()
+    //               .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
+    //               .saturating_add(1),
+    //             self.command_history.history_len()
+    //           ));
+    //         }
+    //       }
+    //       _ => {
+    //         self.command_history.reset();
+    //         handle_movement(&mut self.modify, input, &mut self.changes);
+    //         self.update_input_for_completion();
+    //       }
+    //     },
+    //     Action::Subprocess => match input {
+    //       KeyCode::Char('\n') => {
+    //         if self.error.is_some() {
+    //           self.previous_mode = Some(self.mode.clone());
+    //           self.mode = Mode::Tasks(Action::Error);
+    //         } else {
+    //           match self.task_subprocess() {
+    //             Ok(_) => {
+    //               self.mode = Mode::Tasks(Action::Report);
+    //               self.reset_command();
+    //               self.update(true).await?;
+    //             }
+    //             Err(e) => {
+    //               self.error = Some(e);
+    //               self.mode = Mode::Tasks(Action::Error);
+    //             }
+    //           }
+    //         }
+    //       }
+    //       KeyCode::Esc => {
+    //         self.reset_command();
+    //         self.mode = Mode::Tasks(Action::Report);
+    //       }
+    //       _ => handle_movement(&mut self.command, input, &mut self.changes),
+    //     },
+    //     Action::Log => match input {
+    //       KeyCode::Esc => {
+    //         if self.show_completion_pane {
+    //           self.show_completion_pane = false;
+    //           self.completion_list.unselect();
+    //         } else {
+    //           self.reset_command();
+    //           self.history_status = None;
+    //           self.mode = Mode::Tasks(Action::Report);
+    //         }
+    //       }
+    //       KeyCode::Char('\n') => {
+    //         if self.show_completion_pane {
+    //           self.show_completion_pane = false;
+    //           if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
+    //             let (before, after) = self.command.as_str().split_at(self.command.pos());
+    //             let fs = format!("{}{}{}", before.trim_end_matches(&o), r, after);
+    //             self.command.update(&fs, self.command.pos() + r.len() - o.len(), &mut self.changes);
+    //           }
+    //           self.completion_list.unselect();
+    //         } else if self.error.is_some() {
+    //           self.previous_mode = Some(self.mode.clone());
+    //           self.mode = Mode::Tasks(Action::Error);
+    //         } else {
+    //           match self.task_log() {
+    //             Ok(_) => {
+    //               self.mode = Mode::Tasks(Action::Report);
+    //               self.command_history.add(self.command.as_str());
+    //               self.reset_command();
+    //               self.history_status = None;
+    //               self.update(true).await?;
+    //             }
+    //             Err(e) => {
+    //               self.error = Some(e);
+    //               self.mode = Mode::Tasks(Action::Error);
+    //             }
+    //           }
+    //         }
+    //       }
+    //       KeyCode::Tab | KeyCode::Ctrl('n') => {
+    //         if !self.completion_list.is_empty() {
+    //           self.update_input_for_completion();
+    //           if !self.show_completion_pane {
+    //             self.show_completion_pane = true;
+    //           }
+    //           self.completion_list.next();
+    //         }
+    //       }
+    //       KeyCode::BackTab | KeyCode::Ctrl('p') => {
+    //         if self.show_completion_pane && !self.completion_list.is_empty() {
+    //           self.completion_list.previous();
+    //         }
+    //       }
+    //
+    //       KeyCode::Up => {
+    //         if self.show_completion_pane && !self.completion_list.is_empty() {
+    //           self.completion_list.previous();
+    //         } else if let Some(s) = self
+    //           .command_history
+    //           .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Reverse)
+    //         {
+    //           let p = self.command.pos();
+    //           self.command.update("", 0, &mut self.changes);
+    //           self.command.update(&s, std::cmp::min(s.len(), p), &mut self.changes);
+    //           self.history_status = Some(format!(
+    //             "{} / {}",
+    //             self
+    //               .command_history
+    //               .history_index()
+    //               .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
+    //               .saturating_add(1),
+    //             self.command_history.history_len()
+    //           ));
+    //         }
+    //       }
+    //       KeyCode::Down => {
+    //         if self.show_completion_pane && !self.completion_list.is_empty() {
+    //           self.completion_list.next();
+    //         } else if let Some(s) = self
+    //           .command_history
+    //           .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Forward)
+    //         {
+    //           let p = self.command.pos();
+    //           self.command.update("", 0, &mut self.changes);
+    //           self.command.update(&s, std::cmp::min(s.len(), p), &mut self.changes);
+    //           self.history_status = Some(format!(
+    //             "{} / {}",
+    //             self
+    //               .command_history
+    //               .history_index()
+    //               .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
+    //               .saturating_add(1),
+    //             self.command_history.history_len()
+    //           ));
+    //         }
+    //       }
+    //       _ => {
+    //         self.command_history.reset();
+    //         handle_movement(&mut self.command, input, &mut self.changes);
+    //         self.update_input_for_completion();
+    //       }
+    //     },
+    //     Action::Annotate => match input {
+    //       KeyCode::Esc => {
+    //         if self.show_completion_pane {
+    //           self.show_completion_pane = false;
+    //           self.completion_list.unselect();
+    //         } else {
+    //           self.reset_command();
+    //           self.mode = Mode::Tasks(Action::Report);
+    //           self.history_status = None;
+    //         }
+    //       }
+    //       KeyCode::Char('\n') => {
+    //         if self.show_completion_pane {
+    //           self.show_completion_pane = false;
+    //           if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
+    //             let (before, after) = self.command.as_str().split_at(self.command.pos());
+    //             let fs = format!("{}{}{}", before.trim_end_matches(&o), r, after);
+    //             self.command.update(&fs, self.command.pos() + r.len() - o.len(), &mut self.changes);
+    //           }
+    //           self.completion_list.unselect();
+    //         } else if self.error.is_some() {
+    //           self.previous_mode = Some(self.mode.clone());
+    //           self.mode = Mode::Tasks(Action::Error);
+    //         } else {
+    //           match self.task_annotate() {
+    //             Ok(_) => {
+    //               self.mode = Mode::Tasks(Action::Report);
+    //               self.command_history.add(self.command.as_str());
+    //               self.reset_command();
+    //               self.history_status = None;
+    //               self.update(true).await?;
+    //             }
+    //             Err(e) => {
+    //               self.error = Some(e);
+    //               self.mode = Mode::Tasks(Action::Error);
+    //             }
+    //           }
+    //         }
+    //       }
+    //       KeyCode::Tab | KeyCode::Ctrl('n') => {
+    //         if !self.completion_list.is_empty() {
+    //           self.update_input_for_completion();
+    //           if !self.show_completion_pane {
+    //             self.show_completion_pane = true;
+    //           }
+    //           self.completion_list.next();
+    //         }
+    //       }
+    //       KeyCode::BackTab | KeyCode::Ctrl('p') => {
+    //         if self.show_completion_pane && !self.completion_list.is_empty() {
+    //           self.completion_list.previous();
+    //         }
+    //       }
+    //       KeyCode::Up => {
+    //         if self.show_completion_pane && !self.completion_list.is_empty() {
+    //           self.completion_list.previous();
+    //         } else if let Some(s) = self
+    //           .command_history
+    //           .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Reverse)
+    //         {
+    //           let p = self.command.pos();
+    //           self.command.update("", 0, &mut self.changes);
+    //           self.command.update(&s, std::cmp::min(s.len(), p), &mut self.changes);
+    //           self.history_status = Some(format!(
+    //             "{} / {}",
+    //             self
+    //               .command_history
+    //               .history_index()
+    //               .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
+    //               .saturating_add(1),
+    //             self.command_history.history_len()
+    //           ));
+    //         }
+    //       }
+    //       KeyCode::Down => {
+    //         if self.show_completion_pane && !self.completion_list.is_empty() {
+    //           self.completion_list.next();
+    //         } else if let Some(s) = self
+    //           .command_history
+    //           .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Forward)
+    //         {
+    //           let p = self.command.pos();
+    //           self.command.update("", 0, &mut self.changes);
+    //           self.command.update(&s, std::cmp::min(s.len(), p), &mut self.changes);
+    //           self.history_status = Some(format!(
+    //             "{} / {}",
+    //             self
+    //               .command_history
+    //               .history_index()
+    //               .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
+    //               .saturating_add(1),
+    //             self.command_history.history_len()
+    //           ));
+    //         }
+    //       }
+    //
+    //       _ => {
+    //         self.command_history.reset();
+    //         handle_movement(&mut self.command, input, &mut self.changes);
+    //         self.update_input_for_completion();
+    //       }
+    //     },
+    //     Action::Jump => match input {
+    //       KeyCode::Char('\n') => {
+    //         if self.error.is_some() {
+    //           self.previous_mode = Some(self.mode.clone());
+    //           self.mode = Mode::Tasks(Action::Error);
+    //         } else {
+    //           match self.task_report_jump() {
+    //             Ok(_) => {
+    //               self.mode = Mode::Tasks(Action::Report);
+    //               self.reset_command();
+    //               self.update(true).await?;
+    //             }
+    //             Err(e) => {
+    //               self.reset_command();
+    //               self.error = Some(e.to_string());
+    //               self.mode = Mode::Tasks(Action::Error);
+    //             }
+    //           }
+    //         }
+    //       }
+    //       KeyCode::Esc => {
+    //         self.reset_command();
+    //         self.mode = Mode::Tasks(Action::Report);
+    //       }
+    //       _ => handle_movement(&mut self.command, input, &mut self.changes),
+    //     },
+    //     Action::Add => match input {
+    //       KeyCode::Esc => {
+    //         if self.show_completion_pane {
+    //           self.show_completion_pane = false;
+    //           self.completion_list.unselect();
+    //         } else {
+    //           self.reset_command();
+    //           self.history_status = None;
+    //           self.mode = Mode::Tasks(Action::Report);
+    //         }
+    //       }
+    //       KeyCode::Char('\n') => {
+    //         if self.show_completion_pane {
+    //           self.show_completion_pane = false;
+    //           if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
+    //             let (before, after) = self.command.as_str().split_at(self.command.pos());
+    //             let fs = format!("{}{}{}", before.trim_end_matches(&o), r, after);
+    //             self.command.update(&fs, self.command.pos() + r.len() - o.len(), &mut self.changes);
+    //           }
+    //           self.completion_list.unselect();
+    //         } else if self.error.is_some() {
+    //           self.previous_mode = Some(self.mode.clone());
+    //           self.mode = Mode::Tasks(Action::Error);
+    //         } else {
+    //           match self.task_add() {
+    //             Ok(_) => {
+    //               self.mode = Mode::Tasks(Action::Report);
+    //               self.command_history.add(self.command.as_str());
+    //               self.reset_command();
+    //               self.history_status = None;
+    //               self.update(true).await?;
+    //             }
+    //             Err(e) => {
+    //               self.error = Some(e);
+    //               self.mode = Mode::Tasks(Action::Error);
+    //             }
+    //           }
+    //         }
+    //       }
+    //       KeyCode::Tab | KeyCode::Ctrl('n') => {
+    //         if !self.completion_list.is_empty() {
+    //           self.update_input_for_completion();
+    //           if !self.show_completion_pane {
+    //             self.show_completion_pane = true;
+    //           }
+    //           self.completion_list.next();
+    //         }
+    //       }
+    //       KeyCode::BackTab | KeyCode::Ctrl('p') => {
+    //         if self.show_completion_pane && !self.completion_list.is_empty() {
+    //           self.completion_list.previous();
+    //         }
+    //       }
+    //       KeyCode::Up => {
+    //         if self.show_completion_pane && !self.completion_list.is_empty() {
+    //           self.completion_list.previous();
+    //         } else if let Some(s) = self
+    //           .command_history
+    //           .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Reverse)
+    //         {
+    //           let p = self.command.pos();
+    //           self.command.update("", 0, &mut self.changes);
+    //           self.command.update(&s, std::cmp::min(s.len(), p), &mut self.changes);
+    //           self.history_status = Some(format!(
+    //             "{} / {}",
+    //             self
+    //               .command_history
+    //               .history_index()
+    //               .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
+    //               .saturating_add(1),
+    //             self.command_history.history_len()
+    //           ));
+    //         }
+    //       }
+    //
+    //       KeyCode::Down => {
+    //         if self.show_completion_pane && !self.completion_list.is_empty() {
+    //           self.completion_list.next();
+    //         } else if let Some(s) = self
+    //           .command_history
+    //           .history_search(&self.command.as_str()[..self.command.pos()], HistoryDirection::Forward)
+    //         {
+    //           let p = self.command.pos();
+    //           self.command.update("", 0, &mut self.changes);
+    //           self.command.update(&s, std::cmp::min(s.len(), p), &mut self.changes);
+    //           self.history_status = Some(format!(
+    //             "{} / {}",
+    //             self
+    //               .command_history
+    //               .history_index()
+    //               .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
+    //               .saturating_add(1),
+    //             self.command_history.history_len()
+    //           ));
+    //         }
+    //       }
+    //       _ => {
+    //         self.command_history.reset();
+    //         handle_movement(&mut self.command, input, &mut self.changes);
+    //         self.update_input_for_completion();
+    //       }
+    //     },
+    //     Action::Filter => match input {
+    //       KeyCode::Esc => {
+    //         if self.show_completion_pane {
+    //           self.show_completion_pane = false;
+    //           self.completion_list.unselect();
+    //         } else {
+    //           self.mode = Mode::Tasks(Action::Report);
+    //           self.filter_history.add(self.filter.as_str());
+    //           if self.config.uda_reset_filter_on_esc {
+    //             self.filter.update("", 0, &mut self.changes);
+    //             for c in self.config.filter.chars() {
+    //               self.filter.insert(c, 1, &mut self.changes);
+    //             }
+    //             self.update_input_for_completion();
+    //             self.dirty = true;
+    //           }
+    //           self.history_status = None;
+    //           self.update(true).await?;
+    //         }
+    //       }
+    //       KeyCode::Char('\n') => {
+    //         if self.show_completion_pane {
+    //           self.show_completion_pane = false;
+    //           if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
+    //             let (before, after) = self.filter.as_str().split_at(self.filter.pos());
+    //             let fs = format!("{}{}{}", before.trim_end_matches(&o), r, after);
+    //             self.filter.update(&fs, self.filter.pos() + r.len() - o.len(), &mut self.changes);
+    //           }
+    //           self.completion_list.unselect();
+    //           self.dirty = true;
+    //         } else if self.error.is_some() {
+    //           self.previous_mode = Some(self.mode.clone());
+    //           self.mode = Mode::Tasks(Action::Error);
+    //         } else {
+    //           self.mode = Mode::Tasks(Action::Report);
+    //           self.filter_history.add(self.filter.as_str());
+    //           self.history_status = None;
+    //           self.update(true).await?;
+    //         }
+    //       }
+    //       KeyCode::Up => {
+    //         if self.show_completion_pane && !self.completion_list.is_empty() {
+    //           self.completion_list.previous();
+    //         } else if let Some(s) = self
+    //           .filter_history
+    //           .history_search(&self.filter.as_str()[..self.filter.pos()], HistoryDirection::Reverse)
+    //         {
+    //           let p = self.filter.pos();
+    //           self.filter.update("", 0, &mut self.changes);
+    //           self.filter.update(&s, std::cmp::min(p, s.len()), &mut self.changes);
+    //           self.history_status = Some(format!(
+    //             "{} / {}",
+    //             self
+    //               .filter_history
+    //               .history_index()
+    //               .unwrap_or_else(|| self.filter_history.history_len().saturating_sub(1))
+    //               .saturating_add(1),
+    //             self.filter_history.history_len()
+    //           ));
+    //           self.dirty = true;
+    //         }
+    //       }
+    //       KeyCode::Down => {
+    //         if self.show_completion_pane && !self.completion_list.is_empty() {
+    //           self.completion_list.next();
+    //         } else if let Some(s) = self
+    //           .filter_history
+    //           .history_search(&self.filter.as_str()[..self.filter.pos()], HistoryDirection::Forward)
+    //         {
+    //           let p = self.filter.pos();
+    //           self.filter.update("", 0, &mut self.changes);
+    //           self.filter.update(&s, std::cmp::min(p, s.len()), &mut self.changes);
+    //           self.history_status = Some(format!(
+    //             "{} / {}",
+    //             self
+    //               .filter_history
+    //               .history_index()
+    //               .unwrap_or_else(|| self.filter_history.history_len().saturating_sub(1))
+    //               .saturating_add(1),
+    //             self.filter_history.history_len()
+    //           ));
+    //           self.dirty = true;
+    //         }
+    //       }
+    //       KeyCode::Tab | KeyCode::Ctrl('n') => {
+    //         if !self.completion_list.is_empty() {
+    //           self.update_input_for_completion();
+    //           if !self.show_completion_pane {
+    //             self.show_completion_pane = true;
+    //           }
+    //           self.completion_list.next();
+    //         }
+    //       }
+    //       KeyCode::BackTab | KeyCode::Ctrl('p') => {
+    //         if self.show_completion_pane && !self.completion_list.is_empty() {
+    //           self.completion_list.previous();
+    //         }
+    //       }
+    //       KeyCode::Ctrl('r') => {
+    //         self.filter.update("", 0, &mut self.changes);
+    //         for c in self.config.filter.chars() {
+    //           self.filter.insert(c, 1, &mut self.changes);
+    //         }
+    //         self.history_status = None;
+    //         self.update_input_for_completion();
+    //         self.dirty = true;
+    //       }
+    //       _ => {
+    //         handle_movement(&mut self.filter, input, &mut self.changes);
+    //         self.update_input_for_completion();
+    //         self.dirty = true;
+    //       }
+    //     },
+    //     Action::DonePrompt => {
+    //       if input == self.keyconfig.done || input == KeyCode::Char('\n') {
+    //         if self.error.is_some() {
+    //           self.previous_mode = Some(self.mode.clone());
+    //           self.mode = Mode::Tasks(Action::Error);
+    //         } else {
+    //           match self.task_done() {
+    //             Ok(_) => {
+    //               self.mode = Mode::Tasks(Action::Report);
+    //               self.update(true).await?;
+    //             }
+    //             Err(e) => {
+    //               self.error = Some(e);
+    //               self.mode = Mode::Tasks(Action::Error);
+    //             }
+    //           }
+    //         }
+    //       } else if input == self.keyconfig.quit || input == KeyCode::Esc {
+    //         self.mode = Mode::Tasks(Action::Report);
+    //       } else {
+    //         handle_movement(&mut self.command, input, &mut self.changes);
+    //       }
+    //     }
+    //     Action::DeletePrompt => {
+    //       if input == self.keyconfig.delete || input == KeyCode::Char('\n') {
+    //         if self.error.is_some() {
+    //           self.previous_mode = Some(self.mode.clone());
+    //           self.mode = Mode::Tasks(Action::Error);
+    //         } else {
+    //           match self.task_delete() {
+    //             Ok(_) => {
+    //               self.mode = Mode::Tasks(Action::Report);
+    //               self.update(true).await?;
+    //             }
+    //             Err(e) => {
+    //               self.error = Some(e);
+    //               self.mode = Mode::Tasks(Action::Error);
+    //             }
+    //           }
+    //         }
+    //       } else if input == self.keyconfig.quit || input == KeyCode::Esc {
+    //         self.mode = Mode::Tasks(Action::Report);
+    //       } else {
+    //         handle_movement(&mut self.command, input, &mut self.changes);
+    //       }
+    //     }
+    //     Action::Error => {
+    //       // since filter live updates, don't reset error status
+    //       // for other actions, resetting error to None is required otherwise user cannot
+    //       // ever successfully execute mode.
+    //       if self.previous_mode != Some(Mode::Tasks(Action::Filter)) {
+    //         self.error = None;
+    //       }
+    //       self.mode = self.previous_mode.clone().unwrap_or(Mode::Tasks(Action::Report));
+    //       self.previous_mode = None;
+    //     }
+    //   }
+    // }
+    // self.update_task_table_state();
     Ok(())
   }
 
@@ -3617,51 +3565,51 @@ impl TaskwarriorTui {
 }
 
 pub fn handle_movement(linebuffer: &mut LineBuffer, input: KeyCode, changes: &mut utils::Changeset) {
-  match input {
-    KeyCode::Ctrl('f') | KeyCode::Right => {
-      linebuffer.move_forward(1);
-    }
-    KeyCode::Ctrl('b') | KeyCode::Left => {
-      linebuffer.move_backward(1);
-    }
-    KeyCode::Ctrl('h') | KeyCode::Backspace => {
-      linebuffer.backspace(1, changes);
-    }
-    KeyCode::Ctrl('d') | KeyCode::Delete => {
-      linebuffer.delete(1, changes);
-    }
-    KeyCode::Ctrl('a') | KeyCode::Home => {
-      linebuffer.move_home();
-    }
-    KeyCode::Ctrl('e') | KeyCode::End => {
-      linebuffer.move_end();
-    }
-    KeyCode::Ctrl('k') => {
-      linebuffer.kill_line(changes);
-    }
-    KeyCode::Ctrl('u') => {
-      linebuffer.discard_line(changes);
-    }
-    KeyCode::Ctrl('w') | KeyCode::AltBackspace | KeyCode::CtrlBackspace => {
-      linebuffer.delete_prev_word(Word::Emacs, 1, changes);
-    }
-    KeyCode::Alt('d') | KeyCode::AltDelete | KeyCode::CtrlDelete => {
-      linebuffer.delete_word(At::AfterEnd, Word::Emacs, 1, changes);
-    }
-    KeyCode::Alt('f') => {
-      linebuffer.move_to_next_word(At::AfterEnd, Word::Emacs, 1);
-    }
-    KeyCode::Alt('b') => {
-      linebuffer.move_to_prev_word(Word::Emacs, 1);
-    }
-    KeyCode::Alt('t') => {
-      linebuffer.transpose_words(1, changes);
-    }
-    KeyCode::Char(c) => {
-      linebuffer.insert(c, 1, changes);
-    }
-    _ => {}
-  }
+  // match input {
+  //   KeyCode::Ctrl('f') | KeyCode::Right => {
+  //     linebuffer.move_forward(1);
+  //   }
+  //   KeyCode::Ctrl('b') | KeyCode::Left => {
+  //     linebuffer.move_backward(1);
+  //   }
+  //   KeyCode::Ctrl('h') | KeyCode::Backspace => {
+  //     linebuffer.backspace(1, changes);
+  //   }
+  //   KeyCode::Ctrl('d') | KeyCode::Delete => {
+  //     linebuffer.delete(1, changes);
+  //   }
+  //   KeyCode::Ctrl('a') | KeyCode::Home => {
+  //     linebuffer.move_home();
+  //   }
+  //   KeyCode::Ctrl('e') | KeyCode::End => {
+  //     linebuffer.move_end();
+  //   }
+  //   KeyCode::Ctrl('k') => {
+  //     linebuffer.kill_line(changes);
+  //   }
+  //   KeyCode::Ctrl('u') => {
+  //     linebuffer.discard_line(changes);
+  //   }
+  //   KeyCode::Ctrl('w') | KeyCode::AltBackspace | KeyCode::CtrlBackspace => {
+  //     linebuffer.delete_prev_word(Word::Emacs, 1, changes);
+  //   }
+  //   KeyCode::Alt('d') | KeyCode::AltDelete | KeyCode::CtrlDelete => {
+  //     linebuffer.delete_word(At::AfterEnd, Word::Emacs, 1, changes);
+  //   }
+  //   KeyCode::Alt('f') => {
+  //     linebuffer.move_to_next_word(At::AfterEnd, Word::Emacs, 1);
+  //   }
+  //   KeyCode::Alt('b') => {
+  //     linebuffer.move_to_prev_word(Word::Emacs, 1);
+  //   }
+  //   KeyCode::Alt('t') => {
+  //     linebuffer.transpose_words(1, changes);
+  //   }
+  //   KeyCode::Char(c) => {
+  //     linebuffer.insert(c, 1, changes);
+  //   }
+  //   _ => {}
+  // }
 }
 
 pub fn add_tag(task: &mut Task, tag: String) {
@@ -3682,10 +3630,9 @@ pub fn remove_tag(task: &mut Task, tag: &str) {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use std::ffi::OsStr;
+  use std::fmt::Write;
   use std::fs::File;
   use std::path::Path;
-  use std::{fmt::Write, io};
   use tui::backend::TestBackend;
   use tui::buffer::Buffer;
 
@@ -3719,7 +3666,6 @@ mod tests {
   }
 
   fn setup() {
-    use std::process::Stdio;
     let mut f = File::open(Path::new(env!("TASKDATA")).parent().unwrap().join("export.json")).unwrap();
     let mut s = String::new();
     f.read_to_string(&mut s).unwrap();
@@ -3736,7 +3682,7 @@ mod tests {
   }
 
   async fn test_taskwarrior_tui_history() {
-    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    let mut app = App::new("next").await.unwrap();
     // setup();
     app.mode = Mode::Tasks(Action::Add);
     app.update_completion_list();
@@ -3821,7 +3767,7 @@ mod tests {
   }
 
   async fn _test_taskwarrior_tui() {
-    let app = TaskwarriorTui::new("next", false).await.unwrap();
+    let app = App::new("next").await.unwrap();
 
     assert!(
       app.task_by_index(0).is_none(),
@@ -3831,7 +3777,7 @@ mod tests {
       Path::new(env!("TASKDATA")).parent().unwrap().join(".config")
     );
 
-    let app = TaskwarriorTui::new("next", false).await.unwrap();
+    let app = App::new("next").await.unwrap();
     assert!(app
       .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
       .is_none());
@@ -3843,10 +3789,10 @@ mod tests {
 
     setup();
 
-    let app = TaskwarriorTui::new("next", false).await.unwrap();
+    let app = App::new("next").await.unwrap();
     assert!(app.task_by_index(0).is_some());
 
-    let app = TaskwarriorTui::new("next", false).await.unwrap();
+    let app = App::new("next").await.unwrap();
     assert!(app
       .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
       .is_some());
@@ -3866,7 +3812,7 @@ mod tests {
 
   async fn test_task_tags() {
     // testing tags
-    let app = TaskwarriorTui::new("next", false).await.unwrap();
+    let app = App::new("next").await.unwrap();
     let task = app.task_by_id(1).unwrap();
 
     let tags = vec!["PENDING".to_string(), "PRIORITY".to_string()];
@@ -3875,7 +3821,7 @@ mod tests {
       assert!(task.tags().unwrap().contains(&tag));
     }
 
-    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    let mut app = App::new("next").await.unwrap();
     let task = app.task_by_id(11).unwrap();
     let tags = vec!["finance", "UNBLOCKED", "PENDING", "TAGGED", "UDA"]
       .iter()
@@ -3918,7 +3864,7 @@ mod tests {
   }
 
   async fn test_task_style() {
-    let app = TaskwarriorTui::new("next", false).await.unwrap();
+    let app = App::new("next").await.unwrap();
     let task = app.task_by_id(1).unwrap();
     for r in vec![
       "active",
@@ -3948,7 +3894,7 @@ mod tests {
   }
 
   async fn test_task_context() {
-    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    let mut app = App::new("next").await.unwrap();
 
     assert!(app.update(true).await.is_ok());
 
@@ -3983,7 +3929,7 @@ mod tests {
   async fn test_task_tomorrow() {
     let total_tasks: u64 = 26;
 
-    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    let mut app = App::new("next").await.unwrap();
     assert!(app.update(true).await.is_ok());
     assert_eq!(app.tasks.len(), total_tasks as usize);
     assert_eq!(app.current_context_filter, "");
@@ -4032,7 +3978,7 @@ mod tests {
       .output()
       .unwrap();
 
-    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    let mut app = App::new("next").await.unwrap();
     assert!(app.update(true).await.is_ok());
     assert_eq!(app.tasks.len(), total_tasks as usize);
     assert_eq!(app.current_context_filter, "");
@@ -4041,7 +3987,7 @@ mod tests {
   async fn test_task_earlier_today() {
     let total_tasks: u64 = 26;
 
-    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    let mut app = App::new("next").await.unwrap();
     assert!(app.update(true).await.is_ok());
     assert_eq!(app.tasks.len(), total_tasks as usize);
     assert_eq!(app.current_context_filter, "");
@@ -4091,7 +4037,7 @@ mod tests {
       .output()
       .unwrap();
 
-    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    let mut app = App::new("next").await.unwrap();
     assert!(app.update(true).await.is_ok());
     assert_eq!(app.tasks.len(), total_tasks as usize);
     assert_eq!(app.current_context_filter, "");
@@ -4100,7 +4046,7 @@ mod tests {
   async fn test_task_later_today() {
     let total_tasks: u64 = 26;
 
-    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    let mut app = App::new("next").await.unwrap();
     assert!(app.update(true).await.is_ok());
     assert_eq!(app.tasks.len(), total_tasks as usize);
     assert_eq!(app.current_context_filter, "");
@@ -4147,7 +4093,7 @@ mod tests {
       .output()
       .unwrap();
 
-    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    let mut app = App::new("next").await.unwrap();
     assert!(app.update(true).await.is_ok());
     assert_eq!(app.tasks.len(), total_tasks as usize);
     assert_eq!(app.current_context_filter, "");
@@ -4187,7 +4133,7 @@ mod tests {
       expected.get_mut(i, 13).set_style(Style::default().add_modifier(Modifier::REVERSED));
     }
 
-    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    let mut app = App::new("next").await.unwrap();
 
     app.task_report_next();
     app.context_next();
@@ -4239,7 +4185,7 @@ mod tests {
       expected2.get_mut(i, 0).set_style(Style::default().add_modifier(Modifier::REVERSED));
     }
 
-    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    let mut app = App::new("next").await.unwrap();
 
     let total_tasks: u64 = 26;
 
@@ -4273,7 +4219,7 @@ mod tests {
           .constraints([Constraint::Min(0), Constraint::Length(3)].as_ref())
           .split(f.size());
 
-        let position = TaskwarriorTui::get_position(&app.modify);
+        let position = App::get_position(&app.modify);
         f.set_cursor(
           std::cmp::min(rects[1].x + position as u16, rects[1].x + rects[1].width.saturating_sub(2)),
           rects[1].y + 1,
@@ -4327,7 +4273,7 @@ mod tests {
           .constraints([Constraint::Min(0), Constraint::Length(3)].as_ref())
           .split(f.size());
 
-        let position = TaskwarriorTui::get_position(&app.modify);
+        let position = App::get_position(&app.modify);
         f.set_cursor(
           std::cmp::min(rects[1].x + position as u16, rects[1].x + rects[1].width.saturating_sub(2)),
           rects[1].y + 1,
@@ -4429,7 +4375,7 @@ mod tests {
         .set_style(Style::default().fg(Color::Indexed(1)).bg(Color::Indexed(4)));
     }
 
-    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    let mut app = App::new("next").await.unwrap();
 
     app.task_report_next();
     app.context_next();
@@ -4569,7 +4515,7 @@ mod tests {
         .set_style(Style::default().bg(Color::Reset).add_modifier(Modifier::UNDERLINED));
     }
 
-    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    let mut app = App::new("next").await.unwrap();
 
     app.task_report_next();
     app.context_next();
@@ -4617,7 +4563,7 @@ mod tests {
     expected.get_mut(4, 11).set_style(Style::default().fg(Color::Gray));
     expected.get_mut(5, 11).set_style(Style::default().fg(Color::Gray));
 
-    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    let mut app = App::new("next").await.unwrap();
 
     app.mode = Mode::Tasks(Action::HelpPopup);
     app.task_report_next();
@@ -4676,7 +4622,7 @@ mod tests {
       expected.get_mut(i, 3).set_style(Style::default().add_modifier(Modifier::BOLD));
     }
 
-    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    let mut app = App::new("next").await.unwrap();
 
     app.mode = Mode::Tasks(Action::ContextMenu);
     app.task_report_next();
@@ -4701,7 +4647,7 @@ mod tests {
     dbg!(UnicodeWidthStr::width("写作业"));
     dbg!(UnicodeWidthStr::width("abc"));
 
-    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    let mut app = App::new("next").await.unwrap();
 
     if let Some(task) = app.task_by_id(27) {
       let i = app.task_index_by_uuid(*task.uuid()).unwrap_or_default();
@@ -4724,13 +4670,13 @@ mod tests {
     dbg!(app.modify.as_str().len());
     dbg!(app.modify.graphemes(true).count());
     dbg!(app.modify.pos());
-    let position = TaskwarriorTui::get_position(&app.modify);
+    let position = App::get_position(&app.modify);
     dbg!(position);
   }
 
   // #[test]
   async fn test_taskwarrior_tui_completion() {
-    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    let mut app = App::new("next").await.unwrap();
     app.handle_input(KeyCode::Char('z')).await.unwrap();
     app.mode = Mode::Tasks(Action::Add);
     app.update_completion_list();
@@ -4738,7 +4684,7 @@ mod tests {
     for c in input.chars() {
       app.handle_input(KeyCode::Char(c)).await.unwrap();
     }
-    app.handle_input(KeyCode::Ctrl('e')).await.unwrap();
+    // app.handle_input(KeyCode::Ctrl('e')).await.unwrap();
 
     let input = " project:CO";
     for c in input.chars() {

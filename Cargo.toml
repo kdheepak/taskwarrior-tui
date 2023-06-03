@@ -7,14 +7,9 @@ repository = "https://github.com/kdheepak/taskwarrior-tui/"
 homepage = "https://kdheepak.com/taskwarrior-tui"
 readme = "README.md"
 authors = ["Dheepak Krishnamurthy <me@kdheepak.com>"]
-edition = "2018"
+edition = "2021"
 keywords = ["taskwarrior", "tui"]
 categories = ["command-line-utilities"]
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-[features]
-default = ["crossterm-backend"]
-crossterm-backend = ["tui/crossterm", "crossterm"]
 
 [dependencies]
 anyhow = "1.0.71"
@@ -22,9 +17,7 @@ better-panic = "0.3.0"
 cassowary = "0.3.0"
 chrono = "0.4.25"
 clap = { version = "4.3.0", features = ["derive"] }
-crossterm = { version = "0.26.1", optional = true, default-features = false, features = [
-  "event-stream",
-] }
+crossterm = { version = "0.26.1", default-features = false, features = ["event-stream"] }
 dirs = "5.0.1"
 futures = "0.3.28"
 itertools = "0.10.5"

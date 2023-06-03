@@ -1,11 +1,10 @@
-use crate::event::KeyCode;
 use anyhow::{anyhow, Result};
+use crossterm::event::KeyCode;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::error::Error;
 use std::hash::Hash;
 
-#[derive(Serialize, Deserialize, Debug)]
 pub struct KeyConfig {
   pub quit: KeyCode,
   pub refresh: KeyCode,

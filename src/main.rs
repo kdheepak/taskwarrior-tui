@@ -3,23 +3,6 @@
 #![allow(unused_variables)]
 #![allow(clippy::too_many_arguments)]
 
-mod action;
-mod app;
-mod calendar;
-mod cli;
-mod completion;
-mod config;
-mod event;
-mod help;
-mod history;
-mod keyconfig;
-mod pane;
-mod scrollbar;
-mod table;
-mod task_report;
-mod ui;
-mod utils;
-
 use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
 use log4rs::append::file::FileAppender;
 use log4rs::config::{Appender, Config, Logger, Root};
@@ -43,11 +26,13 @@ use tui::{backend::CrosstermBackend, Terminal};
 
 use path_clean::PathClean;
 
-use app::{Mode, TaskwarriorTui};
-
-use crate::action::Action;
-use crate::event::Event;
-use crate::keyconfig::KeyConfig;
+use taskwarrior_tui::action::Action;
+use taskwarrior_tui::app::{self, App, Mode};
+use taskwarrior_tui::cli;
+use taskwarrior_tui::event::Event;
+use taskwarrior_tui::handler::handle_key_events;
+use taskwarrior_tui::keyconfig::KeyConfig;
+use taskwarrior_tui::tui::Tui;
 
 const LOG_PATTERN: &str = "{d(%Y-%m-%d %H:%M:%S)} | {l} | {f}:{L} | {m}{n}";
 
@@ -110,15 +95,32 @@ async fn tui_main(report: &str) -> Result<()> {
     better_panic::Settings::auto().create_panic_handler()(panic_info);
   }));
 
-  let mut app = app::TaskwarriorTui::new(report, true).await?;
+  let mut app = app::App::new(report).await?;
 
-  let mut terminal = app.start_tui()?;
+  let backend = CrosstermBackend::new(io::stderr());
+  let terminal = Terminal::new(backend)?;
+  let mut tui = Tui::new(terminal, &mut app);
+  tui.init()?;
 
-  let r = app.run(&mut terminal).await;
+  while !app.should_quit {
+    tui.draw(&mut app)?;
+    match tui.events.next().await {
+      Some(Event::Tick) => {
+        app.update(true).await?;
+      }
+      Some(Event::Key(key_event)) => {
+        handle_key_events(key_event, &mut app)?;
+      }
+      Some(Event::Mouse(_)) => {}
+      Some(Event::Resize(_, _)) => {}
+      Some(_) => {}
+      None => {}
+    }
+  }
 
-  app.pause_tui().await?;
+  tui.exit()?;
 
-  r
+  Ok(())
 }
 
 fn main() -> Result<()> {
