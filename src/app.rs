@@ -4446,12 +4446,12 @@ mod tests {
       })
       .unwrap();
 
-    let output = std::process::Command::new("task")
+    let _output = std::process::Command::new("task")
       .arg("rc.confirmation=off")
       .arg("undo")
       .output()
       .unwrap();
-    let output = std::process::Command::new("task")
+    let _output = std::process::Command::new("task")
       .arg("rc.confirmation=off")
       .arg("undo")
       .output()
