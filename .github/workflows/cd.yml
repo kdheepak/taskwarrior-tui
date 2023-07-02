@@ -117,6 +117,7 @@ jobs:
           args: --release
 
       - name: Publish
+        if: startsWith(github.ref, 'refs/tags/')
         uses: actions-rs/cargo@v1
         with:
           command: publish
