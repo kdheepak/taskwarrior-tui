@@ -1287,8 +1287,9 @@ dependencies = [
 
 [[package]]
 name = "task-hookrs"
-version = "0.8.0"
-source = "git+https://github.com/kdheepak/task-hookrs#9fe7bd42f96a14571009b5de3ef395cd26988bbe"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f056b8dfe5514f40e6a5118b48a4584b9c091458387ef321d10e22fe19ae354e"
 dependencies = [
  "chrono",
  "derive_builder",

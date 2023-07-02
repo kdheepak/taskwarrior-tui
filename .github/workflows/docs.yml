@@ -36,19 +36,16 @@ jobs:
           publish_dir: ./site
           force_orphan: true
       - name: Deploy to Netlify
-        id: netlify
-        uses: nwtgck/actions-netlify@v1.1.13
+        uses: nwtgck/actions-netlify@v2.0
         with:
-          publish-dir: ./site
-          production-deploy: false
+          publish-dir: "./site"
+          production-branch: main
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: "Deploy from GitHub Actions"
+          enable-pull-request-comment: true
           enable-commit-comment: false
+          overwrites-pull-request-comment: true
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-        timeout-minutes: 5
-      - name: Documentation Preview
-        uses: ProjectPythia/actions/comment-netlify-preview-in-pr@main
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          deploy-url: ${{ steps.netlify.outputs.deploy-url }}
+        timeout-minutes: 1
