@@ -94,6 +94,7 @@ pub struct Config {
   pub uda_background_process: String,
   pub uda_background_process_period: usize,
   pub uda_quick_tag_name: String,
+  pub uda_task_report_prompt_on_undo: bool,
   pub uda_task_report_prompt_on_delete: bool,
   pub uda_task_report_prompt_on_done: bool,
   pub uda_task_report_date_time_vague_more_precise: bool,
@@ -169,6 +170,7 @@ impl Config {
       uda_style_report_completion_pane.unwrap_or_else(|| Style::default().fg(Color::Black).bg(Color::Rgb(223, 223, 223)));
     let uda_style_report_completion_pane_highlight = uda_style_report_completion_pane_highlight.unwrap_or(uda_style_report_completion_pane);
     let uda_quick_tag_name = Self::get_uda_quick_tag_name(data);
+    let uda_task_report_prompt_on_undo = Self::get_uda_task_report_prompt_on_undo(data);
     let uda_task_report_prompt_on_delete = Self::get_uda_task_report_prompt_on_delete(data);
     let uda_task_report_prompt_on_done = Self::get_uda_task_report_prompt_on_done(data);
     let uda_context_menu_select_on_move = Self::get_uda_context_menu_select_on_move(data);
@@ -222,6 +224,7 @@ impl Config {
       uda_background_process,
       uda_background_process_period,
       uda_quick_tag_name,
+      uda_task_report_prompt_on_undo,
       uda_task_report_prompt_on_delete,
       uda_task_report_prompt_on_done,
       uda_task_report_date_time_vague_more_precise,
@@ -592,6 +595,13 @@ impl Config {
 
   fn get_uda_context_menu_select_on_move(data: &str) -> bool {
     Self::get_config("uda.taskwarrior-tui.context-menu.select-on-move", data)
+      .unwrap_or_default()
+      .get_bool()
+      .unwrap_or(false)
+  }
+
+  fn get_uda_task_report_prompt_on_undo(data: &str) -> bool {
+    Self::get_config("uda.taskwarrior-tui.task-report.prompt-on-undo", data)
       .unwrap_or_default()
       .get_bool()
       .unwrap_or(false)
