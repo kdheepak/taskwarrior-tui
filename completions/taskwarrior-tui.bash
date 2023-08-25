@@ -67,4 +67,4 @@ _taskwarrior-tui() {
     esac
 }
 
-complete -F _taskwarrior-tui -o bashdefault -o default taskwarrior-tui
+complete -F _taskwarrior-tui -o nosort -o bashdefault -o default taskwarrior-tui
