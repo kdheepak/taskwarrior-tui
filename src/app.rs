@@ -867,6 +867,26 @@ impl TaskwarriorTui {
           self.error.clone(),
         );
       }
+      Action::UndoPrompt => {
+        let label = "Run `task undo`?";
+        let k = match self.keyconfig.undo {
+          KeyCode::Char(c) => c.to_string(),
+          _ => "Enter".to_string(),
+        };
+        let q = match self.keyconfig.quit {
+          KeyCode::Char(c) => c.to_string(),
+          _ => "Esc".to_string(),
+        };
+        self.draw_command(
+          f,
+          rects[1],
+          &format!("Press <{}> to confirm or <{}> to abort.", k, q),
+          (Span::styled(label, Style::default().add_modifier(Modifier::BOLD)), None),
+          0,
+          false,
+          self.error.clone(),
+        );
+      }
     }
   }
 
@@ -2583,11 +2603,18 @@ impl TaskwarriorTui {
               }
             }
           } else if input == self.keyconfig.undo {
-            match self.task_undo() {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
+            if self.config.uda_task_report_prompt_on_undo {
+              self.mode = Mode::Tasks(Action::UndoPrompt);
+              if self.task_current().is_none() {
+                self.mode = Mode::Tasks(Action::Report);
+              }
+            } else {
+              match self.task_undo() {
+                Ok(_) => self.update(true).await?,
+                Err(e) => {
+                  self.error = Some(e);
+                  self.mode = Mode::Tasks(Action::Error);
+                }
               }
             }
           } else if input == self.keyconfig.modify {
@@ -3447,6 +3474,29 @@ impl TaskwarriorTui {
               self.mode = Mode::Tasks(Action::Error);
             } else {
               match self.task_delete() {
+                Ok(_) => {
+                  self.mode = Mode::Tasks(Action::Report);
+                  self.update(true).await?;
+                }
+                Err(e) => {
+                  self.error = Some(e);
+                  self.mode = Mode::Tasks(Action::Error);
+                }
+              }
+            }
+          } else if input == self.keyconfig.quit || input == KeyCode::Esc {
+            self.mode = Mode::Tasks(Action::Report);
+          } else {
+            handle_movement(&mut self.command, input, &mut self.changes);
+          }
+        }
+        Action::UndoPrompt => {
+          if input == self.keyconfig.undo || input == KeyCode::Char('\n') {
+            if self.error.is_some() {
+              self.previous_mode = Some(self.mode.clone());
+              self.mode = Mode::Tasks(Action::Error);
+            } else {
+              match self.task_undo() {
                 Ok(_) => {
                   self.mode = Mode::Tasks(Action::Report);
                   self.update(true).await?;

@@ -11,6 +11,7 @@ pub enum Action {
   ContextMenu,
   Jump,
   DeletePrompt,
+  UndoPrompt,
   DonePrompt,
   Error,
 }
