@@ -3539,7 +3539,7 @@ impl TaskwarriorTui {
     };
 
     if let Mode::Tasks(Action::Modify | Action::Filter | Action::Annotate | Action::Add | Action::Log) = self.mode {
-      for s in vec![
+      for s in [
         "project:".to_string(),
         "priority:".to_string(),
         "due:".to_string(),
@@ -3552,7 +3552,7 @@ impl TaskwarriorTui {
     }
 
     if let Mode::Tasks(Action::Modify | Action::Filter | Action::Annotate | Action::Add | Action::Log) = self.mode {
-      for s in vec![
+      for s in [
         ".before:",
         ".under:",
         ".below:",
