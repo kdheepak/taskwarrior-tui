@@ -202,14 +202,14 @@ impl KeyConfig {
         if has_just_one_char(&line) {
           return Some(KeyCode::Char(line.chars().next().unwrap()));
         } else {
-          warn!("Found multiple characters in {} for {}", line, config);
+          error!("Found multiple characters in {} for {}", line, config);
         }
       } else if line.starts_with(&config.replace('-', "_")) {
         let line = line.trim_start_matches(&config.replace('-', "_")).trim_start().trim_end().to_string();
         if has_just_one_char(&line) {
           return Some(KeyCode::Char(line.chars().next().unwrap()));
         } else {
-          warn!("Found multiple characters in {} for {}", line, config);
+          error!("Found multiple characters in {} for {}", line, config);
         }
       }
     }
