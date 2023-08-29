@@ -72,7 +72,8 @@ jobs:
       - name: Compress binaries
         uses: svenstaro/upx-action@v2
         with:
-          file: target/${{ matrix.target }}/release/taskwarrior-tui${{ matrix.binary_postfix }}
+          files: |
+            target/${{ matrix.target }}/release/taskwarrior-tui${{ matrix.binary_postfix }}
           args: ${{ matrix.upx_args }}
           strip: ${{ matrix.strip }}
       - name: Packaging binary
