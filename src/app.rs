@@ -1,94 +1,64 @@
-use crate::calendar::Calendar;
-use crate::completion::{get_start_word_under_cursor, CompletionList};
-use crate::config;
-use crate::config::Config;
-use crate::event::Event;
-use crate::help::Help;
-use crate::keyconfig::KeyConfig;
-use crate::scrollbar::Scrollbar;
-use crate::table::{Row, Table, TableMode, TableState};
-use crate::task_report::TaskReportTable;
-use crate::ui;
-use crate::utils;
-
-use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
-use std::convert::TryInto;
-use std::fs;
-use std::path::Path;
-
-use std::io::Read;
-use std::io::Write;
-
-use std::time::SystemTime;
-
-use task_hookrs::date::Date;
-use task_hookrs::import::import;
-use task_hookrs::status::TaskStatus;
-use task_hookrs::task::Task;
-use tui::symbols::bar::FULL;
-use uuid::Uuid;
-
-use unicode_segmentation::Graphemes;
-use unicode_segmentation::UnicodeSegmentation;
-use unicode_width::UnicodeWidthStr;
-
-use chrono::{DateTime, Datelike, FixedOffset, Local, NaiveDate, NaiveDateTime, TimeZone, Timelike};
-
-use anyhow::Context as AnyhowContext;
-use anyhow::{anyhow, Result};
-
-use std::sync::mpsc;
-
-use std::sync::{Arc, Mutex};
-
-use std::time::Duration;
-use tui::{
-  backend::Backend,
-  layout::{Alignment, Constraint, Direction, Layout, Margin, Rect},
-  style::{Color, Modifier, Style},
-  terminal::Frame,
-  text::{Line, Span, Text},
-  widgets::{Block, BorderType, Borders, Clear, Gauge, LineGauge, List, ListItem, Paragraph, Wrap},
+use std::{
+  borrow::Borrow,
+  cmp::Ordering,
+  collections::{HashMap, HashSet},
+  convert::TryInto,
+  fs, io,
+  io::{Read, Write},
+  path::Path,
+  sync::{mpsc, Arc, Mutex},
+  time::{Duration, Instant, SystemTime},
 };
 
-use rustyline::history::SearchDirection as HistoryDirection;
-use rustyline::line_buffer::LineBuffer;
-use rustyline::At;
-use rustyline::Editor;
-use rustyline::Word;
-
-use crate::history::HistoryContext;
-
-use std::io;
-use tui::{backend::CrosstermBackend, Terminal};
-
-use regex::Regex;
-
-use lazy_static::lazy_static;
-
-use crate::action::Action;
-use crate::event::KeyCode;
-use crate::pane::context::{ContextDetails, ContextsState};
-use crate::pane::project::ProjectsState;
-use crate::pane::Pane;
-
-use crossterm::style::style;
+use anyhow::{anyhow, Context as AnyhowContext, Result};
+use chrono::{DateTime, Datelike, FixedOffset, Local, NaiveDate, NaiveDateTime, TimeZone, Timelike};
 use crossterm::{
   event::{DisableMouseCapture, EnableMouseCapture},
   execute,
+  style::style,
   terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-
 use futures::SinkExt;
-use std::borrow::Borrow;
-use std::time::Instant;
-use task_hookrs::project::Project;
-
+use lazy_static::lazy_static;
+use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
+use ratatui::{
+  backend::{Backend, CrosstermBackend},
+  layout::{Alignment, Constraint, Direction, Layout, Margin, Rect},
+  style::{Color, Modifier, Style},
+  symbols::bar::FULL,
+  terminal::Frame,
+  text::{Line, Span, Text},
+  widgets::{Block, BorderType, Borders, Clear, Gauge, LineGauge, List, ListItem, Paragraph, Tabs, Wrap},
+  Terminal,
+};
+use regex::Regex;
+use rustyline::{history::SearchDirection as HistoryDirection, line_buffer::LineBuffer, At, Editor, Word};
+use task_hookrs::{date::Date, import::import, project::Project, status::TaskStatus, task::Task};
+use unicode_segmentation::{Graphemes, UnicodeSegmentation};
+use unicode_width::UnicodeWidthStr;
+use uuid::Uuid;
 use versions::Versioning;
 
-use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
-use tui::widgets::Tabs;
+use crate::{
+  action::Action,
+  calendar::Calendar,
+  completion::{get_start_word_under_cursor, CompletionList},
+  config,
+  config::Config,
+  event::{Event, KeyCode},
+  help::Help,
+  history::HistoryContext,
+  keyconfig::KeyConfig,
+  pane::{
+    context::{ContextDetails, ContextsState},
+    project::ProjectsState,
+    Pane,
+  },
+  scrollbar::Scrollbar,
+  table::{Row, Table, TableMode, TableState},
+  task_report::TaskReportTable,
+  ui, utils,
+};
 
 const MAX_LINE: usize = 4096;
 
@@ -3731,13 +3701,11 @@ pub fn remove_tag(task: &mut Task, tag: &str) {
 
 #[cfg(test)]
 mod tests {
+  use std::{ffi::OsStr, fmt::Write, fs::File, io, path::Path};
+
+  use ratatui::{backend::TestBackend, buffer::Buffer};
+
   use super::*;
-  use std::ffi::OsStr;
-  use std::fs::File;
-  use std::path::Path;
-  use std::{fmt::Write, io};
-  use tui::backend::TestBackend;
-  use tui::buffer::Buffer;
 
   /// Returns a string representation of the given buffer for debugging purpose.
   fn buffer_view(buffer: &Buffer) -> String {

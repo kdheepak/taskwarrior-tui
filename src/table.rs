@@ -1,22 +1,21 @@
-use cassowary::{
-  strength::{MEDIUM, REQUIRED, WEAK},
-  WeightedRelation::{EQ, GE, LE},
-  {Expression, Solver},
-};
-use std::collections::HashSet;
 use std::{
-  collections::HashMap,
+  collections::{HashMap, HashSet},
   fmt::Display,
   iter::{self, Iterator},
 };
-use tui::{
+
+use cassowary::{
+  strength::{MEDIUM, REQUIRED, WEAK},
+  Expression, Solver,
+  WeightedRelation::{EQ, GE, LE},
+};
+use ratatui::{
   buffer::Buffer,
   layout::{Constraint, Rect},
   style::Style,
   widgets::{Block, StatefulWidget, Widget},
 };
-use unicode_segmentation::Graphemes;
-use unicode_segmentation::UnicodeSegmentation;
+use unicode_segmentation::{Graphemes, UnicodeSegmentation};
 use unicode_width::UnicodeWidthStr;
 
 #[derive(Debug, Clone)]
@@ -113,9 +112,9 @@ where
 /// # Examples
 ///
 /// ```rust
-/// # use tui::widgets::{Block, Borders, Table, Row};
-/// # use tui::layout::Constraint;
-/// # use tui::style::{Style, Color};
+/// # use ratatui::widgets::{Block, Borders, Table, Row};
+/// # use ratatui::layout::Constraint;
+/// # use ratatui::style::{Style, Color};
 /// let row_style = Style::default().fg(Color::White);
 /// Table::new(
 ///         ["Col1", "Col2", "Col3"].into_iter(),

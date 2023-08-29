@@ -1,6 +1,6 @@
 use std::cmp;
 
-use tui::{
+use ratatui::{
   buffer::Buffer,
   layout::{Alignment, Rect},
   style::{Modifier, Style},

@@ -1,9 +1,9 @@
-use crate::event::KeyCode;
+use std::{collections::HashSet, error::Error, hash::Hash};
+
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
-use std::error::Error;
-use std::hash::Hash;
+
+use crate::event::KeyCode;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct KeyConfig {

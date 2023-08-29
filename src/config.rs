@@ -1,11 +1,9 @@
+use std::{collections::HashMap, error::Error, str};
+
 use anyhow::{Context, Result};
-use std::collections::HashMap;
-use std::error::Error;
-use std::str;
-use tui::{
+use ratatui::{
   style::{Color, Modifier, Style},
-  symbols::bar::FULL,
-  symbols::line::DOUBLE_VERTICAL,
+  symbols::{bar::FULL, line::DOUBLE_VERTICAL},
 };
 
 trait TaskWarriorBool {

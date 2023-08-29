@@ -5,17 +5,16 @@ use std::fmt;
 
 const COL_WIDTH: usize = 21;
 
-use chrono::{format::Fixed, DateTime, Datelike, Duration, FixedOffset, Local, Month, NaiveDate, NaiveDateTime, TimeZone};
+use std::cmp::min;
 
-use tui::{
+use chrono::{format::Fixed, DateTime, Datelike, Duration, FixedOffset, Local, Month, NaiveDate, NaiveDateTime, TimeZone};
+use ratatui::{
   buffer::Buffer,
   layout::Rect,
   style::{Color, Modifier, Style},
   symbols,
   widgets::{Block, Widget},
 };
-
-use std::cmp::min;
 
 #[derive(Debug, Clone)]
 pub struct Calendar<'a> {

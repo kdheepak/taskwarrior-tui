@@ -1,21 +1,22 @@
-use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
 use std::{error::Error, io};
-use tui::{
+
+use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
+use ratatui::{
   layout::{Constraint, Corner, Direction, Layout},
   style::{Color, Modifier, Style},
   text::{Line, Span},
   widgets::{Block, Borders, List, ListItem, ListState},
   Terminal,
 };
-
-use rustyline::highlight::{Highlighter, MatchingBracketHighlighter};
-use rustyline::hint::Hinter;
-use rustyline::line_buffer::LineBuffer;
-use rustyline::Context;
-use rustyline::{error::ReadlineError, history::FileHistory};
-
-use unicode_segmentation::Graphemes;
-use unicode_segmentation::UnicodeSegmentation;
+use rustyline::{
+  error::ReadlineError,
+  highlight::{Highlighter, MatchingBracketHighlighter},
+  hint::Hinter,
+  history::FileHistory,
+  line_buffer::LineBuffer,
+  Context,
+};
+use unicode_segmentation::{Graphemes, UnicodeSegmentation};
 use unicode_width::UnicodeWidthStr;
 
 pub fn get_start_word_under_cursor(line: &str, cursor_pos: usize) -> usize {
