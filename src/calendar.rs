@@ -7,7 +7,7 @@ const COL_WIDTH: usize = 21;
 
 use chrono::{format::Fixed, DateTime, Datelike, Duration, FixedOffset, Local, Month, NaiveDate, NaiveDateTime, TimeZone};
 
-use tui::{
+use ratatui::{
   buffer::Buffer,
   layout::Rect,
   style::{Color, Modifier, Style},

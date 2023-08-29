@@ -22,11 +22,11 @@ use std::io::Write;
 
 use std::time::SystemTime;
 
+use ratatui::symbols::bar::FULL;
 use task_hookrs::date::Date;
 use task_hookrs::import::import;
 use task_hookrs::status::TaskStatus;
 use task_hookrs::task::Task;
-use tui::symbols::bar::FULL;
 use uuid::Uuid;
 
 use unicode_segmentation::Graphemes;
@@ -42,8 +42,7 @@ use std::sync::mpsc;
 
 use std::sync::{Arc, Mutex};
 
-use std::time::Duration;
-use tui::{
+use ratatui::{
   backend::Backend,
   layout::{Alignment, Constraint, Direction, Layout, Margin, Rect},
   style::{Color, Modifier, Style},
@@ -51,6 +50,7 @@ use tui::{
   text::{Line, Span, Text},
   widgets::{Block, BorderType, Borders, Clear, Gauge, LineGauge, List, ListItem, Paragraph, Wrap},
 };
+use std::time::Duration;
 
 use rustyline::history::SearchDirection as HistoryDirection;
 use rustyline::line_buffer::LineBuffer;
@@ -60,8 +60,8 @@ use rustyline::Word;
 
 use crate::history::HistoryContext;
 
+use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io;
-use tui::{backend::CrosstermBackend, Terminal};
 
 use regex::Regex;
 
@@ -88,7 +88,7 @@ use task_hookrs::project::Project;
 use versions::Versioning;
 
 use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
-use tui::widgets::Tabs;
+use ratatui::widgets::Tabs;
 
 const MAX_LINE: usize = 4096;
 
@@ -3732,12 +3732,12 @@ pub fn remove_tag(task: &mut Task, tag: &str) {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use ratatui::backend::TestBackend;
+  use ratatui::buffer::Buffer;
   use std::ffi::OsStr;
   use std::fs::File;
   use std::path::Path;
   use std::{fmt::Write, io};
-  use tui::backend::TestBackend;
-  use tui::buffer::Buffer;
 
   /// Returns a string representation of the given buffer for debugging purpose.
   fn buffer_view(buffer: &Buffer) -> String {

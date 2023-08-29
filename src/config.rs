@@ -1,12 +1,12 @@
 use anyhow::{Context, Result};
-use std::collections::HashMap;
-use std::error::Error;
-use std::str;
-use tui::{
+use ratatui::{
   style::{Color, Modifier, Style},
   symbols::bar::FULL,
   symbols::line::DOUBLE_VERTICAL,
 };
+use std::collections::HashMap;
+use std::error::Error;
+use std::str;
 
 trait TaskWarriorBool {
   fn get_bool(&self) -> Option<bool>;

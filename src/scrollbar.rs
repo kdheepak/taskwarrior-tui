@@ -1,4 +1,4 @@
-use tui::{
+use ratatui::{
   backend::Backend,
   buffer::Buffer,
   layout::{Margin, Rect},

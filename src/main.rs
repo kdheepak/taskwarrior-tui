@@ -39,7 +39,7 @@ use crossterm::{
   terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use futures::stream::{FuturesUnordered, StreamExt};
-use tui::{backend::CrosstermBackend, Terminal};
+use ratatui::{backend::CrosstermBackend, Terminal};
 
 use path_clean::PathClean;
 

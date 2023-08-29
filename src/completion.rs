@@ -1,12 +1,12 @@
 use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
-use std::{error::Error, io};
-use tui::{
+use ratatui::{
   layout::{Constraint, Corner, Direction, Layout},
   style::{Color, Modifier, Style},
   text::{Line, Span},
   widgets::{Block, Borders, List, ListItem, ListState},
   Terminal,
 };
+use std::{error::Error, io};
 
 use rustyline::highlight::{Highlighter, MatchingBracketHighlighter};
 use rustyline::hint::Hinter;

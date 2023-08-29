@@ -3,17 +3,17 @@ use cassowary::{
   WeightedRelation::{EQ, GE, LE},
   {Expression, Solver},
 };
+use ratatui::{
+  buffer::Buffer,
+  layout::{Constraint, Rect},
+  style::Style,
+  widgets::{Block, StatefulWidget, Widget},
+};
 use std::collections::HashSet;
 use std::{
   collections::HashMap,
   fmt::Display,
   iter::{self, Iterator},
-};
-use tui::{
-  buffer::Buffer,
-  layout::{Constraint, Rect},
-  style::Style,
-  widgets::{Block, StatefulWidget, Widget},
 };
 use unicode_segmentation::Graphemes;
 use unicode_segmentation::UnicodeSegmentation;
@@ -113,9 +113,9 @@ where
 /// # Examples
 ///
 /// ```rust
-/// # use tui::widgets::{Block, Borders, Table, Row};
-/// # use tui::layout::Constraint;
-/// # use tui::style::{Style, Color};
+/// # use ratatui::widgets::{Block, Borders, Table, Row};
+/// # use ratatui::layout::Constraint;
+/// # use ratatui::style::{Style, Color};
 /// let row_style = Style::default().fg(Color::White);
 /// Table::new(
 ///         ["Col1", "Col2", "Col3"].into_iter(),

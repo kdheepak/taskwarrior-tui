@@ -10,7 +10,7 @@ const COMPLETE_HEADER: &str = "Complete";
 
 use chrono::{Datelike, Duration, Local, Month, NaiveDate, NaiveDateTime, TimeZone};
 
-use tui::{
+use ratatui::{
   buffer::Buffer,
   layout::Rect,
   style::{Color, Modifier, Style},
