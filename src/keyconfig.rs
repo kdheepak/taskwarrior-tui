@@ -1,6 +1,7 @@
 use std::{collections::HashSet, error::Error, hash::Hash};
 
 use anyhow::{anyhow, Result};
+use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 
 use crate::event::KeyCode;
@@ -198,18 +199,27 @@ impl KeyConfig {
     for line in data.split('\n') {
       if line.starts_with(config) {
         let line = line.trim_start_matches(config).trim_start().trim_end().to_string();
-        if line.len() == 1 {
+        if has_just_one_char(&line) {
           return Some(KeyCode::Char(line.chars().next().unwrap()));
+        } else {
+          error!("Found multiple characters in {} for {}", line, config);
         }
       } else if line.starts_with(&config.replace('-', "_")) {
         let line = line.trim_start_matches(&config.replace('-', "_")).trim_start().trim_end().to_string();
-        if line.len() == 1 {
+        if has_just_one_char(&line) {
           return Some(KeyCode::Char(line.chars().next().unwrap()));
+        } else {
+          error!("Found multiple characters in {} for {}", line, config);
         }
       }
     }
     None
   }
+}
+
+fn has_just_one_char(s: &str) -> bool {
+  let mut chars = s.chars();
+  chars.next().is_some() && chars.next().is_none()
 }
 
 #[cfg(test)]
