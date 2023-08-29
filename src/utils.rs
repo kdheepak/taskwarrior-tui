@@ -1,6 +1,4 @@
-use rustyline::line_buffer::ChangeListener;
-use rustyline::line_buffer::DeleteListener;
-use rustyline::line_buffer::Direction;
+use rustyline::line_buffer::{ChangeListener, DeleteListener, Direction};
 
 /// Undo manager
 #[derive(Default)]

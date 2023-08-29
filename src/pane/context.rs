@@ -1,14 +1,22 @@
-use anyhow::Context as AnyhowContext;
-use anyhow::{anyhow, Result};
 use std::fmt;
+
+use anyhow::{anyhow, Context as AnyhowContext, Result};
 
 const NAME: &str = "Name";
 const TYPE: &str = "Remaining";
 const DEFINITION: &str = "Avg age";
 const ACTIVE: &str = "Complete";
 
-use chrono::{Datelike, Duration, Local, Month, NaiveDate, NaiveDateTime, TimeZone};
+use std::{
+  cmp,
+  cmp::min,
+  collections::{HashMap, HashSet},
+  error::Error,
+  process::{Command, Output},
+};
 
+use chrono::{Datelike, Duration, Local, Month, NaiveDate, NaiveDateTime, TimeZone};
+use itertools::Itertools;
 use ratatui::{
   buffer::Buffer,
   layout::{Alignment, Rect},
@@ -17,19 +25,15 @@ use ratatui::{
   text::{Line, Span, Text},
   widgets::{Block, BorderType, Borders, Clear, Paragraph, StatefulWidget, Widget},
 };
-
-use crate::action::Action;
-use crate::app::{Mode, TaskwarriorTui};
-use crate::event::KeyCode;
-use crate::pane::Pane;
-use crate::table::TableState;
-use itertools::Itertools;
-use std::cmp;
-use std::cmp::min;
-use std::collections::{HashMap, HashSet};
-use std::error::Error;
-use std::process::{Command, Output};
 use uuid::Uuid;
+
+use crate::{
+  action::Action,
+  app::{Mode, TaskwarriorTui},
+  event::KeyCode,
+  pane::Pane,
+  table::TableState,
+};
 
 #[derive(Debug, Clone, Default)]
 pub struct ContextDetails {

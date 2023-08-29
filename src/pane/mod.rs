@@ -1,9 +1,12 @@
+use std::ops::Index;
+
 use anyhow::Result;
 
-use crate::action::Action;
-use crate::app::{Mode, TaskwarriorTui};
-use crate::event::KeyCode;
-use std::ops::Index;
+use crate::{
+  action::Action,
+  app::{Mode, TaskwarriorTui},
+  event::KeyCode,
+};
 
 pub mod context;
 pub mod project;

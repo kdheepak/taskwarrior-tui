@@ -1,10 +1,13 @@
+use std::{
+  fs::File,
+  path::{Path, PathBuf},
+};
+
 use anyhow::{anyhow, Result};
-use rustyline::error::ReadlineError;
-use rustyline::history::DefaultHistory;
-use rustyline::history::History;
-use rustyline::history::SearchDirection;
-use std::fs::File;
-use std::path::{Path, PathBuf};
+use rustyline::{
+  error::ReadlineError,
+  history::{DefaultHistory, History, SearchDirection},
+};
 
 pub struct HistoryContext {
   history: DefaultHistory,

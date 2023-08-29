@@ -1,7 +1,13 @@
+use std::{
+  collections::{HashMap, HashSet},
+  fmt::Display,
+  iter::{self, Iterator},
+};
+
 use cassowary::{
   strength::{MEDIUM, REQUIRED, WEAK},
+  Expression, Solver,
   WeightedRelation::{EQ, GE, LE},
-  {Expression, Solver},
 };
 use ratatui::{
   buffer::Buffer,
@@ -9,14 +15,7 @@ use ratatui::{
   style::Style,
   widgets::{Block, StatefulWidget, Widget},
 };
-use std::collections::HashSet;
-use std::{
-  collections::HashMap,
-  fmt::Display,
-  iter::{self, Iterator},
-};
-use unicode_segmentation::Graphemes;
-use unicode_segmentation::UnicodeSegmentation;
+use unicode_segmentation::{Graphemes, UnicodeSegmentation};
 use unicode_width::UnicodeWidthStr;
 
 #[derive(Debug, Clone)]

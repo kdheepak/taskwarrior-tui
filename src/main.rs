@@ -20,18 +20,17 @@ mod task_report;
 mod ui;
 mod utils;
 
-use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
-use log4rs::append::file::FileAppender;
-use log4rs::config::{Appender, Config, Logger, Root};
-use log4rs::encode::pattern::PatternEncoder;
-use std::env;
-use std::error::Error;
-use std::io::{self, Write};
-use std::panic;
-use std::path::{Path, PathBuf};
-use std::time::Duration;
+use std::{
+  env,
+  error::Error,
+  io::{self, Write},
+  panic,
+  path::{Path, PathBuf},
+  time::Duration,
+};
 
 use anyhow::Result;
+use app::{Mode, TaskwarriorTui};
 use crossterm::{
   cursor,
   event::{DisableMouseCapture, EnableMouseCapture, EventStream},
@@ -39,15 +38,16 @@ use crossterm::{
   terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use futures::stream::{FuturesUnordered, StreamExt};
+use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
+use log4rs::{
+  append::file::FileAppender,
+  config::{Appender, Config, Logger, Root},
+  encode::pattern::PatternEncoder,
+};
+use path_clean::PathClean;
 use ratatui::{backend::CrosstermBackend, Terminal};
 
-use path_clean::PathClean;
-
-use app::{Mode, TaskwarriorTui};
-
-use crate::action::Action;
-use crate::event::Event;
-use crate::keyconfig::KeyConfig;
+use crate::{action::Action, event::Event, keyconfig::KeyConfig};
 
 const LOG_PATTERN: &str = "{d(%Y-%m-%d %H:%M:%S)} | {l} | {f}:{L} | {m}{n}";
 

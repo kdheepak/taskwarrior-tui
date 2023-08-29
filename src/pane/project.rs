@@ -1,6 +1,6 @@
-use anyhow::Context as AnyhowContext;
-use anyhow::{anyhow, Result};
 use std::fmt;
+
+use anyhow::{anyhow, Context as AnyhowContext, Result};
 
 const COL_WIDTH: usize = 21;
 const PROJECT_HEADER: &str = "Name";
@@ -8,8 +8,15 @@ const REMAINING_TASK_HEADER: &str = "Remaining";
 const AVG_AGE_HEADER: &str = "Avg age";
 const COMPLETE_HEADER: &str = "Complete";
 
-use chrono::{Datelike, Duration, Local, Month, NaiveDate, NaiveDateTime, TimeZone};
+use std::{
+  cmp::min,
+  collections::{HashMap, HashSet},
+  error::Error,
+  process::{Command, Output},
+};
 
+use chrono::{Datelike, Duration, Local, Month, NaiveDate, NaiveDateTime, TimeZone};
+use itertools::Itertools;
 use ratatui::{
   buffer::Buffer,
   layout::Rect,
@@ -17,20 +24,17 @@ use ratatui::{
   symbols,
   widgets::{Block, Widget},
 };
-
-use crate::action::Action;
-use crate::app::{Mode, TaskwarriorTui};
-use crate::event::KeyCode;
-use crate::pane::Pane;
-use crate::table::TableState;
-use crate::utils::Changeset;
-use itertools::Itertools;
-use std::cmp::min;
-use std::collections::{HashMap, HashSet};
-use std::error::Error;
-use std::process::{Command, Output};
 use task_hookrs::project::Project;
 use uuid::Uuid;
+
+use crate::{
+  action::Action,
+  app::{Mode, TaskwarriorTui},
+  event::KeyCode,
+  pane::Pane,
+  table::TableState,
+  utils::Changeset,
+};
 
 pub struct ProjectsState {
   pub(crate) list: Vec<Project>,

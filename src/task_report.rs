@@ -1,10 +1,9 @@
+use std::{error::Error, process::Command};
+
 use anyhow::Result;
 use chrono::{DateTime, Datelike, Local, NaiveDate, NaiveDateTime, TimeZone};
 use itertools::join;
-use std::error::Error;
-use std::process::Command;
-use task_hookrs::task::Task;
-use task_hookrs::uda::UDAValue;
+use task_hookrs::{task::Task, uda::UDAValue};
 use unicode_truncate::UnicodeTruncateStr;
 use unicode_width::UnicodeWidthStr;
 
