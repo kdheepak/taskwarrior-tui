@@ -34,8 +34,7 @@ use ratatui::{
 use regex::Regex;
 use rustyline::{history::SearchDirection as HistoryDirection, At, Editor, Word};
 use task_hookrs::{date::Date, import::import, project::Project, status::TaskStatus, task::Task};
-use tui_input::backend::crossterm::EventHandler;
-use tui_input::Input;
+use tui_input::{backend::crossterm::EventHandler, Input};
 use unicode_segmentation::{Graphemes, UnicodeSegmentation};
 use unicode_width::UnicodeWidthStr;
 use uuid::Uuid;
@@ -3641,54 +3640,10 @@ impl TaskwarriorTui {
 }
 
 pub fn handle_movement(linebuffer: &mut Input, input: KeyCode, changes: &mut utils::Changeset) {
-  match input {
-    // KeyCode::Ctrl('f') | KeyCode::Right => {
-    //   linebuffer.move_forward(1);
-    // }
-    // KeyCode::Ctrl('b') | KeyCode::Left => {
-    //   linebuffer.move_backward(1);
-    // }
-    // KeyCode::Ctrl('h') | KeyCode::Backspace => {
-    //   linebuffer.backspace(1, changes);
-    // }
-    // KeyCode::Ctrl('d') | KeyCode::Delete => {
-    //   linebuffer.delete(1, changes);
-    // }
-    // KeyCode::Ctrl('a') | KeyCode::Home => {
-    //   linebuffer.move_home();
-    // }
-    // KeyCode::Ctrl('e') | KeyCode::End => {
-    //   linebuffer.move_end();
-    // }
-    // KeyCode::Ctrl('k') => {
-    //   linebuffer.kill_line(changes);
-    // }
-    // KeyCode::Ctrl('u') => {
-    //   linebuffer.discard_line(changes);
-    // }
-    // KeyCode::Ctrl('w') | KeyCode::AltBackspace | KeyCode::CtrlBackspace => {
-    //   linebuffer.delete_prev_word(Word::Emacs, 1, changes);
-    // }
-    // KeyCode::Alt('d') | KeyCode::AltDelete | KeyCode::CtrlDelete => {
-    //   linebuffer.delete_word(At::AfterEnd, Word::Emacs, 1, changes);
-    // }
-    // KeyCode::Alt('f') => {
-    //   linebuffer.move_to_next_word(At::AfterEnd, Word::Emacs, 1);
-    // }
-    // KeyCode::Alt('b') => {
-    //   linebuffer.move_to_prev_word(Word::Emacs, 1);
-    // }
-    // KeyCode::Alt('t') => {
-    //   linebuffer.transpose_words(1, changes);
-    // }
-    KeyCode::Char(c) => {
-      linebuffer.handle_event(&crossterm::event::Event::Key(crossterm::event::KeyEvent::new(
-        input,
-        KeyModifiers::empty(),
-      )));
-    }
-    _ => {}
-  }
+  linebuffer.handle_event(&crossterm::event::Event::Key(crossterm::event::KeyEvent::new(
+    input,
+    KeyModifiers::empty(),
+  )));
 }
 
 pub fn add_tag(task: &mut Task, tag: String) {
