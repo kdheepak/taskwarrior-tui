@@ -1,7 +1,7 @@
 use std::{error::Error, process::Command};
 
-use anyhow::Result;
 use chrono::{DateTime, Datelike, Local, NaiveDate, NaiveDateTime, TimeZone};
+use color_eyre::eyre::Result;
 use itertools::join;
 use task_hookrs::{task::Task, uda::UDAValue};
 use unicode_truncate::UnicodeTruncateStr;
@@ -14,7 +14,7 @@ pub fn format_date_time(dt: NaiveDateTime) -> String {
 
 pub fn format_date(dt: NaiveDateTime) -> String {
   let offset = Local.offset_from_utc_datetime(&dt);
-  let dt = DateTime::<Local>::from_utc(dt, offset);
+  let dt = DateTime::<Local>::from_naive_utc_and_offset(dt, offset);
   dt.format("%Y-%m-%d").to_string()
 }
 

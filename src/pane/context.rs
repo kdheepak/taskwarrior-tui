@@ -1,6 +1,6 @@
 use std::fmt;
 
-use anyhow::{anyhow, Context as AnyhowContext, Result};
+use color_eyre::eyre::{anyhow, Context as AnyhowContext, Result};
 
 const NAME: &str = "Name";
 const TYPE: &str = "Remaining";

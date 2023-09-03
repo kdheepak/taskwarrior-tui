@@ -1,6 +1,6 @@
 use std::{collections::HashMap, error::Error, str};
 
-use anyhow::{Context, Result};
+use color_eyre::eyre::{eyre, Context, Result};
 use ratatui::{
   style::{Color, Modifier, Style},
   symbols::{bar::FULL, line::DOUBLE_VERTICAL},
@@ -465,14 +465,14 @@ impl Config {
 
   fn get_rule_precedence_color(data: &str) -> Vec<String> {
     let data = Self::get_config("rule.precedence.color", data)
-      .context("Unable to parse `task show rule.precedence.color`.")
+      .ok_or_else(|| eyre!("Unable to parse `task show rule.precedence.color`."))
       .unwrap();
     data.split(',').map(ToString::to_string).collect::<Vec<_>>()
   }
 
   fn get_uda_priority_values(data: &str) -> Vec<String> {
     let data = Self::get_config("uda.priority.values", data)
-      .context("Unable to parse `task show uda.priority.values`.")
+      .ok_or_else(|| eyre!("Unable to parse `task show uda.priority.values`."))
       .unwrap();
     data.split(',').map(ToString::to_string).collect::<Vec<_>>()
   }
@@ -489,7 +489,7 @@ impl Config {
 
   fn get_data_location(data: &str) -> String {
     Self::get_config("data.location", data)
-      .context("Unable to parse `task show data.location`.")
+      .ok_or_else(|| eyre!("Unable to parse `task show data.location`."))
       .unwrap()
   }
 

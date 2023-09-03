@@ -1,6 +1,6 @@
 use std::{collections::HashSet, error::Error, hash::Hash};
 
-use anyhow::{anyhow, Result};
+use color_eyre::eyre::{anyhow, Result};
 use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 

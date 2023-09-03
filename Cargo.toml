@@ -7,38 +7,45 @@ repository = "https://github.com/kdheepak/taskwarrior-tui/"
 homepage = "https://kdheepak.com/taskwarrior-tui"
 readme = "README.md"
 authors = ["Dheepak Krishnamurthy <me@kdheepak.com>"]
-edition = "2018"
+edition = "2021"
 keywords = ["taskwarrior", "tui"]
 categories = ["command-line-utilities"]
 
 
 [dependencies]
-anyhow = "1.0.75"
-better-panic = "0.3.0"
 cassowary = "0.3.0"
-chrono = "0.4.26"
-clap = { version = "4.4.1", features = ["derive"] }
-crossterm = { version = "0.27.0", features = [
-  "event-stream",
-] }
-dirs = "5.0.1"
+chrono = "0.4.28"
+clap = { version = "4.4.2", features = ["std", "color", "help", "usage", "error-context", "suggestions", "derive", "cargo", "wrap_help", "unicode", "string", "unstable-styles"] }
+color-eyre = "0.6.2"
+config = "0.13.3"
+crossterm = { version = "0.27.0", features = ["event-stream", "serde"] }
+directories = "5.0.1"
 futures = "0.3.28"
+human-panic = "1.2.0"
 itertools = "0.11.0"
 lazy_static = "1.4.0"
+libc = "0.2.147"
 log = "0.4.20"
-log4rs = "1.2.0"
 path-clean = "1.0.1"
+pretty_assertions = "1.4.0"
 rand = "0.8.5"
-regex = "1.9.4"
+ratatui = "0.23.0"
+regex = "1.9.5"
 rustyline = { version = "12.0.0", features = ["with-file-history", "derive"] }
 serde = { version = "1.0.188", features = ["derive"] }
+serde_derive = "1.0.188"
 serde_json = "1.0.105"
 shellexpand = "3.1.0"
 shlex = "1.1.0"
+signal-hook = "0.3.17"
+strip-ansi-escapes = "0.2.0"
 task-hookrs = "0.9.0"
 tokio = { version = "1.32.0", features = ["full"] }
-tokio-stream = "0.1.14"
-ratatui = "0.23.0"
+tokio-util = "0.7.8"
+tracing = "0.1.37"
+tracing-error = "0.2.0"
+tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+tui-logger = { version = "0.9.5", features = ["ratatui-support", "tracing-support"] }
 unicode-segmentation = "1.10.1"
 unicode-truncate = "0.2.0"
 unicode-width = "0.1.10"
@@ -55,11 +62,10 @@ buildflags = ["--release"]
 taskwarrior-tui = { path = "/usr/bin/taskwarrior-tui" }
 
 [profile.release]
-debug = 1
 incremental = true
-lto = "off"
+lto = true
 
 [build-dependencies]
-clap = { version = "4.4.1", features = ["derive"] }
+clap = { version = "4.4.2", features = ["derive"] }
 clap_complete = "4.4.0"
 shlex = "1.1.0"

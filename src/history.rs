@@ -3,7 +3,7 @@ use std::{
   path::{Path, PathBuf},
 };
 
-use anyhow::{anyhow, Result};
+use color_eyre::eyre::{anyhow, Result};
 use rustyline::{
   error::ReadlineError,
   history::{DefaultHistory, History, SearchDirection},
@@ -16,16 +16,8 @@ pub struct HistoryContext {
 }
 
 impl HistoryContext {
-  pub fn new(filename: &str) -> Self {
+  pub fn new(filename: &str, data_path: PathBuf) -> Self {
     let history = DefaultHistory::new();
-
-    let data_path = if let Ok(s) = std::env::var("TASKWARRIOR_TUI_DATA") {
-      PathBuf::from(s)
-    } else {
-      dirs::data_local_dir()
-        .map(|d| d.join("taskwarrior-tui"))
-        .expect("Unable to create configuration directory for taskwarrior-tui")
-    };
 
     std::fs::create_dir_all(&data_path).unwrap_or_else(|_| panic!("Unable to create configuration directory in {:?}", &data_path));
 

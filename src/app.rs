@@ -5,13 +5,13 @@ use std::{
   convert::TryInto,
   fs, io,
   io::{Read, Write},
-  path::Path,
+  path::{Path, PathBuf},
   sync::{mpsc, Arc, Mutex},
   time::{Duration, Instant, SystemTime},
 };
 
-use anyhow::{anyhow, Context as AnyhowContext, Result};
 use chrono::{DateTime, Datelike, FixedOffset, Local, NaiveDate, NaiveDateTime, TimeZone, Timelike};
+use color_eyre::eyre::{anyhow, Context as AnyhowContext, Result};
 use crossterm::{
   event::{DisableMouseCapture, EnableMouseCapture},
   execute,
@@ -57,7 +57,8 @@ use crate::{
   scrollbar::Scrollbar,
   table::{Row, Table, TableMode, TableState},
   task_report::TaskReportTable,
-  ui, utils,
+  ui,
+  utils::{self, get_data_dir},
 };
 
 const MAX_LINE: usize = 4096;
@@ -177,7 +178,6 @@ pub struct TaskwarriorTui {
   pub all_tasks: Vec<Task>,
   pub task_details: HashMap<Uuid, String>,
   pub marked: HashSet<Uuid>,
-  // stores index of current task that is highlighted
   pub current_selection: usize,
   pub current_selection_uuid: Option<Uuid>,
   pub current_selection_id: Option<u64>,
@@ -240,7 +240,7 @@ impl TaskwarriorTui {
       .output()
       .context("Unable to run `task --version`")?;
 
-    let task_version = Versioning::new(String::from_utf8_lossy(&output.stdout).trim()).context("Unable to get version string")?;
+    let task_version = Versioning::new(String::from_utf8_lossy(&output.stdout).trim()).ok_or(anyhow!("Unable to get version string"))?;
 
     let (w, h) = crossterm::terminal::size().unwrap_or((50, 15));
 
@@ -250,6 +250,8 @@ impl TaskwarriorTui {
       None
     };
     let event_loop = crate::event::EventLoop::new(tick_rate, init_event_loop);
+
+    let data_dir = get_data_dir();
 
     let mut app = Self {
       should_quit: false,
@@ -280,8 +282,8 @@ impl TaskwarriorTui {
       keyconfig: kc,
       terminal_width: w,
       terminal_height: h,
-      filter_history: HistoryContext::new("filter.history"),
-      command_history: HistoryContext::new("command.history"),
+      filter_history: HistoryContext::new("filter.history", data_dir.clone()),
+      command_history: HistoryContext::new("command.history", data_dir.clone()),
       history_status: None,
       completion_list: CompletionList::with_items(vec![]),
       show_completion_pane: false,
