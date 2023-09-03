@@ -9,7 +9,6 @@ mod calendar;
 mod cli;
 mod completion;
 mod config;
-mod event;
 mod help;
 mod history;
 mod keyconfig;
@@ -45,7 +44,6 @@ use utils::{get_config_dir, get_data_dir};
 
 use crate::{
   action::Action,
-  event::Event,
   keyconfig::KeyConfig,
   utils::{initialize_logging, initialize_panic_handler},
 };
@@ -93,11 +91,7 @@ async fn main() -> Result<()> {
 
   let mut app = app::TaskwarriorTui::new(report, true).await?;
 
-  let mut terminal = app.start_tui()?;
-
-  let r = app.run(&mut terminal).await;
-
-  app.pause_tui().await?;
+  let r = app.run().await;
 
   if let Err(err) = r {
     eprintln!("\x1b[0;31m[taskwarrior-tui error]\x1b[0m: {}\n\nIf you need additional help, please report as a github issue on https://github.com/kdheepak/taskwarrior-tui", err);

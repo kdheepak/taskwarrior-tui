@@ -1,18 +1,19 @@
 use std::ops::Index;
 
 use color_eyre::eyre::Result;
+use crossterm::event::KeyEvent;
 
 use crate::{
   action::Action,
   app::{Mode, TaskwarriorTui},
-  event::KeyCode,
+  tui::Event,
 };
 
 pub mod context;
 pub mod project;
 
 pub trait Pane {
-  fn handle_input(app: &mut TaskwarriorTui, input: KeyCode) -> Result<()>;
+  fn handle_input(app: &mut TaskwarriorTui, input: KeyEvent) -> Result<()>;
   fn change_focus_to_left_pane(app: &mut TaskwarriorTui) {
     match app.mode {
       Mode::Tasks(_) => {

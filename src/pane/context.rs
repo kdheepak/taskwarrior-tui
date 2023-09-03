@@ -30,7 +30,6 @@ use uuid::Uuid;
 use crate::{
   action::Action,
   app::{Mode, TaskwarriorTui},
-  event::KeyCode,
   pane::Pane,
   table::TableState,
 };

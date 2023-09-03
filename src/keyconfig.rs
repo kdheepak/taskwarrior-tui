@@ -1,10 +1,9 @@
 use std::{collections::HashSet, error::Error, hash::Hash};
 
 use color_eyre::eyre::{anyhow, Result};
+use crossterm::event::KeyCode;
 use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
-
-use crate::event::KeyCode;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct KeyConfig {
