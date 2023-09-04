@@ -13,7 +13,7 @@ use std::{
 use chrono::{DateTime, Datelike, FixedOffset, Local, NaiveDate, NaiveDateTime, TimeZone, Timelike};
 use color_eyre::eyre::{anyhow, Context as AnyhowContext, Result};
 use crossterm::{
-  event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyModifiers},
+  event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyEvent, KeyModifiers},
   execute,
   style::style,
   terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
@@ -211,7 +211,7 @@ pub struct TaskwarriorTui {
 }
 
 impl TaskwarriorTui {
-  pub async fn new(report: &str, init_event_loop: bool) -> Result<Self> {
+  pub async fn new(report: &str) -> Result<Self> {
     let output = std::process::Command::new("task")
       .arg("rc.color=off")
       .arg("rc._forcecolor=off")
@@ -360,7 +360,7 @@ impl TaskwarriorTui {
         match event {
           Event::Key(keyevent) => {
             debug!("Received input = {:?}", keyevent);
-            self.handle_input(keyevent.code).await?;
+            self.handle_input(keyevent).await?;
           }
           Event::Mouse(mouseevent) => {
             debug!("tui mouseevent")
@@ -2405,7 +2405,7 @@ impl TaskwarriorTui {
     es
   }
 
-  pub async fn handle_input(&mut self, input: KeyCode) -> Result<()> {
+  pub async fn handle_input(&mut self, input: KeyEvent) -> Result<()> {
     match self.mode {
       Mode::Tasks(_) => {
         self.handle_input_by_task_mode(input).await?;
@@ -2462,7 +2462,7 @@ impl TaskwarriorTui {
     Ok(())
   }
 
-  async fn handle_input_by_task_mode(&mut self, input: KeyCode) -> Result<()> {
+  async fn handle_input_by_task_mode(&mut self, input: KeyEvent) -> Result<()> {
     if let Mode::Tasks(task_mode) = &self.mode {
       match task_mode {
         Action::Report => {
@@ -2923,7 +2923,7 @@ impl TaskwarriorTui {
           }
           _ => {
             self.command_history.reset();
-            handle_movement(&mut self.modify, input, &mut self.changes);
+            handle_movement(&mut self.modify, input);
             self.update_input_for_completion();
           }
         },
@@ -2950,7 +2950,7 @@ impl TaskwarriorTui {
             self.reset_command();
             self.mode = Mode::Tasks(Action::Report);
           }
-          _ => handle_movement(&mut self.command, input, &mut self.changes),
+          _ => handle_movement(&mut self.command, input),
         },
         Action::Log => match input {
           KeyCode::Esc => {
@@ -3056,7 +3056,7 @@ impl TaskwarriorTui {
           }
           _ => {
             self.command_history.reset();
-            handle_movement(&mut self.command, input, &mut self.changes);
+            handle_movement(&mut self.command, input);
             self.update_input_for_completion();
           }
         },
@@ -3164,7 +3164,7 @@ impl TaskwarriorTui {
 
           _ => {
             self.command_history.reset();
-            handle_movement(&mut self.command, input, &mut self.changes);
+            handle_movement(&mut self.command, input);
             self.update_input_for_completion();
           }
         },
@@ -3192,7 +3192,7 @@ impl TaskwarriorTui {
             self.reset_command();
             self.mode = Mode::Tasks(Action::Report);
           }
-          _ => handle_movement(&mut self.command, input, &mut self.changes),
+          _ => handle_movement(&mut self.command, input),
         },
         Action::Add => match input {
           KeyCode::Esc => {
@@ -3298,7 +3298,7 @@ impl TaskwarriorTui {
           }
           _ => {
             self.command_history.reset();
-            handle_movement(&mut self.command, input, &mut self.changes);
+            handle_movement(&mut self.command, input);
             self.update_input_for_completion();
           }
         },
@@ -3412,7 +3412,7 @@ impl TaskwarriorTui {
           //   self.dirty = true;
           // }
           _ => {
-            handle_movement(&mut self.filter, input, &mut self.changes);
+            handle_movement(&mut self.filter, input);
             self.update_input_for_completion();
             self.dirty = true;
           }
@@ -3437,7 +3437,7 @@ impl TaskwarriorTui {
           } else if input == self.keyconfig.quit || input == KeyCode::Esc {
             self.mode = Mode::Tasks(Action::Report);
           } else {
-            handle_movement(&mut self.command, input, &mut self.changes);
+            handle_movement(&mut self.command, input);
           }
         }
         Action::DeletePrompt => {
@@ -3460,7 +3460,7 @@ impl TaskwarriorTui {
           } else if input == self.keyconfig.quit || input == KeyCode::Esc {
             self.mode = Mode::Tasks(Action::Report);
           } else {
-            handle_movement(&mut self.command, input, &mut self.changes);
+            handle_movement(&mut self.command, input);
           }
         }
         Action::UndoPrompt => {
@@ -3483,7 +3483,7 @@ impl TaskwarriorTui {
           } else if input == self.keyconfig.quit || input == KeyCode::Esc {
             self.mode = Mode::Tasks(Action::Report);
           } else {
-            handle_movement(&mut self.command, input, &mut self.changes);
+            handle_movement(&mut self.command, input);
           }
         }
         Action::Error => {
@@ -3639,11 +3639,8 @@ impl TaskwarriorTui {
   }
 }
 
-pub fn handle_movement(linebuffer: &mut Input, input: KeyCode, changes: &mut utils::Changeset) {
-  linebuffer.handle_event(&crossterm::event::Event::Key(crossterm::event::KeyEvent::new(
-    input,
-    KeyModifiers::empty(),
-  )));
+pub fn handle_movement(linebuffer: &mut Input, input: KeyEvent) {
+  linebuffer.handle_event(&crossterm::event::Event::Key(input));
 }
 
 pub fn add_tag(task: &mut Task, tag: String) {

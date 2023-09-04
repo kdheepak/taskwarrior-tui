@@ -3,21 +3,24 @@
 #![allow(unused_variables)]
 #![allow(clippy::too_many_arguments)]
 
+// mod app;
+// mod calendar;
+// mod cli;
+// mod completion;
+// mod config;
+// mod help;
+// mod history;
+// mod keyconfig;
+// mod pane;
+// mod scrollbar;
+// mod table;
+// mod task_report;
+// mod ui;
 mod action;
-mod app;
-mod calendar;
-mod cli;
-mod completion;
 mod config;
-mod help;
-mod history;
-mod keyconfig;
-mod pane;
-mod scrollbar;
-mod table;
-mod task_report;
+mod keyevent;
+mod keymap;
 mod tui;
-mod ui;
 mod utils;
 
 use std::{
@@ -29,73 +32,73 @@ use std::{
   time::Duration,
 };
 
-use app::{Mode, TaskwarriorTui};
+// use app::{Mode, TaskwarriorTui};
 use color_eyre::eyre::Result;
-use crossterm::{
-  cursor,
-  event::{DisableMouseCapture, EnableMouseCapture, EventStream},
-  execute,
-  terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
-};
-use futures::stream::{FuturesUnordered, StreamExt};
-use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
-use ratatui::{backend::CrosstermBackend, Terminal};
-use utils::{get_config_dir, get_data_dir};
+// use crossterm::{
+//   cursor,
+//   event::{DisableMouseCapture, EnableMouseCapture, EventStream},
+//   execute,
+//   terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
+// };
+// use futures::stream::{FuturesUnordered, StreamExt};
+// use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
+// use ratatui::{backend::CrosstermBackend, Terminal};
+// use utils::{get_config_dir, get_data_dir};
 
-use crate::{
-  action::Action,
-  keyconfig::KeyConfig,
-  utils::{initialize_logging, initialize_panic_handler},
-};
-
-const LOG_PATTERN: &str = "{d(%Y-%m-%d %H:%M:%S)} | {l} | {f}:{L} | {m}{n}";
+// use crate::{
+//   action::Action,
+//   keyconfig::KeyConfig,
+//   utils::{initialize_logging, initialize_panic_handler},
+// };
+//
+// const LOG_PATTERN: &str = "{d(%Y-%m-%d %H:%M:%S)} | {l} | {f}:{L} | {m}{n}";
 
 #[tokio::main]
 async fn main() -> Result<()> {
-  let matches = cli::generate_cli_app().get_matches();
-
-  let config = matches.get_one::<String>("config");
-  let data = matches.get_one::<String>("data");
-  let taskrc = matches.get_one::<String>("taskrc");
-  let taskdata = matches.get_one::<String>("taskdata");
-  let binding = String::from("next");
-  let report = matches.get_one::<String>("report").unwrap_or(&binding);
-
-  let config_dir = config.map(PathBuf::from).unwrap_or_else(get_config_dir);
-  let data_dir = data.map(PathBuf::from).unwrap_or_else(get_data_dir);
-
-  // if let Some(e) = taskrc {
-  //   if env::var("TASKRC").is_err() {
-  //     // if environment variable is not set, this env::var returns an error
-  //     env::set_var("TASKRC", absolute_path(PathBuf::from(e)).expect("Unable to get path for taskrc"))
-  //   } else {
-  //     warn!("TASKRC environment variable cannot be set.")
-  //   }
-  // }
+  // let matches = cli::generate_cli_app().get_matches();
   //
-  // if let Some(e) = taskdata {
-  //   if env::var("TASKDATA").is_err() {
-  //     // if environment variable is not set, this env::var returns an error
-  //     env::set_var("TASKDATA", absolute_path(PathBuf::from(e)).expect("Unable to get path for taskdata"))
-  //   } else {
-  //     warn!("TASKDATA environment variable cannot be set.")
-  //   }
+  // let config = matches.get_one::<String>("config");
+  // let data = matches.get_one::<String>("data");
+  // let taskrc = matches.get_one::<String>("taskrc");
+  // let taskdata = matches.get_one::<String>("taskdata");
+  // let binding = String::from("next");
+  // let report = matches.get_one::<String>("report").unwrap_or(&binding);
+  //
+  // let config_dir = config.map(PathBuf::from).unwrap_or_else(get_config_dir);
+  // let data_dir = data.map(PathBuf::from).unwrap_or_else(get_data_dir);
+  //
+  // // if let Some(e) = taskrc {
+  // //   if env::var("TASKRC").is_err() {
+  // //     // if environment variable is not set, this env::var returns an error
+  // //     env::set_var("TASKRC", absolute_path(PathBuf::from(e)).expect("Unable to get path for taskrc"))
+  // //   } else {
+  // //     warn!("TASKRC environment variable cannot be set.")
+  // //   }
+  // // }
+  // //
+  // // if let Some(e) = taskdata {
+  // //   if env::var("TASKDATA").is_err() {
+  // //     // if environment variable is not set, this env::var returns an error
+  // //     env::set_var("TASKDATA", absolute_path(PathBuf::from(e)).expect("Unable to get path for taskdata"))
+  // //   } else {
+  // //     warn!("TASKDATA environment variable cannot be set.")
+  // //   }
+  // // }
+  //
+  // initialize_logging(data_dir)?;
+  // initialize_panic_handler()?;
+  //
+  // log::info!("getting matches from clap...");
+  // debug!("report = {:?}", &report);
+  // debug!("config = {:?}", &config);
+  //
+  // let mut app = app::TaskwarriorTui::new(report).await?;
+  //
+  // let r = app.run().await;
+  //
+  // if let Err(err) = r {
+  //   eprintln!("\x1b[0;31m[taskwarrior-tui error]\x1b[0m: {}\n\nIf you need additional help, please report as a github issue on https://github.com/kdheepak/taskwarrior-tui", err);
+  //   std::process::exit(1);
   // }
-
-  initialize_logging(data_dir)?;
-  initialize_panic_handler()?;
-
-  debug!("getting matches from clap...");
-  debug!("report = {:?}", &report);
-  debug!("config = {:?}", &config);
-
-  let mut app = app::TaskwarriorTui::new(report, true).await?;
-
-  let r = app.run().await;
-
-  if let Err(err) = r {
-    eprintln!("\x1b[0;31m[taskwarrior-tui error]\x1b[0m: {}\n\nIf you need additional help, please report as a github issue on https://github.com/kdheepak/taskwarrior-tui", err);
-    std::process::exit(1);
-  }
   Ok(())
 }

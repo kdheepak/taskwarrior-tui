@@ -1,5 +1,32 @@
-#[derive(Clone, PartialEq, Eq, Debug, Copy)]
+use serde_derive::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Action {
+  Quit,
+  Refresh,
+  GotoBottom,
+  GotoTop,
+  GotoPageBottom,
+  GotoPageTop,
+  Down,
+  Up,
+  PageDown,
+  PageUp,
+  Delete,
+  Done,
+  ToggleStartStop,
+  QuickTag,
+  Select,
+  SelectAll,
+  Undo,
+  Edit,
+  Shell,
+  Help,
+  ToggleZoom,
+  Context,
+  Next,
+  Previous,
+  Shortcut(usize),
   Report,
   Filter,
   Add,
