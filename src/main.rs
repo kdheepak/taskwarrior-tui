@@ -3,24 +3,23 @@
 #![allow(unused_variables)]
 #![allow(clippy::too_many_arguments)]
 
-// mod app;
-// mod calendar;
-// mod cli;
-// mod completion;
-// mod config;
-// mod help;
-// mod history;
-// mod keyconfig;
-// mod pane;
-// mod scrollbar;
-// mod table;
-// mod task_report;
-// mod ui;
 mod action;
+mod app;
+mod calendar;
+mod cli;
+mod completion;
 mod config;
+mod help;
+mod history;
+mod keyconfig;
 mod keyevent;
 mod keymap;
+mod pane;
+mod scrollbar;
+mod table;
+mod task_report;
 mod tui;
+mod ui;
 mod utils;
 
 use std::{

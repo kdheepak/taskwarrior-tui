@@ -233,7 +233,7 @@ impl TaskwarriorTui {
     }
 
     let data = String::from_utf8_lossy(&output.stdout);
-    let c = Config::new(&data, report)?;
+    let c = Config::new()?;
     let kc = KeyConfig::new(&data)?;
 
     let output = std::process::Command::new("task")
@@ -450,7 +450,7 @@ impl TaskwarriorTui {
       Mode::Projects => 1,
       Mode::Calendar => 2,
     };
-    let navbar_block = Block::default().style(self.config.uda_style_navbar);
+    let navbar_block = Block::default().style(*self.config.uda_style_navbar);
     let context = Line::from(vec![
       Span::from("["),
       Span::from(if self.current_context.is_empty() {
@@ -500,7 +500,7 @@ impl TaskwarriorTui {
             .get(&format!("color.project.{}", project[0]))
             .copied()
             .unwrap_or_default();
-          style = style.patch(s);
+          style = style.patch(*s);
         }
         &_ => {}
       }
@@ -510,7 +510,7 @@ impl TaskwarriorTui {
 
   pub fn draw_calendar(&mut self, f: &mut Frame<impl Backend>, layout: Rect) {
     let mut c = Calendar::default()
-      .today_style(self.config.uda_style_calendar_today)
+      .today_style(*self.config.uda_style_calendar_today)
       .year(self.calendar_year)
       .date_style(self.get_dates_with_styles())
       .months_per_row(self.config.uda_calendar_months_per_row)
@@ -844,6 +844,7 @@ impl TaskwarriorTui {
           self.error.clone(),
         );
       }
+      _ => {}
     }
   }
 
@@ -911,7 +912,7 @@ impl TaskwarriorTui {
     for (i, context) in contexts.iter().enumerate() {
       let mut style = Style::default();
       if &self.contexts.rows[i].active == "yes" {
-        style = self.config.uda_style_context_active;
+        style = *self.config.uda_style_context_active;
       }
       rows.push(Row::StyledData(context.iter(), style));
       if i == self.contexts.table_state.current_selection().unwrap_or_default() {
@@ -970,8 +971,8 @@ impl TaskwarriorTui {
     // Create a List from all list items and highlight the currently selected one
     let items = List::new(items)
       .block(Block::default().borders(Borders::NONE).title(""))
-      .style(self.config.uda_style_report_completion_pane)
-      .highlight_style(self.config.uda_style_report_completion_pane_highlight)
+      .style(*self.config.uda_style_report_completion_pane)
+      .highlight_style(*self.config.uda_style_report_completion_pane_highlight)
       .highlight_symbol(&self.config.uda_selection_indicator);
 
     let area = f.size();
@@ -1014,7 +1015,7 @@ impl TaskwarriorTui {
       .split(rect);
 
     // render command title
-    let mut style = self.config.uda_style_command;
+    let mut style = self.config.uda_style_command.0;
     if error.is_some() {
       style = style.fg(Color::Red);
     };
@@ -1105,20 +1106,20 @@ impl TaskwarriorTui {
       if tag_name == "uda." || tag_name == "priority" {
         if let Some(p) = task.priority() {
           let s = self.config.color.get(&format!("color.uda.priority.{}", p)).copied().unwrap_or_default();
-          style = style.patch(s);
+          style = style.patch(s.0);
         }
       } else if tag_name == "tag." {
         if let Some(tags) = task.tags() {
           for t in tags {
             let color_tag_name = format!("color.tag.{}", t);
             let s = self.config.color.get(&color_tag_name).copied().unwrap_or_default();
-            style = style.patch(s);
+            style = style.patch(s.0);
           }
         }
       } else if tag_name == "project." {
         if let Some(p) = task.project() {
           let s = self.config.color.get(&format!("color.project.{}", p)).copied().unwrap_or_default();
-          style = style.patch(s);
+          style = style.patch(s.0);
         }
       } else if task
         .tags()
@@ -1127,7 +1128,7 @@ impl TaskwarriorTui {
       {
         let color_tag_name = format!("color.{}", tag_name);
         let s = self.config.color.get(&color_tag_name).copied().unwrap_or_default();
-        style = style.patch(s);
+        style = style.patch(s.0);
       }
     }
 
@@ -1204,7 +1205,7 @@ impl TaskwarriorTui {
       let style = self.style_for_task(&self.tasks[i]);
       if i == selected {
         pos = i;
-        highlight_style = style.patch(self.config.uda_style_report_selection);
+        highlight_style = style.patch(self.config.uda_style_report_selection.0);
         if self.config.uda_selection_bold {
           highlight_style = highlight_style.add_modifier(Modifier::BOLD);
         }
@@ -1248,9 +1249,9 @@ impl TaskwarriorTui {
     f.render_stateful_widget(t, rect, &mut self.task_table_state);
     if tasks.iter().len() as u16 > rect.height.saturating_sub(4) {
       let mut widget = Scrollbar::new(pos, tasks.iter().len());
-      widget.pos_style = self.config.uda_style_report_scrollbar;
+      widget.pos_style = self.config.uda_style_report_scrollbar.0;
       widget.pos_symbol = self.config.uda_scrollbar_indicator.clone();
-      widget.area_style = self.config.uda_style_report_scrollbar_area;
+      widget.area_style = self.config.uda_style_report_scrollbar_area.0;
       widget.area_symbol = self.config.uda_scrollbar_area.clone();
       f.render_widget(widget, rect);
     }
@@ -3496,6 +3497,7 @@ impl TaskwarriorTui {
           self.mode = self.previous_mode.clone().unwrap_or(Mode::Tasks(Action::Report));
           self.previous_mode = None;
         }
+        _ => {}
       }
     }
     self.update_task_table_state();

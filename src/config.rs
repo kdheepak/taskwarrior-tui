@@ -17,8 +17,21 @@ use serde_derive::{Deserialize, Serialize};
 
 use crate::{action::Action, keyevent::parse_key_sequence, keymap::KeyMap, utils::get_config_dir};
 
-#[derive(Default, Clone, Debug)]
-pub struct SerdeStyle(Style);
+#[derive(Default, Clone, Debug, Copy)]
+pub struct SerdeStyle(pub Style);
+
+impl std::ops::Deref for SerdeStyle {
+  type Target = Style;
+
+  fn deref(&self) -> &Self::Target {
+    &self.0
+  }
+}
+impl std::ops::DerefMut for SerdeStyle {
+  fn deref_mut(&mut self) -> &mut Self::Target {
+    &mut self.0
+  }
+}
 
 impl<'de> Deserialize<'de> for SerdeStyle {
   fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -230,8 +243,22 @@ fn color_to_string(color: Color) -> String {
     Color::Black => "black".to_string(),
     Color::Red => "red".to_string(),
     Color::Green => "green".to_string(),
-    // ... handle all other colors ...
-    _ => "".to_string(), // Default case, adjust as needed
+    Color::Reset => "reset".to_string(),
+    Color::Yellow => "yellow".to_string(),
+    Color::Blue => "blue".to_string(),
+    Color::Magenta => "magenta".to_string(),
+    Color::Cyan => "cyan".to_string(),
+    Color::Gray => "gray".to_string(),
+    Color::DarkGray => "darkgray".to_string(),
+    Color::LightRed => "lightred".to_string(),
+    Color::LightGreen => "lightgreen".to_string(),
+    Color::LightYellow => "lightyellow".to_string(),
+    Color::LightBlue => "lightblue".to_string(),
+    Color::LightMagenta => "lightmagenta".to_string(),
+    Color::LightCyan => "lightcyan".to_string(),
+    Color::White => "white".to_string(),
+    Color::Rgb(r, g, b) => format!("#{}{}{}", r, g, b),
+    Color::Indexed(u) => format!("#{}", u),
   }
 }
 
