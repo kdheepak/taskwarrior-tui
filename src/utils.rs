@@ -1,3 +1,4 @@
+use path_clean::PathClean;
 use rustyline::line_buffer::{ChangeListener, DeleteListener, Direction};
 
 /// Undo manager
@@ -16,7 +17,7 @@ impl ChangeListener for Changeset {
   fn replace(&mut self, idx: usize, old: &str, new: &str) {}
 }
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use color_eyre::eyre::{anyhow, Context, Result};
 use directories::ProjectDirs;
@@ -162,4 +163,17 @@ Authors: {author}
 Config directory: {config_dir_path}
 Data directory: {data_dir_path}"
   )
+}
+
+pub fn absolute_path(path: impl AsRef<Path>) -> std::io::Result<PathBuf> {
+  let path = path.as_ref();
+
+  let absolute_path = if path.is_absolute() {
+    path.to_path_buf()
+  } else {
+    std::env::current_dir()?.join(path)
+  }
+  .clean();
+
+  Ok(absolute_path)
 }

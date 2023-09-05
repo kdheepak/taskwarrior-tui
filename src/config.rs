@@ -208,10 +208,10 @@ impl Serialize for SerdeStyle {
     S: Serializer,
   {
     // Getting the foreground color string
-    let fg_str = color_to_string(self.0.fg.unwrap());
+    let fg_str = color_to_string(self.0.fg.unwrap_or_default());
 
     // Getting the background color string
-    let mut bg_str = color_to_string(self.0.bg.unwrap());
+    let mut bg_str = color_to_string(self.0.bg.unwrap_or_default());
 
     // If the background is not default, prepend with "on "
     if bg_str != "" {
