@@ -308,7 +308,7 @@ impl TaskwarriorTui {
 
     app.task_report_table.date_time_vague_precise = app.config.uda_task_report_date_time_vague_more_precise;
 
-    app.update(true)?;
+    // app.update(true)?;
 
     app.filter_history.load()?;
     app.filter_history.add(app.filter.value());
@@ -330,7 +330,7 @@ impl TaskwarriorTui {
     let mut tui = tui::Tui::new(self.tick_rate as usize)?;
     tui.enter()?;
 
-    let mut events: Vec<Event> = Vec::new();
+    let mut events: Vec<KeyEvent> = Vec::new();
     let mut ticker = 0;
 
     loop {
@@ -341,19 +341,28 @@ impl TaskwarriorTui {
       }
       tui.draw(|f| self.draw(f))?;
       if let Some(event) = tui.next().await {
-        if let Event::Tick = event {
-          if ticker > 5 {
-            events.clear();
-            ticker = 0;
-          } else {
-            ticker += 1;
+        let mut maybe_action = match event {
+          Event::Quit => Some(Action::Quit),
+          Event::Error => Some(Action::Error("Received event error".into())),
+          Event::Closed => Some(Action::Quit),
+          Event::Tick => {
+            if ticker > 5 {
+              events.clear();
+              ticker = 0;
+            } else {
+              ticker += 1;
+            }
+            Some(Action::Tick)
           }
-        } else {
-          events.push(event);
-        }
-        let mut maybe_action = self.handle_event(&events)?;
+          Event::Key(key_event) => {
+            events.push(key_event);
+            self.handle_event(&events)?
+          }
+          Event::Mouse(_) => None,
+          Event::Resize(x, y) => None,
+        };
         while let Some(action) = maybe_action {
-          maybe_action = self.update(action);
+          maybe_action = self.update(action)?;
         }
       }
 
@@ -365,7 +374,11 @@ impl TaskwarriorTui {
     Ok(())
   }
 
-  pub fn handle_event(&mut self, events: &Vec<Event>) -> Result<Option<Action>> {
+  pub fn handle_event(&mut self, events: &Vec<KeyEvent>) -> Result<Option<Action>> {
+    Ok(None)
+  }
+
+  pub fn update(&mut self, action: Action) -> Result<Option<Action>> {
     Ok(None)
   }
 
@@ -413,9 +426,9 @@ impl TaskwarriorTui {
 
     self.draw_tabs(f, tab_layout);
     match self.mode {
-      Mode::Tasks(action) => self.draw_task(f, main_layout, action),
       Mode::Calendar => self.draw_calendar(f, main_layout),
       Mode::Projects => self.draw_projects(f, main_layout),
+      _ => self.draw_task(f, main_layout),
     }
   }
 
@@ -423,9 +436,9 @@ impl TaskwarriorTui {
     let titles: Vec<&str> = vec!["Tasks", "Projects", "Calendar"];
     let tab_names: Vec<_> = titles.into_iter().map(Line::from).collect();
     let selected_tab = match self.mode {
-      Mode::Tasks(_) => 0,
       Mode::Projects => 1,
       Mode::Calendar => 2,
+      _ => 0,
     };
     let navbar_block = Block::default().style(*self.config.uda_style_navbar);
     let context = Line::from(vec![
@@ -496,7 +509,7 @@ impl TaskwarriorTui {
     f.render_widget(c, layout);
   }
 
-  pub fn draw_task(&mut self, f: &mut Frame<impl Backend>, layout: Rect, action: Action) {
+  pub fn draw_task(&mut self, f: &mut Frame<impl Backend>, layout: Rect) {
     let rects = Layout::default()
       .direction(Direction::Vertical)
       .constraints([Constraint::Min(0), Constraint::Length(2)].as_ref())
@@ -537,12 +550,12 @@ impl TaskwarriorTui {
     };
 
     // render task mode
-    self.handle_task_mode_action(f, &rects, &task_ids, action);
+    self.draw_task_mode_action(f, &rects, &task_ids);
   }
 
-  fn handle_task_mode_action(&mut self, f: &mut Frame<impl Backend>, rects: &[Rect], task_ids: &[String], action: Action) {
-    match action {
-      Action::Error => {
+  fn draw_task_mode_action(&mut self, f: &mut Frame<impl Backend>, rects: &[Rect], task_ids: &[String]) {
+    match self.mode {
+      Mode::TaskError => {
         self.draw_command(
           f,
           rects[1],
@@ -566,7 +579,7 @@ impl TaskwarriorTui {
           .constraints([Constraint::Min(0)].as_ref())
           .split(f.size());
       }
-      Action::Report => {
+      Mode::TaskReport => {
         // reset error when entering Action::Report
         self.previous_mode = None;
         self.error = None;
@@ -581,7 +594,7 @@ impl TaskwarriorTui {
           self.error.clone(),
         );
       }
-      Action::Jump => {
+      Mode::TaskJump => {
         let position = self.command.visual_cursor();
         self.draw_command(
           f,
@@ -593,7 +606,7 @@ impl TaskwarriorTui {
           self.error.clone(),
         );
       }
-      Action::Filter => {
+      Mode::TaskFilter => {
         let position = self.filter.visual_cursor();
         if self.show_completion_pane {
           self.draw_completion_pop_up(f, rects[1], position);
@@ -614,7 +627,7 @@ impl TaskwarriorTui {
           self.error.clone(),
         );
       }
-      Action::Log => {
+      Mode::TaskLog => {
         if self.config.uda_auto_insert_double_quotes_on_log && self.command.value().is_empty() {
           self.command = self.command.clone().with_value(r#""""#.to_string());
         };
@@ -638,7 +651,7 @@ impl TaskwarriorTui {
           self.error.clone(),
         );
       }
-      Action::Subprocess => {
+      Mode::TaskSubprocess => {
         let position = self.command.visual_cursor();
         self.draw_command(
           f,
@@ -650,7 +663,7 @@ impl TaskwarriorTui {
           self.error.clone(),
         );
       }
-      Action::Modify => {
+      Mode::TaskModify => {
         let position = self.modify.visual_cursor();
         if self.show_completion_pane {
           self.draw_completion_pop_up(f, rects[1], position);
@@ -676,7 +689,7 @@ impl TaskwarriorTui {
           self.error.clone(),
         );
       }
-      Action::Annotate => {
+      Mode::TaskAnnotate => {
         if self.config.uda_auto_insert_double_quotes_on_annotate && self.command.value().is_empty() {
           self.command = self.command.clone().with_value(r#""""#.to_string());
         };
@@ -705,7 +718,7 @@ impl TaskwarriorTui {
           self.error.clone(),
         );
       }
-      Action::Add => {
+      Mode::TaskAdd => {
         if self.config.uda_auto_insert_double_quotes_on_add && self.command.value().is_empty() {
           self.command = self.command.clone().with_value(r#""""#.to_string());
         };
@@ -729,7 +742,7 @@ impl TaskwarriorTui {
           self.error.clone(),
         );
       }
-      Action::HelpPopup => {
+      Mode::TaskHelpPopup => {
         self.draw_command(
           f,
           rects[1],
@@ -741,7 +754,7 @@ impl TaskwarriorTui {
         );
         self.draw_help_popup(f, 80, 90);
       }
-      Action::ContextMenu => {
+      Mode::TaskContextMenu => {
         self.draw_command(
           f,
           rects[1],
@@ -753,7 +766,7 @@ impl TaskwarriorTui {
         );
         self.draw_context_menu(f, 80, 50);
       }
-      Action::DonePrompt => {
+      Mode::TaskDonePrompt => {
         let label = if task_ids.len() > 1 {
           format!("Done Tasks {}?", task_ids.join(","))
         } else {
@@ -777,7 +790,7 @@ impl TaskwarriorTui {
           self.error.clone(),
         );
       }
-      Action::DeletePrompt => {
+      Mode::TaskDeletePrompt => {
         let label = if task_ids.len() > 1 {
           format!("Delete Tasks {}?", task_ids.join(","))
         } else {
@@ -801,7 +814,7 @@ impl TaskwarriorTui {
           self.error.clone(),
         );
       }
-      Action::UndoPrompt => {
+      Mode::TaskUndoPrompt => {
         let label = "Run `task undo`?";
         let k = match self.keyconfig.undo {
           KeyCode::Char(c) => c.to_string(),
@@ -1252,39 +1265,39 @@ impl TaskwarriorTui {
     (tasks, headers)
   }
 
-  pub fn update(&mut self, force: bool) -> Result<()> {
-    trace!("self.update({:?});", force);
-    if force || self.dirty || self.tasks_changed_since(self.last_export).unwrap_or(true) {
-      self.get_context()?;
-      let task_uuids = self.selected_task_uuids();
-      if self.current_selection_uuid.is_none() && self.current_selection_id.is_none() && task_uuids.len() == 1 {
-        if let Some(uuid) = task_uuids.get(0) {
-          self.current_selection_uuid = Some(*uuid);
-        }
-      }
-
-      self.last_export = Some(std::time::SystemTime::now());
-      self.task_report_table.export_headers(None, &self.report)?;
-      self.export_tasks()?;
-      if self.config.uda_task_report_use_all_tasks_for_completion {
-        self.export_all_tasks()?;
-      }
-      self.contexts.update_data()?;
-      self.projects.update_data()?;
-      self.update_tags();
-      self.task_details.clear();
-      self.dirty = false;
-      self.save_history()?;
-    }
-    self.cursor_fix();
-    self.update_task_table_state();
-    if self.task_report_show_info {
-      self.update_task_details()?;
-    }
-    self.selection_fix();
-
-    Ok(())
-  }
+  // pub fn update(&mut self, force: bool) -> Result<()> {
+  //   trace!("self.update({:?});", force);
+  //   if force || self.dirty || self.tasks_changed_since(self.last_export).unwrap_or(true) {
+  //     self.get_context()?;
+  //     let task_uuids = self.selected_task_uuids();
+  //     if self.current_selection_uuid.is_none() && self.current_selection_id.is_none() && task_uuids.len() == 1 {
+  //       if let Some(uuid) = task_uuids.get(0) {
+  //         self.current_selection_uuid = Some(*uuid);
+  //       }
+  //     }
+  //
+  //     self.last_export = Some(std::time::SystemTime::now());
+  //     self.task_report_table.export_headers(None, &self.report)?;
+  //     self.export_tasks()?;
+  //     if self.config.uda_task_report_use_all_tasks_for_completion {
+  //       self.export_all_tasks()?;
+  //     }
+  //     self.contexts.update_data()?;
+  //     self.projects.update_data()?;
+  //     self.update_tags();
+  //     self.task_details.clear();
+  //     self.dirty = false;
+  //     self.save_history()?;
+  //   }
+  //   self.cursor_fix();
+  //   self.update_task_table_state();
+  //   if self.task_report_show_info {
+  //     self.update_task_details()?;
+  //   }
+  //   self.selection_fix();
+  //
+  //   Ok(())
+  // }
 
   pub fn selection_fix(&mut self) {
     if let (Some(t), Some(id)) = (self.task_current(), self.current_selection_id) {
@@ -1616,13 +1629,13 @@ impl TaskwarriorTui {
         self.all_tasks = imported;
         info!("Imported {} tasks", self.tasks.len());
         self.error = None;
-        if self.mode == Mode::Tasks(Action::Error) {
-          self.mode = self.previous_mode.clone().unwrap_or(Mode::Tasks(Action::Report));
+        if self.mode == Mode::TaskError {
+          self.mode = self.previous_mode.clone().unwrap_or(Mode::TaskReport);
           self.previous_mode = None;
         }
       } else {
         self.error = Some(format!("Unable to parse output of `{:?}`:\n`{:?}`", task, data));
-        self.mode = Mode::Tasks(Action::Error);
+        self.mode = Mode::TaskError;
         debug!("Unable to parse output: {:?}", data);
       }
     } else {
@@ -1675,13 +1688,13 @@ impl TaskwarriorTui {
         self.tasks = imported;
         info!("Imported {} tasks", self.tasks.len());
         self.error = None;
-        if self.mode == Mode::Tasks(Action::Error) {
-          self.mode = self.previous_mode.clone().unwrap_or(Mode::Tasks(Action::Report));
+        if self.mode == Mode::TaskError {
+          self.mode = self.previous_mode.clone().unwrap_or(Mode::TaskReport);
           self.previous_mode = None;
         }
       } else {
         self.error = Some(format!("Unable to parse output of `{:?}`:\n`{:?}`", task, data));
-        self.mode = Mode::Tasks(Action::Error);
+        self.mode = Mode::TaskError;
         debug!("Unable to parse output: {:?}", data);
       }
     } else {
@@ -2383,11 +2396,11 @@ impl TaskwarriorTui {
     es
   }
 
-  pub fn handle_input(&mut self, input: KeyEvent) -> Result<()> {
+  pub fn handle_input(&mut self, input: Vec<KeyEvent>) -> Result<()> {
     match self.mode {
       Mode::Projects => {
-        ProjectsState::handle_input(self, input.into())?;
-        self.update(false)?;
+        ProjectsState::handle_input(self, *input.first().unwrap())?;
+        // self.update(false)?;
       }
       Mode::Calendar => {
         // if input == self.keyconfig.quit {
@@ -2440,18 +2453,18 @@ impl TaskwarriorTui {
     Ok(())
   }
 
-  fn handle_input_by_task_mode(&mut self, input: KeyEvent) -> Result<()> {
+  fn handle_input_by_task_mode(&mut self, input: Vec<KeyEvent>) -> Result<Option<Action>> {
     match self.mode {
       Mode::TaskReport => {
         if let Some(keymap) = self.config.keymap.get("task-report") {
           if let Some(action) = keymap.get(&input) {
-            return action;
+            return Ok(Some(action.clone()));
           }
         }
       }
       _ => {}
     }
-    Ok(())
+    Ok(None)
   }
 
   pub fn update_completion_list(&mut self) {
@@ -2463,7 +2476,7 @@ impl TaskwarriorTui {
       &self.tasks
     };
 
-    if let Mode::Tasks(Action::Modify | Action::Filter | Action::Annotate | Action::Add | Action::Log) = self.mode {
+    if let Mode::TaskModify | Mode::TaskFilter | Mode::TaskAnnotate | Mode::TaskAdd | Mode::TaskLog = self.mode {
       for s in [
         "project:".to_string(),
         "priority:".to_string(),
@@ -2476,7 +2489,7 @@ impl TaskwarriorTui {
       }
     }
 
-    if let Mode::Tasks(Action::Modify | Action::Filter | Action::Annotate | Action::Add | Action::Log) = self.mode {
+    if let Mode::TaskModify | Mode::TaskFilter | Mode::TaskAnnotate | Mode::TaskAdd | Mode::TaskLog = self.mode {
       for s in [
         ".before:",
         ".under:",
@@ -2505,7 +2518,7 @@ impl TaskwarriorTui {
       }
     }
 
-    if let Mode::Tasks(Action::Modify | Action::Filter | Action::Annotate | Action::Add | Action::Log) = self.mode {
+    if let Mode::TaskModify | Mode::TaskFilter | Mode::TaskAnnotate | Mode::TaskAdd | Mode::TaskLog = self.mode {
       for priority in &self.config.uda_priority_values {
         let p = priority.to_string();
         self.completion_list.insert(("priority".to_string(), p));
@@ -2561,7 +2574,7 @@ impl TaskwarriorTui {
       }
     }
 
-    if self.mode == Mode::Tasks(Action::Filter) {
+    if self.mode == Mode::TaskFilter {
       self.completion_list.insert(("status".to_string(), "pending".into()));
       self.completion_list.insert(("status".to_string(), "completed".into()));
       self.completion_list.insert(("status".to_string(), "deleted".into()));
@@ -2571,17 +2584,17 @@ impl TaskwarriorTui {
 
   pub fn update_input_for_completion(&mut self) {
     match self.mode {
-      Mode::Tasks(Action::Add | Action::Annotate | Action::Log) => {
+      Mode::TaskAdd | Mode::TaskAnnotate | Mode::TaskLog => {
         let i = get_start_word_under_cursor(self.command.value(), self.command.cursor());
         let input = self.command.value()[i..self.command.cursor()].to_string();
         self.completion_list.input(input, "".to_string());
       }
-      Mode::Tasks(Action::Modify) => {
+      Mode::TaskModify => {
         let i = get_start_word_under_cursor(self.modify.value(), self.modify.cursor());
         let input = self.modify.value()[i..self.modify.cursor()].to_string();
         self.completion_list.input(input, "".to_string());
       }
-      Mode::Tasks(Action::Filter) => {
+      Mode::TaskFilter => {
         let i = get_start_word_under_cursor(self.filter.value(), self.filter.cursor());
         let input = self.filter.value()[i..self.filter.cursor()].to_string();
         self.completion_list.input(input, "".to_string());

@@ -116,8 +116,8 @@ mod validate_tests {
   #[test]
   fn test_no_conflict() {
     let mut map = std::collections::HashMap::new();
-    map.insert(vec![KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty())], Action::Report);
-    map.insert(vec![KeyEvent::new(KeyCode::Char('b'), KeyModifiers::empty())], Action::Report);
+    map.insert(vec![KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty())], Action::Quit);
+    map.insert(vec![KeyEvent::new(KeyCode::Char('b'), KeyModifiers::empty())], Action::Quit);
     let keymap = KeyMap(map);
 
     assert!(keymap.validate().is_ok());
@@ -126,13 +126,13 @@ mod validate_tests {
   #[test]
   fn test_conflict_prefix() {
     let mut map = std::collections::HashMap::new();
-    map.insert(vec![KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty())], Action::Report);
+    map.insert(vec![KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty())], Action::Quit);
     map.insert(
       vec![
         KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty()),
         KeyEvent::new(KeyCode::Char('b'), KeyModifiers::empty()),
       ],
-      Action::Report,
+      Action::Quit,
     );
     let keymap = KeyMap(map);
 
@@ -142,8 +142,8 @@ mod validate_tests {
   #[test]
   fn test_no_conflict_different_modifiers() {
     let mut map = std::collections::HashMap::new();
-    map.insert(vec![KeyEvent::new(KeyCode::Char('a'), KeyModifiers::CONTROL)], Action::Report);
-    map.insert(vec![KeyEvent::new(KeyCode::Char('a'), KeyModifiers::ALT)], Action::Report);
+    map.insert(vec![KeyEvent::new(KeyCode::Char('a'), KeyModifiers::CONTROL)], Action::Quit);
+    map.insert(vec![KeyEvent::new(KeyCode::Char('a'), KeyModifiers::ALT)], Action::Quit);
     let keymap = KeyMap(map);
 
     assert!(keymap.validate().is_ok());
@@ -157,14 +157,14 @@ mod validate_tests {
         KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty()),
         KeyEvent::new(KeyCode::Char('b'), KeyModifiers::empty()),
       ],
-      Action::Report,
+      Action::Quit,
     );
     map.insert(
       vec![
         KeyEvent::new(KeyCode::Char('b'), KeyModifiers::empty()),
         KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty()),
       ],
-      Action::Report,
+      Action::Quit,
     );
     let keymap = KeyMap(map);
 
@@ -180,14 +180,14 @@ mod validate_tests {
         KeyEvent::new(KeyCode::Char('b'), KeyModifiers::empty()),
         KeyEvent::new(KeyCode::Char('c'), KeyModifiers::empty()),
       ],
-      Action::Report,
+      Action::Quit,
     );
     map.insert(
       vec![
         KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty()),
         KeyEvent::new(KeyCode::Char('b'), KeyModifiers::empty()),
       ],
-      Action::Report,
+      Action::Quit,
     );
     let keymap = KeyMap(map);
 

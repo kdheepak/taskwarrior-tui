@@ -2,6 +2,8 @@ use serde_derive::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Action {
+  Tick,
+  Error(String),
   Quit,
   Refresh,
   GotoBottom,
@@ -29,4 +31,9 @@ pub enum Action {
   Next,
   Previous,
   Shortcut(usize),
+  Modify,
+  Log,
+  Annotate,
+  Filter,
+  Add,
 }
