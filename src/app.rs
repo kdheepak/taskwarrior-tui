@@ -11,7 +11,7 @@ use std::{
 };
 
 use chrono::{DateTime, Datelike, FixedOffset, Local, NaiveDate, NaiveDateTime, TimeZone, Timelike};
-use color_eyre::eyre::{anyhow, Context as AnyhowContext, Result};
+use color_eyre::eyre::{anyhow, Context, Result};
 use crossterm::{
   event::{DisableMouseCapture, EnableMouseCapture, KeyCode, KeyEvent, KeyModifiers},
   execute,
@@ -133,7 +133,7 @@ fn get_formatted_datetime(date: &Date) -> String {
   )
 }
 
-fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+fn centered_rect(r: Rect, percent_x: u16, percent_y: u16) -> Rect {
   let popup_layout = Layout::default()
     .direction(Direction::Vertical)
     .constraints(
@@ -465,7 +465,7 @@ impl TaskwarriorTui {
   }
 
   pub fn draw_debug(&mut self, f: &mut Frame<impl Backend>) {
-    let area = centered_rect(50, 50, f.size());
+    let area = centered_rect(f.size(), 50, 50);
     f.render_widget(Clear, area);
     let t = format!("{}", self.current_selection);
     let p = Paragraph::new(Text::from(t)).block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded));
@@ -567,7 +567,7 @@ impl TaskwarriorTui {
         );
         let text = self.error.clone().unwrap_or_else(|| "Unknown error.".to_string());
         let title = vec![Span::styled("Error", Style::default().add_modifier(Modifier::BOLD))];
-        let rect = centered_rect(90, 60, f.size());
+        let rect = centered_rect(f.size(), 90, 60);
         f.render_widget(Clear, rect);
         let p = Paragraph::new(Text::from(text))
           .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).title(title))
@@ -856,7 +856,7 @@ impl TaskwarriorTui {
   }
 
   fn draw_help_popup(&mut self, f: &mut Frame<impl Backend>, percent_x: u16, percent_y: u16) {
-    let area = centered_rect(percent_x, percent_y, f.size());
+    let area = centered_rect(f.size(), percent_x, percent_y);
     f.render_widget(Clear, area);
 
     let chunks = Layout::default()
@@ -886,7 +886,7 @@ impl TaskwarriorTui {
       .constraints([Constraint::Min(0)].as_ref())
       .split(f.size());
 
-    let area = centered_rect(percent_x, percent_y, f.size());
+    let area = centered_rect(f.size(), percent_x, percent_y);
 
     f.render_widget(Clear, area.inner(&Margin { vertical: 0, horizontal: 0 }));
 
