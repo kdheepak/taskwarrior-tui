@@ -161,7 +161,20 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Mode {
-  Tasks(Action),
+  TaskReport,
+  TaskFilter,
+  TaskAdd,
+  TaskAnnotate,
+  TaskSubprocess,
+  TaskLog,
+  TaskModify,
+  TaskHelpPopup,
+  TaskContextMenu,
+  TaskJump,
+  TaskDeletePrompt,
+  TaskUndoPrompt,
+  TaskDonePrompt,
+  TaskError,
   Projects,
   Calendar,
 }
@@ -211,7 +224,7 @@ pub struct TaskwarriorTui {
 }
 
 impl TaskwarriorTui {
-  pub async fn new(report: &str) -> Result<Self> {
+  pub fn new(report: &str) -> Result<Self> {
     let output = std::process::Command::new("task")
       .arg("rc.color=off")
       .arg("rc._forcecolor=off")
@@ -264,7 +277,7 @@ impl TaskwarriorTui {
       command: Input::default(),
       filter: Input::default(),
       modify: Input::default(),
-      mode: Mode::Tasks(Action::Report),
+      mode: Mode::TaskReport,
       previous_mode: None,
       task_report_height: 0,
       task_details_scroll: 0,
@@ -295,7 +308,7 @@ impl TaskwarriorTui {
 
     app.task_report_table.date_time_vague_precise = app.config.uda_task_report_date_time_vague_more_precise;
 
-    app.update(true).await?;
+    app.update(true)?;
 
     app.filter_history.load()?;
     app.filter_history.add(app.filter.value());
@@ -307,46 +320,18 @@ impl TaskwarriorTui {
         "Found taskwarrior version {} but taskwarrior-tui works with taskwarrior>={}",
         app.task_version, *TASKWARRIOR_VERSION_SUPPORTED
       ));
-      app.mode = Mode::Tasks(Action::Error);
+      app.mode = Mode::TaskError;
     }
 
     Ok(app)
   }
 
-  pub fn start_tui(&mut self) -> Result<Terminal<CrosstermBackend<std::io::Stdout>>> {
-    enable_raw_mode()?;
-    let mut stdout = std::io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-    let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend)?;
-    terminal.hide_cursor()?;
-    Ok(terminal)
-  }
-
-  pub async fn resume_tui(&mut self) -> Result<()> {
-    self.resume_event_loop().await?;
-    let backend = CrosstermBackend::new(io::stdout());
-    let mut terminal = Terminal::new(backend)?;
-    execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture)?;
-    enable_raw_mode()?;
-    self.requires_redraw = true;
-    terminal.hide_cursor()?;
-    Ok(())
-  }
-
-  pub async fn resume_event_loop(&mut self) -> Result<()> {
-    let tick_rate = if self.config.uda_tick_rate > 0 {
-      Some(std::time::Duration::from_millis(self.config.uda_tick_rate))
-    } else {
-      None
-    };
-    // self.event_loop = crate::event::EventLoop::new(tick_rate, true);
-    Ok(())
-  }
-
   pub async fn run(&mut self) -> Result<()> {
     let mut tui = tui::Tui::new(self.tick_rate as usize)?;
     tui.enter()?;
+
+    let mut events: Vec<Event> = Vec::new();
+    let mut ticker = 0;
 
     loop {
       if self.requires_redraw {
@@ -355,32 +340,20 @@ impl TaskwarriorTui {
         self.requires_redraw = false;
       }
       tui.draw(|f| self.draw(f))?;
-      // Handle input
       if let Some(event) = tui.next().await {
-        match event {
-          Event::Key(keyevent) => {
-            debug!("Received input = {:?}", keyevent);
-            self.handle_input(keyevent).await?;
+        if let Event::Tick = event {
+          if ticker > 5 {
+            events.clear();
+            ticker = 0;
+          } else {
+            ticker += 1;
           }
-          Event::Mouse(mouseevent) => {
-            debug!("tui mouseevent")
-          }
-          Event::Tick => {
-            debug!("Tick event");
-            self.update(false).await?;
-          }
-          Event::Closed => {
-            debug!("tui closed");
-          }
-          Event::Error => {
-            debug!("tui errored");
-          }
-          Event::Resize(x, y) => {
-            debug!("tui resized");
-          }
-          Event::Quit => {
-            debug!("tui quit")
-          }
+        } else {
+          events.push(event);
+        }
+        let mut maybe_action = self.handle_event(&events)?;
+        while let Some(action) = maybe_action {
+          maybe_action = self.update(action);
         }
       }
 
@@ -390,6 +363,10 @@ impl TaskwarriorTui {
     }
     tui.exit()?;
     Ok(())
+  }
+
+  pub fn handle_event(&mut self, events: &Vec<Event>) -> Result<Option<Action>> {
+    Ok(None)
   }
 
   pub fn reset_command(&mut self) {
@@ -1275,7 +1252,7 @@ impl TaskwarriorTui {
     (tasks, headers)
   }
 
-  pub async fn update(&mut self, force: bool) -> Result<()> {
+  pub fn update(&mut self, force: bool) -> Result<()> {
     trace!("self.update({:?});", force);
     if force || self.dirty || self.tasks_changed_since(self.last_export).unwrap_or(true) {
       self.get_context()?;
@@ -1302,7 +1279,7 @@ impl TaskwarriorTui {
     self.cursor_fix();
     self.update_task_table_state();
     if self.task_report_show_info {
-      self.update_task_details().await?;
+      self.update_task_details()?;
     }
     self.selection_fix();
 
@@ -1341,7 +1318,7 @@ impl TaskwarriorTui {
     }
   }
 
-  pub async fn update_task_details(&mut self) -> Result<()> {
+  pub fn update_task_details(&mut self) -> Result<()> {
     if self.tasks.is_empty() {
       return Ok(());
     }
@@ -1372,7 +1349,7 @@ impl TaskwarriorTui {
 
     l.dedup();
 
-    let (tx, mut rx) = tokio::sync::mpsc::channel(100);
+    let (tx, rx) = std::sync::mpsc::channel();
     let tasks = self.tasks.clone();
     let defaultwidth = self.terminal_width.saturating_sub(2);
     for s in &l {
@@ -1396,13 +1373,13 @@ impl TaskwarriorTui {
             .await;
           if let Ok(output) = output {
             let data = String::from_utf8_lossy(&output.stdout).to_string();
-            _tx.send(Some((task_uuid, data))).await.unwrap();
+            _tx.send(Some((task_uuid, data))).unwrap();
           }
         });
       }
     }
     drop(tx);
-    while let Some(Some((task_uuid, data))) = rx.recv().await {
+    while let Some((task_uuid, data)) = rx.recv()? {
       self.task_details.insert(task_uuid, data);
     }
     Ok(())
@@ -1829,7 +1806,7 @@ impl TaskwarriorTui {
     });
   }
 
-  pub async fn task_shortcut(&mut self, s: usize) -> Result<(), String> {
+  pub fn task_shortcut(&mut self, s: usize) -> Result<(), String> {
     // self.pause_tui().await.unwrap();
 
     let task_uuids = if self.tasks.is_empty() { vec![] } else { self.selected_task_uuids() };
@@ -1837,7 +1814,7 @@ impl TaskwarriorTui {
     let shell = &self.config.uda_shortcuts[s];
 
     if shell.is_empty() {
-      self.resume_tui().await.unwrap();
+      // self.resume_tui().await.unwrap();
       return Err("Trying to run empty shortcut.".to_string());
     }
 
@@ -1886,7 +1863,7 @@ impl TaskwarriorTui {
       }
     }
 
-    self.resume_tui().await.unwrap();
+    // self.resume_tui().await.unwrap();
 
     r
   }
@@ -2197,7 +2174,7 @@ impl TaskwarriorTui {
     }
   }
 
-  pub async fn task_edit(&mut self) -> Result<(), String> {
+  pub fn task_edit(&mut self) -> Result<(), String> {
     if self.tasks.is_empty() {
       return Ok(());
     }
@@ -2237,7 +2214,7 @@ impl TaskwarriorTui {
 
     self.current_selection_uuid = Some(task_uuid);
 
-    self.resume_tui().await.unwrap();
+    // self.resume_tui().await.unwrap();
 
     r
   }
@@ -2406,1101 +2383,74 @@ impl TaskwarriorTui {
     es
   }
 
-  pub async fn handle_input(&mut self, input: KeyEvent) -> Result<()> {
+  pub fn handle_input(&mut self, input: KeyEvent) -> Result<()> {
     match self.mode {
-      Mode::Tasks(_) => {
-        self.handle_input_by_task_mode(input).await?;
-      }
       Mode::Projects => {
         ProjectsState::handle_input(self, input.into())?;
-        self.update(false).await?;
+        self.update(false)?;
       }
       Mode::Calendar => {
-        if input == self.keyconfig.quit {
-          self.should_quit = true;
-        } else if input == self.keyconfig.next_tab {
-          if self.config.uda_change_focus_rotate {
-            self.mode = Mode::Tasks(Action::Report);
-          }
-        } else if input == self.keyconfig.previous_tab {
-          self.mode = Mode::Projects;
-        } else if input == KeyCode::Up || input == self.keyconfig.up {
-          if self.calendar_year > 0 {
-            self.calendar_year -= 1;
-          }
-        } else if input == KeyCode::Down || input == self.keyconfig.down {
-          self.calendar_year += 1;
-        } else if input == KeyCode::PageUp || input == self.keyconfig.page_up {
-          self.task_report_previous_page();
-        } else if input == KeyCode::PageDown || input == self.keyconfig.page_down {
-          self.calendar_year += 10;
-        // } else if input == KeyCode::Ctrl('e') {
-        //   self.task_details_scroll_down();
-        // } else if input == KeyCode::Ctrl('y') {
-        //   self.task_details_scroll_up();
-        } else if input == self.keyconfig.done {
-          if self.config.uda_task_report_prompt_on_done {
-            self.mode = Mode::Tasks(Action::DonePrompt);
-            if self.task_current().is_none() {
-              self.mode = Mode::Tasks(Action::Report);
-            }
-          } else {
-            match self.task_done() {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
-              }
-            }
-            if self.calendar_year > 0 {
-              self.calendar_year -= 10;
-            }
-          }
-        }
+        // if input == self.keyconfig.quit {
+        //   self.should_quit = true;
+        // } else if input == self.keyconfig.next_tab {
+        //   if self.config.uda_change_focus_rotate {
+        //     self.mode = Mode::Tasks(Action::Report);
+        //   }
+        // } else if input == self.keyconfig.previous_tab {
+        //   self.mode = Mode::Projects;
+        // } else if input == KeyCode::Up || input == self.keyconfig.up {
+        //   if self.calendar_year > 0 {
+        //     self.calendar_year -= 1;
+        //   }
+        // } else if input == KeyCode::Down || input == self.keyconfig.down {
+        //   self.calendar_year += 1;
+        // } else if input == KeyCode::PageUp || input == self.keyconfig.page_up {
+        //   self.task_report_previous_page();
+        // } else if input == KeyCode::PageDown || input == self.keyconfig.page_down {
+        //   self.calendar_year += 10;
+        // // } else if input == KeyCode::Ctrl('e') {
+        // //   self.task_details_scroll_down();
+        // // } else if input == KeyCode::Ctrl('y') {
+        // //   self.task_details_scroll_up();
+        // } else if input == self.keyconfig.done {
+        //   if self.config.uda_task_report_prompt_on_done {
+        //     self.mode = Mode::Tasks(Action::DonePrompt);
+        //     if self.task_current().is_none() {
+        //       self.mode = Mode::Tasks(Action::Report);
+        //     }
+        //   } else {
+        //     match self.task_done() {
+        //       Ok(_) => self.update(true).await?,
+        //       Err(e) => {
+        //         self.error = Some(e);
+        //         self.mode = Mode::Tasks(Action::Error);
+        //       }
+        //     }
+        //     if self.calendar_year > 0 {
+        //       self.calendar_year -= 10;
+        //     }
+        //   }
+        // }
+      }
+      _ => {
+        self.handle_input_by_task_mode(input)?;
       }
     }
     self.update_task_table_state();
     Ok(())
   }
 
-  async fn handle_input_by_task_mode(&mut self, input: KeyEvent) -> Result<()> {
-    if let Mode::Tasks(task_mode) = &self.mode {
-      match task_mode {
-        Action::Report => {
-          if input == KeyCode::Esc {
-            self.marked.clear();
-          } else if input == self.keyconfig.quit {
-            // || input == KeyCode::Ctrl('c') {
-            self.should_quit = true;
-          } else if input == self.keyconfig.select {
-            self.task_table_state.multiple_selection();
-            self.toggle_mark();
-          } else if input == self.keyconfig.select_all {
-            self.task_table_state.multiple_selection();
-            self.toggle_mark_all();
-          } else if input == self.keyconfig.refresh {
-            self.update(true).await?;
-          } else if input == self.keyconfig.go_to_bottom || input == KeyCode::End {
-            self.task_report_bottom();
-          } else if input == self.keyconfig.go_to_top || input == KeyCode::Home {
-            self.task_report_top();
-          } else if input == KeyCode::Down || input == self.keyconfig.down {
-            self.task_report_next();
-          } else if input == KeyCode::Up || input == self.keyconfig.up {
-            self.task_report_previous();
-          } else if input == KeyCode::PageDown || input == self.keyconfig.page_down {
-            self.task_report_next_page();
-          } else if input == KeyCode::PageUp || input == self.keyconfig.page_up {
-            self.task_report_previous_page();
-          // } else if input == KeyCode::Ctrl('e') {
-          //   self.task_details_scroll_down();
-          // } else if input == KeyCode::Ctrl('y') {
-          //   self.task_details_scroll_up();
-          } else if input == self.keyconfig.done {
-            if self.config.uda_task_report_prompt_on_done {
-              self.mode = Mode::Tasks(Action::DonePrompt);
-              if self.task_current().is_none() {
-                self.mode = Mode::Tasks(Action::Report);
-              }
-            } else {
-              match self.task_done() {
-                Ok(_) => self.update(true).await?,
-                Err(e) => {
-                  self.error = Some(e);
-                  self.mode = Mode::Tasks(Action::Error);
-                }
-              }
-            }
-          } else if input == self.keyconfig.delete {
-            if self.config.uda_task_report_prompt_on_delete {
-              self.mode = Mode::Tasks(Action::DeletePrompt);
-              if self.task_current().is_none() {
-                self.mode = Mode::Tasks(Action::Report);
-              }
-            } else {
-              match self.task_delete() {
-                Ok(_) => self.update(true).await?,
-                Err(e) => {
-                  self.error = Some(e);
-                  self.mode = Mode::Tasks(Action::Error);
-                }
-              }
-            }
-          } else if input == self.keyconfig.start_stop {
-            match self.task_start_stop() {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
-              }
-            }
-          } else if input == self.keyconfig.quick_tag {
-            match self.task_quick_tag() {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
-              }
-            }
-          } else if input == self.keyconfig.edit {
-            match self.task_edit().await {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
-              }
-            }
-          } else if input == self.keyconfig.undo {
-            if self.config.uda_task_report_prompt_on_undo {
-              self.mode = Mode::Tasks(Action::UndoPrompt);
-              if self.task_current().is_none() {
-                self.mode = Mode::Tasks(Action::Report);
-              }
-            } else {
-              match self.task_undo() {
-                Ok(_) => self.update(true).await?,
-                Err(e) => {
-                  self.error = Some(e);
-                  self.mode = Mode::Tasks(Action::Error);
-                }
-              }
-            }
-          } else if input == self.keyconfig.modify {
-            self.mode = Mode::Tasks(Action::Modify);
-            self.command_history.reset();
-            self.history_status = Some(format!(
-              "{} / {}",
-              self
-                .command_history
-                .history_index()
-                .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
-                .saturating_add(1),
-              self.command_history.history_len()
-            ));
-            self.update_completion_list();
-            match self.task_table_state.mode() {
-              TableMode::SingleSelection => match self.task_current() {
-                Some(t) => {
-                  let mut s = format!("{} ", Self::escape(t.description()));
-                  if self.config.uda_prefill_task_metadata {
-                    if t.tags().is_some() {
-                      let virtual_tags = self.task_report_table.virtual_tags.clone();
-                      for tag in t.tags().unwrap() {
-                        if !virtual_tags.contains(tag) {
-                          s = format!("{}+{} ", s, tag);
-                        }
-                      }
-                    }
-                    if t.project().is_some() {
-                      s = format!("{}project:{} ", s, t.project().unwrap());
-                    }
-                    if t.priority().is_some() {
-                      s = format!("{}priority:{} ", s, t.priority().unwrap());
-                    }
-                    if t.due().is_some() {
-                      let date = t.due().unwrap();
-                      s = format!("{}due:{} ", s, get_formatted_datetime(date));
-                    }
-                  }
-                  self.modify = self.modify.clone().with_value(s);
-                }
-                None => self.modify.reset(),
-              },
-              TableMode::MultipleSelection => self.modify.reset(),
-            }
-          } else if input == self.keyconfig.shell {
-            self.mode = Mode::Tasks(Action::Subprocess);
-          } else if input == self.keyconfig.log {
-            self.mode = Mode::Tasks(Action::Log);
-            self.command_history.reset();
-            self.history_status = Some(format!(
-              "{} / {}",
-              self
-                .command_history
-                .history_index()
-                .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
-                .saturating_add(1),
-              self.command_history.history_len()
-            ));
-            self.update_completion_list();
-          } else if input == self.keyconfig.add {
-            self.mode = Mode::Tasks(Action::Add);
-            self.command_history.reset();
-            self.history_status = Some(format!(
-              "{} / {}",
-              self
-                .command_history
-                .history_index()
-                .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
-                .saturating_add(1),
-              self.command_history.history_len()
-            ));
-            self.update_completion_list();
-          } else if input == self.keyconfig.annotate {
-            self.mode = Mode::Tasks(Action::Annotate);
-            self.command_history.reset();
-            self.history_status = Some(format!(
-              "{} / {}",
-              self
-                .command_history
-                .history_index()
-                .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
-                .saturating_add(1),
-              self.command_history.history_len()
-            ));
-            self.update_completion_list();
-          } else if input == self.keyconfig.help {
-            self.mode = Mode::Tasks(Action::HelpPopup);
-          } else if input == self.keyconfig.filter {
-            self.mode = Mode::Tasks(Action::Filter);
-            self.filter_history.reset();
-            self.history_status = Some(format!(
-              "{} / {}",
-              self
-                .filter_history
-                .history_index()
-                .unwrap_or_else(|| self.filter_history.history_len().saturating_sub(1))
-                .saturating_add(1),
-              self.filter_history.history_len()
-            ));
-            self.update_completion_list();
-          } else if input == KeyCode::Char(':') {
-            self.mode = Mode::Tasks(Action::Jump);
-          } else if input == self.keyconfig.shortcut1 {
-            match self.task_shortcut(1).await {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.update(true).await?;
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
-              }
-            }
-          } else if input == self.keyconfig.shortcut2 {
-            match self.task_shortcut(2).await {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.update(true).await?;
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
-              }
-            }
-          } else if input == self.keyconfig.shortcut3 {
-            match self.task_shortcut(3).await {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.update(true).await?;
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
-              }
-            }
-          } else if input == self.keyconfig.shortcut4 {
-            match self.task_shortcut(4).await {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.update(true).await?;
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
-              }
-            }
-          } else if input == self.keyconfig.shortcut5 {
-            match self.task_shortcut(5).await {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.update(true).await?;
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
-              }
-            }
-          } else if input == self.keyconfig.shortcut6 {
-            match self.task_shortcut(6).await {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.update(true).await?;
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
-              }
-            }
-          } else if input == self.keyconfig.shortcut7 {
-            match self.task_shortcut(7).await {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.update(true).await?;
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
-              }
-            }
-          } else if input == self.keyconfig.shortcut8 {
-            match self.task_shortcut(8).await {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.update(true).await?;
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
-              }
-            }
-          } else if input == self.keyconfig.shortcut9 {
-            match self.task_shortcut(9).await {
-              Ok(_) => self.update(true).await?,
-              Err(e) => {
-                self.update(true).await?;
-                self.error = Some(e);
-                self.mode = Mode::Tasks(Action::Error);
-              }
-            }
-          } else if input == self.keyconfig.zoom {
-            self.task_report_show_info = !self.task_report_show_info;
-          } else if input == self.keyconfig.context_menu {
-            self.mode = Mode::Tasks(Action::ContextMenu);
-          } else if input == self.keyconfig.previous_tab {
-            if self.config.uda_change_focus_rotate {
-              self.mode = Mode::Calendar;
-            }
-          } else if input == self.keyconfig.next_tab {
-            self.mode = Mode::Projects;
+  fn handle_input_by_task_mode(&mut self, input: KeyEvent) -> Result<()> {
+    match self.mode {
+      Mode::TaskReport => {
+        if let Some(keymap) = self.config.keymap.get("task-report") {
+          if let Some(action) = keymap.get(&input) {
+            return action;
           }
         }
-        Action::ContextMenu => {
-          if input == self.keyconfig.quit || input == KeyCode::Esc {
-            self.mode = Mode::Tasks(Action::Report);
-          } else if input == KeyCode::Down || input == self.keyconfig.down {
-            self.context_next();
-            if self.config.uda_context_menu_select_on_move {
-              if self.error.is_some() {
-                self.previous_mode = Some(self.mode.clone());
-                self.mode = Mode::Tasks(Action::Error);
-              } else {
-                match self.context_select() {
-                  Ok(_) => self.update(true).await?,
-                  Err(e) => {
-                    self.error = Some(e.to_string());
-                  }
-                }
-              }
-            }
-          } else if input == KeyCode::Up || input == self.keyconfig.up {
-            self.context_previous();
-            if self.config.uda_context_menu_select_on_move {
-              if self.error.is_some() {
-                self.previous_mode = Some(self.mode.clone());
-                self.mode = Mode::Tasks(Action::Error);
-              } else {
-                match self.context_select() {
-                  Ok(_) => self.update(true).await?,
-                  Err(e) => {
-                    self.error = Some(e.to_string());
-                  }
-                }
-              }
-            }
-          } else if input == KeyCode::Char('\n') {
-            if self.error.is_some() {
-              self.previous_mode = Some(self.mode.clone());
-              self.mode = Mode::Tasks(Action::Error);
-            } else if self.config.uda_context_menu_select_on_move {
-              self.mode = Mode::Tasks(Action::Report);
-            } else {
-              match self.context_select() {
-                Ok(_) => self.update(true).await?,
-                Err(e) => {
-                  self.error = Some(e.to_string());
-                  self.mode = Mode::Tasks(Action::Error);
-                }
-              }
-            }
-          }
-        }
-        Action::HelpPopup => {
-          if input == self.keyconfig.quit || input == KeyCode::Esc {
-            self.mode = Mode::Tasks(Action::Report);
-          } else if input == self.keyconfig.down {
-            self.help_popup.scroll = self.help_popup.scroll.checked_add(1).unwrap_or(0);
-            let th = (self.help_popup.text_height as u16).saturating_sub(1);
-            if self.help_popup.scroll > th {
-              self.help_popup.scroll = th;
-            }
-          } else if input == self.keyconfig.up {
-            self.help_popup.scroll = self.help_popup.scroll.saturating_sub(1);
-          }
-        }
-        Action::Modify => match input {
-          KeyCode::Esc => {
-            if self.show_completion_pane {
-              self.show_completion_pane = false;
-              self.completion_list.unselect();
-            } else {
-              self.modify.reset();
-              self.mode = Mode::Tasks(Action::Report);
-            }
-          }
-          KeyCode::Char('\n') => {
-            if self.show_completion_pane {
-              self.show_completion_pane = false;
-              if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
-                let (before, after) = self.modify.value().split_at(self.modify.cursor());
-                let fs = format!("{}{}{}", before.trim_end_matches(&o), r, after);
-                let cursor = self.modify.cursor() + r.len() - o.len();
-                self.modify = self.modify.clone().with_value(fs);
-                self.modify = self.modify.clone().with_cursor(cursor);
-              }
-              self.completion_list.unselect();
-            } else if self.error.is_some() {
-              self.previous_mode = Some(self.mode.clone());
-              self.mode = Mode::Tasks(Action::Error);
-            } else {
-              match self.task_modify() {
-                Ok(_) => {
-                  self.mode = Mode::Tasks(Action::Report);
-                  self.command_history.add(self.modify.value());
-                  self.modify.reset();
-                  self.update(true).await?;
-                }
-                Err(e) => {
-                  self.error = Some(e);
-                  self.mode = Mode::Tasks(Action::Error);
-                }
-              }
-            }
-          }
-          KeyCode::Tab => {
-            // | KeyCode::Ctrl('n')
-            if !self.completion_list.is_empty() {
-              self.update_input_for_completion();
-              if !self.show_completion_pane {
-                self.show_completion_pane = true;
-              }
-              self.completion_list.next();
-            }
-          }
-          KeyCode::BackTab => {
-            // | KeyCode::Ctrl('p')
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.previous();
-            }
-          }
-
-          KeyCode::Up => {
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.previous();
-            } else if let Some(s) = self
-              .command_history
-              .history_search(&self.modify.value()[..self.modify.cursor()], HistoryDirection::Reverse)
-            {
-              self.modify.reset();
-              let p = std::cmp::min(s.len(), self.modify.cursor());
-              self.modify = self.modify.clone().with_value(s);
-              self.modify = self.modify.clone().with_cursor(p);
-              self.history_status = Some(format!(
-                "{} / {}",
-                self
-                  .command_history
-                  .history_index()
-                  .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
-                  .saturating_add(1),
-                self.command_history.history_len()
-              ));
-            }
-          }
-          KeyCode::Down => {
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.next();
-            } else if let Some(s) = self
-              .command_history
-              .history_search(&self.modify.value()[..self.modify.cursor()], HistoryDirection::Forward)
-            {
-              self.modify.reset();
-              let p = std::cmp::min(s.len(), self.modify.cursor());
-              self.modify = self.modify.clone().with_value(s);
-              self.modify = self.modify.clone().with_cursor(p);
-              self.history_status = Some(format!(
-                "{} / {}",
-                self
-                  .command_history
-                  .history_index()
-                  .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
-                  .saturating_add(1),
-                self.command_history.history_len()
-              ));
-            }
-          }
-          _ => {
-            self.command_history.reset();
-            handle_movement(&mut self.modify, input);
-            self.update_input_for_completion();
-          }
-        },
-        Action::Subprocess => match input {
-          KeyCode::Char('\n') => {
-            if self.error.is_some() {
-              self.previous_mode = Some(self.mode.clone());
-              self.mode = Mode::Tasks(Action::Error);
-            } else {
-              match self.task_subprocess() {
-                Ok(_) => {
-                  self.mode = Mode::Tasks(Action::Report);
-                  self.reset_command();
-                  self.update(true).await?;
-                }
-                Err(e) => {
-                  self.error = Some(e);
-                  self.mode = Mode::Tasks(Action::Error);
-                }
-              }
-            }
-          }
-          KeyCode::Esc => {
-            self.reset_command();
-            self.mode = Mode::Tasks(Action::Report);
-          }
-          _ => handle_movement(&mut self.command, input),
-        },
-        Action::Log => match input {
-          KeyCode::Esc => {
-            if self.show_completion_pane {
-              self.show_completion_pane = false;
-              self.completion_list.unselect();
-            } else {
-              self.reset_command();
-              self.history_status = None;
-              self.mode = Mode::Tasks(Action::Report);
-            }
-          }
-          KeyCode::Char('\n') => {
-            if self.show_completion_pane {
-              self.show_completion_pane = false;
-              if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
-                let (before, after) = self.command.value().split_at(self.command.cursor());
-                let fs = format!("{}{}{}", before.trim_end_matches(&o), r, after);
-                let cursor = self.command.cursor() + r.len() - o.len();
-                self.command.clone().with_value(fs);
-                self.command.clone().with_cursor(cursor);
-              }
-              self.completion_list.unselect();
-            } else if self.error.is_some() {
-              self.previous_mode = Some(self.mode.clone());
-              self.mode = Mode::Tasks(Action::Error);
-            } else {
-              match self.task_log() {
-                Ok(_) => {
-                  self.mode = Mode::Tasks(Action::Report);
-                  self.command_history.add(self.command.value());
-                  self.reset_command();
-                  self.history_status = None;
-                  self.update(true).await?;
-                }
-                Err(e) => {
-                  self.error = Some(e);
-                  self.mode = Mode::Tasks(Action::Error);
-                }
-              }
-            }
-          }
-          KeyCode::Tab => {
-            // | KeyCode::Ctrl('n')
-            if !self.completion_list.is_empty() {
-              self.update_input_for_completion();
-              if !self.show_completion_pane {
-                self.show_completion_pane = true;
-              }
-              self.completion_list.next();
-            }
-          }
-          KeyCode::BackTab => {
-            // | KeyCode::Ctrl('p')
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.previous();
-            }
-          }
-
-          KeyCode::Up => {
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.previous();
-            } else if let Some(s) = self
-              .command_history
-              .history_search(&self.command.value()[..self.command.cursor()], HistoryDirection::Reverse)
-            {
-              let p = std::cmp::min(s.len(), self.command.cursor());
-              self.command.reset();
-              self.command = self.command.clone().with_value(s);
-              self.command = self.command.clone().with_cursor(p);
-              self.history_status = Some(format!(
-                "{} / {}",
-                self
-                  .command_history
-                  .history_index()
-                  .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
-                  .saturating_add(1),
-                self.command_history.history_len()
-              ));
-            }
-          }
-          KeyCode::Down => {
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.next();
-            } else if let Some(s) = self
-              .command_history
-              .history_search(&self.command.value()[..self.command.cursor()], HistoryDirection::Forward)
-            {
-              let p = std::cmp::min(s.len(), self.command.cursor());
-              self.command.reset();
-              self.command = self.command.clone().with_value(s);
-              self.command = self.command.clone().with_cursor(p);
-              self.history_status = Some(format!(
-                "{} / {}",
-                self
-                  .command_history
-                  .history_index()
-                  .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
-                  .saturating_add(1),
-                self.command_history.history_len()
-              ));
-            }
-          }
-          _ => {
-            self.command_history.reset();
-            handle_movement(&mut self.command, input);
-            self.update_input_for_completion();
-          }
-        },
-        Action::Annotate => match input {
-          KeyCode::Esc => {
-            if self.show_completion_pane {
-              self.show_completion_pane = false;
-              self.completion_list.unselect();
-            } else {
-              self.reset_command();
-              self.mode = Mode::Tasks(Action::Report);
-              self.history_status = None;
-            }
-          }
-          KeyCode::Char('\n') => {
-            if self.show_completion_pane {
-              self.show_completion_pane = false;
-              if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
-                let (before, after) = self.command.value().split_at(self.command.cursor());
-                let fs = format!("{}{}{}", before.trim_end_matches(&o), r, after);
-                let cursor = self.command.cursor() + r.len() - o.len();
-                self.command = self.command.clone().with_value(fs);
-                self.command = self.command.clone().with_cursor(cursor);
-              }
-              self.completion_list.unselect();
-            } else if self.error.is_some() {
-              self.previous_mode = Some(self.mode.clone());
-              self.mode = Mode::Tasks(Action::Error);
-            } else {
-              match self.task_annotate() {
-                Ok(_) => {
-                  self.mode = Mode::Tasks(Action::Report);
-                  self.command_history.add(self.command.value());
-                  self.reset_command();
-                  self.history_status = None;
-                  self.update(true).await?;
-                }
-                Err(e) => {
-                  self.error = Some(e);
-                  self.mode = Mode::Tasks(Action::Error);
-                }
-              }
-            }
-          }
-          KeyCode::Tab => {
-            // | KeyCode::Ctrl('n')
-            if !self.completion_list.is_empty() {
-              self.update_input_for_completion();
-              if !self.show_completion_pane {
-                self.show_completion_pane = true;
-              }
-              self.completion_list.next();
-            }
-          }
-          KeyCode::BackTab => {
-            // | KeyCode::Ctrl('p')
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.previous();
-            }
-          }
-          KeyCode::Up => {
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.previous();
-            } else if let Some(s) = self
-              .command_history
-              .history_search(&self.command.value()[..self.command.cursor()], HistoryDirection::Reverse)
-            {
-              let p = std::cmp::min(self.command.cursor(), s.len());
-              self.command.reset();
-              self.command = self.command.clone().with_value(s);
-              self.command = self.command.clone().with_cursor(p);
-              self.history_status = Some(format!(
-                "{} / {}",
-                self
-                  .command_history
-                  .history_index()
-                  .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
-                  .saturating_add(1),
-                self.command_history.history_len()
-              ));
-            }
-          }
-          KeyCode::Down => {
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.next();
-            } else if let Some(s) = self
-              .command_history
-              .history_search(&self.command.value()[..self.command.cursor()], HistoryDirection::Forward)
-            {
-              let p = std::cmp::min(self.command.cursor(), s.len());
-              self.command.reset();
-              self.command = self.command.clone().with_value(s);
-              self.command = self.command.clone().with_cursor(p);
-              self.history_status = Some(format!(
-                "{} / {}",
-                self
-                  .command_history
-                  .history_index()
-                  .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
-                  .saturating_add(1),
-                self.command_history.history_len()
-              ));
-            }
-          }
-
-          _ => {
-            self.command_history.reset();
-            handle_movement(&mut self.command, input);
-            self.update_input_for_completion();
-          }
-        },
-        Action::Jump => match input {
-          KeyCode::Char('\n') => {
-            if self.error.is_some() {
-              self.previous_mode = Some(self.mode.clone());
-              self.mode = Mode::Tasks(Action::Error);
-            } else {
-              match self.task_report_jump() {
-                Ok(_) => {
-                  self.mode = Mode::Tasks(Action::Report);
-                  self.reset_command();
-                  self.update(true).await?;
-                }
-                Err(e) => {
-                  self.reset_command();
-                  self.error = Some(e.to_string());
-                  self.mode = Mode::Tasks(Action::Error);
-                }
-              }
-            }
-          }
-          KeyCode::Esc => {
-            self.reset_command();
-            self.mode = Mode::Tasks(Action::Report);
-          }
-          _ => handle_movement(&mut self.command, input),
-        },
-        Action::Add => match input {
-          KeyCode::Esc => {
-            if self.show_completion_pane {
-              self.show_completion_pane = false;
-              self.completion_list.unselect();
-            } else {
-              self.reset_command();
-              self.history_status = None;
-              self.mode = Mode::Tasks(Action::Report);
-            }
-          }
-          KeyCode::Char('\n') => {
-            if self.show_completion_pane {
-              self.show_completion_pane = false;
-              if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
-                let (before, after) = self.command.value().split_at(self.command.cursor());
-                let fs = format!("{}{}{}", before.trim_end_matches(&o), r, after);
-                let cursor = self.command.cursor() + r.len() - o.len();
-                self.command = self.command.clone().with_value(fs);
-                self.command = self.command.clone().with_cursor(cursor);
-              }
-              self.completion_list.unselect();
-            } else if self.error.is_some() {
-              self.previous_mode = Some(self.mode.clone());
-              self.mode = Mode::Tasks(Action::Error);
-            } else {
-              match self.task_add() {
-                Ok(_) => {
-                  self.mode = Mode::Tasks(Action::Report);
-                  self.command_history.add(self.command.value());
-                  self.reset_command();
-                  self.history_status = None;
-                  self.update(true).await?;
-                }
-                Err(e) => {
-                  self.error = Some(e);
-                  self.mode = Mode::Tasks(Action::Error);
-                }
-              }
-            }
-          }
-          KeyCode::Tab => {
-            //  KeyCode::Ctrl('n')
-            if !self.completion_list.is_empty() {
-              self.update_input_for_completion();
-              if !self.show_completion_pane {
-                self.show_completion_pane = true;
-              }
-              self.completion_list.next();
-            }
-          }
-          KeyCode::BackTab => {
-            // | KeyCode::Ctrl('p')
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.previous();
-            }
-          }
-          KeyCode::Up => {
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.previous();
-            } else if let Some(s) = self
-              .command_history
-              .history_search(&self.command.value()[..self.command.cursor()], HistoryDirection::Reverse)
-            {
-              let p = std::cmp::min(self.command.cursor(), s.len());
-              self.command.reset();
-              self.command = self.command.clone().with_value(s);
-              self.command = self.command.clone().with_cursor(p);
-              self.history_status = Some(format!(
-                "{} / {}",
-                self
-                  .command_history
-                  .history_index()
-                  .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
-                  .saturating_add(1),
-                self.command_history.history_len()
-              ));
-            }
-          }
-
-          KeyCode::Down => {
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.next();
-            } else if let Some(s) = self
-              .command_history
-              .history_search(&self.command.value()[..self.command.cursor()], HistoryDirection::Forward)
-            {
-              let p = std::cmp::min(self.command.cursor(), s.len());
-              self.command.reset();
-              self.command = self.command.clone().with_value(s);
-              self.command = self.command.clone().with_cursor(p);
-              self.history_status = Some(format!(
-                "{} / {}",
-                self
-                  .command_history
-                  .history_index()
-                  .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
-                  .saturating_add(1),
-                self.command_history.history_len()
-              ));
-            }
-          }
-          _ => {
-            self.command_history.reset();
-            handle_movement(&mut self.command, input);
-            self.update_input_for_completion();
-          }
-        },
-        Action::Filter => match input {
-          KeyCode::Esc => {
-            if self.show_completion_pane {
-              self.show_completion_pane = false;
-              self.completion_list.unselect();
-            } else {
-              self.mode = Mode::Tasks(Action::Report);
-              self.filter_history.add(self.filter.value());
-              if self.config.uda_reset_filter_on_esc {
-                self.filter.reset();
-                self.filter = self.filter.clone().with_value(self.config.filter.clone());
-                self.update_input_for_completion();
-                self.dirty = true;
-              }
-              self.history_status = None;
-              self.update(true).await?;
-            }
-          }
-          KeyCode::Char('\n') => {
-            if self.show_completion_pane {
-              self.show_completion_pane = false;
-              if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
-                let (before, after) = self.filter.value().split_at(self.filter.cursor());
-                let fs = format!("{}{}{}", before.trim_end_matches(&o), r, after);
-                let cursor = self.filter.cursor() + r.len() - o.len();
-                self.filter = self.filter.clone().with_value(fs);
-                self.filter = self.filter.clone().with_cursor(cursor);
-              }
-              self.completion_list.unselect();
-              self.dirty = true;
-            } else if self.error.is_some() {
-              self.previous_mode = Some(self.mode.clone());
-              self.mode = Mode::Tasks(Action::Error);
-            } else {
-              self.mode = Mode::Tasks(Action::Report);
-              self.filter_history.add(self.filter.value());
-              self.history_status = None;
-              self.update(true).await?;
-            }
-          }
-          KeyCode::Up => {
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.previous();
-            } else if let Some(s) = self
-              .filter_history
-              .history_search(&self.filter.value()[..self.filter.cursor()], HistoryDirection::Reverse)
-            {
-              let p = std::cmp::min(self.filter.cursor(), s.len());
-              self.filter.reset();
-              self.filter = self.filter.clone().with_value(s);
-              self.filter = self.filter.clone().with_cursor(p);
-              self.history_status = Some(format!(
-                "{} / {}",
-                self
-                  .filter_history
-                  .history_index()
-                  .unwrap_or_else(|| self.filter_history.history_len().saturating_sub(1))
-                  .saturating_add(1),
-                self.filter_history.history_len()
-              ));
-              self.dirty = true;
-            }
-          }
-          KeyCode::Down => {
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.next();
-            } else if let Some(s) = self
-              .filter_history
-              .history_search(&self.filter.value()[..self.filter.cursor()], HistoryDirection::Forward)
-            {
-              let p = std::cmp::min(self.filter.cursor(), s.len());
-              self.filter.reset();
-              self.filter = self.filter.clone().with_value(s);
-              self.filter = self.filter.clone().with_cursor(p);
-              self.history_status = Some(format!(
-                "{} / {}",
-                self
-                  .filter_history
-                  .history_index()
-                  .unwrap_or_else(|| self.filter_history.history_len().saturating_sub(1))
-                  .saturating_add(1),
-                self.filter_history.history_len()
-              ));
-              self.dirty = true;
-            }
-          }
-          KeyCode::Tab => {
-            // | KeyCode::Ctrl('n')
-            if !self.completion_list.is_empty() {
-              self.update_input_for_completion();
-              if !self.show_completion_pane {
-                self.show_completion_pane = true;
-              }
-              self.completion_list.next();
-            }
-          }
-          KeyCode::BackTab => {
-            // | KeyCode::Ctrl('p')
-            if self.show_completion_pane && !self.completion_list.is_empty() {
-              self.completion_list.previous();
-            }
-          }
-          // KeyCode::Ctrl('r') => {
-          //   self.filter.reset();
-          //   self.filter = self.filter.with_value(self.config.filter.clone());
-          //   self.history_status = None;
-          //   self.update_input_for_completion();
-          //   self.dirty = true;
-          // }
-          _ => {
-            handle_movement(&mut self.filter, input);
-            self.update_input_for_completion();
-            self.dirty = true;
-          }
-        },
-        Action::DonePrompt => {
-          if input == self.keyconfig.done || input == KeyCode::Char('\n') {
-            if self.error.is_some() {
-              self.previous_mode = Some(self.mode.clone());
-              self.mode = Mode::Tasks(Action::Error);
-            } else {
-              match self.task_done() {
-                Ok(_) => {
-                  self.mode = Mode::Tasks(Action::Report);
-                  self.update(true).await?;
-                }
-                Err(e) => {
-                  self.error = Some(e);
-                  self.mode = Mode::Tasks(Action::Error);
-                }
-              }
-            }
-          } else if input == self.keyconfig.quit || input == KeyCode::Esc {
-            self.mode = Mode::Tasks(Action::Report);
-          } else {
-            handle_movement(&mut self.command, input);
-          }
-        }
-        Action::DeletePrompt => {
-          if input == self.keyconfig.delete || input == KeyCode::Char('\n') {
-            if self.error.is_some() {
-              self.previous_mode = Some(self.mode.clone());
-              self.mode = Mode::Tasks(Action::Error);
-            } else {
-              match self.task_delete() {
-                Ok(_) => {
-                  self.mode = Mode::Tasks(Action::Report);
-                  self.update(true).await?;
-                }
-                Err(e) => {
-                  self.error = Some(e);
-                  self.mode = Mode::Tasks(Action::Error);
-                }
-              }
-            }
-          } else if input == self.keyconfig.quit || input == KeyCode::Esc {
-            self.mode = Mode::Tasks(Action::Report);
-          } else {
-            handle_movement(&mut self.command, input);
-          }
-        }
-        Action::UndoPrompt => {
-          if input == self.keyconfig.undo || input == KeyCode::Char('\n') {
-            if self.error.is_some() {
-              self.previous_mode = Some(self.mode.clone());
-              self.mode = Mode::Tasks(Action::Error);
-            } else {
-              match self.task_undo() {
-                Ok(_) => {
-                  self.mode = Mode::Tasks(Action::Report);
-                  self.update(true).await?;
-                }
-                Err(e) => {
-                  self.error = Some(e);
-                  self.mode = Mode::Tasks(Action::Error);
-                }
-              }
-            }
-          } else if input == self.keyconfig.quit || input == KeyCode::Esc {
-            self.mode = Mode::Tasks(Action::Report);
-          } else {
-            handle_movement(&mut self.command, input);
-          }
-        }
-        Action::Error => {
-          // since filter live updates, don't reset error status
-          // for other actions, resetting error to None is required otherwise user cannot
-          // ever successfully execute mode.
-          if self.previous_mode != Some(Mode::Tasks(Action::Filter)) {
-            self.error = None;
-          }
-          self.mode = self.previous_mode.clone().unwrap_or(Mode::Tasks(Action::Report));
-          self.previous_mode = None;
-        }
-        _ => {}
       }
+      _ => {}
     }
-    self.update_task_table_state();
     Ok(())
   }
 
