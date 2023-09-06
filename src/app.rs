@@ -57,6 +57,7 @@ use crate::{
   scrollbar::Scrollbar,
   table::{Row, Table, TableMode, TableState},
   task_report::TaskReportTable,
+  trace_dbg,
   tui::{self, Event},
   ui,
   utils::{self, get_data_dir},
@@ -331,7 +332,7 @@ impl TaskwarriorTui {
     tui.enter()?;
 
     let mut events: Vec<KeyEvent> = Vec::new();
-    let mut ticker = 0;
+    // let mut ticker = 0;
 
     loop {
       if self.requires_redraw {
@@ -341,17 +342,13 @@ impl TaskwarriorTui {
       }
       tui.draw(|f| self.draw(f))?;
       if let Some(event) = tui.next().await {
+        trace_dbg!(event);
         let mut maybe_action = match event {
           Event::Quit => Some(Action::Quit),
           Event::Error => Some(Action::Error("Received event error".into())),
           Event::Closed => Some(Action::Quit),
           Event::Tick => {
-            if ticker > 5 {
-              events.clear();
-              ticker = 0;
-            } else {
-              ticker += 1;
-            }
+            events.clear();
             Some(Action::Tick)
           }
           Event::Key(key_event) => {
@@ -374,11 +371,11 @@ impl TaskwarriorTui {
     Ok(())
   }
 
-  pub fn handle_event(&mut self, events: &Vec<KeyEvent>) -> Result<Option<Action>> {
-    Ok(None)
-  }
-
   pub fn update(&mut self, action: Action) -> Result<Option<Action>> {
+    match action {
+      Action::Quit => self.should_quit = true,
+      _ => {}
+    }
     Ok(None)
   }
 
@@ -2396,7 +2393,7 @@ impl TaskwarriorTui {
     es
   }
 
-  pub fn handle_input(&mut self, input: Vec<KeyEvent>) -> Result<()> {
+  pub fn handle_event(&mut self, input: &Vec<KeyEvent>) -> Result<Option<Action>> {
     match self.mode {
       Mode::Projects => {
         ProjectsState::handle_input(self, *input.first().unwrap())?;
@@ -2446,18 +2443,21 @@ impl TaskwarriorTui {
         // }
       }
       _ => {
-        self.handle_input_by_task_mode(input)?;
+        return self.handle_input_by_task_mode(input);
       }
     }
     self.update_task_table_state();
-    Ok(())
+    Ok(None)
   }
 
-  fn handle_input_by_task_mode(&mut self, input: Vec<KeyEvent>) -> Result<Option<Action>> {
+  fn handle_input_by_task_mode(&mut self, input: &Vec<KeyEvent>) -> Result<Option<Action>> {
     match self.mode {
       Mode::TaskReport => {
         if let Some(keymap) = self.config.keymap.get("task-report") {
-          if let Some(action) = keymap.get(&input) {
+          log::info!("Received input: {:?}", &input);
+          log::info!("Action {:?}", keymap.get(input));
+          if let Some(action) = keymap.get(input) {
+            log::info!("Got action: {:?}", &action);
             return Ok(Some(action.clone()));
           }
         }
