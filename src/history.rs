@@ -19,7 +19,8 @@ impl HistoryContext {
   pub fn new(filename: &str, data_path: PathBuf) -> Self {
     let history = DefaultHistory::new();
 
-    std::fs::create_dir_all(&data_path).unwrap_or_else(|_| panic!("Unable to create configuration directory in {:?}", &data_path));
+    std::fs::create_dir_all(&data_path)
+      .unwrap_or_else(|_| panic!("Unable to create configuration directory in {:?}", &data_path));
 
     let data_path = data_path.join(filename);
 
@@ -78,7 +79,9 @@ impl HistoryContext {
     } else {
       let hi = self.history_index().unwrap();
 
-      if hi == self.history.len().saturating_sub(1) && dir == SearchDirection::Forward || hi == 0 && dir == SearchDirection::Reverse {
+      if hi == self.history.len().saturating_sub(1) && dir == SearchDirection::Forward
+        || hi == 0 && dir == SearchDirection::Reverse
+      {
         return None;
       }
 

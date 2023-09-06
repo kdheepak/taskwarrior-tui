@@ -104,7 +104,14 @@ impl ProjectsState {
     let rows = self
       .rows
       .iter()
-      .map(|c| vec![c.name.clone(), c.remaining.to_string(), c.avg_age.to_string(), c.complete.clone()])
+      .map(|c| {
+        vec![
+          c.name.clone(),
+          c.remaining.to_string(),
+          c.avg_age.to_string(),
+          c.complete.clone(),
+        ]
+      })
       .collect();
     let headers = self.columns.clone();
     (rows, headers)
@@ -112,7 +119,9 @@ impl ProjectsState {
 
   pub fn last_line(&self, line: &str) -> bool {
     let words = line.trim().split(' ').map(|s| s.trim()).collect::<Vec<&str>>();
-    return words.len() == 2 && words[0].chars().map(|c| c.is_numeric()).all(|b| b) && (words[1] == "project" || words[1] == "projects");
+    return words.len() == 2
+      && words[0].chars().map(|c| c.is_numeric()).all(|b| b)
+      && (words[1] == "project" || words[1] == "projects");
   }
 
   pub fn update_data(&mut self) -> Result<()> {

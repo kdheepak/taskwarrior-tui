@@ -58,6 +58,7 @@ use crate::{
   table::{Row, Table, TableMode, TableState},
   task_report::TaskReportTable,
   trace_dbg,
+  traits::TaskwarriorTuiTask,
   tui::{self, Event},
   ui,
   utils::{self, get_data_dir},
@@ -255,7 +256,8 @@ impl TaskwarriorTui {
       .output()
       .context("Unable to run `task --version`")?;
 
-    let task_version = Versioning::new(String::from_utf8_lossy(&output.stdout).trim()).ok_or(anyhow!("Unable to get version string"))?;
+    let task_version =
+      Versioning::new(String::from_utf8_lossy(&output.stdout).trim()).ok_or(anyhow!("Unable to get version string"))?;
 
     let (w, h) = crossterm::terminal::size().unwrap_or((50, 15));
 
@@ -372,9 +374,9 @@ impl TaskwarriorTui {
   }
 
   pub fn update(&mut self, action: Action) -> Result<Option<Action>> {
-    match action {
-      Action::Quit => self.should_quit = true,
-      _ => {}
+    if let Action::Quit = action {
+      self.should_quit = true;
+      return Ok(None);
     }
     Ok(None)
   }
@@ -384,7 +386,10 @@ impl TaskwarriorTui {
   }
 
   pub fn get_context(&mut self) -> Result<()> {
-    let output = std::process::Command::new("task").arg("_get").arg("rc.context").output()?;
+    let output = std::process::Command::new("task")
+      .arg("_get")
+      .arg("rc.context")
+      .output()?;
     self.current_context = String::from_utf8_lossy(&output.stdout).to_string();
     self.current_context = self.current_context.strip_suffix('\n').unwrap_or("").to_string();
 
@@ -465,7 +470,8 @@ impl TaskwarriorTui {
     let area = centered_rect(f.size(), 50, 50);
     f.render_widget(Clear, area);
     let t = format!("{}", self.current_selection);
-    let p = Paragraph::new(Text::from(t)).block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded));
+    let p =
+      Paragraph::new(Text::from(t)).block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded));
     f.render_widget(p, area);
   }
 
@@ -557,7 +563,10 @@ impl TaskwarriorTui {
           f,
           rects[1],
           "Press any key to continue.",
-          (Span::styled("Error", Style::default().add_modifier(Modifier::BOLD)), None),
+          (
+            Span::styled("Error", Style::default().add_modifier(Modifier::BOLD)),
+            None,
+          ),
           0,
           false,
           self.error.clone(),
@@ -567,7 +576,12 @@ impl TaskwarriorTui {
         let rect = centered_rect(f.size(), 90, 60);
         f.render_widget(Clear, rect);
         let p = Paragraph::new(Text::from(text))
-          .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).title(title))
+          .block(
+            Block::default()
+              .borders(Borders::ALL)
+              .border_type(BorderType::Rounded)
+              .title(title),
+          )
           .wrap(Wrap { trim: true });
         f.render_widget(p, rect);
         // draw error pop up
@@ -597,7 +611,10 @@ impl TaskwarriorTui {
           f,
           rects[1],
           self.command.value(),
-          (Span::styled("Jump to Task", Style::default().add_modifier(Modifier::BOLD)), None),
+          (
+            Span::styled("Jump to Task", Style::default().add_modifier(Modifier::BOLD)),
+            None,
+          ),
           position,
           true,
           self.error.clone(),
@@ -654,7 +671,10 @@ impl TaskwarriorTui {
           f,
           rects[1],
           self.command.value(),
-          (Span::styled("Shell Command", Style::default().add_modifier(Modifier::BOLD)), None),
+          (
+            Span::styled("Shell Command", Style::default().add_modifier(Modifier::BOLD)),
+            None,
+          ),
           position,
           true,
           self.error.clone(),
@@ -885,7 +905,13 @@ impl TaskwarriorTui {
 
     let area = centered_rect(f.size(), percent_x, percent_y);
 
-    f.render_widget(Clear, area.inner(&Margin { vertical: 0, horizontal: 0 }));
+    f.render_widget(
+      Clear,
+      area.inner(&Margin {
+        vertical: 0,
+        horizontal: 0,
+      }),
+    );
 
     let (contexts, headers) = self.get_all_contexts();
 
@@ -918,7 +944,10 @@ impl TaskwarriorTui {
         Block::default()
           .borders(Borders::ALL)
           .border_type(BorderType::Rounded)
-          .title(Line::from(vec![Span::styled("Context", Style::default().add_modifier(Modifier::BOLD))])),
+          .title(Line::from(vec![Span::styled(
+            "Context",
+            Style::default().add_modifier(Modifier::BOLD),
+          )])),
       )
       .header_style(
         self
@@ -968,7 +997,12 @@ impl TaskwarriorTui {
     rect.height = std::cmp::min(area.height / 2, self.completion_list.len() as u16 + 2);
     rect.width = std::cmp::min(
       area.width / 2,
-      self.completion_list.max_width().unwrap_or(40).try_into().unwrap_or(area.width / 2),
+      self
+        .completion_list
+        .max_width()
+        .unwrap_or(40)
+        .try_into()
+        .unwrap_or(area.width / 2),
     );
     rect.y = rect.y.saturating_sub(rect.height);
     if cursor_position as u16 + rect.width >= area.width {
@@ -994,7 +1028,10 @@ impl TaskwarriorTui {
   ) {
     // f.render_widget(Clear, rect);
     if cursor {
-      f.set_cursor(std::cmp::min(rect.x + position as u16, rect.x + rect.width.saturating_sub(2)), rect.y + 1);
+      f.set_cursor(
+        std::cmp::min(rect.x + position as u16, rect.x + rect.width.saturating_sub(2)),
+        rect.y + 1,
+      );
     }
     let rects = Layout::default()
       .direction(Direction::Vertical)
@@ -1034,7 +1071,9 @@ impl TaskwarriorTui {
       None => "Loading task details ...".to_string(),
     };
     self.task_details_scroll = std::cmp::min(
-      (data.lines().count() as u16).saturating_sub(rect.height).saturating_add(2),
+      (data.lines().count() as u16)
+        .saturating_sub(rect.height)
+        .saturating_add(2),
       self.task_details_scroll,
     );
     let p = Paragraph::new(Text::from(&data[..]))
@@ -1092,7 +1131,12 @@ impl TaskwarriorTui {
     for tag_name in virtual_tag_names_in_precedence.iter().rev() {
       if tag_name == "uda." || tag_name == "priority" {
         if let Some(p) = task.priority() {
-          let s = self.config.color.get(&format!("color.uda.priority.{}", p)).copied().unwrap_or_default();
+          let s = self
+            .config
+            .color
+            .get(&format!("color.uda.priority.{}", p))
+            .copied()
+            .unwrap_or_default();
           style = style.patch(s.0);
         }
       } else if tag_name == "tag." {
@@ -1105,7 +1149,12 @@ impl TaskwarriorTui {
         }
       } else if tag_name == "project." {
         if let Some(p) = task.project() {
-          let s = self.config.color.get(&format!("color.project.{}", p)).copied().unwrap_or_default();
+          let s = self
+            .config
+            .color
+            .get(&format!("color.project.{}", p))
+            .copied()
+            .unwrap_or_default();
           style = style.patch(s.0);
         }
       } else if task
@@ -1151,7 +1200,10 @@ impl TaskwarriorTui {
 
     // now start trimming
     while (widths.iter().sum::<usize>() as u16) >= maximum_column_width - (headers.len()) as u16 {
-      let index = widths.iter().position(|i| i == widths.iter().max().unwrap_or(&0)).unwrap_or_default();
+      let index = widths
+        .iter()
+        .position(|i| i == widths.iter().max().unwrap_or(&0))
+        .unwrap_or_default();
       if widths[index] == 1 {
         break;
       }
@@ -1636,7 +1688,10 @@ impl TaskwarriorTui {
         debug!("Unable to parse output: {:?}", data);
       }
     } else {
-      self.error = Some(format!("Cannot run `{:?}` - ({}) error:\n{}", &task, output.status, error));
+      self.error = Some(format!(
+        "Cannot run `{:?}` - ({}) error:\n{}",
+        &task, output.status, error
+      ));
     }
 
     Ok(())
@@ -1653,7 +1708,9 @@ impl TaskwarriorTui {
       .arg("rc._forcecolor=off");
     // .arg("rc.verbose:override=false");
 
-    if let Some(args) = shlex::split(format!(r#"rc.report.{}.filter='{}'"#, self.report, self.filter.value().trim()).trim()) {
+    if let Some(args) =
+      shlex::split(format!(r#"rc.report.{}.filter='{}'"#, self.report, self.filter.value().trim()).trim())
+    {
       for arg in args {
         task.arg(arg);
       }
@@ -1695,7 +1752,10 @@ impl TaskwarriorTui {
         debug!("Unable to parse output: {:?}", data);
       }
     } else {
-      self.error = Some(format!("Cannot run `{:?}` - ({}) error:\n{}", &task, output.status, error));
+      self.error = Some(format!(
+        "Cannot run `{:?}` - ({}) error:\n{}",
+        &task, output.status, error
+      ));
     }
 
     Ok(())
@@ -1722,7 +1782,11 @@ impl TaskwarriorTui {
   }
 
   pub fn task_subprocess(&mut self) -> Result<(), String> {
-    let task_uuids = if self.tasks.is_empty() { vec![] } else { self.selected_task_uuids() };
+    let task_uuids = if self.tasks.is_empty() {
+      vec![]
+    } else {
+      self.selected_task_uuids()
+    };
 
     let shell = self.command.value();
 
@@ -1745,7 +1809,14 @@ impl TaskwarriorTui {
             Ok(o) => {
               let output = String::from_utf8_lossy(&o.stdout);
               if !output.is_empty() {
-                Err(format!("Shell command `{}` ran successfully but printed the following output:\n\n{}\n\nSuppress output of shell commands to prevent the error prompt from showing up.", shell, output))
+                Err(format!(
+                  r#"Shell command `{}` ran successfully but printed the following output:
+
+                {}
+
+                Suppress output of shell commands to prevent the error prompt from showing up."#,
+                  shell, output
+                ))
               } else {
                 Ok(())
               }
@@ -1781,10 +1852,16 @@ impl TaskwarriorTui {
         let output = command.output();
         match output {
           Ok(_) => Ok(()),
-          Err(_) => Err(format!("Cannot run `task log {}`. Check documentation for more information", shell)),
+          Err(_) => Err(format!(
+            "Cannot run `task log {}`. Check documentation for more information",
+            shell
+          )),
         }
       }
-      None => Err(format!("Unable to run `{:?}`: shlex::split(`{}`) failed.", command, shell)),
+      None => Err(format!(
+        "Unable to run `{:?}`: shlex::split(`{}`) failed.",
+        command, shell
+      )),
     }
   }
 
@@ -1819,7 +1896,11 @@ impl TaskwarriorTui {
   pub fn task_shortcut(&mut self, s: usize) -> Result<(), String> {
     // self.pause_tui().await.unwrap();
 
-    let task_uuids = if self.tasks.is_empty() { vec![] } else { self.selected_task_uuids() };
+    let task_uuids = if self.tasks.is_empty() {
+      vec![]
+    } else {
+      self.selected_task_uuids()
+    };
 
     let shell = &self.config.uda_shortcuts[s];
 
@@ -1831,7 +1912,11 @@ impl TaskwarriorTui {
     let shell = format!(
       "{} {}",
       shell,
-      task_uuids.iter().map(ToString::to_string).collect::<Vec<String>>().join(" ")
+      task_uuids
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<String>>()
+        .join(" ")
     );
 
     let shell = shellexpand::tilde(&shell).into_owned();
@@ -1861,10 +1946,16 @@ impl TaskwarriorTui {
               Err(s) => Err(format!("`{}` failed to wait with output: {}", shell, s)),
             }
           }
-          Err(err) => Err(format!("`{}` failed: Unable to spawn shortcut number {} - Error: {}", shell, s, err)),
+          Err(err) => Err(format!(
+            "`{}` failed: Unable to spawn shortcut number {} - Error: {}",
+            shell, s, err
+          )),
         }
       }
-      None => Err(format!("Unable to run shortcut number {}: shlex::split(`{}`) failed.", s, shell)),
+      None => Err(format!(
+        "Unable to run shortcut number {}: shlex::split(`{}`) failed.",
+        s, shell
+      )),
     };
 
     if task_uuids.len() == 1 {
@@ -1964,7 +2055,11 @@ impl TaskwarriorTui {
           }
           Err(_) => Err(format!(
             "Cannot run `task {} annotate {}`. Check documentation for more information",
-            task_uuids.iter().map(ToString::to_string).collect::<Vec<String>>().join(" "),
+            task_uuids
+              .iter()
+              .map(ToString::to_string)
+              .collect::<Vec<String>>()
+              .join(" "),
             shell
           )),
         }
@@ -2010,12 +2105,17 @@ impl TaskwarriorTui {
           Err(e) => Err(format!("Cannot run `{:?}`: {}", command, e)),
         }
       }
-      None => Err(format!("Unable to run `{:?}`: shlex::split(`{}`) failed.", command, shell)),
+      None => Err(format!(
+        "Unable to run `{:?}`: shlex::split(`{}`) failed.",
+        command, shell
+      )),
     }
   }
 
   pub fn task_virtual_tags(task_uuid: Uuid) -> Result<String, String> {
-    let output = std::process::Command::new("task").arg(format!("{}", task_uuid)).output();
+    let output = std::process::Command::new("task")
+      .arg(format!("{}", task_uuid))
+      .output();
 
     match output {
       Ok(output) => {
@@ -2034,7 +2134,10 @@ impl TaskwarriorTui {
           task_uuid
         ))
       }
-      Err(_) => Err(format!("Cannot run `task {}`. Check documentation for more information", task_uuid)),
+      Err(_) => Err(format!(
+        "Cannot run `task {}`. Check documentation for more information",
+        task_uuid
+      )),
     }
   }
 
@@ -2047,13 +2150,19 @@ impl TaskwarriorTui {
 
     for task_uuid in &task_uuids {
       let mut command = "start";
-      for tag in TaskwarriorTui::task_virtual_tags(*task_uuid).unwrap_or_default().split(' ') {
+      for tag in TaskwarriorTui::task_virtual_tags(*task_uuid)
+        .unwrap_or_default()
+        .split(' ')
+      {
         if tag == "ACTIVE" {
           command = "stop";
         }
       }
 
-      let output = std::process::Command::new("task").arg(task_uuid.to_string()).arg(command).output();
+      let output = std::process::Command::new("task")
+        .arg(task_uuid.to_string())
+        .arg(command)
+        .output();
       if output.is_err() {
         return Err(format!("Error running `task {}` for task `{}`.", command, task_uuid));
       }
@@ -2094,7 +2203,10 @@ impl TaskwarriorTui {
           .output();
 
         if output.is_err() {
-          return Err(format!("Error running `task modify {}` for task `{}`.", tag_to_set, task_uuid,));
+          return Err(format!(
+            "Error running `task modify {}` for task `{}`.",
+            tag_to_set, task_uuid,
+          ));
         }
       }
     }
@@ -2130,7 +2242,11 @@ impl TaskwarriorTui {
       Ok(_) => Ok(()),
       Err(_) => Err(format!(
         "Cannot run `task delete` for tasks `{}`. Check documentation for more information",
-        task_uuids.iter().map(ToString::to_string).collect::<Vec<String>>().join(" ")
+        task_uuids
+          .iter()
+          .map(ToString::to_string)
+          .collect::<Vec<String>>()
+          .join(" ")
       )),
     };
     self.current_selection_uuid = None;
@@ -2158,7 +2274,11 @@ impl TaskwarriorTui {
       Ok(_) => Ok(()),
       Err(_) => Err(format!(
         "Cannot run `task done` for task `{}`. Check documentation for more information",
-        task_uuids.iter().map(ToString::to_string).collect::<Vec<String>>().join(" ")
+        task_uuids
+          .iter()
+          .map(ToString::to_string)
+          .collect::<Vec<String>>()
+          .join(" ")
       )),
     };
     self.current_selection_uuid = None;
@@ -2167,12 +2287,17 @@ impl TaskwarriorTui {
   }
 
   pub fn task_undo(&mut self) -> Result<(), String> {
-    let output = std::process::Command::new("task").arg("rc.confirmation=off").arg("undo").output();
+    let output = std::process::Command::new("task")
+      .arg("rc.confirmation=off")
+      .arg("undo")
+      .output();
 
     match output {
       Ok(output) => {
         let data = String::from_utf8_lossy(&output.stdout);
-        let re = Regex::new(r"(?P<task_uuid>[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})").unwrap();
+        let re =
+          Regex::new(r"(?P<task_uuid>[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})")
+            .unwrap();
         if let Some(caps) = re.captures(&data) {
           if let Ok(uuid) = Uuid::parse_str(&caps["task_uuid"]) {
             self.current_selection_uuid = Some(uuid);
@@ -2195,7 +2320,10 @@ impl TaskwarriorTui {
     let task_id = self.tasks[selected].id().unwrap_or_default();
     let task_uuid = *self.tasks[selected].uuid();
 
-    let r = std::process::Command::new("task").arg(format!("{}", task_uuid)).arg("edit").spawn();
+    let r = std::process::Command::new("task")
+      .arg(format!("{}", task_uuid))
+      .arg("edit")
+      .spawn();
 
     let r = match r {
       Ok(child) => {
@@ -2244,7 +2372,7 @@ impl TaskwarriorTui {
     for l_i in 0..tasks.len() {
       let default_deps = vec![];
       let deps = tasks[l_i].depends().unwrap_or(&default_deps).clone();
-      add_tag(&mut tasks[l_i], "UNBLOCKED".to_string());
+      tasks[l_i].add_tag("UNBLOCKED".to_string());
       for dep in deps {
         for r_i in 0..tasks.len() {
           if tasks[r_i].uuid() == &dep {
@@ -2255,9 +2383,9 @@ impl TaskwarriorTui {
               && r_status != &TaskStatus::Completed
               && r_status != &TaskStatus::Deleted
             {
-              remove_tag(&mut tasks[l_i], "UNBLOCKED");
-              add_tag(&mut tasks[l_i], "BLOCKED".to_string());
-              add_tag(&mut tasks[r_i], "BLOCKING".to_string());
+              tasks[l_i].remove_tag("UNBLOCKED");
+              tasks[l_i].add_tag("BLOCKED".to_string());
+              tasks[r_i].add_tag("BLOCKING".to_string());
             }
             break;
           }
@@ -2269,45 +2397,45 @@ impl TaskwarriorTui {
     // TODO: support all virtual tags that taskwarrior supports
     for task in tasks.iter_mut() {
       match task.status() {
-        TaskStatus::Waiting => add_tag(task, "WAITING".to_string()),
-        TaskStatus::Completed => add_tag(task, "COMPLETED".to_string()),
-        TaskStatus::Pending => add_tag(task, "PENDING".to_string()),
-        TaskStatus::Deleted => add_tag(task, "DELETED".to_string()),
+        TaskStatus::Waiting => task.add_tag("WAITING".to_string()),
+        TaskStatus::Completed => task.add_tag("COMPLETED".to_string()),
+        TaskStatus::Pending => task.add_tag("PENDING".to_string()),
+        TaskStatus::Deleted => task.add_tag("DELETED".to_string()),
         TaskStatus::Recurring => (),
       }
       if task.start().is_some() {
-        add_tag(task, "ACTIVE".to_string());
+        task.add_tag("ACTIVE".to_string());
       }
       if task.scheduled().is_some() {
-        add_tag(task, "SCHEDULED".to_string());
+        task.add_tag("SCHEDULED".to_string());
       }
       if task.parent().is_some() {
-        add_tag(task, "INSTANCE".to_string());
+        task.add_tag("INSTANCE".to_string());
       }
       if task.until().is_some() {
-        add_tag(task, "UNTIL".to_string());
+        task.add_tag("UNTIL".to_string());
       }
       if task.annotations().is_some() {
-        add_tag(task, "ANNOTATED".to_string());
+        task.add_tag("ANNOTATED".to_string());
       }
       let virtual_tags = self.task_report_table.virtual_tags.clone();
       if task.tags().is_some() && task.tags().unwrap().iter().any(|s| !virtual_tags.contains(s)) {
-        add_tag(task, "TAGGED".to_string());
+        task.add_tag("TAGGED".to_string());
       }
       if !task.uda().is_empty() {
-        add_tag(task, "UDA".to_string());
+        task.add_tag("UDA".to_string());
       }
       if task.mask().is_some() {
-        add_tag(task, "TEMPLATE".to_string());
+        task.add_tag("TEMPLATE".to_string());
       }
       if task.project().is_some() {
-        add_tag(task, "PROJECT".to_string());
+        task.add_tag("PROJECT".to_string());
       }
       if task.priority().is_some() {
-        add_tag(task, "PRIORITY".to_string());
+        task.add_tag("PRIORITY".to_string());
       }
       if task.recur().is_some() {
-        add_tag(task, "RECURRING".to_string());
+        task.add_tag("RECURRING".to_string());
         let r = task.recur().unwrap();
       }
       if let Some(d) = task.due() {
@@ -2319,24 +2447,24 @@ impl TaskwarriorTui {
           let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
           let d = d.clone();
           if (reference - chrono::Duration::nanoseconds(1)).month() == now.month() {
-            add_tag(task, "MONTH".to_string());
+            task.add_tag("MONTH".to_string());
           }
           if (reference - chrono::Duration::nanoseconds(1)).month() % 4 == now.month() % 4 {
-            add_tag(task, "QUARTER".to_string());
+            task.add_tag("QUARTER".to_string());
           }
           if reference.year() == now.year() {
-            add_tag(task, "YEAR".to_string());
+            task.add_tag("YEAR".to_string());
           }
           match get_date_state(&d, self.config.due) {
             DateState::EarlierToday | DateState::LaterToday => {
-              add_tag(task, "DUE".to_string());
-              add_tag(task, "TODAY".to_string());
-              add_tag(task, "DUETODAY".to_string());
+              task.add_tag("DUE".to_string());
+              task.add_tag("TODAY".to_string());
+              task.add_tag("DUETODAY".to_string());
             }
             DateState::AfterToday => {
-              add_tag(task, "DUE".to_string());
+              task.add_tag("DUE".to_string());
               if reference.date_naive() == (now + chrono::Duration::days(1)).date_naive() {
-                add_tag(task, "TOMORROW".to_string());
+                task.add_tag("TOMORROW".to_string());
               }
             }
             _ => (),
@@ -2350,7 +2478,7 @@ impl TaskwarriorTui {
           let now = Local::now().naive_utc();
           let d = NaiveDateTime::new(d.date(), d.time());
           if d < now {
-            add_tag(task, "OVERDUE".to_string());
+            task.add_tag("OVERDUE".to_string());
           }
         }
       }
@@ -2528,7 +2656,9 @@ impl TaskwarriorTui {
         if let Some(tags) = task.tags() {
           for tag in tags {
             if !virtual_tags.contains(tag) {
-              self.completion_list.insert(("tag".to_string(), format!("tag:{}", &tag)));
+              self
+                .completion_list
+                .insert(("tag".to_string(), format!("tag:{}", &tag)));
             }
           }
         }
@@ -2554,22 +2684,30 @@ impl TaskwarriorTui {
       }
       for task in tasks {
         if let Some(date) = task.due() {
-          self.completion_list.insert(("due".to_string(), get_formatted_datetime(date)));
+          self
+            .completion_list
+            .insert(("due".to_string(), get_formatted_datetime(date)));
         }
       }
       for task in tasks {
         if let Some(date) = task.wait() {
-          self.completion_list.insert(("wait".to_string(), get_formatted_datetime(date)));
+          self
+            .completion_list
+            .insert(("wait".to_string(), get_formatted_datetime(date)));
         }
       }
       for task in tasks {
         if let Some(date) = task.scheduled() {
-          self.completion_list.insert(("scheduled".to_string(), get_formatted_datetime(date)));
+          self
+            .completion_list
+            .insert(("scheduled".to_string(), get_formatted_datetime(date)));
         }
       }
       for task in tasks {
         if let Some(date) = task.end() {
-          self.completion_list.insert(("end".to_string(), get_formatted_datetime(date)));
+          self
+            .completion_list
+            .insert(("end".to_string(), get_formatted_datetime(date)));
         }
       }
     }
@@ -2600,25 +2738,6 @@ impl TaskwarriorTui {
         self.completion_list.input(input, "".to_string());
       }
       _ => {}
-    }
-  }
-}
-
-pub fn handle_movement(linebuffer: &mut Input, input: KeyEvent) {
-  linebuffer.handle_event(&crossterm::event::Event::Key(input));
-}
-
-pub fn add_tag(task: &mut Task, tag: String) {
-  match task.tags_mut() {
-    Some(t) => t.push(tag),
-    None => task.set_tags(Some(vec![tag])),
-  }
-}
-
-pub fn remove_tag(task: &mut Task, tag: &str) {
-  if let Some(t) = task.tags_mut() {
-    if let Some(index) = t.iter().position(|x| *x == tag) {
-      t.remove(index);
     }
   }
 }

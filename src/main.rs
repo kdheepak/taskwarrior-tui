@@ -18,6 +18,7 @@ mod pane;
 mod scrollbar;
 mod table;
 mod task_report;
+mod traits;
 mod tui;
 mod ui;
 mod utils;
@@ -70,7 +71,10 @@ async fn main() -> Result<()> {
   if let Some(e) = taskrc {
     if env::var("TASKRC").is_err() {
       // if environment variable is not set, this env::var returns an error
-      env::set_var("TASKRC", absolute_path(PathBuf::from(e)).expect("Unable to get path for taskrc"))
+      env::set_var(
+        "TASKRC",
+        absolute_path(PathBuf::from(e)).expect("Unable to get path for taskrc"),
+      )
     } else {
       log::warn!("TASKRC environment variable cannot be set.")
     }
@@ -79,7 +83,10 @@ async fn main() -> Result<()> {
   if let Some(e) = taskdata {
     if env::var("TASKDATA").is_err() {
       // if environment variable is not set, this env::var returns an error
-      env::set_var("TASKDATA", absolute_path(PathBuf::from(e)).expect("Unable to get path for taskdata"))
+      env::set_var(
+        "TASKDATA",
+        absolute_path(PathBuf::from(e)).expect("Unable to get path for taskdata"),
+      )
     } else {
       log::warn!("TASKDATA environment variable cannot be set.")
     }

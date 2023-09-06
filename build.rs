@@ -19,7 +19,10 @@ fn run_pandoc() -> Result<Output, std::io::Error> {
 }
 
 fn get_commit_hash() {
-  let git_output = std::process::Command::new("git").args(["rev-parse", "--git-dir"]).output().ok();
+  let git_output = std::process::Command::new("git")
+    .args(["rev-parse", "--git-dir"])
+    .output()
+    .ok();
   let git_dir = git_output.as_ref().and_then(|output| {
     std::str::from_utf8(&output.stdout)
       .ok()

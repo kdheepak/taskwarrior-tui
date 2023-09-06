@@ -1,4 +1,4 @@
-max_width = 150
+max_width = 120
 tab_spaces = 2
 group_imports = "StdExternalCrate"
 imports_granularity = "Crate"

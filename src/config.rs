@@ -1,3 +1,7 @@
+use std::{collections::HashMap, error::Error, path::PathBuf, str};
+
+use color_eyre::eyre::{eyre, Context, Result};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use figment::{
   providers::{Env, Format, Serialized, Toml},
   Figment,
@@ -6,13 +10,10 @@ use ratatui::{
   style::{Color, Modifier, Style},
   symbols::line::DOUBLE_VERTICAL,
 };
-use std::{collections::HashMap, error::Error, path::PathBuf, str};
-
-use color_eyre::eyre::{eyre, Context, Result};
-
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use serde::de::{self, Deserialize, Deserializer, MapAccess, Visitor};
-use serde::ser::{self, Serialize, Serializer};
+use serde::{
+  de::{self, Deserialize, Deserializer, MapAccess, Visitor},
+  ser::{self, Serialize, Serializer},
+};
 use serde_derive::{Deserialize, Serialize};
 
 use crate::{action::Action, keyevent::parse_key_sequence, keymap::KeyMap, utils::get_config_dir};

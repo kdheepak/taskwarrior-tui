@@ -1,14 +1,21 @@
-use std::ops::{Deref, DerefMut};
-use std::{collections::HashMap, error::Error, str};
+use std::{
+  collections::HashMap,
+  error::Error,
+  ops::{Deref, DerefMut},
+  str,
+};
 
 use color_eyre::eyre::{eyre, Context, Result};
-
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use serde::de::{self, Deserialize, Deserializer, MapAccess, Visitor};
-use serde::ser::{self, Serialize, SerializeMap, Serializer};
+use serde::{
+  de::{self, Deserialize, Deserializer, MapAccess, Visitor},
+  ser::{self, Serialize, SerializeMap, Serializer},
+};
 
-use crate::keyevent::key_event_to_string;
-use crate::{action::Action, keyevent::parse_key_sequence};
+use crate::{
+  action::Action,
+  keyevent::{key_event_to_string, parse_key_sequence},
+};
 
 #[derive(Clone, Debug, Default)]
 pub struct KeyMap(pub std::collections::HashMap<Vec<KeyEvent>, Action>);
@@ -96,7 +103,11 @@ impl<'de> Deserialize<'de> for KeyMap {
 
           if let Some(old_action) = keymap.insert(key_sequence, action.clone()) {
             if old_action != action {
-              return Err(format!("Found a {:?} for both {:?} and {:?}", key_sequence_str, old_action, action)).map_err(de::Error::custom);
+              return Err(format!(
+                "Found a {:?} for both {:?} and {:?}",
+                key_sequence_str, old_action, action
+              ))
+              .map_err(de::Error::custom);
             }
           }
         }
@@ -110,14 +121,21 @@ impl<'de> Deserialize<'de> for KeyMap {
 
 #[cfg(test)]
 mod validate_tests {
-  use super::*;
   use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+
+  use super::*;
 
   #[test]
   fn test_no_conflict() {
     let mut map = std::collections::HashMap::new();
-    map.insert(vec![KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty())], Action::Quit);
-    map.insert(vec![KeyEvent::new(KeyCode::Char('b'), KeyModifiers::empty())], Action::Quit);
+    map.insert(
+      vec![KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty())],
+      Action::Quit,
+    );
+    map.insert(
+      vec![KeyEvent::new(KeyCode::Char('b'), KeyModifiers::empty())],
+      Action::Quit,
+    );
     let keymap = KeyMap(map);
 
     assert!(keymap.validate().is_ok());
@@ -126,7 +144,10 @@ mod validate_tests {
   #[test]
   fn test_conflict_prefix() {
     let mut map = std::collections::HashMap::new();
-    map.insert(vec![KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty())], Action::Quit);
+    map.insert(
+      vec![KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty())],
+      Action::Quit,
+    );
     map.insert(
       vec![
         KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty()),
@@ -142,7 +163,10 @@ mod validate_tests {
   #[test]
   fn test_no_conflict_different_modifiers() {
     let mut map = std::collections::HashMap::new();
-    map.insert(vec![KeyEvent::new(KeyCode::Char('a'), KeyModifiers::CONTROL)], Action::Quit);
+    map.insert(
+      vec![KeyEvent::new(KeyCode::Char('a'), KeyModifiers::CONTROL)],
+      Action::Quit,
+    );
     map.insert(vec![KeyEvent::new(KeyCode::Char('a'), KeyModifiers::ALT)], Action::Quit);
     let keymap = KeyMap(map);
 

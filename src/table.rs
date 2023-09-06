@@ -445,16 +445,18 @@ where
       });
       for (i, row) in self.rows.skip(state.offset).take(remaining).enumerate() {
         let (data, style, symbol) = match row {
-          Row::Data(d) | Row::StyledData(d, _) if Some(i) == state.current_selection().map(|s| s - state.offset) => match state.mode {
-            TableMode::MultipleSelection => {
-              if state.marked.contains(&(i + state.offset)) {
-                (d, highlight_style, mark_highlight_symbol.to_string())
-              } else {
-                (d, highlight_style, unmark_highlight_symbol.to_string())
+          Row::Data(d) | Row::StyledData(d, _) if Some(i) == state.current_selection().map(|s| s - state.offset) => {
+            match state.mode {
+              TableMode::MultipleSelection => {
+                if state.marked.contains(&(i + state.offset)) {
+                  (d, highlight_style, mark_highlight_symbol.to_string())
+                } else {
+                  (d, highlight_style, unmark_highlight_symbol.to_string())
+                }
               }
+              TableMode::SingleSelection => (d, highlight_style, highlight_symbol.to_string()),
             }
-            TableMode::SingleSelection => (d, highlight_style, highlight_symbol.to_string()),
-          },
+          }
           Row::Data(d) => {
             if state.marked.contains(&(i + state.offset)) {
               (d, default_style, mark_symbol.to_string())

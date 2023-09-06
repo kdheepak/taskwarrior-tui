@@ -24,15 +24,22 @@ use directories::ProjectDirs;
 use lazy_static::lazy_static;
 use tracing::error;
 use tracing_error::ErrorLayer;
-use tracing_subscriber::{self, filter::EnvFilter, prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt, Layer};
+use tracing_subscriber::{
+  self, filter::EnvFilter, prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt, Layer,
+};
 
 use crate::tui::Tui;
 
 lazy_static! {
   pub static ref CRATE_NAME: String = env!("CARGO_CRATE_NAME").to_uppercase().to_string();
-  pub static ref DATA_FOLDER: Option<PathBuf> = std::env::var(format!("{}_DATA", CRATE_NAME.clone())).ok().map(PathBuf::from);
-  pub static ref CONFIG_FOLDER: Option<PathBuf> = std::env::var(format!("{}_CONFIG", CRATE_NAME.clone())).ok().map(PathBuf::from);
-  pub static ref GIT_COMMIT_HASH: String = std::env::var(format!("{}_GIT_INFO", CRATE_NAME.clone())).unwrap_or_else(|_| String::from("Unknown"));
+  pub static ref DATA_FOLDER: Option<PathBuf> = std::env::var(format!("{}_DATA", CRATE_NAME.clone()))
+    .ok()
+    .map(PathBuf::from);
+  pub static ref CONFIG_FOLDER: Option<PathBuf> = std::env::var(format!("{}_CONFIG", CRATE_NAME.clone()))
+    .ok()
+    .map(PathBuf::from);
+  pub static ref GIT_COMMIT_HASH: String =
+    std::env::var(format!("{}_GIT_INFO", CRATE_NAME.clone())).unwrap_or_else(|_| String::from("Unknown"));
   pub static ref LOG_FILE: String = format!("{}.log", CRATE_NAME.to_lowercase());
 }
 
@@ -105,15 +112,16 @@ pub fn initialize_logging(directory: PathBuf) -> Result<()> {
     .with(tui_logger::tracing_subscriber_layer())
     .with(ErrorLayer::default())
     .init();
-  let default_level = std::env::var("RUST_LOG").map_or(log::LevelFilter::Info, |val| match val.to_lowercase().as_str() {
-    "off" => log::LevelFilter::Off,
-    "error" => log::LevelFilter::Error,
-    "warn" => log::LevelFilter::Warn,
-    "info" => log::LevelFilter::Info,
-    "debug" => log::LevelFilter::Debug,
-    "trace" => log::LevelFilter::Trace,
-    _ => log::LevelFilter::Info,
-  });
+  let default_level =
+    std::env::var("RUST_LOG").map_or(log::LevelFilter::Info, |val| match val.to_lowercase().as_str() {
+      "off" => log::LevelFilter::Off,
+      "error" => log::LevelFilter::Error,
+      "warn" => log::LevelFilter::Warn,
+      "info" => log::LevelFilter::Info,
+      "debug" => log::LevelFilter::Debug,
+      "trace" => log::LevelFilter::Trace,
+      _ => log::LevelFilter::Info,
+    });
   tui_logger::set_default_level(default_level);
 
   Ok(())

@@ -186,8 +186,9 @@ pub fn key_event_to_string(event: KeyEvent) -> String {
 
 #[cfg(test)]
 mod tests {
-  use super::*;
   use pretty_assertions::assert_eq;
+
+  use super::*;
 
   fn test_event_to_string() {
     let event = KeyEvent::new(KeyCode::Char('a'), KeyModifiers::CONTROL);
@@ -197,7 +198,10 @@ mod tests {
   #[test]
   fn test_single_key_sequence() {
     let result = parse_key_sequence("a");
-    assert_eq!(result.unwrap(), vec![KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty())]);
+    assert_eq!(
+      result.unwrap(),
+      vec![KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty())]
+    );
 
     let result = parse_key_sequence("<a><b>");
     assert_eq!(
@@ -217,11 +221,17 @@ mod tests {
       ]
     );
     let result = parse_key_sequence("<Ctrl-a>");
-    assert_eq!(result.unwrap(), vec![KeyEvent::new(KeyCode::Char('a'), KeyModifiers::CONTROL),]);
+    assert_eq!(
+      result.unwrap(),
+      vec![KeyEvent::new(KeyCode::Char('a'), KeyModifiers::CONTROL),]
+    );
     let result = parse_key_sequence("<Ctrl-Alt-a>");
     assert_eq!(
       result.unwrap(),
-      vec![KeyEvent::new(KeyCode::Char('a'), KeyModifiers::CONTROL | KeyModifiers::ALT),]
+      vec![KeyEvent::new(
+        KeyCode::Char('a'),
+        KeyModifiers::CONTROL | KeyModifiers::ALT
+      ),]
     );
     assert!(parse_key_sequence("Ctrl-a>").is_err());
     assert!(parse_key_sequence("<Ctrl-a").is_err());
@@ -229,11 +239,20 @@ mod tests {
 
   #[test]
   fn test_simple_keys() {
-    assert_eq!(parse_key_event("a").unwrap(), KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty()));
+    assert_eq!(
+      parse_key_event("a").unwrap(),
+      KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty())
+    );
 
-    assert_eq!(parse_key_event("enter").unwrap(), KeyEvent::new(KeyCode::Enter, KeyModifiers::empty()));
+    assert_eq!(
+      parse_key_event("enter").unwrap(),
+      KeyEvent::new(KeyCode::Enter, KeyModifiers::empty())
+    );
 
-    assert_eq!(parse_key_event("esc").unwrap(), KeyEvent::new(KeyCode::Esc, KeyModifiers::empty()));
+    assert_eq!(
+      parse_key_event("esc").unwrap(),
+      KeyEvent::new(KeyCode::Esc, KeyModifiers::empty())
+    );
   }
 
   #[test]
@@ -243,9 +262,15 @@ mod tests {
       KeyEvent::new(KeyCode::Char('a'), KeyModifiers::CONTROL)
     );
 
-    assert_eq!(parse_key_event("alt-enter").unwrap(), KeyEvent::new(KeyCode::Enter, KeyModifiers::ALT));
+    assert_eq!(
+      parse_key_event("alt-enter").unwrap(),
+      KeyEvent::new(KeyCode::Enter, KeyModifiers::ALT)
+    );
 
-    assert_eq!(parse_key_event("shift-esc").unwrap(), KeyEvent::new(KeyCode::Esc, KeyModifiers::SHIFT));
+    assert_eq!(
+      parse_key_event("shift-esc").unwrap(),
+      KeyEvent::new(KeyCode::Esc, KeyModifiers::SHIFT)
+    );
   }
 
   #[test]
@@ -274,6 +299,9 @@ mod tests {
       KeyEvent::new(KeyCode::Char('a'), KeyModifiers::CONTROL)
     );
 
-    assert_eq!(parse_key_event("AlT-eNtEr").unwrap(), KeyEvent::new(KeyCode::Enter, KeyModifiers::ALT));
+    assert_eq!(
+      parse_key_event("AlT-eNtEr").unwrap(),
+      KeyEvent::new(KeyCode::Enter, KeyModifiers::ALT)
+    );
   }
 }
