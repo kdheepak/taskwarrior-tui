@@ -1,4 +1,8 @@
-use std::ops::{Deref, DerefMut};
+
+use std::{
+  ops::{Deref, DerefMut},
+  time::Duration,
+};
 
 use color_eyre::eyre::Result;
 use crossterm::{
@@ -15,14 +19,18 @@ use tokio::{
 };
 use tokio_util::sync::CancellationToken;
 
-pub type CrosstermFrame<'a> = ratatui::Frame<'a, Backend<std::io::Stderr>>;
+pub type Frame<'a> = ratatui::Frame<'a, Backend<std::io::Stderr>>;
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Event {
   Quit,
   Error,
   Closed,
   Tick,
+  Render,
+  FocusGained,
+  FocusLost,
+  Paste(String),
   Key(KeyEvent),
   Mouse(MouseEvent),
   Resize(u16, u16),
@@ -34,36 +42,37 @@ pub struct Tui {
   pub cancellation_token: CancellationToken,
   pub event_rx: UnboundedReceiver<Event>,
   pub event_tx: UnboundedSender<Event>,
-  pub tick_rate: usize,
+  pub tick_rate: (usize, usize),
 }
 
 impl Tui {
-  pub fn new(tick_rate: usize) -> Result<Self> {
+  pub fn new() -> Result<Self> {
+    let tick_rate = (1000, 100);
     let terminal = ratatui::Terminal::new(Backend::new(std::io::stderr()))?;
     let (event_tx, event_rx) = mpsc::unbounded_channel();
     let cancellation_token = CancellationToken::new();
     let task = tokio::spawn(async {});
-    Ok(Self {
-      terminal,
-      task,
-      cancellation_token,
-      event_rx,
-      event_tx,
-      tick_rate,
-    })
+    Ok(Self { terminal, task, cancellation_token, event_rx, event_tx, tick_rate })
+  }
+
+  pub fn tick_rate(&mut self, tick_rate: (usize, usize)) {
+    self.tick_rate = tick_rate;
   }
 
   pub fn start(&mut self) {
-    let tick_rate = std::time::Duration::from_millis(self.tick_rate as u64);
-    self.cancellation_token.cancel();
+    let tick_rate = std::time::Duration::from_millis(self.tick_rate.0 as u64);
+    let render_tick_rate = std::time::Duration::from_millis(self.tick_rate.1 as u64);
+    self.cancel();
     self.cancellation_token = CancellationToken::new();
     let _cancellation_token = self.cancellation_token.clone();
     let _event_tx = self.event_tx.clone();
     self.task = tokio::spawn(async move {
       let mut reader = crossterm::event::EventStream::new();
       let mut interval = tokio::time::interval(tick_rate);
+      let mut render_interval = tokio::time::interval(render_tick_rate);
       loop {
         let delay = interval.tick();
+        let render_delay = render_interval.tick();
         let crossterm_event = reader.next().fuse();
         tokio::select! {
           _ = _cancellation_token.cancelled() => {
@@ -78,10 +87,21 @@ impl Tui {
                       _event_tx.send(Event::Key(key)).unwrap();
                     }
                   },
+                  CrosstermEvent::Mouse(mouse) => {
+                    _event_tx.send(Event::Mouse(mouse)).unwrap();
+                  },
                   CrosstermEvent::Resize(x, y) => {
                     _event_tx.send(Event::Resize(x, y)).unwrap();
                   },
-                  _ => {},
+                  CrosstermEvent::FocusLost => {
+                    _event_tx.send(Event::FocusLost).unwrap();
+                  },
+                  CrosstermEvent::FocusGained => {
+                    _event_tx.send(Event::FocusGained).unwrap();
+                  },
+                  CrosstermEvent::Paste(s) => {
+                    _event_tx.send(Event::Paste(s)).unwrap();
+                  },
                 }
               }
               Some(Err(_)) => {
@@ -93,9 +113,29 @@ impl Tui {
           _ = delay => {
               _event_tx.send(Event::Tick).unwrap();
           },
+          _ = render_delay => {
+              _event_tx.send(Event::Render).unwrap();
+          },
         }
       }
     });
+  }
+
+  pub fn stop(&self) -> Result<()> {
+    self.cancel();
+    let mut counter = 0;
+    while !self.task.is_finished() {
+      std::thread::sleep(Duration::from_millis(1));
+      counter += 1;
+      if counter > 50 {
+        self.task.abort();
+      }
+      if counter > 100 {
+        log::error!("Failed to abort task in 100 milliseconds for unknown reason");
+        return Err(color_eyre::eyre::eyre!("Unable to abort task"));
+      }
+    }
+    Ok(())
   }
 
   pub fn enter(&mut self) -> Result<()> {
@@ -106,10 +146,14 @@ impl Tui {
   }
 
   pub fn exit(&self) -> Result<()> {
+    self.stop()?;
     crossterm::execute!(std::io::stderr(), LeaveAlternateScreen, cursor::Show)?;
     crossterm::terminal::disable_raw_mode()?;
-    self.cancellation_token.cancel();
     Ok(())
+  }
+
+  pub fn cancel(&self) {
+    self.cancellation_token.cancel();
   }
 
   pub fn suspend(&self) -> Result<()> {

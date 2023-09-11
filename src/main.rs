@@ -92,7 +92,7 @@ async fn main() -> Result<()> {
     }
   }
 
-  initialize_logging(data_dir)?;
+  initialize_logging()?;
   initialize_panic_handler()?;
 
   log::info!("getting matches from clap...");

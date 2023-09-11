@@ -330,7 +330,8 @@ impl TaskwarriorTui {
   }
 
   pub async fn run(&mut self) -> Result<()> {
-    let mut tui = tui::Tui::new(self.tick_rate as usize)?;
+    let mut tui = tui::Tui::new()?;
+    tui.tick_rate((self.tick_rate as usize, self.tick_rate as usize));
     tui.enter()?;
 
     let mut events: Vec<KeyEvent> = Vec::new();
@@ -342,9 +343,7 @@ impl TaskwarriorTui {
         tui.resize(s)?;
         self.requires_redraw = false;
       }
-      tui.draw(|f| self.draw(f))?;
       if let Some(event) = tui.next().await {
-        trace_dbg!(event);
         let mut maybe_action = match event {
           Event::Quit => Some(Action::Quit),
           Event::Error => Some(Action::Error("Received event error".into())),
@@ -359,6 +358,13 @@ impl TaskwarriorTui {
           }
           Event::Mouse(_) => None,
           Event::Resize(x, y) => None,
+          Event::Render => {
+            tui.draw(|f| self.draw(f))?;
+            None
+          }
+          Event::FocusGained => None,
+          Event::FocusLost => None,
+          Event::Paste(s) => None,
         };
         while let Some(action) = maybe_action {
           maybe_action = self.update(action)?;
