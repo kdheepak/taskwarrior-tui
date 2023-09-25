@@ -10,22 +10,15 @@ use tui_input::backend::crossterm::EventHandler;
 use uuid::Uuid;
 
 use super::{Component, Frame};
-use crate::{command::Command, config::KeyBindings};
-
-#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum Mode {
-  #[default]
-  TaskReport,
-  TaskContext,
-  Calendar,
-  Error,
-}
+use crate::{
+  command::Command,
+  config::{Config, KeyBindings},
+};
 
 #[derive(Default)]
-pub struct App {
-  pub mode: Mode,
+pub struct TaskReport {
+  pub config: Config,
   pub command_tx: Option<UnboundedSender<Command>>,
-  pub keybindings: KeyBindings,
   pub last_export: Option<std::time::SystemTime>,
   pub report: String,
   pub filter: String,
@@ -33,14 +26,9 @@ pub struct App {
   pub tasks: Vec<Task>,
 }
 
-impl App {
+impl TaskReport {
   pub fn new() -> Self {
     Self::default()
-  }
-
-  pub fn keybindings(mut self, keybindings: KeyBindings) -> Self {
-    self.keybindings = keybindings;
-    self
   }
 
   pub fn refresh(&mut self) -> Result<()> {
@@ -93,39 +81,25 @@ impl App {
       if let Ok(imported) = import(data.as_bytes()) {
         self.tasks = imported;
         log::info!("Imported {} tasks", self.tasks.len());
-        if self.mode == Mode::Error {
-          self.send_command(Command::ShowTaskReport)?;
-        };
-        // } else {
-        //   self.error = Some(format!("Unable to parse output of `{:?}`:\n`{:?}`", task, data));
-        //   self.mode = Mode::Tasks(Action::Error);
-        //   debug!("Unable to parse output: {:?}", data);
+        self.send_command(Command::ShowTaskReport)?;
       }
     } else {
-      // self.error = Some(format!("Cannot run `{:?}` - ({}) error:\n{}", &task, output.status, error));
+      self.send_command(Command::Error(format!("Unable to parse output of `{:?}`:\n`{:?}`", task, data)))?;
     }
 
     Ok(())
   }
 }
 
-impl Component for App {
+impl Component for TaskReport {
   fn register_command_handler(&mut self, tx: UnboundedSender<Command>) -> Result<()> {
     self.command_tx = Some(tx);
     Ok(())
   }
 
-  fn handle_key_events(&mut self, key: KeyEvent) -> Result<Option<Command>> {
-    let command = if let Some(keymap) = self.keybindings.get(&self.mode) {
-      if let Some(command) = keymap.get(&vec![key]) {
-        command
-      } else {
-        return Ok(None);
-      }
-    } else {
-      return Ok(None);
-    };
-    Ok(Some(command.clone()))
+  fn register_config_handler(&mut self, config: Config) -> Result<()> {
+    self.config = config;
+    Ok(())
   }
 
   fn update(&mut self, command: Command) -> Result<Option<Command>> {

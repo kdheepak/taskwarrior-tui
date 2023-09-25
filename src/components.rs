@@ -5,14 +5,19 @@ use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{
   command::Command,
+  config::Config,
   tui::{Event, Frame},
 };
 
-pub mod app;
+pub mod task_report;
 
 pub trait Component {
   #[allow(unused_variables)]
   fn register_command_handler(&mut self, tx: UnboundedSender<Command>) -> Result<()> {
+    Ok(())
+  }
+  #[allow(unused_variables)]
+  fn register_config_handler(&mut self, config: Config) -> Result<()> {
     Ok(())
   }
   fn init(&mut self) -> Result<()> {

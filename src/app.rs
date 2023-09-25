@@ -1,27 +1,38 @@
 use color_eyre::eyre::Result;
+use serde_derive::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 
 use crate::{
   command::Command,
-  components::{app::App, Component},
+  components::{task_report::TaskReport, Component},
   config::Config,
   tui,
 };
 
-pub struct Runner {
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Mode {
+  #[default]
+  TaskReport,
+  TaskContext,
+  Calendar,
+  Error,
+}
+
+pub struct App {
   pub config: Config,
   pub tick_rate: f64,
   pub frame_rate: f64,
   pub components: Vec<Box<dyn Component>>,
   pub should_quit: bool,
   pub should_suspend: bool,
+  pub mode: Mode,
 }
 
-impl Runner {
+impl App {
   pub fn new(tick_rate: f64, frame_rate: f64) -> Result<Self> {
-    let app = App::new();
+    let app = TaskReport::new();
     let config = Config::new()?;
-    let app = app.keybindings(config.keybindings.clone());
+    let mode = Mode::TaskReport;
     Ok(Self {
       tick_rate,
       frame_rate,
@@ -29,6 +40,7 @@ impl Runner {
       should_quit: false,
       should_suspend: false,
       config,
+      mode,
     })
   }
 
@@ -45,6 +57,10 @@ impl Runner {
     }
 
     for component in self.components.iter_mut() {
+      component.register_config_handler(self.config.clone())?;
+    }
+
+    for component in self.components.iter_mut() {
       component.init()?;
     }
 
@@ -55,13 +71,19 @@ impl Runner {
           tui::Event::Tick => command_tx.send(Command::Tick)?,
           tui::Event::Render => command_tx.send(Command::Render)?,
           tui::Event::Resize(x, y) => command_tx.send(Command::Resize(x, y))?,
-          e => {
-            for component in self.components.iter_mut() {
-              if let Some(command) = component.handle_events(Some(e.clone()))? {
-                command_tx.send(command)?;
-              }
-            }
+          tui::Event::Key(key) => {
+            let command = if let Some(keymap) = self.config.keybindings.get(&self.mode) {
+              if let Some(command) = keymap.get(&vec![key]) {
+                command_tx.send(command.clone())?;
+              };
+            };
           },
+          _ => {},
+        }
+        for component in self.components.iter_mut() {
+          if let Some(command) = component.handle_events(Some(e.clone()))? {
+            command_tx.send(command)?;
+          }
         }
       }
 

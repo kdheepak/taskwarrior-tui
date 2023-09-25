@@ -2,11 +2,11 @@
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 
+pub mod app;
 pub mod cli;
 pub mod command;
 pub mod components;
 pub mod config;
-pub mod runner;
 pub mod tui;
 pub mod utils;
 
@@ -15,7 +15,7 @@ use cli::Cli;
 use color_eyre::eyre::Result;
 
 use crate::{
-  runner::Runner,
+  app::App,
   utils::{initialize_logging, initialize_panic_handler, version},
 };
 
@@ -25,7 +25,7 @@ async fn tokio_main() -> Result<()> {
   initialize_panic_handler()?;
 
   let args = Cli::parse();
-  let mut runner = Runner::new(args.tick_rate, args.frame_rate)?;
+  let mut runner = App::new(args.tick_rate, args.frame_rate)?;
   runner.run().await?;
 
   Ok(())

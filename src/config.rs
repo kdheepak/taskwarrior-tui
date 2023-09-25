@@ -7,7 +7,7 @@ use ratatui::style::{Color, Modifier, Style};
 use serde::de::{self, Deserialize, Deserializer, MapAccess, Visitor};
 use serde_derive::Deserialize;
 
-use crate::{command::Command, components::app::Mode};
+use crate::{app::Mode, command::Command};
 
 const CONFIG: &'static str = include_str!("../.config/config.json5");
 
