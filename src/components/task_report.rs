@@ -31,6 +31,11 @@ impl TaskReport {
     Self::default()
   }
 
+  pub fn report(mut self, report: String) -> Self {
+    self.report = report;
+    self
+  }
+
   pub fn refresh(&mut self) -> Result<()> {
     self.last_export = Some(std::time::SystemTime::now());
     Ok(())
@@ -78,10 +83,13 @@ impl TaskReport {
     let error = String::from_utf8_lossy(&output.stderr);
 
     if output.status.success() {
-      if let Ok(imported) = import(data.as_bytes()) {
-        self.tasks = imported;
+      let imported = import(data.as_bytes());
+      if imported.is_ok() {
+        self.tasks = imported?;
         log::info!("Imported {} tasks", self.tasks.len());
         self.send_command(Command::ShowTaskReport)?;
+      } else {
+        imported?;
       }
     } else {
       self.send_command(Command::Error(format!("Unable to parse output of `{:?}`:\n`{:?}`", task, data)))?;
@@ -110,6 +118,20 @@ impl Component for TaskReport {
   }
 
   fn draw(&mut self, f: &mut Frame<'_>, rect: Rect) -> Result<()> {
+    Ok(())
+  }
+}
+
+mod tests {
+  use pretty_assertions::assert_eq;
+
+  use super::*;
+
+  #[test]
+  fn test_export() -> Result<()> {
+    let mut tr = TaskReport::new().report("next".into());
+    tr.task_export()?;
+    assert_eq!(tr.tasks.len(), 33);
     Ok(())
   }
 }

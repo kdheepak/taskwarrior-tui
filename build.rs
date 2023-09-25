@@ -1,4 +1,6 @@
 #![allow(dead_code)]
+#![allow(unused_imports)]
+#![allow(unused_variables)]
 use std::process::{Command, Output};
 
 use clap_complete::{
