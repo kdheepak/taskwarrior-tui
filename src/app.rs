@@ -1,4 +1,5 @@
 use color_eyre::eyre::Result;
+use crossterm::event::KeyEvent;
 use serde_derive::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 
@@ -26,6 +27,7 @@ pub struct App {
   pub should_quit: bool,
   pub should_suspend: bool,
   pub mode: Mode,
+  pub last_tick_key_events: Vec<KeyEvent>,
 }
 
 impl App {
@@ -41,6 +43,7 @@ impl App {
       should_suspend: false,
       config,
       mode,
+      last_tick_key_events: Vec::new(),
     })
   }
 
@@ -72,8 +75,9 @@ impl App {
           tui::Event::Render => command_tx.send(Command::Render)?,
           tui::Event::Resize(x, y) => command_tx.send(Command::Resize(x, y))?,
           tui::Event::Key(key) => {
-            let command = if let Some(keymap) = self.config.keybindings.get(&self.mode) {
-              if let Some(command) = keymap.get(&vec![key]) {
+            self.last_tick_key_events.push(key);
+            if let Some(keymap) = self.config.keybindings.get(&self.mode) {
+              if let Some(command) = keymap.get(&self.last_tick_key_events) {
                 command_tx.send(command.clone())?;
               };
             };
@@ -92,6 +96,9 @@ impl App {
           log::debug!("{command:?}");
         }
         match command {
+          Command::Tick => {
+            self.last_tick_key_events.drain(..);
+          },
           Command::Quit => self.should_quit = true,
           Command::Suspend => self.should_suspend = true,
           Command::Resume => self.should_suspend = false,
