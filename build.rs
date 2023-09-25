@@ -19,14 +19,9 @@ fn run_pandoc() -> Result<Output, std::io::Error> {
 }
 
 fn get_commit_hash() {
-  let git_output = std::process::Command::new("git")
-    .args(["rev-parse", "--git-dir"])
-    .output()
-    .ok();
+  let git_output = std::process::Command::new("git").args(["rev-parse", "--git-dir"]).output().ok();
   let git_dir = git_output.as_ref().and_then(|output| {
-    std::str::from_utf8(&output.stdout)
-      .ok()
-      .and_then(|s| s.strip_suffix('\n').or_else(|| s.strip_suffix("\r\n")))
+    std::str::from_utf8(&output.stdout).ok().and_then(|s| s.strip_suffix('\n').or_else(|| s.strip_suffix("\r\n")))
   });
 
   // Tell cargo to rebuild if the head or any relevant refs change.
@@ -47,13 +42,9 @@ fn get_commit_hash() {
     }
   }
 
-  let git_output = std::process::Command::new("git")
-    .args(["describe", "--always", "--tags", "--long", "--dirty"])
-    .output()
-    .ok();
-  let git_info = git_output
-    .as_ref()
-    .and_then(|output| std::str::from_utf8(&output.stdout).ok().map(str::trim));
+  let git_output =
+    std::process::Command::new("git").args(["describe", "--always", "--tags", "--long", "--dirty"]).output().ok();
+  let git_info = git_output.as_ref().and_then(|output| std::str::from_utf8(&output.stdout).ok().map(str::trim));
   let cargo_pkg_version = env!("CARGO_PKG_VERSION");
 
   // Default git_describe to cargo_pkg_version
@@ -76,14 +67,13 @@ fn get_commit_hash() {
 
 fn main() {
   get_commit_hash();
-  let mut app = generate_cli_app();
-  let name = app.get_name().to_string();
-  let outdir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("completions/");
-  dbg!(&outdir);
-  generate_to(Bash, &mut app, &name, &outdir).unwrap();
-  generate_to(Zsh, &mut app, &name, &outdir).unwrap();
-  generate_to(Fish, &mut app, &name, &outdir).unwrap();
-  generate_to(PowerShell, &mut app, &name, &outdir).unwrap();
+  // let mut app = generate_cli_app();
+  // let name = app.get_name().to_string();
+  // let outdir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("completions/");
+  // generate_to(Bash, &mut app, &name, &outdir).unwrap();
+  // generate_to(Zsh, &mut app, &name, &outdir).unwrap();
+  // generate_to(Fish, &mut app, &name, &outdir).unwrap();
+  // generate_to(PowerShell, &mut app, &name, &outdir).unwrap();
   if run_pandoc().is_err() {
     dbg!("Unable to run pandoc to generate man page documentation");
   }

@@ -1,4 +1,3 @@
-
 use std::{
   ops::{Deref, DerefMut},
   time::Duration,
@@ -23,6 +22,7 @@ pub type Frame<'a> = ratatui::Frame<'a, Backend<std::io::Stderr>>;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Event {
+  Init,
   Quit,
   Error,
   Closed,
@@ -42,36 +42,43 @@ pub struct Tui {
   pub cancellation_token: CancellationToken,
   pub event_rx: UnboundedReceiver<Event>,
   pub event_tx: UnboundedSender<Event>,
-  pub tick_rate: (usize, usize),
+  pub frame_rate: f64,
+  pub tick_rate: f64,
 }
 
 impl Tui {
   pub fn new() -> Result<Self> {
-    let tick_rate = (1000, 100);
+    let tick_rate = 4.0;
+    let frame_rate = 60.0;
     let terminal = ratatui::Terminal::new(Backend::new(std::io::stderr()))?;
     let (event_tx, event_rx) = mpsc::unbounded_channel();
     let cancellation_token = CancellationToken::new();
     let task = tokio::spawn(async {});
-    Ok(Self { terminal, task, cancellation_token, event_rx, event_tx, tick_rate })
+    Ok(Self { terminal, task, cancellation_token, event_rx, event_tx, frame_rate, tick_rate })
   }
 
-  pub fn tick_rate(&mut self, tick_rate: (usize, usize)) {
+  pub fn tick_rate(&mut self, tick_rate: f64) {
     self.tick_rate = tick_rate;
   }
 
+  pub fn frame_rate(&mut self, frame_rate: f64) {
+    self.frame_rate = frame_rate;
+  }
+
   pub fn start(&mut self) {
-    let tick_rate = std::time::Duration::from_millis(self.tick_rate.0 as u64);
-    let render_tick_rate = std::time::Duration::from_millis(self.tick_rate.1 as u64);
+    let tick_delay = std::time::Duration::from_secs_f64(1.0 / self.tick_rate);
+    let render_delay = std::time::Duration::from_secs_f64(1.0 / self.frame_rate);
     self.cancel();
     self.cancellation_token = CancellationToken::new();
     let _cancellation_token = self.cancellation_token.clone();
     let _event_tx = self.event_tx.clone();
     self.task = tokio::spawn(async move {
       let mut reader = crossterm::event::EventStream::new();
-      let mut interval = tokio::time::interval(tick_rate);
-      let mut render_interval = tokio::time::interval(render_tick_rate);
+      let mut tick_interval = tokio::time::interval(tick_delay);
+      let mut render_interval = tokio::time::interval(render_delay);
+      _event_tx.send(Event::Init).unwrap();
       loop {
-        let delay = interval.tick();
+        let tick_delay = tick_interval.tick();
         let render_delay = render_interval.tick();
         let crossterm_event = reader.next().fuse();
         tokio::select! {
@@ -110,7 +117,7 @@ impl Tui {
               None => {},
             }
           },
-          _ = delay => {
+          _ = tick_delay => {
               _event_tx.send(Event::Tick).unwrap();
           },
           _ = render_delay => {
@@ -132,7 +139,7 @@ impl Tui {
       }
       if counter > 100 {
         log::error!("Failed to abort task in 100 milliseconds for unknown reason");
-        return Err(color_eyre::eyre::eyre!("Unable to abort task"));
+        break;
       }
     }
     Ok(())
@@ -145,10 +152,13 @@ impl Tui {
     Ok(())
   }
 
-  pub fn exit(&self) -> Result<()> {
+  pub fn exit(&mut self) -> Result<()> {
     self.stop()?;
-    crossterm::execute!(std::io::stderr(), LeaveAlternateScreen, cursor::Show)?;
-    crossterm::terminal::disable_raw_mode()?;
+    if crossterm::terminal::is_raw_mode_enabled()? {
+      self.flush()?;
+      crossterm::execute!(std::io::stderr(), LeaveAlternateScreen, cursor::Show)?;
+      crossterm::terminal::disable_raw_mode()?;
+    }
     Ok(())
   }
 
@@ -156,7 +166,7 @@ impl Tui {
     self.cancellation_token.cancel();
   }
 
-  pub fn suspend(&self) -> Result<()> {
+  pub fn suspend(&mut self) -> Result<()> {
     self.exit()?;
     #[cfg(not(windows))]
     signal_hook::low_level::raise(signal_hook::consts::signal::SIGTSTP)?;

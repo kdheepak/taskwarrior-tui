@@ -27,6 +27,7 @@ _taskwarrior-tui() {
 '--help[Print help]' \
 '-V[Print version]' \
 '--version[Print version]' \
+'::tick-rate:' \
 && ret=0
 }
 

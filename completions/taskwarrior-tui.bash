@@ -19,7 +19,7 @@ _taskwarrior-tui() {
 
     case "${cmd}" in
         taskwarrior__tui)
-            opts="-d -c -r -h -V --data --config --taskdata --taskrc --report --help --version"
+            opts="-d -c -r -h -V --data --config --taskdata --taskrc --report --help --version [FLOAT]"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
