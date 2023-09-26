@@ -31,8 +31,8 @@ pub struct App {
 }
 
 impl App {
-  pub fn new(tick_rate: f64, frame_rate: f64) -> Result<Self> {
-    let app = TaskReport::new();
+  pub fn new(tick_rate: f64, frame_rate: f64, report: &str) -> Result<Self> {
+    let app = TaskReport::new().report(report.into());
     let config = Config::new()?;
     let mode = Mode::TaskReport;
     Ok(Self {

@@ -9,7 +9,7 @@ use serde_derive::Deserialize;
 
 use crate::{app::Mode, command::Command};
 
-const CONFIG: &'static str = include_str!("../.config/config.json5");
+const CONFIG: &str = include_str!("../.config/config.json5");
 
 #[derive(Clone, Debug, Deserialize, Default)]
 pub struct AppConfig {
@@ -31,7 +31,7 @@ pub struct Config {
 
 impl Config {
   pub fn new() -> Result<Self, config::ConfigError> {
-    let default_config: Config = json5::from_str(&CONFIG).unwrap();
+    let default_config: Config = json5::from_str(CONFIG).unwrap();
     let data_dir = crate::utils::get_data_dir();
     let config_dir = crate::utils::get_config_dir();
     let mut builder = config::Config::builder()
@@ -177,7 +177,7 @@ pub fn key_event_to_string(key_event: &KeyEvent) -> String {
     KeyCode::Delete => "delete",
     KeyCode::Insert => "insert",
     KeyCode::F(c) => {
-      char = format!("f({})", c.to_string());
+      char = format!("f({c})");
       &char
     },
     KeyCode::Char(c) if c == ' ' => "space",
@@ -227,8 +227,8 @@ pub fn parse_key_sequence(raw: &str) -> Result<Vec<KeyEvent>, String> {
     return Err(format!("Unable to parse `{}`", raw));
   }
   let raw = if !raw.contains("><") {
-    let raw = raw.strip_prefix("<").unwrap_or(raw);
-    let raw = raw.strip_prefix(">").unwrap_or(raw);
+    let raw = raw.strip_prefix('<').unwrap_or(raw);
+    let raw = raw.strip_prefix('>').unwrap_or(raw);
     raw
   } else {
     raw
@@ -236,10 +236,10 @@ pub fn parse_key_sequence(raw: &str) -> Result<Vec<KeyEvent>, String> {
   let sequences = raw
     .split("><")
     .map(|seq| {
-      if seq.starts_with('<') {
-        &seq[1..]
-      } else if seq.ends_with('>') {
-        &seq[..seq.len() - 1]
+      if let Some(s) = seq.strip_prefix('<') {
+        s
+      } else if let Some(s) = seq.strip_suffix('>') {
+        s
       } else {
         seq
       }
