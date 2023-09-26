@@ -14,7 +14,7 @@ use uuid::Uuid;
 
 use super::{Component, Frame};
 use crate::{
-  command::Command,
+  action::Action,
   config::{Config, KeyBindings},
 };
 
@@ -90,7 +90,7 @@ pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime, with
 #[derive(Default)]
 pub struct TaskReport {
   pub config: Config,
-  pub command_tx: Option<UnboundedSender<Command>>,
+  pub command_tx: Option<UnboundedSender<Action>>,
   pub last_export: Option<std::time::SystemTime>,
   pub report: String,
   pub filter: String,
@@ -121,7 +121,7 @@ impl TaskReport {
     Ok(())
   }
 
-  pub fn send_command(&self, command: Command) -> Result<()> {
+  pub fn send_action(&self, command: Action) -> Result<()> {
     if let Some(ref tx) = self.command_tx {
       tx.send(command)?;
     }
@@ -480,12 +480,12 @@ impl TaskReport {
       if imported.is_ok() {
         self.tasks = imported?;
         log::info!("Imported {} tasks", self.tasks.len());
-        self.send_command(Command::ShowTaskReport)?;
+        self.send_action(Action::ShowTaskReport)?;
       } else {
         imported?;
       }
     } else {
-      self.send_command(Command::Error(format!("Unable to parse output of `{:?}`:\n`{:?}`", task, data)))?;
+      self.send_action(Action::Error(format!("Unable to parse output of `{:?}`:\n`{:?}`", task, data)))?;
     }
 
     Ok(())
@@ -493,7 +493,7 @@ impl TaskReport {
 }
 
 impl Component for TaskReport {
-  fn register_command_handler(&mut self, tx: UnboundedSender<Command>) -> Result<()> {
+  fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
     self.command_tx = Some(tx);
     Ok(())
   }
@@ -503,9 +503,9 @@ impl Component for TaskReport {
     Ok(())
   }
 
-  fn update(&mut self, command: Command) -> Result<Option<Command>> {
+  fn update(&mut self, command: Action) -> Result<Option<Action>> {
     match command {
-      Command::Tick => {
+      Action::Tick => {
         self.task_export()?;
         self.export_headers()?;
         self.generate_rows()?;

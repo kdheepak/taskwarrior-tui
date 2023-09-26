@@ -4,7 +4,7 @@ use serde_derive::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 
 use crate::{
-  command::Command,
+  action::Action,
   components::{task_report::TaskReport, Component},
   config::Config,
   tui,
@@ -48,7 +48,7 @@ impl App {
   }
 
   pub async fn run(&mut self) -> Result<()> {
-    let (command_tx, mut command_rx) = mpsc::unbounded_channel();
+    let (action_tx, mut action_rx) = mpsc::unbounded_channel();
 
     let mut tui = tui::Tui::new()?;
     tui.tick_rate(self.tick_rate);
@@ -56,7 +56,7 @@ impl App {
     tui.enter()?;
 
     for component in self.components.iter_mut() {
-      component.register_command_handler(command_tx.clone())?;
+      component.register_action_handler(action_tx.clone())?;
     }
 
     for component in self.components.iter_mut() {
@@ -70,44 +70,44 @@ impl App {
     loop {
       if let Some(e) = tui.next().await {
         match e {
-          tui::Event::Quit => command_tx.send(Command::Quit)?,
-          tui::Event::Tick => command_tx.send(Command::Tick)?,
-          tui::Event::Render => command_tx.send(Command::Render)?,
-          tui::Event::Resize(x, y) => command_tx.send(Command::Resize(x, y))?,
+          tui::Event::Quit => action_tx.send(Action::Quit)?,
+          tui::Event::Tick => action_tx.send(Action::Tick)?,
+          tui::Event::Render => action_tx.send(Action::Render)?,
+          tui::Event::Resize(x, y) => action_tx.send(Action::Resize(x, y))?,
           tui::Event::Key(key) => {
             self.last_tick_key_events.push(key);
             if let Some(keymap) = self.config.keybindings.get(&self.mode) {
-              if let Some(command) = keymap.get(&self.last_tick_key_events) {
-                command_tx.send(command.clone())?;
+              if let Some(action) = keymap.get(&self.last_tick_key_events) {
+                action_tx.send(action.clone())?;
               };
             };
           },
           _ => {},
         }
         for component in self.components.iter_mut() {
-          if let Some(command) = component.handle_events(Some(e.clone()))? {
-            command_tx.send(command)?;
+          if let Some(action) = component.handle_events(Some(e.clone()))? {
+            action_tx.send(action)?;
           }
         }
       }
 
-      while let Ok(command) = command_rx.try_recv() {
-        if command != Command::Tick && command != Command::Render {
-          log::debug!("{command:?}");
+      while let Ok(action) = action_rx.try_recv() {
+        if action != Action::Tick && action != Action::Render {
+          log::debug!("{action:?}");
         }
-        match command {
-          Command::Tick => {
+        match action {
+          Action::Tick => {
             self.last_tick_key_events.drain(..);
           },
-          Command::Quit => self.should_quit = true,
-          Command::Suspend => self.should_suspend = true,
-          Command::Resume => self.should_suspend = false,
-          Command::Render => {
+          Action::Quit => self.should_quit = true,
+          Action::Suspend => self.should_suspend = true,
+          Action::Resume => self.should_suspend = false,
+          Action::Render => {
             tui.draw(|f| {
               for component in self.components.iter_mut() {
                 let r = component.draw(f, f.size());
                 if let Err(e) = r {
-                  command_tx.send(Command::Error(format!("Failed to draw: {:?}", e))).unwrap();
+                  action_tx.send(Action::Error(format!("Failed to draw: {:?}", e))).unwrap();
                 }
               }
             })?;
@@ -115,14 +115,14 @@ impl App {
           _ => {},
         }
         for component in self.components.iter_mut() {
-          if let Some(command) = component.update(command.clone())? {
-            command_tx.send(command)?
+          if let Some(action) = component.update(action.clone())? {
+            action_tx.send(action)?
           };
         }
       }
       if self.should_suspend {
         tui.suspend()?;
-        command_tx.send(Command::Resume)?;
+        action_tx.send(Action::Resume)?;
         tui = tui::Tui::new()?;
         tui.tick_rate(self.tick_rate);
         tui.frame_rate(self.frame_rate);

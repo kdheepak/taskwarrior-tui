@@ -2,9 +2,9 @@
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 
+pub mod action;
 pub mod app;
 pub mod cli;
-pub mod command;
 pub mod components;
 pub mod config;
 pub mod tui;

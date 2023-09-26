@@ -7,7 +7,7 @@ use ratatui::style::{Color, Modifier, Style};
 use serde::de::{self, Deserialize, Deserializer, MapAccess, Visitor};
 use serde_derive::Deserialize;
 
-use crate::{app::Mode, command::Command};
+use crate::{action::Action, app::Mode};
 
 const CONFIG: &str = include_str!("../.config/config.json5");
 
@@ -59,14 +59,14 @@ impl Config {
 }
 
 #[derive(Clone, Debug, Default, Deref, DerefMut)]
-pub struct KeyBindings(pub HashMap<Mode, HashMap<Vec<KeyEvent>, Command>>);
+pub struct KeyBindings(pub HashMap<Mode, HashMap<Vec<KeyEvent>, Action>>);
 
 impl<'de> Deserialize<'de> for KeyBindings {
   fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
   where
     D: Deserializer<'de>,
   {
-    let parsed_map = HashMap::<Mode, HashMap<String, Command>>::deserialize(deserializer)?;
+    let parsed_map = HashMap::<Mode, HashMap<String, Action>>::deserialize(deserializer)?;
 
     let keybindings = parsed_map
       .into_iter()
@@ -423,7 +423,7 @@ mod tests {
     let c = Config::new()?;
     assert_eq!(
       c.keybindings.get(&Mode::TaskReport).unwrap().get(&parse_key_sequence("<q>").unwrap_or_default()).unwrap(),
-      &Command::Quit
+      &Action::Quit
     );
     Ok(())
   }
