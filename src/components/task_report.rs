@@ -10,6 +10,7 @@ use task_hookrs::{import::import, task::Task, uda::UDAValue};
 use tokio::sync::mpsc::UnboundedSender;
 use tui_input::backend::crossterm::EventHandler;
 use unicode_truncate::UnicodeTruncateStr;
+use unicode_width::UnicodeWidthStr;
 use uuid::Uuid;
 
 use super::{Component, Frame};
@@ -120,8 +121,6 @@ impl TaskReport {
 
   pub fn generate_rows(&mut self) -> Result<()> {
     self.rows = vec![];
-
-    // get all tasks as their string representation
     for task in self.tasks.iter() {
       if self.columns.is_empty() {
         break;
@@ -467,6 +466,44 @@ impl TaskReport {
     self.state.select(Some(self.current_selection));
     log::info!("{:?}", self.state);
   }
+
+  pub fn calculate_widths(&self, maximum_available_width: u16) -> Vec<usize> {
+    // naive implementation of calculate widths
+    let mut widths = self.labels.iter().map(String::len).collect::<Vec<usize>>();
+    for i in 0..self.labels.len() {
+      let max_width = self.rows.iter().map(|row| row[i].len()).max().unwrap_or(0);
+      if max_width == 0 {
+        widths[i] = 0
+      } else {
+        widths[i] = widths[i].max(max_width);
+      }
+    }
+    for (i, header) in self.labels.iter().enumerate() {
+      if header == "Description" || header == "Definition" {
+        // always give description or definition the most room to breath
+        widths[i] = maximum_available_width as usize;
+        break;
+      }
+    }
+    for (i, header) in self.labels.iter().enumerate() {
+      if i == 0 {
+        // always give ID a couple of extra for indicator
+        widths[i] += self.config.task_report.selection_indicator.as_str().width();
+        // if let TableMode::MultipleSelection = self.task_table_state.mode() {
+        //     widths[i] += 2
+        // };
+      }
+    }
+    // now start trimming
+    while (widths.iter().sum::<usize>() as u16) >= maximum_available_width - (self.labels.len()) as u16 {
+      let index = widths.iter().position(|i| i == widths.iter().max().unwrap_or(&0)).unwrap_or_default();
+      if widths[index] == 1 {
+        break;
+      }
+      widths[index] -= 1;
+    }
+    widths
+  }
 }
 
 impl Component for TaskReport {
@@ -495,34 +532,20 @@ impl Component for TaskReport {
   }
 
   fn draw(&mut self, f: &mut Frame<'_>, rect: Rect) -> Result<()> {
+    let column_spacing = 1;
     if self.rows.len() == 0 {
       f.render_widget(Paragraph::new("No data found").block(Block::new().borders(Borders::all())), rect);
       return Ok(());
     }
-    let mut total_fixed_widths = 0;
-    let mut constraints = Vec::with_capacity(self.rows[0].len());
-
-    for i in 0..self.rows[0].len() {
-      if self.columns[i] == "description" {
-        constraints.push(Constraint::Min(0)); // temporary, will update later
-      } else {
-        let max_width = self.rows.iter().map(|row| row[i].len() as u16).max().unwrap_or(0);
-        total_fixed_widths += max_width + 2; // adding 2 for padding
-        constraints.push(Constraint::Length(max_width + 2));
-      }
-    }
-
-    if let Some(pos) = self.columns.iter().position(|x| x == "description") {
-      let description_width = rect.width.saturating_sub(total_fixed_widths).saturating_sub(4);
-      constraints[pos] = Constraint::Length(description_width);
-    }
+    let widths = self.calculate_widths(rect.width);
+    let constraints: Vec<Constraint> = widths.iter().map(|i| Constraint::Min(*i as u16)).collect();
     let rows = self.rows.iter().map(|row| Row::new(row.clone()));
     let table = Table::new(rows)
-      .header(Row::new(self.columns.clone()))
+      .header(Row::new(self.labels.clone()))
       .widths(&constraints)
-      .block(Block::new().borders(Borders::ALL))
       .highlight_symbol(&self.config.task_report.selection_indicator)
-      .highlight_spacing(HighlightSpacing::Always);
+      .highlight_spacing(HighlightSpacing::Always)
+      .column_spacing(column_spacing);
     f.render_stateful_widget(table, rect, &mut self.state);
 
     Ok(())

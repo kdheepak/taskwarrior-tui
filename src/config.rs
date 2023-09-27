@@ -6,13 +6,14 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use derive_deref::{Deref, DerefMut};
 use ratatui::style::{Color, Modifier, Style};
 use serde::de::{self, Deserialize, Deserializer, MapAccess, Visitor};
-use serde_derive::Deserialize;
+use serde_derive::{Deserialize, Serialize};
+use serde_json::Value as JsonValue;
 
 use crate::{action::Action, app::Mode};
 
 const CONFIG: &str = include_str!("../.config/config.json5");
 
-#[derive(Clone, Debug, Deserialize, Default)]
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct TaskReportConfig {
   #[serde(default)]
   pub looping: bool,
@@ -22,11 +23,33 @@ pub struct TaskReportConfig {
 
 impl Into<Value> for TaskReportConfig {
   fn into(self) -> Value {
-    let mut map = HashMap::new();
-    map.insert("looping".to_string(), Value::from(self.looping));
-    map.insert("selection_indicator".to_string(), Value::from(self.selection_indicator));
+    let json_value = serde_json::to_value(self).unwrap();
+    _convert_json_to_config(json_value)
+  }
+}
 
-    Value::from(map)
+fn _convert_json_to_config(json_value: serde_json::Value) -> config::Value {
+  match json_value {
+    JsonValue::Null => config::Value::new(None, config::ValueKind::Nil),
+    JsonValue::Bool(b) => config::Value::from(b),
+    JsonValue::Number(n) => {
+      if let Some(i) = n.as_i64() {
+        config::Value::from(i)
+      } else if let Some(f) = n.as_f64() {
+        config::Value::from(f)
+      } else {
+        unreachable!()
+      }
+    },
+    JsonValue::String(s) => config::Value::from(s),
+    JsonValue::Array(arr) => {
+      let cv_arr: Vec<_> = arr.into_iter().map(_convert_json_to_config).collect();
+      config::Value::new(None, config::ValueKind::Array(cv_arr))
+    },
+    JsonValue::Object(map) => {
+      let cv_map: HashMap<_, _> = map.into_iter().map(|(k, v)| (k, _convert_json_to_config(v))).collect();
+      config::Value::new(None, config::ValueKind::Table(cv_map))
+    },
   }
 }
 
@@ -60,7 +83,6 @@ impl Config {
       .set_default("_data_dir", data_dir.to_str().unwrap())?
       .set_default("_config_dir", config_dir.to_str().unwrap())?;
 
-    // List of potential configuration files provided by the user
     let config_files = [
       ("config.json5", config::FileFormat::Json5),
       ("config.json", config::FileFormat::Json),
