@@ -18,75 +18,6 @@ use crate::{
   config::{Config, KeyBindings},
 };
 
-pub fn format_date_time(dt: NaiveDateTime) -> String {
-  let dt = Local.from_local_datetime(&dt).unwrap();
-  dt.format("%Y-%m-%d %H:%M:%S").to_string()
-}
-
-pub fn format_date(dt: NaiveDateTime) -> String {
-  let offset = Local.offset_from_utc_datetime(&dt);
-  let dt = DateTime::<Local>::from_naive_utc_and_offset(dt, offset);
-  dt.format("%Y-%m-%d").to_string()
-}
-
-pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime, with_remainder: bool) -> String {
-  let to_dt = Local.from_local_datetime(&to_dt).unwrap();
-  let from_dt = Local.from_local_datetime(&from_dt).unwrap();
-  let mut seconds = (to_dt - from_dt).num_seconds();
-  let minus = if seconds < 0 {
-    seconds *= -1;
-    "-"
-  } else {
-    ""
-  };
-
-  let year = 60 * 60 * 24 * 365;
-  let month = 60 * 60 * 24 * 30;
-  let week = 60 * 60 * 24 * 7;
-  let day = 60 * 60 * 24;
-  let hour = 60 * 60;
-  let minute = 60;
-
-  if seconds >= 60 * 60 * 24 * 365 {
-    return if with_remainder {
-      format!("{}{}y{}mo", minus, seconds / year, (seconds - year * (seconds / year)) / month)
-    } else {
-      format!("{}{}y", minus, seconds / year)
-    };
-  } else if seconds >= 60 * 60 * 24 * 90 {
-    return if with_remainder {
-      format!("{}{}mo{}w", minus, seconds / month, (seconds - month * (seconds / month)) / week)
-    } else {
-      format!("{}{}mo", minus, seconds / month)
-    };
-  } else if seconds >= 60 * 60 * 24 * 14 {
-    return if with_remainder {
-      format!("{}{}w{}d", minus, seconds / week, (seconds - week * (seconds / week)) / day)
-    } else {
-      format!("{}{}w", minus, seconds / week)
-    };
-  } else if seconds >= 60 * 60 * 24 {
-    return if with_remainder {
-      format!("{}{}d{}h", minus, seconds / day, (seconds - day * (seconds / day)) / hour)
-    } else {
-      format!("{}{}d", minus, seconds / day)
-    };
-  } else if seconds >= 60 * 60 {
-    return if with_remainder {
-      format!("{}{}h{}min", minus, seconds / hour, (seconds - hour * (seconds / hour)) / minute)
-    } else {
-      format!("{}{}h", minus, seconds / hour)
-    };
-  } else if seconds >= 60 {
-    return if with_remainder {
-      format!("{}{}min{}s", minus, seconds / minute, (seconds - minute * (seconds / minute)))
-    } else {
-      format!("{}{}min", minus, seconds / minute)
-    };
-  }
-  format!("{}{}s", minus, seconds)
-}
-
 #[derive(Default)]
 pub struct TaskReport {
   pub config: Config,
@@ -97,13 +28,15 @@ pub struct TaskReport {
   pub current_context_filter: String,
   pub tasks: Vec<Task>,
   pub rows: Vec<Vec<String>>,
-  pub headers: Vec<String>,
   pub state: TableState,
   pub columns: Vec<String>,
   pub labels: Vec<String>,
   pub date_time_vague_precise: bool,
   pub virtual_tags: Vec<String>,
   pub description_width: usize,
+  pub current_selection: usize,
+  pub current_selection_id: Option<u64>,
+  pub current_selection_uuid: Option<Uuid>,
 }
 
 impl TaskReport {
@@ -178,9 +111,9 @@ impl TaskReport {
         }
       }
     }
-    let num_labels = self.labels.len();
-    let num_columns = self.columns.len();
-    assert!(num_labels == num_columns, "Must have the same number of labels (currently {}) and columns (currently {}). Compare their values as shown by \"task show report.{}.\" and fix your taskwarrior config.", num_labels, num_columns, &self.report);
+    if self.labels.len() != self.columns.len() {
+      return Err(color_eyre::eyre::eyre!(format!("`{}` expects to have the same number of labels and columns ({} != {}). Compare their values as shown by `task show report.{}.` and fix your taskwarrior config.", env!("CARGO_PKG_NAME"), self.labels.len(), self.columns.len(), &self.report)));
+    }
 
     Ok(())
   }
@@ -470,7 +403,7 @@ impl TaskReport {
 
     task.arg(&self.report);
 
-    log::info!("Running `{:?}`", task);
+    log::debug!("Running `{:?}`", task);
     let output = task.output()?;
     let data = String::from_utf8_lossy(&output.stdout);
     let error = String::from_utf8_lossy(&output.stderr);
@@ -479,7 +412,7 @@ impl TaskReport {
       let imported = import(data.as_bytes());
       if imported.is_ok() {
         self.tasks = imported?;
-        log::info!("Imported {} tasks", self.tasks.len());
+        log::debug!("Imported {} tasks", self.tasks.len());
         self.send_action(Action::ShowTaskReport)?;
       } else {
         imported?;
@@ -489,6 +422,50 @@ impl TaskReport {
     }
 
     Ok(())
+  }
+
+  fn next(&mut self) {
+    if self.tasks.is_empty() {
+      return;
+    }
+    let i = {
+      if self.current_selection >= self.tasks.len() - 1 {
+        if self.config.task_report.looping {
+          0
+        } else {
+          self.current_selection
+        }
+      } else {
+        self.current_selection + 1
+      }
+    };
+    self.current_selection = i;
+    self.current_selection_id = None;
+    self.current_selection_uuid = None;
+    self.state.select(Some(self.current_selection));
+    log::info!("{:?}", self.state);
+  }
+
+  pub fn previous(&mut self) {
+    if self.tasks.is_empty() {
+      return;
+    }
+    let i = {
+      if self.current_selection == 0 {
+        if self.config.task_report.looping {
+          self.tasks.len() - 1
+        } else {
+          0
+        }
+      } else {
+        self.current_selection - 1
+      }
+    };
+    self.current_selection = i;
+    self.current_selection_id = None;
+    self.current_selection_uuid = None;
+    self.state.select(Some(self.current_selection));
+    log::info!("{:?}", self.state);
   }
 }
 
@@ -503,28 +480,122 @@ impl Component for TaskReport {
     Ok(())
   }
 
-  fn update(&mut self, command: Action) -> Result<Option<Action>> {
-    match command {
+  fn update(&mut self, action: Action) -> Result<Option<Action>> {
+    match action {
       Action::Tick => {
         self.task_export()?;
         self.export_headers()?;
         self.generate_rows()?;
       },
+      Action::MoveDown => self.next(),
+      Action::MoveUp => self.previous(),
       _ => {},
     }
     Ok(None)
   }
 
   fn draw(&mut self, f: &mut Frame<'_>, rect: Rect) -> Result<()> {
-    let mut constraints = vec![];
+    if self.rows.len() == 0 {
+      f.render_widget(Paragraph::new("No data found").block(Block::new().borders(Borders::all())), rect);
+      return Ok(());
+    }
+    let mut total_fixed_widths = 0;
+    let mut constraints = Vec::with_capacity(self.rows[0].len());
+
     for i in 0..self.rows[0].len() {
-      constraints.push(Constraint::Percentage(100 / self.rows[0].len() as u16));
+      if self.columns[i] == "description" {
+        constraints.push(Constraint::Min(0)); // temporary, will update later
+      } else {
+        let max_width = self.rows.iter().map(|row| row[i].len() as u16).max().unwrap_or(0);
+        total_fixed_widths += max_width + 2; // adding 2 for padding
+        constraints.push(Constraint::Length(max_width + 2));
+      }
+    }
+
+    if let Some(pos) = self.columns.iter().position(|x| x == "description") {
+      let description_width = rect.width.saturating_sub(total_fixed_widths).saturating_sub(4);
+      constraints[pos] = Constraint::Length(description_width);
     }
     let rows = self.rows.iter().map(|row| Row::new(row.clone()));
-    let table = Table::new(rows).header(Row::new(self.headers.clone())).widths(&constraints);
+    let table = Table::new(rows)
+      .header(Row::new(self.columns.clone()))
+      .widths(&constraints)
+      .block(Block::new().borders(Borders::ALL))
+      .highlight_symbol(&self.config.task_report.selection_indicator)
+      .highlight_spacing(HighlightSpacing::Always);
     f.render_stateful_widget(table, rect, &mut self.state);
+
     Ok(())
   }
+}
+
+pub fn format_date_time(dt: NaiveDateTime) -> String {
+  let dt = Local.from_local_datetime(&dt).unwrap();
+  dt.format("%Y-%m-%d %H:%M:%S").to_string()
+}
+
+pub fn format_date(dt: NaiveDateTime) -> String {
+  let offset = Local.offset_from_utc_datetime(&dt);
+  let dt = DateTime::<Local>::from_naive_utc_and_offset(dt, offset);
+  dt.format("%Y-%m-%d").to_string()
+}
+
+pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime, with_remainder: bool) -> String {
+  let to_dt = Local.from_local_datetime(&to_dt).unwrap();
+  let from_dt = Local.from_local_datetime(&from_dt).unwrap();
+  let mut seconds = (to_dt - from_dt).num_seconds();
+  let minus = if seconds < 0 {
+    seconds *= -1;
+    "-"
+  } else {
+    ""
+  };
+
+  let year = 60 * 60 * 24 * 365;
+  let month = 60 * 60 * 24 * 30;
+  let week = 60 * 60 * 24 * 7;
+  let day = 60 * 60 * 24;
+  let hour = 60 * 60;
+  let minute = 60;
+
+  if seconds >= 60 * 60 * 24 * 365 {
+    return if with_remainder {
+      format!("{}{}y{}mo", minus, seconds / year, (seconds - year * (seconds / year)) / month)
+    } else {
+      format!("{}{}y", minus, seconds / year)
+    };
+  } else if seconds >= 60 * 60 * 24 * 90 {
+    return if with_remainder {
+      format!("{}{}mo{}w", minus, seconds / month, (seconds - month * (seconds / month)) / week)
+    } else {
+      format!("{}{}mo", minus, seconds / month)
+    };
+  } else if seconds >= 60 * 60 * 24 * 14 {
+    return if with_remainder {
+      format!("{}{}w{}d", minus, seconds / week, (seconds - week * (seconds / week)) / day)
+    } else {
+      format!("{}{}w", minus, seconds / week)
+    };
+  } else if seconds >= 60 * 60 * 24 {
+    return if with_remainder {
+      format!("{}{}d{}h", minus, seconds / day, (seconds - day * (seconds / day)) / hour)
+    } else {
+      format!("{}{}d", minus, seconds / day)
+    };
+  } else if seconds >= 60 * 60 {
+    return if with_remainder {
+      format!("{}{}h{}min", minus, seconds / hour, (seconds - hour * (seconds / hour)) / minute)
+    } else {
+      format!("{}{}h", minus, seconds / hour)
+    };
+  } else if seconds >= 60 {
+    return if with_remainder {
+      format!("{}{}min{}s", minus, seconds / minute, (seconds - minute * (seconds / minute)))
+    } else {
+      format!("{}{}min", minus, seconds / minute)
+    };
+  }
+  format!("{}{}s", minus, seconds)
 }
 
 mod tests {

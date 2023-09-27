@@ -1,6 +1,7 @@
 use std::{collections::HashMap, fmt, path::PathBuf};
 
 use color_eyre::eyre::Result;
+use config::Value;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use derive_deref::{Deref, DerefMut};
 use ratatui::style::{Color, Modifier, Style};
@@ -12,6 +13,24 @@ use crate::{action::Action, app::Mode};
 const CONFIG: &str = include_str!("../.config/config.json5");
 
 #[derive(Clone, Debug, Deserialize, Default)]
+pub struct TaskReportConfig {
+  #[serde(default)]
+  pub looping: bool,
+  #[serde(default)]
+  pub selection_indicator: String,
+}
+
+impl Into<Value> for TaskReportConfig {
+  fn into(self) -> Value {
+    let mut map = HashMap::new();
+    map.insert("looping".to_string(), Value::from(self.looping));
+    map.insert("selection_indicator".to_string(), Value::from(self.selection_indicator));
+
+    Value::from(map)
+  }
+}
+
+#[derive(Clone, Debug, Deserialize, Default)]
 pub struct AppConfig {
   #[serde(default)]
   pub _data_dir: PathBuf,
@@ -21,7 +40,9 @@ pub struct AppConfig {
 
 #[derive(Clone, Debug, Default, Deserialize)]
 pub struct Config {
-  #[serde(default, flatten)]
+  #[serde(default)]
+  pub task_report: TaskReportConfig,
+  #[serde(default)]
   pub config: AppConfig,
   #[serde(default)]
   pub keybindings: KeyBindings,
@@ -35,15 +56,23 @@ impl Config {
     let data_dir = crate::utils::get_data_dir();
     let config_dir = crate::utils::get_config_dir();
     let mut builder = config::Config::builder()
+      .set_default("task_report", default_config.task_report)?
       .set_default("_data_dir", data_dir.to_str().unwrap())?
       .set_default("_config_dir", config_dir.to_str().unwrap())?;
 
-    builder = builder
-      .add_source(config::File::from(config_dir.join("config.json5")).format(config::FileFormat::Json5).required(false))
-      .add_source(config::File::from(config_dir.join("config.json")).format(config::FileFormat::Json).required(false))
-      .add_source(config::File::from(config_dir.join("config.yaml")).format(config::FileFormat::Yaml).required(false))
-      .add_source(config::File::from(config_dir.join("config.toml")).format(config::FileFormat::Toml).required(false))
-      .add_source(config::File::from(config_dir.join("config.ini")).format(config::FileFormat::Ini).required(false));
+    // List of potential configuration files provided by the user
+    let config_files = [
+      ("config.json5", config::FileFormat::Json5),
+      ("config.json", config::FileFormat::Json),
+      ("config.yaml", config::FileFormat::Yaml),
+      ("config.toml", config::FileFormat::Toml),
+      ("config.ini", config::FileFormat::Ini),
+    ];
+    for (file, format) in &config_files {
+      if config_dir.join(file).exists() {
+        builder = builder.add_source(config::File::from(config_dir.join(file)).format(*format).required(false));
+      }
+    }
 
     let mut cfg: Self = builder.build()?.try_deserialize()?;
 
@@ -51,6 +80,12 @@ impl Config {
       let user_bindings = cfg.keybindings.entry(*mode).or_default();
       for (key, cmd) in default_bindings.iter() {
         user_bindings.entry(key.clone()).or_insert_with(|| cmd.clone());
+      }
+    }
+    for (mode, default_styles) in default_config.styles.iter() {
+      let user_styles = cfg.styles.entry(*mode).or_default();
+      for (style_key, style) in default_styles.iter() {
+        user_styles.entry(style_key.clone()).or_insert_with(|| style.clone());
       }
     }
 

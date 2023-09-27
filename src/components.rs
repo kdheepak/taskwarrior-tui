@@ -40,7 +40,7 @@ pub trait Component {
     Ok(None)
   }
   #[allow(unused_variables)]
-  fn update(&mut self, command: Action) -> Result<Option<Action>> {
+  fn update(&mut self, action: Action) -> Result<Option<Action>> {
     Ok(None)
   }
   fn draw(&mut self, f: &mut Frame<'_>, rect: Rect) -> Result<()>;

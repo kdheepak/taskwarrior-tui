@@ -33,7 +33,7 @@ pub struct App {
 impl App {
   pub fn new(tick_rate: f64, frame_rate: f64, report: &str) -> Result<Self> {
     let app = TaskReport::new().report(report.into());
-    let config = Config::new()?;
+    let config = Config::new().unwrap();
     let mode = Mode::TaskReport;
     Ok(Self {
       tick_rate,
@@ -75,11 +75,21 @@ impl App {
           tui::Event::Render => action_tx.send(Action::Render)?,
           tui::Event::Resize(x, y) => action_tx.send(Action::Resize(x, y))?,
           tui::Event::Key(key) => {
-            self.last_tick_key_events.push(key);
             if let Some(keymap) = self.config.keybindings.get(&self.mode) {
-              if let Some(action) = keymap.get(&self.last_tick_key_events) {
+              if let Some(action) = keymap.get(&vec![key.clone()]) {
+                log::info!("Got action: {action:?}");
                 action_tx.send(action.clone())?;
-              };
+              } else {
+                // If the key was not handled as a single key action,
+                // then consider it for multi-key combinations.
+                self.last_tick_key_events.push(key);
+
+                // Check for multi-key combinations
+                if let Some(action) = keymap.get(&self.last_tick_key_events) {
+                  log::info!("Got action: {action:?}");
+                  action_tx.send(action.clone())?;
+                }
+              }
             };
           },
           _ => {},
