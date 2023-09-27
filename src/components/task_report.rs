@@ -1,12 +1,12 @@
 use std::{collections::HashMap, time::Duration};
 
-use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
+use chrono::{DateTime, Datelike, Local, NaiveDateTime, TimeZone};
 use color_eyre::eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
 use itertools::Itertools;
 use ratatui::{prelude::*, widgets::*};
 use serde_derive::{Deserialize, Serialize};
-use task_hookrs::{import::import, task::Task, uda::UDAValue};
+use task_hookrs::{import::import, status::TaskStatus, task::Task, uda::UDAValue};
 use tokio::sync::mpsc::UnboundedSender;
 use tui_input::backend::crossterm::EventHandler;
 use unicode_truncate::UnicodeTruncateStr;
@@ -509,35 +509,155 @@ impl TaskReport {
   }
 
   fn style_for_task(&self, task: &Task) -> Style {
-    let virtual_tag_names_in_precedence = &self.config.taskwarrior.rule_precedence_color;
+    let rule_precedence_color = &self.config.taskwarrior.rule_precedence_color;
 
     let mut style = Style::default();
 
-    for tag_name in virtual_tag_names_in_precedence.iter().rev() {
-      if tag_name == "uda." || tag_name == "priority" {
+    for name in rule_precedence_color.iter().rev() {
+      if name == "uda." || name == "priority" {
         if let Some(p) = task.priority() {
           let s = self.config.taskwarrior.color.get(&format!("color.priority.{p}")).copied().unwrap_or_default();
           style = style.patch(s);
         }
-      } else if tag_name == "tag." {
+      } else if name == "tag." {
         if let Some(tags) = task.tags() {
           for t in tags {
             let s = self.config.taskwarrior.color.get(&format!("color.tag.{t}")).copied().unwrap_or_default();
             style = style.patch(s);
           }
         }
-      } else if tag_name == "project." {
+      } else if name == "project." {
         if let Some(p) = task.project() {
           let s = self.config.taskwarrior.color.get(&format!("color.project.{p}")).copied().unwrap_or_default();
           style = style.patch(s);
         }
-      } else if task.tags().unwrap_or(&vec![]).contains(&tag_name.to_string().replace('.', "").to_uppercase()) {
-        let s = self.config.taskwarrior.color.get(&format!("color.{tag_name}")).copied().unwrap_or_default();
+      } else if task.tags().unwrap_or(&vec![]).contains(&name.to_string().replace('.', "").to_uppercase()) {
+        let s = self.config.taskwarrior.color.get(&format!("color.{name}")).copied().unwrap_or_default();
         style = style.patch(s);
       }
     }
 
     style
+  }
+
+  pub fn update_tags(&mut self) {
+    let tasks = &mut self.tasks;
+
+    // dependency scan
+    for l_i in 0..tasks.len() {
+      let default_deps = vec![];
+      let deps = tasks[l_i].depends().unwrap_or(&default_deps).clone();
+      add_tag(&mut tasks[l_i], "UNBLOCKED".to_string());
+      for dep in deps {
+        for r_i in 0..tasks.len() {
+          if tasks[r_i].uuid() == &dep {
+            let l_status = tasks[l_i].status();
+            let r_status = tasks[r_i].status();
+            if l_status != &TaskStatus::Completed
+              && l_status != &TaskStatus::Deleted
+              && r_status != &TaskStatus::Completed
+              && r_status != &TaskStatus::Deleted
+            {
+              remove_tag(&mut tasks[l_i], "UNBLOCKED");
+              add_tag(&mut tasks[l_i], "BLOCKED".to_string());
+              add_tag(&mut tasks[r_i], "BLOCKING".to_string());
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    // other virtual tags
+    // TODO: support all virtual tags that taskwarrior supports
+    for task in tasks.iter_mut() {
+      match task.status() {
+        TaskStatus::Waiting => add_tag(task, "WAITING".to_string()),
+        TaskStatus::Completed => add_tag(task, "COMPLETED".to_string()),
+        TaskStatus::Pending => add_tag(task, "PENDING".to_string()),
+        TaskStatus::Deleted => add_tag(task, "DELETED".to_string()),
+        TaskStatus::Recurring => (),
+      }
+      if task.start().is_some() {
+        add_tag(task, "ACTIVE".to_string());
+      }
+      if task.scheduled().is_some() {
+        add_tag(task, "SCHEDULED".to_string());
+      }
+      if task.parent().is_some() {
+        add_tag(task, "INSTANCE".to_string());
+      }
+      if task.until().is_some() {
+        add_tag(task, "UNTIL".to_string());
+      }
+      if task.annotations().is_some() {
+        add_tag(task, "ANNOTATED".to_string());
+      }
+      let virtual_tags = self.virtual_tags.clone();
+      if task.tags().is_some() && task.tags().unwrap().iter().any(|s| !virtual_tags.contains(s)) {
+        add_tag(task, "TAGGED".to_string());
+      }
+      if !task.uda().is_empty() {
+        add_tag(task, "UDA".to_string());
+      }
+      if task.mask().is_some() {
+        add_tag(task, "TEMPLATE".to_string());
+      }
+      if task.project().is_some() {
+        add_tag(task, "PROJECT".to_string());
+      }
+      if task.priority().is_some() {
+        add_tag(task, "PRIORITY".to_string());
+      }
+      if task.recur().is_some() {
+        add_tag(task, "RECURRING".to_string());
+        let r = task.recur().unwrap();
+      }
+      if let Some(d) = task.due() {
+        let status = task.status();
+        // due today
+        if status != &TaskStatus::Completed && status != &TaskStatus::Deleted {
+          let now = Local::now();
+          let reference = TimeZone::from_utc_datetime(now.offset(), d);
+          let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
+          let d = d.clone();
+          if (reference - chrono::Duration::nanoseconds(1)).month() == now.month() {
+            add_tag(task, "MONTH".to_string());
+          }
+          if (reference - chrono::Duration::nanoseconds(1)).month() % 4 == now.month() % 4 {
+            add_tag(task, "QUARTER".to_string());
+          }
+          if reference.year() == now.year() {
+            add_tag(task, "YEAR".to_string());
+          }
+          match get_date_state(&d, self.config.taskwarrior.due) {
+            DateState::EarlierToday | DateState::LaterToday => {
+              add_tag(task, "DUE".to_string());
+              add_tag(task, "TODAY".to_string());
+              add_tag(task, "DUETODAY".to_string());
+            },
+            DateState::AfterToday => {
+              add_tag(task, "DUE".to_string());
+              if reference.date_naive() == (now + chrono::Duration::days(1)).date_naive() {
+                add_tag(task, "TOMORROW".to_string());
+              }
+            },
+            _ => (),
+          }
+        }
+      }
+      if let Some(d) = task.due() {
+        let status = task.status();
+        // overdue
+        if status != &TaskStatus::Completed && status != &TaskStatus::Deleted && status != &TaskStatus::Recurring {
+          let now = Local::now().naive_utc();
+          let d = NaiveDateTime::new(d.date(), d.time());
+          if d < now {
+            add_tag(task, "OVERDUE".to_string());
+          }
+        }
+      }
+    }
   }
 }
 
@@ -579,7 +699,18 @@ impl Component for TaskReport {
       Row::new(row.clone()).style(style)
     });
     let table = Table::new(rows)
-      .header(Row::new(self.labels.iter().map(|l| Cell::from(l.clone()).underlined())))
+      .header(Row::new(self.labels.iter().map(|l| {
+        Cell::from(l.clone()).style(
+          self
+            .config
+            .taskwarrior
+            .color
+            .get("color.label")
+            .copied()
+            .unwrap_or_default()
+            .add_modifier(Modifier::UNDERLINED),
+        )
+      })))
       .widths(&constraints)
       .highlight_symbol(&self.config.task_report.selection_indicator)
       .highlight_spacing(HighlightSpacing::Always)
@@ -589,9 +720,47 @@ impl Component for TaskReport {
   }
 }
 
+#[derive(Debug)]
+pub enum DateState {
+  BeforeToday,
+  EarlierToday,
+  LaterToday,
+  AfterToday,
+  NotDue,
+}
+
+pub fn get_date_state(reference: &task_hookrs::date::Date, due: usize) -> DateState {
+  let now = Local::now();
+  let reference = TimeZone::from_utc_datetime(now.offset(), reference);
+  let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
+
+  if reference.date_naive() < now.date_naive() {
+    return DateState::BeforeToday;
+  }
+
+  if reference.date_naive() == now.date_naive() {
+    return if reference.time() < now.time() { DateState::EarlierToday } else { DateState::LaterToday };
+  }
+
+  if reference <= now + chrono::Duration::days(7) {
+    DateState::AfterToday
+  } else {
+    DateState::NotDue
+  }
+}
+
 pub fn format_date_time(dt: NaiveDateTime) -> String {
   let dt = Local.from_local_datetime(&dt).unwrap();
   dt.format("%Y-%m-%d %H:%M:%S").to_string()
+}
+
+fn get_offset_hour_minute() -> (&'static str, i32, i32) {
+  let off = Local::now().offset().local_minus_utc();
+  let sym = if off >= 0 { "+" } else { "-" };
+  let off = off.abs();
+  let h = if off > 60 * 60 { off / 60 / 60 } else { 0 };
+  let m = if (off - ((off / 60 / 60) * 60 * 60)) > 60 { (off - ((off / 60 / 60) * 60 * 60)) / 60 } else { 0 };
+  (sym, h, m)
 }
 
 pub fn format_date(dt: NaiveDateTime) -> String {
@@ -656,6 +825,21 @@ pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime, with
     };
   }
   format!("{}{}s", minus, seconds)
+}
+
+pub fn add_tag(task: &mut Task, tag: String) {
+  match task.tags_mut() {
+    Some(t) => t.push(tag),
+    None => task.set_tags(Some(vec![tag])),
+  }
+}
+
+pub fn remove_tag(task: &mut Task, tag: &str) {
+  if let Some(t) = task.tags_mut() {
+    if let Some(index) = t.iter().position(|x| *x == tag) {
+      t.remove(index);
+    }
+  }
 }
 
 mod tests {

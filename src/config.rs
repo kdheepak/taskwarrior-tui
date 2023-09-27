@@ -174,6 +174,7 @@ impl Config {
         };
       }
     }
+    log::info!("{color:?}");
     self.taskwarrior.color = color;
   }
 
