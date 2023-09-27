@@ -42,7 +42,47 @@ pub struct TaskReport {
 
 impl TaskReport {
   pub fn new() -> Self {
-    Self::default()
+    let mut s = Self::default();
+    s.virtual_tags = vec![
+      "PROJECT",
+      "BLOCKED",
+      "UNBLOCKED",
+      "BLOCKING",
+      "DUE",
+      "DUETODAY",
+      "TODAY",
+      "OVERDUE",
+      "WEEK",
+      "MONTH",
+      "QUARTER",
+      "YEAR",
+      "ACTIVE",
+      "SCHEDULED",
+      "PARENT",
+      "CHILD",
+      "UNTIL",
+      "WAITING",
+      "ANNOTATED",
+      "READY",
+      "YESTERDAY",
+      "TOMORROW",
+      "TAGGED",
+      "PENDING",
+      "COMPLETED",
+      "DELETED",
+      "UDA",
+      "ORPHAN",
+      "PRIORITY",
+      "PROJECT",
+      "LATEST",
+      "RECURRING",
+      "INSTANCE",
+      "TEMPLATE",
+    ]
+    .iter()
+    .map(|s| s.to_string())
+    .collect::<Vec<_>>();
+    s
   }
 
   pub fn report(mut self, report: String) -> Self {
@@ -416,6 +456,7 @@ impl TaskReport {
         if highlight_first_element {
           self.state.select(Some(0));
         }
+        self.update_tags();
       } else {
         imported?;
       }
@@ -472,7 +513,7 @@ impl TaskReport {
 
   pub fn calculate_widths(&self, maximum_available_width: u16) -> Vec<usize> {
     // naive implementation of calculate widths
-    let mut widths = self.labels.iter().map(String::len).collect::<Vec<usize>>();
+    let mut widths = self.labels.iter().map(|s| s.len()).collect::<Vec<usize>>();
     for i in 0..self.labels.len() {
       let max_width = self.rows.iter().map(|row| row[i].len()).max().unwrap_or(0);
       if max_width == 0 {
