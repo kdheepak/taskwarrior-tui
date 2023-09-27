@@ -32,7 +32,7 @@ log = "0.4.20"
 path-clean = "1.0.1"
 pretty_assertions = "1.4.0"
 rand = "0.8.5"
-ratatui = { version = "0.23.0", features = ["all-widgets"] }
+ratatui = { version = "0.23.0", features = ["serde", "all-widgets"] }
 regex = "1.9.5"
 rustyline = { version = "12.0.0", features = ["with-file-history", "derive"] }
 serde = { version = "1.0.188", features = ["derive"] }

@@ -504,6 +504,38 @@ impl TaskReport {
     }
     widths
   }
+
+  fn style_for_task(&self, task: &Task) -> Style {
+    let virtual_tag_names_in_precedence = &self.config.taskwarrior.rule_precedence_color;
+
+    let mut style = Style::default();
+
+    for tag_name in virtual_tag_names_in_precedence.iter().rev() {
+      if tag_name == "uda." || tag_name == "priority" {
+        if let Some(p) = task.priority() {
+          let s = self.config.taskwarrior.color.uda_priority.get(p).copied().unwrap_or_default();
+          style = style.patch(s);
+        }
+      } else if tag_name == "tag." {
+        if let Some(tags) = task.tags() {
+          for t in tags {
+            let s = self.config.taskwarrior.color.tag.get(t).copied().unwrap_or_default();
+            style = style.patch(s);
+          }
+        }
+      } else if tag_name == "project." {
+        if let Some(p) = task.project() {
+          let s = self.config.taskwarrior.color.project.get(p).copied().unwrap_or_default();
+          style = style.patch(s);
+        }
+      } else if task.tags().unwrap_or(&vec![]).contains(&tag_name.to_string().replace('.', "").to_uppercase()) {
+        let s = self.config.taskwarrior.color.tag.get(tag_name).copied().unwrap_or_default();
+        style = style.patch(s);
+      }
+    }
+
+    style
+  }
 }
 
 impl Component for TaskReport {
@@ -539,15 +571,17 @@ impl Component for TaskReport {
     }
     let widths = self.calculate_widths(rect.width);
     let constraints: Vec<Constraint> = widths.iter().map(|i| Constraint::Min(*i as u16)).collect();
-    let rows = self.rows.iter().map(|row| Row::new(row.clone()));
+    let rows = self.rows.iter().enumerate().map(|(i, row)| {
+      let style = self.style_for_task(&self.tasks[i]);
+      Row::new(row.clone())
+    });
     let table = Table::new(rows)
-      .header(Row::new(self.labels.clone()))
+      .header(Row::new(self.labels.iter().map(|l| Cell::from(l.clone()).underlined())))
       .widths(&constraints)
       .highlight_symbol(&self.config.task_report.selection_indicator)
       .highlight_spacing(HighlightSpacing::Always)
       .column_spacing(column_spacing);
     f.render_stateful_widget(table, rect, &mut self.state);
-
     Ok(())
   }
 }

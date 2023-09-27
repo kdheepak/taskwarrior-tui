@@ -1285,6 +1285,7 @@ dependencies = [
  "indoc",
  "itertools",
  "paste",
+ "serde",
  "strum",
  "time 0.3.28",
  "unicode-segmentation",
