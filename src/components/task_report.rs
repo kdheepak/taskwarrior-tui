@@ -8,7 +8,7 @@ use ratatui::{prelude::*, widgets::*};
 use serde_derive::{Deserialize, Serialize};
 use task_hookrs::{import::import, status::TaskStatus, task::Task, uda::UDAValue};
 use tokio::sync::mpsc::UnboundedSender;
-use tui_input::backend::crossterm::EventHandler;
+use tui_input::{backend::crossterm::EventHandler, Input};
 use unicode_truncate::UnicodeTruncateStr;
 use unicode_width::UnicodeWidthStr;
 use uuid::Uuid;
@@ -56,25 +56,48 @@ const VIRTUAL_TAGS: [&str; 34] = [
 ];
 
 #[derive(Default)]
+pub enum Mode {
+  #[default]
+  Report,
+  Filter,
+  Add,
+  Annotate,
+  Subprocess,
+  Log,
+  Modify,
+  HelpPopup,
+  ContextMenu,
+  Jump,
+  DeletePrompt,
+  UndoPrompt,
+  DonePrompt,
+  Error,
+}
+
+#[derive(Default)]
 pub struct TaskReport {
-  pub config: Config,
-  pub command_tx: Option<UnboundedSender<Action>>,
-  pub last_export: Option<std::time::SystemTime>,
-  pub report: String,
-  pub filter: String,
-  pub current_context_filter: String,
-  pub tasks: Vec<Task>,
-  pub rows: Vec<Vec<String>>,
-  pub row_heights: Vec<u16>,
-  pub state: TableState,
   pub columns: Vec<String>,
-  pub labels: Vec<String>,
-  pub date_time_vague_precise: bool,
-  pub virtual_tags: Vec<String>,
-  pub description_width: usize,
+  pub command_tx: Option<UnboundedSender<Action>>,
+  pub config: Config,
+  pub current_context: String,
+  pub current_context_filter: String,
+  pub current_filter: String,
   pub current_selection: usize,
   pub current_selection_id: Option<u64>,
   pub current_selection_uuid: Option<Uuid>,
+  pub date_time_vague_precise: bool,
+  pub description_width: usize,
+  pub input: Input,
+  pub labels: Vec<String>,
+  pub last_export: Option<std::time::SystemTime>,
+  pub report: String,
+  pub row_heights: Vec<u16>,
+  pub rows: Vec<Vec<String>>,
+  pub state: TableState,
+  pub task_details: HashMap<Uuid, String>,
+  pub tasks: Vec<Task>,
+  pub virtual_tags: Vec<String>,
+  pub mode: Mode,
 }
 
 impl TaskReport {
@@ -432,6 +455,29 @@ impl TaskReport {
     }
   }
 
+  pub fn get_context(&mut self) -> Result<()> {
+    let output = std::process::Command::new("task").arg("_get").arg("rc.context").output()?;
+    self.current_context = String::from_utf8_lossy(&output.stdout).to_string();
+    self.current_context = self.current_context.strip_suffix('\n').unwrap_or("").to_string();
+
+    // support new format for context
+    let output = std::process::Command::new("task")
+      .arg("_get")
+      .arg(format!("rc.context.{}.read", self.current_context))
+      .output()?;
+    self.current_context_filter = String::from_utf8_lossy(&output.stdout).to_string();
+    self.current_context_filter = self.current_context_filter.strip_suffix('\n').unwrap_or("").to_string();
+
+    // If new format is not used, check if old format is used
+    if self.current_context_filter.is_empty() {
+      let output =
+        std::process::Command::new("task").arg("_get").arg(format!("rc.context.{}", self.current_context)).output()?;
+      self.current_context_filter = String::from_utf8_lossy(&output.stdout).to_string();
+      self.current_context_filter = self.current_context_filter.strip_suffix('\n').unwrap_or("").to_string();
+    }
+    Ok(())
+  }
+
   pub fn task_export(&mut self) -> Result<()> {
     let mut task = std::process::Command::new("task");
 
@@ -443,7 +489,9 @@ impl TaskReport {
       .arg("rc._forcecolor=off");
     // .arg("rc.verbose:override=false");
 
-    if let Some(args) = shlex::split(format!(r#"rc.report.{}.filter='{}'"#, self.report, self.filter.trim()).trim()) {
+    if let Some(args) =
+      shlex::split(format!(r#"rc.report.{}.filter='{}'"#, self.report, self.current_filter.trim()).trim())
+    {
       for arg in args {
         task.arg(arg);
       }

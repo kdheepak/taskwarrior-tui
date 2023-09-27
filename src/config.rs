@@ -15,18 +15,133 @@ const CONFIG: &str = include_str!("../.config/config.json5");
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct TaskwarriorConfig {
-  #[serde(default)]
   pub rule_precedence_color: Vec<String>,
-  #[serde(default)]
   pub uda_priority_values: Vec<String>,
-  #[serde(default)]
   pub weekstart: bool,
-  #[serde(default)]
   pub due: usize,
-  #[serde(default)]
   pub color: HashMap<String, Style>,
-  #[serde(default)]
   pub data_location: String,
+  pub filter: String,
+}
+
+impl TaskwarriorConfig {
+  pub fn taskwarrior_config(&mut self, report: &str) -> Result<()> {
+    let output = std::process::Command::new("task")
+      .arg("rc.color=off")
+      .arg("rc._forcecolor=off")
+      .arg("rc.defaultwidth=0")
+      .arg("show")
+      .output()?;
+
+    if !output.status.success() {
+      let output = std::process::Command::new("task").arg("diagnostics").output()?;
+      return Err(color_eyre::eyre::eyre!(
+        "Unable to run `task show`.\n{}\n{}\nPlease check your configuration or open a issue on github.",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+      ));
+    }
+
+    let data = String::from_utf8_lossy(&output.stdout);
+
+    self.rule_precedence_color(&data);
+    self.uda_priority_values(&data);
+    self.weekstart(&data);
+    self.due(&data);
+    self.data_location(&data);
+    self.color(&data);
+    self.filter(&data, &report);
+    Ok(())
+  }
+
+  fn color(&mut self, data: &str) {
+    let mut color = HashMap::new();
+    for line in data.split('\n') {
+      if line.starts_with("color.") {
+        let mut i = line.split(' ');
+        let attribute = i.next();
+        let line = i.collect::<Vec<_>>().join(" ");
+        let line = line.trim_start_matches(' ');
+        let style = parse_style(line);
+        if let Some(attr) = attribute {
+          color.insert(attr.to_string(), style);
+        };
+      }
+    }
+    log::info!("{color:?}");
+    self.color = color;
+  }
+
+  fn filter(&mut self, data: &str, report: &str) {
+    let filter = if report == "all" {
+      "".into()
+    } else if let Some(s) =
+      // TODO: move this to configuration struct
+      Self::try_get_config(format!("uda.taskwarrior-tui.task-report.{}.filter", report).as_str(), data)
+    {
+      s
+    } else {
+      Self::get_config(format!("report.{}.filter", report).as_str(), data).unwrap_or_default()
+    };
+    let filter = if filter.trim_start().trim_end().is_empty() { filter } else { format!("{} ", filter) };
+    self.filter = filter;
+  }
+
+  fn data_location(&mut self, data: &str) {
+    self.data_location = Self::get_config("data.location", data).unwrap();
+  }
+
+  fn rule_precedence_color(&mut self, data: &str) {
+    let data = Self::get_config("rule.precedence.color", data).unwrap();
+    self.rule_precedence_color = data.split(',').map(ToString::to_string).collect::<Vec<_>>();
+  }
+
+  fn weekstart(&mut self, data: &str) {
+    let data = Self::try_get_config("weekstart", data).unwrap_or_default();
+    self.weekstart = data.eq_ignore_ascii_case("Monday");
+  }
+
+  fn due(&mut self, data: &str) {
+    self.due = Self::try_get_config("due", data).unwrap_or_default().parse::<usize>().unwrap_or(7)
+  }
+
+  fn uda_priority_values(&mut self, data: &str) {
+    let data = Self::get_config("uda.priority.values", data).unwrap();
+    self.uda_priority_values = data.split(',').map(ToString::to_string).collect::<Vec<_>>();
+  }
+
+  fn get_config(config: &str, data: &str) -> Result<String> {
+    Self::try_get_config(config, data).ok_or(color_eyre::eyre::eyre!("Unable to parse `task show {config}`"))
+  }
+
+  fn try_get_config(config: &str, data: &str) -> Option<String> {
+    let mut config_lines = Vec::new();
+
+    for line in data.split('\n') {
+      if config_lines.is_empty() {
+        if line.starts_with(config) {
+          config_lines.push(line.trim_start_matches(config).trim_start().trim_end().to_string());
+        } else {
+          let config = &config.replace('-', "_");
+          if line.starts_with(config) {
+            config_lines.push(line.trim_start_matches(config).trim_start().trim_end().to_string());
+          }
+        }
+      } else {
+        if !line.starts_with("   ") {
+          return Some(config_lines.join(" "));
+        }
+
+        config_lines.push(line.trim_start().trim_end().to_string());
+      }
+    }
+
+    if !config_lines.is_empty() {
+      return Some(config_lines.join(" "));
+    }
+
+    None
+  }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
@@ -131,108 +246,6 @@ impl Config {
 
     Ok(cfg)
   }
-
-  pub fn taskwarrior_config(&mut self) -> Result<()> {
-    let output = std::process::Command::new("task")
-      .arg("rc.color=off")
-      .arg("rc._forcecolor=off")
-      .arg("rc.defaultwidth=0")
-      .arg("show")
-      .output()?;
-
-    if !output.status.success() {
-      let output = std::process::Command::new("task").arg("diagnostics").output()?;
-      return Err(color_eyre::eyre::eyre!(
-        "Unable to run `task show`.\n{}\n{}\nPlease check your configuration or open a issue on github.",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-      ));
-    }
-
-    let data = String::from_utf8_lossy(&output.stdout);
-
-    self.rule_precedence_color(&data);
-    self.uda_priority_values(&data);
-    self.weekstart(&data);
-    self.due(&data);
-    self.data_location(&data);
-    self.color(&data);
-    Ok(())
-  }
-
-  fn color(&mut self, data: &str) {
-    let mut color = HashMap::new();
-    for line in data.split('\n') {
-      if line.starts_with("color.") {
-        let mut i = line.split(' ');
-        let attribute = i.next();
-        let line = i.collect::<Vec<_>>().join(" ");
-        let line = line.trim_start_matches(' ');
-        let style = parse_style(line);
-        if let Some(attr) = attribute {
-          color.insert(attr.to_string(), style);
-        };
-      }
-    }
-    log::info!("{color:?}");
-    self.taskwarrior.color = color;
-  }
-
-  fn data_location(&mut self, data: &str) {
-    self.taskwarrior.data_location = get_config("data.location", data).unwrap();
-  }
-
-  fn rule_precedence_color(&mut self, data: &str) {
-    let data = get_config("rule.precedence.color", data).unwrap();
-    self.taskwarrior.rule_precedence_color = data.split(',').map(ToString::to_string).collect::<Vec<_>>();
-  }
-
-  fn weekstart(&mut self, data: &str) {
-    let data = try_get_config("weekstart", data).unwrap_or_default();
-    self.taskwarrior.weekstart = data.eq_ignore_ascii_case("Monday");
-  }
-
-  fn due(&mut self, data: &str) {
-    self.taskwarrior.due = try_get_config("due", data).unwrap_or_default().parse::<usize>().unwrap_or(7)
-  }
-
-  fn uda_priority_values(&mut self, data: &str) {
-    let data = get_config("uda.priority.values", data).unwrap();
-    self.taskwarrior.uda_priority_values = data.split(',').map(ToString::to_string).collect::<Vec<_>>();
-  }
-}
-
-fn get_config(config: &str, data: &str) -> Result<String> {
-  try_get_config(config, data).ok_or(color_eyre::eyre::eyre!("Unable to parse `task show {config}`"))
-}
-
-fn try_get_config(config: &str, data: &str) -> Option<String> {
-  let mut config_lines = Vec::new();
-
-  for line in data.split('\n') {
-    if config_lines.is_empty() {
-      if line.starts_with(config) {
-        config_lines.push(line.trim_start_matches(config).trim_start().trim_end().to_string());
-      } else {
-        let config = &config.replace('-', "_");
-        if line.starts_with(config) {
-          config_lines.push(line.trim_start_matches(config).trim_start().trim_end().to_string());
-        }
-      }
-    } else {
-      if !line.starts_with("   ") {
-        return Some(config_lines.join(" "));
-      }
-
-      config_lines.push(line.trim_start().trim_end().to_string());
-    }
-  }
-
-  if !config_lines.is_empty() {
-    return Some(config_lines.join(" "));
-  }
-
-  None
 }
 
 #[derive(Clone, Debug, Default, Deref, DerefMut)]

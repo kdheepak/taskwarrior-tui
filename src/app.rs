@@ -35,7 +35,7 @@ impl App {
   pub fn new(tick_rate: f64, frame_rate: f64, report: &str) -> Result<Self> {
     let app = TaskReport::new().report(report.into());
     let mut config = Config::new()?;
-    config.taskwarrior_config()?;
+    config.taskwarrior.taskwarrior_config(report)?;
     let mode = Mode::TaskReport;
     Ok(Self {
       tick_rate,
