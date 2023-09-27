@@ -18,6 +18,42 @@ use crate::{
   action::Action,
   config::{Config, KeyBindings},
 };
+const VIRTUAL_TAGS: [&str; 34] = [
+  "PROJECT",
+  "BLOCKED",
+  "UNBLOCKED",
+  "BLOCKING",
+  "DUE",
+  "DUETODAY",
+  "TODAY",
+  "OVERDUE",
+  "WEEK",
+  "MONTH",
+  "QUARTER",
+  "YEAR",
+  "ACTIVE",
+  "SCHEDULED",
+  "PARENT",
+  "CHILD",
+  "UNTIL",
+  "WAITING",
+  "ANNOTATED",
+  "READY",
+  "YESTERDAY",
+  "TOMORROW",
+  "TAGGED",
+  "PENDING",
+  "COMPLETED",
+  "DELETED",
+  "UDA",
+  "ORPHAN",
+  "PRIORITY",
+  "PROJECT",
+  "LATEST",
+  "RECURRING",
+  "INSTANCE",
+  "TEMPLATE",
+];
 
 #[derive(Default)]
 pub struct TaskReport {
@@ -43,45 +79,7 @@ pub struct TaskReport {
 impl TaskReport {
   pub fn new() -> Self {
     let mut s = Self::default();
-    s.virtual_tags = vec![
-      "PROJECT",
-      "BLOCKED",
-      "UNBLOCKED",
-      "BLOCKING",
-      "DUE",
-      "DUETODAY",
-      "TODAY",
-      "OVERDUE",
-      "WEEK",
-      "MONTH",
-      "QUARTER",
-      "YEAR",
-      "ACTIVE",
-      "SCHEDULED",
-      "PARENT",
-      "CHILD",
-      "UNTIL",
-      "WAITING",
-      "ANNOTATED",
-      "READY",
-      "YESTERDAY",
-      "TOMORROW",
-      "TAGGED",
-      "PENDING",
-      "COMPLETED",
-      "DELETED",
-      "UDA",
-      "ORPHAN",
-      "PRIORITY",
-      "PROJECT",
-      "LATEST",
-      "RECURRING",
-      "INSTANCE",
-      "TEMPLATE",
-    ]
-    .iter()
-    .map(|s| s.to_string())
-    .collect::<Vec<_>>();
+    s.virtual_tags = VIRTUAL_TAGS.iter().map(|s| s.to_string()).collect::<Vec<_>>();
     s
   }
 
