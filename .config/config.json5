@@ -9,6 +9,7 @@
       "<q>": "Quit", // Quit the application
       "<j>": "MoveDown", // MoveDown
       "<k>": "MoveUp", // MoveUp
+      "</>": "ExecuteTask(Filter)",
       "<Ctrl-d>": "Quit", // Another way to quit
       "<Ctrl-c>": "Quit", // Yet another way to quit
       "<Ctrl-z>": "Suspend" // Suspend the application
