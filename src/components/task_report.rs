@@ -558,7 +558,7 @@ impl TaskReport {
       }
     }
     // now start trimming
-    while (widths.iter().sum::<usize>() as u16) >= maximum_available_width - (self.labels.len()) as u16 {
+    while (widths.iter().sum::<usize>() as u16) >= maximum_available_width.saturating_sub(self.labels.len() as u16) {
       let index = widths.iter().position(|i| i == widths.iter().max().unwrap_or(&0)).unwrap_or_default();
       if widths[index] == 1 {
         break;

@@ -1,5 +1,6 @@
 use color_eyre::eyre::Result;
 use crossterm::event::KeyEvent;
+use ratatui::prelude::Rect;
 use serde_derive::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 
@@ -113,6 +114,17 @@ impl App {
           Action::Quit => self.should_quit = true,
           Action::Suspend => self.should_suspend = true,
           Action::Resume => self.should_suspend = false,
+          Action::Resize(w, h) => {
+            tui.resize(Rect::new(0, 0, w, h))?;
+            tui.draw(|f| {
+              for component in self.components.iter_mut() {
+                let r = component.draw(f, f.size());
+                if let Err(e) = r {
+                  action_tx.send(Action::Error(format!("Failed to draw: {:?}", e))).unwrap();
+                }
+              }
+            })?;
+          },
           Action::Render => {
             tui.draw(|f| {
               for component in self.components.iter_mut() {
