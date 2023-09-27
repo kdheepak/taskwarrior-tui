@@ -65,6 +65,7 @@ pub struct TaskReport {
   pub current_context_filter: String,
   pub tasks: Vec<Task>,
   pub rows: Vec<Vec<String>>,
+  pub row_heights: Vec<u16>,
   pub state: TableState,
   pub columns: Vec<String>,
   pub labels: Vec<String>,
@@ -159,16 +160,36 @@ impl TaskReport {
 
   pub fn generate_rows(&mut self) -> Result<()> {
     self.rows = vec![];
+    self.row_heights = vec![];
     for task in self.tasks.iter() {
       if self.columns.is_empty() {
         break;
       }
       let mut item = vec![];
+      let mut row_height = 1;
       for name in &self.columns {
-        let s = self.get_string_attribute(name, &task, &self.tasks);
+        let s = if name == "description" {
+          let mut s = self.get_string_attribute(name, &task, &self.tasks);
+          if let Some(annotations) = task.annotations() {
+            if annotations.len() > 0 {
+              for annotation in annotations {
+                s.push_str(&format!(
+                  "\n {} {}",
+                  format_date(NaiveDateTime::new(annotation.entry().date(), annotation.entry().time())),
+                  annotation.description()
+                ));
+                row_height += 1;
+              }
+            }
+          }
+          s
+        } else {
+          self.get_string_attribute(name, &task, &self.tasks)
+        };
         item.push(s);
       }
       self.rows.push(item);
+      self.row_heights.push(row_height);
     }
     Ok(())
   }
@@ -735,7 +756,7 @@ impl Component for TaskReport {
     let constraints: Vec<Constraint> = widths.iter().map(|i| Constraint::Min(*i as u16)).collect();
     let rows = self.rows.iter().enumerate().map(|(i, row)| {
       let style = self.style_for_task(&self.tasks[i]);
-      Row::new(row.clone()).style(style)
+      Row::new(row.clone()).height(self.row_heights[i]).style(style)
     });
     let table = Table::new(rows)
       .header(Row::new(self.labels.iter().map(|l| {
