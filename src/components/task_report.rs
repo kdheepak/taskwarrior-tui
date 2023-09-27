@@ -410,9 +410,12 @@ impl TaskReport {
     if output.status.success() {
       let imported = import(data.as_bytes());
       if imported.is_ok() {
+        let highlight_first_element = if self.tasks.is_empty() { true } else { false };
         self.tasks = imported?;
         log::debug!("Imported {} tasks", self.tasks.len());
-        self.send_action(Action::ShowTaskReport)?;
+        if highlight_first_element {
+          self.state.select(Some(0));
+        }
       } else {
         imported?;
       }
@@ -513,23 +516,23 @@ impl TaskReport {
     for tag_name in virtual_tag_names_in_precedence.iter().rev() {
       if tag_name == "uda." || tag_name == "priority" {
         if let Some(p) = task.priority() {
-          let s = self.config.taskwarrior.color.uda_priority.get(p).copied().unwrap_or_default();
+          let s = self.config.taskwarrior.color.get(&format!("color.priority.{p}")).copied().unwrap_or_default();
           style = style.patch(s);
         }
       } else if tag_name == "tag." {
         if let Some(tags) = task.tags() {
           for t in tags {
-            let s = self.config.taskwarrior.color.tag.get(t).copied().unwrap_or_default();
+            let s = self.config.taskwarrior.color.get(&format!("color.tag.{t}")).copied().unwrap_or_default();
             style = style.patch(s);
           }
         }
       } else if tag_name == "project." {
         if let Some(p) = task.project() {
-          let s = self.config.taskwarrior.color.project.get(p).copied().unwrap_or_default();
+          let s = self.config.taskwarrior.color.get(&format!("color.project.{p}")).copied().unwrap_or_default();
           style = style.patch(s);
         }
       } else if task.tags().unwrap_or(&vec![]).contains(&tag_name.to_string().replace('.', "").to_uppercase()) {
-        let s = self.config.taskwarrior.color.tag.get(tag_name).copied().unwrap_or_default();
+        let s = self.config.taskwarrior.color.get(&format!("color.{tag_name}")).copied().unwrap_or_default();
         style = style.patch(s);
       }
     }
@@ -573,7 +576,7 @@ impl Component for TaskReport {
     let constraints: Vec<Constraint> = widths.iter().map(|i| Constraint::Min(*i as u16)).collect();
     let rows = self.rows.iter().enumerate().map(|(i, row)| {
       let style = self.style_for_task(&self.tasks[i]);
-      Row::new(row.clone())
+      Row::new(row.clone()).style(style)
     });
     let table = Table::new(rows)
       .header(Row::new(self.labels.iter().map(|l| Cell::from(l.clone()).underlined())))

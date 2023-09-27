@@ -14,59 +14,6 @@ use crate::{action::Action, app::Mode};
 const CONFIG: &str = include_str!("../.config/config.json5");
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
-pub struct TaskwarriorColorConfig {
-  pub active: Style,
-  pub alternate: Style,
-  pub blocked: Style,
-  pub blocking: Style,
-  pub burndown_done: Style,
-  pub burndown_pending: Style,
-  pub burndown_started: Style,
-  pub calendar_due: Style,
-  pub calendar_due_today: Style,
-  pub calendar_holiday: Style,
-  pub calendar_overdue: Style,
-  pub calendar_scheduled: Style,
-  pub calendar_today: Style,
-  pub calendar_weekend: Style,
-  pub calendar_weeknumber: Style,
-  pub completed: Style,
-  pub debug: Style,
-  pub deleted: Style,
-  pub due: Style,
-  pub due_today: Style,
-  pub error: Style,
-  pub footnote: Style,
-  pub header: Style,
-  pub history_add: Style,
-  pub history_delete: Style,
-  pub history_done: Style,
-  pub label: Style,
-  pub label_sort: Style,
-  pub overdue: Style,
-  pub project_basics: Style,
-  pub project_none: Style,
-  pub project_wth: Style,
-  pub recurring: Style,
-  pub scheduled: Style,
-  pub summary_background: Style,
-  pub summary_bar: Style,
-  pub sync_added: Style,
-  pub sync_changed: Style,
-  pub sync_rejected: Style,
-  pub tag_next: Style,
-  pub tag_none: Style,
-  pub tagged: Style,
-  pub uda_priority: HashMap<String, Style>,
-  pub tag: HashMap<String, Style>,
-  pub project: HashMap<String, Style>,
-  pub undo_after: Style,
-  pub undo_before: Style,
-  pub until: Style,
-  pub warning: Style,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct TaskwarriorConfig {
   #[serde(default)]
   pub rule_precedence_color: Vec<String>,
@@ -77,7 +24,7 @@ pub struct TaskwarriorConfig {
   #[serde(default)]
   pub due: usize,
   #[serde(default)]
-  pub color: TaskwarriorColorConfig,
+  pub color: HashMap<String, Style>,
   #[serde(default)]
   pub data_location: String,
 }
@@ -209,61 +156,25 @@ impl Config {
     self.weekstart(&data);
     self.due(&data);
     self.data_location(&data);
+    self.color(&data);
     Ok(())
   }
 
-  fn color(&mut self, data: &str) -> Result<()> {
-    self.taskwarrior.color.active = parse_style(&get_config("color.active", data)?);
-    self.taskwarrior.color.alternate = parse_style(&get_config("color.alternate", data)?);
-    self.taskwarrior.color.blocked = parse_style(&get_config("color.blocked", data)?);
-    self.taskwarrior.color.blocking = parse_style(&get_config("color.blocking", data)?);
-    self.taskwarrior.color.burndown_done = parse_style(&get_config("color.burndown.done", data)?);
-    self.taskwarrior.color.burndown_pending = parse_style(&get_config("color.burndown.pending", data)?);
-    self.taskwarrior.color.burndown_started = parse_style(&get_config("color.burndown.started", data)?);
-    self.taskwarrior.color.calendar_due = parse_style(&get_config("color.calendar.due", data)?);
-    self.taskwarrior.color.calendar_due_today = parse_style(&get_config("color.calendar.due.today", data)?);
-    self.taskwarrior.color.calendar_holiday = parse_style(&get_config("color.calendar.holiday", data)?);
-    self.taskwarrior.color.calendar_overdue = parse_style(&get_config("color.calendar.overdue", data)?);
-    self.taskwarrior.color.calendar_scheduled = parse_style(&get_config("color.calendar.scheduled", data)?);
-    self.taskwarrior.color.calendar_today = parse_style(&get_config("color.calendar.today", data)?);
-    self.taskwarrior.color.calendar_weekend = parse_style(&get_config("color.calendar.weekend", data)?);
-    self.taskwarrior.color.calendar_weeknumber = parse_style(&get_config("color.calendar.weeknumber", data)?);
-    self.taskwarrior.color.completed = parse_style(&get_config("color.completed", data)?);
-    self.taskwarrior.color.debug = parse_style(&get_config("color.debug", data)?);
-    self.taskwarrior.color.deleted = parse_style(&get_config("color.deleted", data)?);
-    self.taskwarrior.color.due = parse_style(&get_config("color.due", data)?);
-    self.taskwarrior.color.due_today = parse_style(&get_config("color.due.today", data)?);
-    self.taskwarrior.color.error = parse_style(&get_config("color.error", data)?);
-    self.taskwarrior.color.footnote = parse_style(&get_config("color.footnote", data)?);
-    self.taskwarrior.color.header = parse_style(&get_config("color.header", data)?);
-    self.taskwarrior.color.history_add = parse_style(&get_config("color.history.add", data)?);
-    self.taskwarrior.color.history_delete = parse_style(&get_config("color.history.delete", data)?);
-    self.taskwarrior.color.history_done = parse_style(&get_config("color.history.done", data)?);
-    self.taskwarrior.color.label = parse_style(&get_config("color.label", data)?);
-    self.taskwarrior.color.label_sort = parse_style(&get_config("color.label.sort", data)?);
-    self.taskwarrior.color.overdue = parse_style(&get_config("color.overdue", data)?);
-    self.taskwarrior.color.project_basics = parse_style(&get_config("color.project.basics", data)?);
-    self.taskwarrior.color.project_none = parse_style(&get_config("color.project.none", data)?);
-    self.taskwarrior.color.project_wth = parse_style(&get_config("color.project.wth", data)?);
-    self.taskwarrior.color.recurring = parse_style(&get_config("color.recurring", data)?);
-    self.taskwarrior.color.scheduled = parse_style(&get_config("color.scheduled", data)?);
-    self.taskwarrior.color.summary_background = parse_style(&get_config("color.summary.background", data)?);
-    self.taskwarrior.color.summary_bar = parse_style(&get_config("color.summary.bar", data)?);
-    self.taskwarrior.color.sync_added = parse_style(&get_config("color.sync.added", data)?);
-    self.taskwarrior.color.sync_changed = parse_style(&get_config("color.sync.changed", data)?);
-    self.taskwarrior.color.sync_rejected = parse_style(&get_config("color.sync.rejected", data)?);
-    self.taskwarrior.color.tag_next = parse_style(&get_config("color.tag.next", data)?);
-    self.taskwarrior.color.tag_none = parse_style(&get_config("color.tag.none", data)?);
-    self.taskwarrior.color.tagged = parse_style(&get_config("color.tagged", data)?);
-    self.taskwarrior.color.uda_priority.insert("H".into(), parse_style(&get_config("color.uda.priority.H", data)?));
-    self.taskwarrior.color.uda_priority.insert("L".into(), parse_style(&get_config("color.uda.priority.L", data)?));
-    self.taskwarrior.color.uda_priority.insert("M".into(), parse_style(&get_config("color.uda.priority.M", data)?));
-    self.taskwarrior.color.uda_priority.insert("U".into(), parse_style(&get_config("color.uda.priority.U", data)?));
-    self.taskwarrior.color.undo_after = parse_style(&get_config("color.undo.after", data)?);
-    self.taskwarrior.color.undo_before = parse_style(&get_config("color.undo.before", data)?);
-    self.taskwarrior.color.until = parse_style(&get_config("color.until", data)?);
-    self.taskwarrior.color.warning = parse_style(&get_config("color.warning", data)?);
-    Ok(())
+  fn color(&mut self, data: &str) {
+    let mut color = HashMap::new();
+    for line in data.split('\n') {
+      if line.starts_with("color.") {
+        let mut i = line.split(' ');
+        let attribute = i.next();
+        let line = i.collect::<Vec<_>>().join(" ");
+        let line = line.trim_start_matches(' ');
+        let style = parse_style(line);
+        if let Some(attr) = attribute {
+          color.insert(attr.to_string(), style);
+        };
+      }
+    }
+    self.taskwarrior.color = color;
   }
 
   fn data_location(&mut self, data: &str) {
