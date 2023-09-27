@@ -15,7 +15,7 @@ use uuid::Uuid;
 
 use super::{Component, Frame};
 use crate::{
-  action::Action,
+  action::{Action, TaskCommand},
   config::{Config, KeyBindings},
 };
 const VIRTUAL_TAGS: [&str; 34] = [
@@ -55,7 +55,7 @@ const VIRTUAL_TAGS: [&str; 34] = [
   "TEMPLATE",
 ];
 
-#[derive(Default)]
+#[derive(Default, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Mode {
   #[default]
   Report,
@@ -767,6 +767,10 @@ impl TaskReport {
       }
     }
   }
+
+  fn mode(&mut self, mode: Mode) {
+    self.mode = mode
+  }
 }
 
 impl Component for TaskReport {
@@ -787,8 +791,22 @@ impl Component for TaskReport {
         self.export_headers()?;
         self.generate_rows()?;
       },
-      Action::MoveDown => self.next(),
-      Action::MoveUp => self.previous(),
+      Action::MoveDown => {
+        if self.mode == Mode::Report {
+          self.next()
+        }
+      },
+      Action::MoveUp => {
+        if self.mode == Mode::Report {
+          self.previous()
+        }
+      },
+      Action::ExecuteTask(t) => {
+        match t {
+          TaskCommand::Filter => self.mode(Mode::Filter),
+          _ => {},
+        }
+      },
       _ => {},
     }
     Ok(None)

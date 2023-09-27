@@ -29,13 +29,13 @@ pub enum Action {
   ToggleZoom,
   Context,
   ExecuteShortcut(usize),
-  ExecuteTask(Task),
+  ExecuteTask(TaskCommand),
   RunShell,
   ShowTaskReport,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Task {
+pub enum TaskCommand {
   Undo,
   Edit,
   Tag,
@@ -111,16 +111,16 @@ impl<'de> Deserialize<'de> for Action {
           },
           data if data.starts_with("ExecuteTask(") => {
             match data {
-              "ExecuteTask(Undo)" => Ok(Action::ExecuteTask(Task::Undo)),
-              "ExecuteTask(Edit)" => Ok(Action::ExecuteTask(Task::Edit)),
-              "ExecuteTask(Tag)" => Ok(Action::ExecuteTask(Task::Tag)),
-              "ExecuteTask(Start)" => Ok(Action::ExecuteTask(Task::Start)),
-              "ExecuteTask(Stop)" => Ok(Action::ExecuteTask(Task::Stop)),
-              "ExecuteTask(Modify)" => Ok(Action::ExecuteTask(Task::Modify)),
-              "ExecuteTask(Log)" => Ok(Action::ExecuteTask(Task::Log)),
-              "ExecuteTask(Annotate)" => Ok(Action::ExecuteTask(Task::Annotate)),
-              "ExecuteTask(Filter)" => Ok(Action::ExecuteTask(Task::Filter)),
-              "ExecuteTask(Add)" => Ok(Action::ExecuteTask(Task::Add)),
+              "ExecuteTask(Undo)" => Ok(Action::ExecuteTask(TaskCommand::Undo)),
+              "ExecuteTask(Edit)" => Ok(Action::ExecuteTask(TaskCommand::Edit)),
+              "ExecuteTask(Tag)" => Ok(Action::ExecuteTask(TaskCommand::Tag)),
+              "ExecuteTask(Start)" => Ok(Action::ExecuteTask(TaskCommand::Start)),
+              "ExecuteTask(Stop)" => Ok(Action::ExecuteTask(TaskCommand::Stop)),
+              "ExecuteTask(Modify)" => Ok(Action::ExecuteTask(TaskCommand::Modify)),
+              "ExecuteTask(Log)" => Ok(Action::ExecuteTask(TaskCommand::Log)),
+              "ExecuteTask(Annotate)" => Ok(Action::ExecuteTask(TaskCommand::Annotate)),
+              "ExecuteTask(Filter)" => Ok(Action::ExecuteTask(TaskCommand::Filter)),
+              "ExecuteTask(Add)" => Ok(Action::ExecuteTask(TaskCommand::Add)),
               _ => Err(E::custom(format!("Unknown ExecuteTask variant: {}", value))),
             }
           },
