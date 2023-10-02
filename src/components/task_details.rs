@@ -11,6 +11,7 @@ pub struct TaskDetails {
   pub command_tx: Option<UnboundedSender<Action>>,
   pub config: Config,
   pub uuid: Option<uuid::Uuid>,
+  pub task: Option<Task>,
 }
 
 impl TaskDetails {
@@ -19,14 +20,17 @@ impl TaskDetails {
       let tx = self.command_tx.clone().unwrap();
       tokio::spawn(async move {
         let output = tokio::process::Command::new("task")
+          .arg("rc.json.array=on")
+          .arg("rc.confirmation=off")
+          .arg("rc.json.depends.array=on")
           .arg("rc.color=off")
           .arg("rc._forcecolor=off")
           .arg(format!("{}", uuid))
+          .arg("export")
           .output()
           .await;
         if let Ok(output) = output {
           let data = String::from_utf8_lossy(&output.stdout).to_string();
-          tx.send(Action::TaskDetailsUpdateData((uuid, data))).unwrap();
         }
       });
     }
@@ -41,7 +45,16 @@ impl Component for TaskDetails {
 
   fn update(&mut self, action: Action) -> Result<Option<Action>> {
     match action {
-      Action::TaskDetailsUpdateUuid(uuid) => {},
+      Action::TaskDetailsUpdateUuid(uuid) => {
+        self.uuid = Some(uuid);
+        self.update();
+      },
+      Action::TaskDetailsUpdateData((uuid, data)) => {
+        let imported = task_hookrs::import::import(data.as_bytes());
+        if let Ok(tasks) = imported {
+          self.task = Some(tasks[0].clone())
+        }
+      },
       _ => {},
     }
     Ok(None)
