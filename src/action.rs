@@ -32,6 +32,8 @@ pub enum Action {
   ExecuteTask(TaskCommand),
   RunShell,
   ShowTaskReport,
+  TaskDetailsUpdateUuid(uuid::Uuid),
+  TaskDetailsUpdateData((uuid::Uuid, String)),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
