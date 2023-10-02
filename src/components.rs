@@ -9,6 +9,7 @@ use crate::{
   tui::{Event, Frame},
 };
 
+pub mod task_details;
 pub mod task_report;
 
 pub trait Component {
@@ -43,5 +44,5 @@ pub trait Component {
   fn update(&mut self, action: Action) -> Result<Option<Action>> {
     Ok(None)
   }
-  fn draw(&mut self, f: &mut Frame<'_>, rect: Rect) -> Result<()>;
+  fn draw(&mut self, f: &mut Frame<'_>, area: Rect) -> Result<()>;
 }

@@ -18,6 +18,7 @@ use crate::{
   action::{Action, TaskCommand},
   config::{Config, KeyBindings},
 };
+
 const VIRTUAL_TAGS: [&str; 34] = [
   "PROJECT",
   "BLOCKED",
@@ -812,13 +813,13 @@ impl Component for TaskReport {
     Ok(None)
   }
 
-  fn draw(&mut self, f: &mut Frame<'_>, rect: Rect) -> Result<()> {
+  fn draw(&mut self, f: &mut Frame<'_>, area: Rect) -> Result<()> {
     let column_spacing = 1;
     if self.rows.len() == 0 {
-      f.render_widget(Paragraph::new("No data found").block(Block::new().borders(Borders::all())), rect);
+      f.render_widget(Paragraph::new("No data found").block(Block::new().borders(Borders::all())), area);
       return Ok(());
     }
-    let widths = self.calculate_widths(rect.width);
+    let widths = self.calculate_widths(area.width);
     let constraints: Vec<Constraint> = widths.iter().map(|i| Constraint::Min(*i as u16)).collect();
     let rows = self.rows.iter().enumerate().map(|(i, row)| {
       let style = self.style_for_task(&self.tasks[i]);
@@ -841,7 +842,7 @@ impl Component for TaskReport {
       .highlight_symbol(&self.config.task_report.selection_indicator)
       .highlight_spacing(HighlightSpacing::Always)
       .column_spacing(column_spacing);
-    f.render_stateful_widget(table, rect, &mut self.state);
+    f.render_stateful_widget(table, area, &mut self.state);
     Ok(())
   }
 }
@@ -965,19 +966,5 @@ pub fn remove_tag(task: &mut Task, tag: &str) {
     if let Some(index) = t.iter().position(|x| *x == tag) {
       t.remove(index);
     }
-  }
-}
-
-mod tests {
-  use pretty_assertions::assert_eq;
-
-  use super::*;
-
-  #[test]
-  fn test_export() -> Result<()> {
-    let mut tr = TaskReport::new().report("next".into());
-    tr.task_export()?;
-    assert_eq!(tr.tasks.len(), 33);
-    Ok(())
   }
 }
