@@ -26,9 +26,9 @@ This installs `task` from `homebrew` as well.
 brew install taskwarrior-tui
 ```
 
-**Installation for Arch Linux** [![](https://img.shields.io/archlinux/v/community/x86_64/taskwarrior-tui)](https://archlinux.org/packages/community/x86_64/taskwarrior-tui/) [![](https://img.shields.io/aur/version/taskwarrior-tui-git)](https://aur.archlinux.org/packages/taskwarrior-tui-git/)
+**Installation for Arch Linux** [![](https://img.shields.io/archlinux/v/extra/x86_64/taskwarrior-tui)](https://archlinux.org/packages/extra/x86_64/taskwarrior-tui/) [![](https://img.shields.io/aur/version/taskwarrior-tui-git)](https://aur.archlinux.org/packages/taskwarrior-tui-git/)
 
-Use [pacman](https://wiki.archlinux.org/index.php/Pacman) to install it from the [community repository](https://archlinux.org/packages/community/x86_64/taskwarrior-tui/):
+Use [pacman](https://wiki.archlinux.org/index.php/Pacman) to install it from the [extra repository](https://archlinux.org/packages/extra/x86_64/taskwarrior-tui/):
 
 ```bash
 pacman -S taskwarrior-tui
