@@ -6,8 +6,8 @@
 git clone https://github.com/kdheepak/taskwarrior-tui
 cd taskwarrior-tui
 
-git clone github.com/kdheepak/taskwarrior-testdata tests/data
-source .env
+git clone https://github.com/kdheepak/taskwarrior-testdata tests/data
+source .envrc
 
 cargo test
 ```
