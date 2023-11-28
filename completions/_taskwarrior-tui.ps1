@@ -23,8 +23,8 @@ Register-ArgumentCompleter -Native -CommandName 'taskwarrior-tui' -ScriptBlock {
         'taskwarrior-tui' {
             [CompletionResult]::new('-d', 'd', [CompletionResultType]::ParameterName, 'Sets the data folder for taskwarrior-tui')
             [CompletionResult]::new('--data', 'data', [CompletionResultType]::ParameterName, 'Sets the data folder for taskwarrior-tui')
-            [CompletionResult]::new('-c', 'c', [CompletionResultType]::ParameterName, 'Sets the config folder for taskwarrior-tui (currently not used)')
-            [CompletionResult]::new('--config', 'config', [CompletionResultType]::ParameterName, 'Sets the config folder for taskwarrior-tui (currently not used)')
+            [CompletionResult]::new('-c', 'c', [CompletionResultType]::ParameterName, 'Sets the config folder for taskwarrior-tui')
+            [CompletionResult]::new('--config', 'config', [CompletionResultType]::ParameterName, 'Sets the config folder for taskwarrior-tui')
             [CompletionResult]::new('--taskdata', 'taskdata', [CompletionResultType]::ParameterName, 'Sets the .task folder using the TASKDATA environment variable for taskwarrior')
             [CompletionResult]::new('--taskrc', 'taskrc', [CompletionResultType]::ParameterName, 'Sets the .taskrc file using the TASKRC environment variable for taskwarrior')
             [CompletionResult]::new('-r', 'r', [CompletionResultType]::ParameterName, 'Sets default report')

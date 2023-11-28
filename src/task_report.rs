@@ -1,7 +1,7 @@
 use std::{error::Error, process::Command};
 
-use anyhow::Result;
 use chrono::{DateTime, Datelike, Local, NaiveDate, NaiveDateTime, TimeZone};
+use color_eyre::eyre::Result;
 use itertools::join;
 use task_hookrs::{task::Task, uda::UDAValue};
 use unicode_truncate::UnicodeTruncateStr;
@@ -14,7 +14,7 @@ pub fn format_date_time(dt: NaiveDateTime) -> String {
 
 pub fn format_date(dt: NaiveDateTime) -> String {
   let offset = Local.offset_from_utc_datetime(&dt);
-  let dt = DateTime::<Local>::from_utc(dt, offset);
+  let dt = DateTime::<Local>::from_naive_utc_and_offset(dt, offset);
   dt.format("%Y-%m-%d").to_string()
 }
 
@@ -38,37 +38,67 @@ pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime, with
 
   if seconds >= 60 * 60 * 24 * 365 {
     return if with_remainder {
-      format!("{}{}y{}mo", minus, seconds / year, (seconds - year * (seconds / year)) / month)
+      format!(
+        "{}{}y{}mo",
+        minus,
+        seconds / year,
+        (seconds - year * (seconds / year)) / month
+      )
     } else {
       format!("{}{}y", minus, seconds / year)
     };
   } else if seconds >= 60 * 60 * 24 * 90 {
     return if with_remainder {
-      format!("{}{}mo{}w", minus, seconds / month, (seconds - month * (seconds / month)) / week)
+      format!(
+        "{}{}mo{}w",
+        minus,
+        seconds / month,
+        (seconds - month * (seconds / month)) / week
+      )
     } else {
       format!("{}{}mo", minus, seconds / month)
     };
   } else if seconds >= 60 * 60 * 24 * 14 {
     return if with_remainder {
-      format!("{}{}w{}d", minus, seconds / week, (seconds - week * (seconds / week)) / day)
+      format!(
+        "{}{}w{}d",
+        minus,
+        seconds / week,
+        (seconds - week * (seconds / week)) / day
+      )
     } else {
       format!("{}{}w", minus, seconds / week)
     };
   } else if seconds >= 60 * 60 * 24 {
     return if with_remainder {
-      format!("{}{}d{}h", minus, seconds / day, (seconds - day * (seconds / day)) / hour)
+      format!(
+        "{}{}d{}h",
+        minus,
+        seconds / day,
+        (seconds - day * (seconds / day)) / hour
+      )
     } else {
       format!("{}{}d", minus, seconds / day)
     };
   } else if seconds >= 60 * 60 {
     return if with_remainder {
-      format!("{}{}h{}min", minus, seconds / hour, (seconds - hour * (seconds / hour)) / minute)
+      format!(
+        "{}{}h{}min",
+        minus,
+        seconds / hour,
+        (seconds - hour * (seconds / hour)) / minute
+      )
     } else {
       format!("{}{}h", minus, seconds / hour)
     };
   } else if seconds >= 60 {
     return if with_remainder {
-      format!("{}{}min{}s", minus, seconds / minute, (seconds - minute * (seconds / minute)))
+      format!(
+        "{}{}min{}s",
+        minus,
+        seconds / minute,
+        (seconds - minute * (seconds / minute))
+      )
     } else {
       format!("{}{}min", minus, seconds / minute)
     };
@@ -365,7 +395,12 @@ impl TaskReportTable {
         None => "".to_string(),
       },
       "tags" => match task.tags() {
-        Some(v) => v.iter().filter(|t| !self.virtual_tags.contains(t)).cloned().collect::<Vec<_>>().join(","),
+        Some(v) => v
+          .iter()
+          .filter(|t| !self.virtual_tags.contains(t))
+          .cloned()
+          .collect::<Vec<_>>()
+          .join(","),
         None => "".to_string(),
       },
       "recur" => match task.recur() {

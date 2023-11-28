@@ -1,6 +1,7 @@
 use std::fmt;
 
-use anyhow::{anyhow, Context as AnyhowContext, Result};
+use color_eyre::eyre::{anyhow, Context as AnyhowContext, Result};
+use crossterm::event::{KeyCode, KeyEvent};
 
 const COL_WIDTH: usize = 21;
 const PROJECT_HEADER: &str = "Name";
@@ -30,7 +31,6 @@ use uuid::Uuid;
 use crate::{
   action::Action,
   app::{Mode, TaskwarriorTui},
-  event::KeyCode,
   pane::Pane,
   table::TableState,
   utils::Changeset,
@@ -104,7 +104,14 @@ impl ProjectsState {
     let rows = self
       .rows
       .iter()
-      .map(|c| vec![c.name.clone(), c.remaining.to_string(), c.avg_age.to_string(), c.complete.clone()])
+      .map(|c| {
+        vec![
+          c.name.clone(),
+          c.remaining.to_string(),
+          c.avg_age.to_string(),
+          c.complete.clone(),
+        ]
+      })
       .collect();
     let headers = self.columns.clone();
     (rows, headers)
@@ -112,7 +119,9 @@ impl ProjectsState {
 
   pub fn last_line(&self, line: &str) -> bool {
     let words = line.trim().split(' ').map(|s| s.trim()).collect::<Vec<&str>>();
-    return words.len() == 2 && words[0].chars().map(|c| c.is_numeric()).all(|b| b) && (words[1] == "project" || words[1] == "projects");
+    return words.len() == 2
+      && words[0].chars().map(|c| c.is_numeric()).all(|b| b)
+      && (words[1] == "project" || words[1] == "projects");
   }
 
   pub fn update_data(&mut self) -> Result<()> {
@@ -144,18 +153,19 @@ impl ProjectsState {
 }
 
 impl Pane for ProjectsState {
-  fn handle_input(app: &mut TaskwarriorTui, input: KeyCode) -> Result<()> {
-    if input == app.keyconfig.quit || input == KeyCode::Ctrl('c') {
+  fn handle_input(app: &mut TaskwarriorTui, input: KeyEvent) -> Result<()> {
+    if input.code == app.keyconfig.quit {
+      // || input == KeyCode::Ctrl('c') {
       app.should_quit = true;
-    } else if input == app.keyconfig.next_tab {
+    } else if input.code == app.keyconfig.next_tab {
       Self::change_focus_to_right_pane(app);
-    } else if input == app.keyconfig.previous_tab {
+    } else if input.code == app.keyconfig.previous_tab {
       Self::change_focus_to_left_pane(app);
-    } else if input == KeyCode::Down || input == app.keyconfig.down {
+    } else if input.code == KeyCode::Down || input.code == app.keyconfig.down {
       self::focus_on_next_project(app);
-    } else if input == KeyCode::Up || input == app.keyconfig.up {
+    } else if input.code == KeyCode::Up || input.code == app.keyconfig.up {
       self::focus_on_previous_project(app);
-    } else if input == app.keyconfig.select {
+    } else if input.code == app.keyconfig.select {
       self::update_task_filter_by_selection(app)?;
     }
     app.projects.update_table_state();
@@ -182,11 +192,11 @@ fn update_task_filter_by_selection(app: &mut TaskwarriorTui) -> Result<()> {
   let last_project_pattern = ProjectsState::pattern_by_marked(app);
   app.projects.toggle_mark();
   let new_project_pattern = ProjectsState::pattern_by_marked(app);
-  let current_filter = app.filter.as_str();
+  let current_filter = app.filter.value();
   app.filter_history.add(current_filter);
 
   let mut filter = current_filter.replace(&last_project_pattern, "");
   filter = format!("{}{}", filter, new_project_pattern);
-  app.filter.update(filter.as_str(), filter.len(), &mut Changeset::default());
+  app.filter = app.filter.clone().with_value(filter);
   Ok(())
 }

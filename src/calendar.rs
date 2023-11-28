@@ -7,7 +7,9 @@ const COL_WIDTH: usize = 21;
 
 use std::cmp::min;
 
-use chrono::{format::Fixed, DateTime, Datelike, Duration, FixedOffset, Local, Month, NaiveDate, NaiveDateTime, TimeZone};
+use chrono::{
+  format::Fixed, DateTime, Datelike, Duration, FixedOffset, Local, Month, NaiveDate, NaiveDateTime, TimeZone,
+};
 use ratatui::{
   buffer::Buffer,
   layout::Rect,
@@ -228,13 +230,20 @@ impl<'a> Widget for Calendar<'a> {
             .iter()
             .map(|i| {
               let first = NaiveDate::from_ymd_opt(self.year + new_year as i32, i + 1, 1).unwrap();
-              (first, first - Duration::days(i64::from(first.weekday().num_days_from_sunday())))
+              (
+                first,
+                first - Duration::days(i64::from(first.weekday().num_days_from_sunday())),
+              )
             })
             .collect::<Vec<_>>(),
         );
 
         let x = area.x;
-        let s = format!("{year:^width$}", year = self.year as usize + new_year, width = area.width as usize);
+        let s = format!(
+          "{year:^width$}",
+          year = self.year as usize + new_year,
+          width = area.width as usize
+        );
         let mut style = Style::default().add_modifier(Modifier::UNDERLINED);
         if self.year + new_year as i32 == today.year() {
           style = style.add_modifier(Modifier::BOLD);

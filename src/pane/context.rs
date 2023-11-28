@@ -1,6 +1,6 @@
 use std::fmt;
 
-use anyhow::{anyhow, Context as AnyhowContext, Result};
+use color_eyre::eyre::{anyhow, Context as AnyhowContext, Result};
 
 const NAME: &str = "Name";
 const TYPE: &str = "Remaining";
@@ -30,7 +30,6 @@ use uuid::Uuid;
 use crate::{
   action::Action,
   app::{Mode, TaskwarriorTui},
-  event::KeyCode,
   pane::Pane,
   table::TableState,
 };
@@ -66,7 +65,12 @@ impl ContextsState {
     Self {
       table_state: TableState::default(),
       report_height: 0,
-      columns: vec![NAME.to_string(), TYPE.to_string(), DEFINITION.to_string(), ACTIVE.to_string()],
+      columns: vec![
+        NAME.to_string(),
+        TYPE.to_string(),
+        DEFINITION.to_string(),
+        ACTIVE.to_string(),
+      ],
       rows: vec![],
     }
   }
@@ -115,7 +119,12 @@ impl ContextsState {
       let definition = line.replacen(name, "", 1);
       let definition = definition.replacen(typ, "", 1);
       let definition = definition.strip_suffix(active).unwrap_or_default();
-      let context = ContextDetails::new(name.to_string(), definition.trim().to_string(), active.to_string(), typ.to_string());
+      let context = ContextDetails::new(
+        name.to_string(),
+        definition.trim().to_string(),
+        active.to_string(),
+        typ.to_string(),
+      );
       self.rows.push(context);
     }
     if self.rows.iter().any(|r| r.active != "no") {
@@ -126,7 +135,12 @@ impl ContextsState {
     } else {
       self.rows.insert(
         0,
-        ContextDetails::new("none".to_string(), "".to_string(), "yes".to_string(), "read".to_string()),
+        ContextDetails::new(
+          "none".to_string(),
+          "".to_string(),
+          "yes".to_string(),
+          "read".to_string(),
+        ),
       );
     }
     Ok(())

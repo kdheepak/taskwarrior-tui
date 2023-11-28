@@ -17,8 +17,8 @@ _taskwarrior-tui() {
     _arguments "${_arguments_options[@]}" \
 '-d+[Sets the data folder for taskwarrior-tui]:FOLDER: ' \
 '--data=[Sets the data folder for taskwarrior-tui]:FOLDER: ' \
-'-c+[Sets the config folder for taskwarrior-tui (currently not used)]:FOLDER: ' \
-'--config=[Sets the config folder for taskwarrior-tui (currently not used)]:FOLDER: ' \
+'-c+[Sets the config folder for taskwarrior-tui]:FOLDER: ' \
+'--config=[Sets the config folder for taskwarrior-tui]:FOLDER: ' \
 '--taskdata=[Sets the .task folder using the TASKDATA environment variable for taskwarrior]:FOLDER: ' \
 '--taskrc=[Sets the .taskrc file using the TASKRC environment variable for taskwarrior]:FILE: ' \
 '-r+[Sets default report]:STRING: ' \

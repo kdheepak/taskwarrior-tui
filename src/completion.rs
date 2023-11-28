@@ -100,7 +100,11 @@ impl CompletionList {
       state: ListState::default(),
       current: String::new(),
       pos: 0,
-      helper: TaskwarriorTuiCompletionHelper { candidates, context, input },
+      helper: TaskwarriorTuiCompletionHelper {
+        candidates,
+        context,
+        input,
+      },
     }
   }
 

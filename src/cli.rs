@@ -21,7 +21,7 @@ pub fn generate_cli_app() -> clap::Command {
         .short('c')
         .long("config")
         .value_name("FOLDER")
-        .help("Sets the config folder for taskwarrior-tui (currently not used)")
+        .help("Sets the config folder for taskwarrior-tui")
         .action(clap::ArgAction::Set),
     )
     .arg(

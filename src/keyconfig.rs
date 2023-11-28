@@ -1,10 +1,9 @@
 use std::{collections::HashSet, error::Error, hash::Hash};
 
-use anyhow::{anyhow, Result};
+use color_eyre::eyre::{anyhow, Result};
+use crossterm::event::KeyCode;
 use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
-
-use crate::event::KeyCode;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct KeyConfig {
@@ -205,7 +204,11 @@ impl KeyConfig {
           error!("Found multiple characters in {} for {}", line, config);
         }
       } else if line.starts_with(&config.replace('-', "_")) {
-        let line = line.trim_start_matches(&config.replace('-', "_")).trim_start().trim_end().to_string();
+        let line = line
+          .trim_start_matches(&config.replace('-', "_"))
+          .trim_start()
+          .trim_end()
+          .to_string();
         if has_just_one_char(&line) {
           return Some(KeyCode::Char(line.chars().next().unwrap()));
         } else {
