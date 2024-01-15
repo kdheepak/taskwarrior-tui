@@ -125,6 +125,16 @@ impl KeyConfig {
     let context_menu = Self::get_config("uda.taskwarrior-tui.keyconfig.context-menu", data);
     let next_tab = Self::get_config("uda.taskwarrior-tui.keyconfig.next-tab", data);
     let previous_tab = Self::get_config("uda.taskwarrior-tui.keyconfig.previous-tab", data);
+    let shortcut0 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut0", data);
+    let shortcut1 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut1", data);
+    let shortcut2 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut2", data);
+    let shortcut3 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut3", data);
+    let shortcut4 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut4", data);
+    let shortcut5 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut5", data);
+    let shortcut6 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut6", data);
+    let shortcut7 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut7", data);
+    let shortcut8 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut8", data);
+    let shortcut9 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut9", data);
 
     self.quit = quit.unwrap_or(self.quit);
     self.refresh = refresh.unwrap_or(self.refresh);
@@ -152,6 +162,16 @@ impl KeyConfig {
     self.context_menu = context_menu.unwrap_or(self.context_menu);
     self.next_tab = next_tab.unwrap_or(self.next_tab);
     self.previous_tab = previous_tab.unwrap_or(self.previous_tab);
+    self.shortcut0 = shortcut0.unwrap_or(self.shortcut0);
+    self.shortcut1 = shortcut1.unwrap_or(self.shortcut1);
+    self.shortcut2 = shortcut2.unwrap_or(self.shortcut2);
+    self.shortcut3 = shortcut3.unwrap_or(self.shortcut3);
+    self.shortcut4 = shortcut4.unwrap_or(self.shortcut4);
+    self.shortcut5 = shortcut5.unwrap_or(self.shortcut5);
+    self.shortcut6 = shortcut6.unwrap_or(self.shortcut6);
+    self.shortcut7 = shortcut7.unwrap_or(self.shortcut7);
+    self.shortcut8 = shortcut8.unwrap_or(self.shortcut8);
+    self.shortcut9 = shortcut9.unwrap_or(self.shortcut9);
 
     self.check()
   }
