@@ -2202,6 +2202,37 @@ impl TaskwarriorTui {
     r
   }
 
+  pub fn task_priority(&mut self, priority: &str) -> Result<(), String> {
+    if self.tasks.is_empty() {
+      return Ok(());
+    }
+    let mut priority_arg = String::from("priority:");
+    priority_arg.push_str(priority);
+    let task_uuids = self.selected_task_uuids();
+    let mut cmd = std::process::Command::new("task");
+    cmd
+      .arg("rc.bulk=0")
+      .arg("rc.confirmation=off")
+      .arg("rc.dependency.confirmation=off")
+      .arg("rc.recurrence.confirmation=off")
+      .arg("modify")
+      .arg(&priority_arg);
+    for task_uuid in &task_uuids {
+      cmd.arg(task_uuid.to_string());
+    }
+    let output = cmd.output();
+    let r = match output {
+      Ok(_) => Ok(()),
+      Err(_) => Err(format!(
+        "Cannot run `task modify priority` for task `{}`. Check documentation for more information",
+        task_uuids.iter().map(ToString::to_string).collect::<Vec<String>>().join(" ")
+      )),
+    };
+    self.current_selection_uuid = None;
+    self.current_selection_id = None;
+    r
+  }
+
   pub fn task_undo(&mut self) -> Result<(), String> {
     let output = std::process::Command::new("task").arg("rc.confirmation=off").arg("undo").output();
 
@@ -2693,6 +2724,38 @@ impl TaskwarriorTui {
               Ok(_) => self.update(true).await?,
               Err(e) => {
                 self.update(true).await?;
+                self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
+              }
+            }
+          } else if input == self.keyconfig.priority_h {
+            match self.task_priority("H") {
+              Ok(_) => self.update(true).await?,
+              Err(e) => {
+                self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
+              }
+            }
+          } else if input == self.keyconfig.priority_m {
+            match self.task_priority("M") {
+              Ok(_) => self.update(true).await?,
+              Err(e) => {
+                self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
+              }
+            }
+          } else if input == self.keyconfig.priority_l {
+            match self.task_priority("L") {
+              Ok(_) => self.update(true).await?,
+              Err(e) => {
+                self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
+              }
+            }
+          } else if input == self.keyconfig.priority_n {
+            match self.task_priority("") {
+              Ok(_) => self.update(true).await?,
+              Err(e) => {
                 self.error = Some(e);
                 self.mode = Mode::Tasks(Action::Error);
               }
