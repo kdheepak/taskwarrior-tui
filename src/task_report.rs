@@ -3,6 +3,7 @@ use std::{error::Error, process::Command};
 use anyhow::Result;
 use chrono::{DateTime, Datelike, Local, NaiveDate, NaiveDateTime, TimeZone};
 use itertools::join;
+use regex::Regex;
 use task_hookrs::{task::Task, uda::UDAValue};
 use unicode_truncate::UnicodeTruncateStr;
 use unicode_width::UnicodeWidthStr;
@@ -269,6 +270,10 @@ impl TaskReportTable {
           NaiveDateTime::new(v.date(), v.time()),
           self.date_time_vague_precise,
         ),
+        None => "".to_string(),
+      },
+      "scheduled" => match task.scheduled() {
+        Some(v) => format_date(NaiveDateTime::new(v.date(), v.time())),
         None => "".to_string(),
       },
       "due" => match task.due() {

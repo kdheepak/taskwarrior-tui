@@ -18,6 +18,10 @@ Keybindings for task report:
 
     e: task {selected} edit              - Open selected task in editor
 
+    E: task {selected} edit note         - Open selected task edit note
+
+    C: task {selected} copy              - Copy selected task
+
     j: {selected+=1}                     - Move down in task report
 
     k: {selected-=1}                     - Move up in task report

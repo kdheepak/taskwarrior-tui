@@ -172,6 +172,7 @@ pub struct TaskwarriorTui {
   pub current_context: String,
   pub command: LineBuffer,
   pub filter: LineBuffer,
+  pub copy: LineBuffer,
   pub modify: LineBuffer,
   pub tasks: Vec<Task>,
   pub all_tasks: Vec<Task>,
@@ -266,6 +267,7 @@ impl TaskwarriorTui {
       current_context: "".to_string(),
       command: LineBuffer::with_capacity(MAX_LINE),
       filter: LineBuffer::with_capacity(MAX_LINE),
+      copy: LineBuffer::with_capacity(MAX_LINE),
       modify: LineBuffer::with_capacity(MAX_LINE),
       mode: Mode::Tasks(Action::Report),
       previous_mode: None,
@@ -2074,6 +2076,30 @@ impl TaskwarriorTui {
     }
   }
 
+  pub fn task_copy(&mut self) -> Result<(), String> {
+    if self.tasks.is_empty() {
+      return Ok(());
+    }
+
+    let task_uuids = self.selected_task_uuids();
+
+    for task_uuid in &task_uuids {
+      let command = "duplicate";
+      let output = std::process::Command::new("task").arg(task_uuid.to_string()).arg(command).output();
+      if output.is_err() {
+        return Err(format!("Error running `task {}` for task `{}`.", command, task_uuid));
+      }
+    }
+
+    if task_uuids.len() == 1 {
+      if let Some(uuid) = task_uuids.get(0) {
+        self.current_selection_uuid = Some(*uuid);
+      }
+    }
+
+    Ok(())
+  }
+
   pub fn task_start_stop(&mut self) -> Result<(), String> {
     if self.tasks.is_empty() {
       return Ok(());
@@ -2249,6 +2275,59 @@ impl TaskwarriorTui {
       }
       Err(_) => Err("Cannot run `task undo`. Check documentation for more information".to_string()),
     }
+  }
+
+  pub async fn task_edit_markdown(&mut self) -> Result<(), String> {
+    if self.tasks.is_empty() {
+      return Ok(());
+    }
+
+    self.pause_tui().await.unwrap();
+
+    let selected = self.current_selection;
+    let task_id = self.tasks[selected].id().unwrap_or_default();
+    let task_uuid = *self.tasks[selected].uuid();
+
+    let data_dir = shellexpand::tilde(&self.config.data_location).into_owned();
+
+    let r = std::process::Command::new("nvim")
+      .arg(format!(
+        "{}/note/{}.md",
+        shellexpand::tilde(&self.config.data_location).into_owned(),
+        task_uuid
+      ))
+      .spawn();
+
+    let r = match r {
+      Ok(child) => {
+        let output = child.wait_with_output();
+        match output {
+          Ok(output) => {
+            if output.status.success() {
+              Ok(())
+            } else {
+              Err(format!(
+                "`task edit` for task `{}` failed. {}{}",
+                task_uuid,
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr),
+              ))
+            }
+          }
+          Err(err) => Err(format!("Cannot run `task edit` for task `{}`. {}", task_uuid, err)),
+        }
+      }
+      _ => Err(format!(
+        "Cannot start `task edit` for task `{}`. Check documentation for more information",
+        task_uuid
+      )),
+    };
+
+    self.current_selection_uuid = Some(task_uuid);
+
+    self.resume_tui().await.unwrap();
+
+    r
   }
 
   pub async fn task_edit(&mut self) -> Result<(), String> {
@@ -2597,6 +2676,22 @@ impl TaskwarriorTui {
             }
           } else if input == self.keyconfig.edit {
             match self.task_edit().await {
+              Ok(_) => self.update(true).await?,
+              Err(e) => {
+                self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
+              }
+            }
+          } else if input == self.keyconfig.edit_markdown {
+            match self.task_edit_markdown().await {
+              Ok(_) => self.update(true).await?,
+              Err(e) => {
+                self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
+              }
+            }
+          } else if input == self.keyconfig.copy {
+            match self.task_copy() {
               Ok(_) => self.update(true).await?,
               Err(e) => {
                 self.error = Some(e);
