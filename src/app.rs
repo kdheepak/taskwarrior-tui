@@ -64,7 +64,7 @@ const MAX_LINE: usize = 4096;
 
 lazy_static! {
   static ref START_TIME: Instant = Instant::now();
-  static ref TASKWARRIOR_VERSION_SUPPORTED: Versioning = Versioning::new("2.6.0").unwrap();
+  static ref TASKWARRIOR_VERSION_SUPPORTED: Versioning = Versioning::new("3.0.0").unwrap();
 }
 
 #[derive(Debug)]
@@ -1309,7 +1309,6 @@ impl TaskwarriorTui {
         }
       }
 
-      self.last_export = Some(std::time::SystemTime::now());
       self.task_report_table.export_headers(None, &self.report)?;
       self.export_tasks()?;
       if self.config.uda_task_report_use_all_tasks_for_completion {
@@ -1321,6 +1320,10 @@ impl TaskwarriorTui {
       self.task_details.clear();
       self.dirty = false;
       self.save_history()?;
+
+      // Some operations like export or summary change the taskwarrior database.
+      // The export time therefore gets set at the end, to avoid an infinite update loop.
+      self.last_export = Some(std::time::SystemTime::now());
     }
     self.cursor_fix();
     self.update_task_table_state();
@@ -1608,20 +1611,21 @@ impl TaskwarriorTui {
     }
   }
 
-  fn get_task_files_max_mtime(&self) -> Result<SystemTime> {
-    let data_dir = shellexpand::tilde(&self.config.data_location).into_owned();
-    ["backlog.data", "completed.data", "pending.data"]
-      .iter()
-      .map(|n| fs::metadata(Path::new(&data_dir).join(n)).map(|m| m.modified()))
-      .filter_map(Result::ok)
-      .filter_map(Result::ok)
-      .max()
-      .ok_or_else(|| anyhow!("Unable to get task files max time"))
+  fn get_task_database_mtime(&self) -> Result<SystemTime> {
+    let data_dir = shellexpand::tilde(&self.config.data_location);
+    let database_path = Path::new(data_dir.as_ref()).join("taskchampion.sqlite3");
+
+    let metadata = fs::metadata(database_path).context("Fetching the metadate of the task database failed")?;
+    let mtime = metadata
+      .modified()
+      .context("Could not get mtime of task database, but fetching metadata succeeded")?;
+
+    Ok(mtime)
   }
 
   pub fn tasks_changed_since(&mut self, prev: Option<SystemTime>) -> Result<bool> {
     if let Some(prev) = prev {
-      let mtime = self.get_task_files_max_mtime()?;
+      let mtime = self.get_task_database_mtime()?;
       if mtime > prev {
         Ok(true)
       } else {

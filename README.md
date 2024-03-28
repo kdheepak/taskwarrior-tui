@@ -1,7 +1,7 @@
 # `taskwarrior-tui`
 
 > [!IMPORTANT]
-> `taskwarrior-tui` is only tested with `taskwarrior` v2.x. [`taskwarrior` v3.x](https://github.com/GothenburgBitFactory/taskwarrior/releases/tag/v3.0.0) may not work as intended.
+> [`taskwarrior` v3.x](https://github.com/GothenburgBitFactory/taskwarrior/releases/tag/v3.0.0) may break `taskwarrior-tui` features in unexpected ways. Please file a bug report if you encounter a bug. 
 
 [![CI](https://github.com/kdheepak/taskwarrior-tui/workflows/CI/badge.svg)](https://github.com/kdheepak/taskwarrior-tui/actions?query=workflow%3ACI)
 [![](https://img.shields.io/github/license/kdheepak/taskwarrior-tui)](./LICENSE)
