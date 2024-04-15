@@ -307,7 +307,7 @@ jobs:
           cd /tmp
           git clone https://github.com/GothenburgBitFactory/taskwarrior
           cd taskwarrior
-          git checkout v2.6.1
+          git checkout v3.0.0
           cmake -DCMAKE_BUILD_TYPE=release -DENABLE_SYNC=OFF .
           make
           sudo make install
