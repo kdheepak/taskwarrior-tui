@@ -1304,7 +1304,7 @@ impl TaskwarriorTui {
       self.get_context()?;
       let task_uuids = self.selected_task_uuids();
       if self.current_selection_uuid.is_none() && self.current_selection_id.is_none() && task_uuids.len() == 1 {
-        if let Some(uuid) = task_uuids.get(0) {
+        if let Some(uuid) = task_uuids.first() {
           self.current_selection_uuid = Some(*uuid);
         }
       }
@@ -1798,7 +1798,7 @@ impl TaskwarriorTui {
     };
 
     if task_uuids.len() == 1 {
-      if let Some(uuid) = task_uuids.get(0) {
+      if let Some(uuid) = task_uuids.first() {
         self.current_selection_uuid = Some(*uuid);
       }
     }
@@ -1908,7 +1908,7 @@ impl TaskwarriorTui {
     };
 
     if task_uuids.len() == 1 {
-      if let Some(uuid) = task_uuids.get(0) {
+      if let Some(uuid) = task_uuids.first() {
         self.current_selection_uuid = Some(*uuid);
       }
     }
@@ -1961,7 +1961,7 @@ impl TaskwarriorTui {
     };
 
     if task_uuids.len() == 1 {
-      if let Some(uuid) = task_uuids.get(0) {
+      if let Some(uuid) = task_uuids.first() {
         self.current_selection_uuid = Some(*uuid);
       }
     }
@@ -2013,7 +2013,7 @@ impl TaskwarriorTui {
     };
 
     if task_uuids.len() == 1 {
-      if let Some(uuid) = task_uuids.get(0) {
+      if let Some(uuid) = task_uuids.first() {
         self.current_selection_uuid = Some(*uuid);
       }
     }
@@ -2100,7 +2100,7 @@ impl TaskwarriorTui {
     }
 
     if task_uuids.len() == 1 {
-      if let Some(uuid) = task_uuids.get(0) {
+      if let Some(uuid) = task_uuids.first() {
         self.current_selection_uuid = Some(*uuid);
       }
     }
@@ -2140,7 +2140,7 @@ impl TaskwarriorTui {
     }
 
     if task_uuids.len() == 1 {
-      if let Some(uuid) = task_uuids.get(0) {
+      if let Some(uuid) = task_uuids.first() {
         self.current_selection_uuid = Some(*uuid);
       }
     }
