@@ -3963,7 +3963,7 @@ mod tests {
 
     let mut app = TaskwarriorTui::new("next", false).await.unwrap();
     let task = app.task_by_id(11).unwrap();
-    let tags = vec!["finance", "UNBLOCKED", "PENDING", "TAGGED", "UDA"]
+    let tags = ["finance", "UNBLOCKED", "PENDING", "TAGGED", "UDA"]
       .iter()
       .map(ToString::to_string)
       .collect::<Vec<String>>();
@@ -3982,7 +3982,7 @@ mod tests {
     app.update(true).await.unwrap();
 
     let task = app.task_by_id(11).unwrap();
-    let tags = vec!["next", "finance", "UNBLOCKED", "PENDING", "TAGGED", "UDA"]
+    let tags = ["next", "finance", "UNBLOCKED", "PENDING", "TAGGED", "UDA"]
       .iter()
       .map(ToString::to_string)
       .collect::<Vec<String>>();
@@ -3994,7 +3994,7 @@ mod tests {
     app.update(true).await.unwrap();
 
     let task = app.task_by_id(11).unwrap();
-    let tags = vec!["finance", "UNBLOCKED", "PENDING", "TAGGED", "UDA"]
+    let tags = ["finance", "UNBLOCKED", "PENDING", "TAGGED", "UDA"]
       .iter()
       .map(ToString::to_string)
       .collect::<Vec<String>>();
