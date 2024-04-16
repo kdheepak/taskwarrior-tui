@@ -3768,11 +3768,18 @@ pub fn remove_tag(task: &mut Task, tag: &str) {
 
 #[cfg(test)]
 mod tests {
-  use std::{ffi::OsStr, fmt::Write, fs::File, io, path::Path};
+  use std::{ffi::OsStr, fmt::Write, fs::File, io, path::{Path, PathBuf}};
 
   use ratatui::{backend::TestBackend, buffer::Buffer};
 
   use super::*;
+
+  fn get_taskdata_path() -> PathBuf {
+    let taskdata_env_var = std::env::var("TASKDATA").expect("TASKDATA environment variable not set.");
+    let taskdata_path = Path::new(&taskdata_env_var).to_owned();
+
+    taskdata_path
+  }
 
   /// Returns a string representation of the given buffer for debugging purpose.
   fn buffer_view(buffer: &Buffer) -> String {
@@ -3805,7 +3812,7 @@ mod tests {
 
   fn setup() {
     use std::process::Stdio;
-    let mut f = File::open(Path::new(env!("TASKDATA")).parent().unwrap().join("export.json")).unwrap();
+    let mut f = File::open(get_taskdata_path().parent().unwrap().join("export.json")).unwrap();
     let mut s = String::new();
     f.read_to_string(&mut s).unwrap();
     let tasks = task_hookrs::import::import(s.as_bytes()).unwrap();
@@ -3816,7 +3823,7 @@ mod tests {
   }
 
   fn teardown() {
-    let cd = Path::new(env!("TASKDATA"));
+    let cd = get_taskdata_path();
     std::fs::remove_dir_all(cd).unwrap();
   }
 
@@ -3912,8 +3919,8 @@ mod tests {
       app.task_by_index(0).is_none(),
       "Expected task data to be empty but found {} tasks. Delete contents of {:?} and {:?} and run the tests again.",
       app.tasks.len(),
-      Path::new(env!("TASKDATA")),
-      Path::new(env!("TASKDATA")).parent().unwrap().join(".config")
+      get_taskdata_path(),
+      get_taskdata_path().parent().unwrap().join(".config")
     );
 
     let app = TaskwarriorTui::new("next", false).await.unwrap();
