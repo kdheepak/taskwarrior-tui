@@ -3903,16 +3903,8 @@ mod tests {
     // teardown();
   }
 
-  #[test]
-  fn test_taskwarrior_tui() {
-    let r = tokio::runtime::Builder::new_multi_thread()
-      .enable_all()
-      .build()
-      .unwrap()
-      .block_on(async { _test_taskwarrior_tui().await });
-  }
-
-  async fn _test_taskwarrior_tui() {
+  #[tokio::test]
+  async fn test_taskwarrior_tui() {
     let app = TaskwarriorTui::new("next", false).await.unwrap();
 
     assert!(
