@@ -3767,6 +3767,8 @@ pub fn remove_tag(task: &mut Task, tag: &str) {
 }
 
 #[cfg(test)]
+// Disabled, as "'" should be a String for more readable shlex shell escaping.
+#[allow(clippy::single_char_pattern)]
 mod tests {
   use std::{ffi::OsStr, fmt::Write, fs::File, io, path::{Path, PathBuf}};
 
