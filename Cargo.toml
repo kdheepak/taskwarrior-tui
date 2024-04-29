@@ -55,7 +55,7 @@ taskwarrior-tui = { path = "/usr/bin/taskwarrior-tui" }
 [profile.release]
 debug = 1
 incremental = true
-lto = "off"
+lto = "fat"
 
 [build-dependencies]
 clap = { version = "4.4.1", features = ["derive"] }
