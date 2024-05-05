@@ -72,7 +72,7 @@ To make a file executable:
 1. Run `chmod +x /path/to/script` to modify the executable flag.
 2. Add `#!/usr/bin/env bash`, `#!/usr/bin/env python` or whatever is appropriate for your script.
 
-By default, keys `1`-`9` are available to run shortcuts.
+By default, keys `0`-`9` are available to run shortcuts.
 
 When you hit the shortcut, the script will be executed with the `selected_tasks_uuid` as an
 argument:
@@ -88,7 +88,7 @@ in `~/.config/taskwarrior-tui/shortcut-scripts/add-personal-tag.sh` :
 task rc.bulk=0 rc.confirmation=off rc.dependency.confirmation=off rc.recurrence.confirmation=off "$@" modify +personal
 ```
 
-By default, shortcuts are linked to the `1-9` number row keys. They can be customized as any other
+By default, shortcuts are linked to the `0-9` number row keys. They can be customized as any other
 keys through `uda.taskwarrior-tui.keyconfig.shortcut1=<key>`. For example:
 
 ```plaintext

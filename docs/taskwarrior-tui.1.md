@@ -119,7 +119,7 @@ Ctrl-y
 `!`
 : {string}                          - Custom shell command
 
-`1-9`
+`0-9`
 : {string}                          - Run user defined shortcuts
 
 `:`

@@ -58,7 +58,7 @@ Keybindings for task report:
 
     !: {string}                          - Custom shell command
 
-    1-9: {string}                        - Run user defined shortcuts
+    0-9: {string}                        - Run user defined shortcuts
 
     :: {task id}                         - Jump to task id
 

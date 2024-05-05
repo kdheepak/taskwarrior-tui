@@ -2719,6 +2719,15 @@ impl TaskwarriorTui {
             self.update_completion_list();
           } else if input == KeyCode::Char(':') {
             self.mode = Mode::Tasks(Action::Jump);
+          } else if input == self.keyconfig.shortcut0 {
+            match self.task_shortcut(0).await {
+              Ok(_) => self.update(true).await?,
+              Err(e) => {
+                self.update(true).await?;
+                self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
+              }
+            }
           } else if input == self.keyconfig.shortcut1 {
             match self.task_shortcut(1).await {
               Ok(_) => self.update(true).await?,
