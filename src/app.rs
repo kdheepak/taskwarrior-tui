@@ -43,8 +43,7 @@ use crate::{
   action::Action,
   calendar::Calendar,
   completion::{get_start_word_under_cursor, CompletionList},
-  config,
-  config::Config,
+  config::{self, Config},
   event::{Event, KeyCode},
   help::Help,
   history::HistoryContext,
@@ -928,8 +927,7 @@ impl TaskwarriorTui {
     let maximum_column_width = area.width;
     let widths = self.calculate_widths(&contexts, &headers, maximum_column_width);
 
-    let selected = self.contexts.table_state.current_selection().unwrap_or_default();
-    let header = headers.iter();
+    let selected = self.contexts.table_state.selected().unwrap_or_default();
     let mut rows = vec![];
     let mut highlight_style = Style::default();
     for (i, context) in contexts.iter().enumerate() {
@@ -937,8 +935,8 @@ impl TaskwarriorTui {
       if &self.contexts.rows[i].active == "yes" {
         style = self.config.uda_style_context_active;
       }
-      rows.push(Row::StyledData(context.iter(), style));
-      if i == self.contexts.table_state.current_selection().unwrap_or_default() {
+      rows.push(ratatui::widgets::Row::new(context.clone()).style(style));
+      if i == self.contexts.table_state.selected().unwrap_or_default() {
         highlight_style = style;
       }
     }
@@ -949,25 +947,26 @@ impl TaskwarriorTui {
       .collect();
 
     let highlight_style = highlight_style.add_modifier(Modifier::BOLD);
-    let t = Table::new(header, rows.into_iter())
+    let t = ratatui::widgets::Table::new(rows.into_iter(), constraints.clone())
       .block(
         Block::default()
           .borders(Borders::ALL)
           .border_type(BorderType::Rounded)
           .title(Line::from(vec![Span::styled("Context", Style::default().add_modifier(Modifier::BOLD))])),
       )
-      .header_style(
-        self
-          .config
-          .color
-          .get("color.label")
-          .copied()
-          .unwrap_or_default()
-          .add_modifier(Modifier::UNDERLINED),
+      .header(
+        ratatui::widgets::Row::new(headers).style(
+          self
+            .config
+            .color
+            .get("color.label")
+            .copied()
+            .unwrap_or_default()
+            .add_modifier(Modifier::UNDERLINED),
+        ),
       )
       .highlight_style(highlight_style)
-      .highlight_symbol(&self.config.uda_selection_indicator)
-      .widths(&constraints);
+      .highlight_symbol(self.config.uda_selection_indicator.clone());
 
     f.render_stateful_widget(t, area, &mut self.contexts.table_state);
   }
@@ -1442,7 +1441,7 @@ impl TaskwarriorTui {
   }
 
   pub fn context_next(&mut self) {
-    let i = match self.contexts.table_state.current_selection() {
+    let i = match self.contexts.table_state.selected() {
       Some(i) => {
         if i >= self.contexts.len() - 1 {
           0
@@ -1456,7 +1455,7 @@ impl TaskwarriorTui {
   }
 
   pub fn context_previous(&mut self) {
-    let i = match self.contexts.table_state.current_selection() {
+    let i = match self.contexts.table_state.selected() {
       Some(i) => {
         if i == 0 {
           self.contexts.len() - 1
@@ -1470,7 +1469,7 @@ impl TaskwarriorTui {
   }
 
   pub fn context_select(&mut self) -> Result<()> {
-    let i = self.contexts.table_state.current_selection().unwrap_or_default();
+    let i = self.contexts.table_state.selected().unwrap_or_default();
     let mut command = std::process::Command::new("task");
     command.arg("context").arg(&self.contexts.rows[i].name);
     command.output()?;

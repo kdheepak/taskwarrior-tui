@@ -14,7 +14,7 @@ pub fn format_date_time(dt: NaiveDateTime) -> String {
 
 pub fn format_date(dt: NaiveDateTime) -> String {
   let offset = Local.offset_from_utc_datetime(&dt);
-  let dt = DateTime::<Local>::from_utc(dt, offset);
+  let dt = DateTime::<Local>::from_naive_utc_and_offset(dt, offset);
   dt.format("%Y-%m-%d").to_string()
 }
 
