@@ -276,6 +276,10 @@ impl TaskReportTable {
         ),
         None => "".to_string(),
       },
+      "scheduled" => match task.scheduled() {
+        Some(v) => format_date(NaiveDateTime::new(v.date(), v.time())),
+        None => "".to_string(),
+      },
       "due.relative" => match task.due() {
         Some(v) => vague_format_date_time(
           Local::now().naive_utc(),
