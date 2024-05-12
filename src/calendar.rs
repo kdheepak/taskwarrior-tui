@@ -249,7 +249,7 @@ impl<'a> Widget for Calendar<'a> {
 
 impl<'a> Calendar<'a> {
   fn generate_month_names() -> [&'a str; 12] {
-    let month_names = [
+    [
       Month::January.name(),
       Month::February.name(),
       Month::March.name(),
@@ -262,7 +262,6 @@ impl<'a> Calendar<'a> {
       Month::October.name(),
       Month::November.name(),
       Month::December.name(),
-    ];
-    month_names
+    ]
   }
 }

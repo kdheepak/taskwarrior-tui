@@ -64,7 +64,7 @@ const MAX_LINE: usize = 4096;
 
 lazy_static! {
   static ref START_TIME: Instant = Instant::now();
-  static ref TASKWARRIOR_VERSION_SUPPORTED: Versioning = Versioning::new("2.6.0").unwrap();
+  static ref TASKWARRIOR_VERSION_SUPPORTED: Versioning = Versioning::new("3.0.0").unwrap();
 }
 
 #[derive(Debug)]
@@ -1304,12 +1304,11 @@ impl TaskwarriorTui {
       self.get_context()?;
       let task_uuids = self.selected_task_uuids();
       if self.current_selection_uuid.is_none() && self.current_selection_id.is_none() && task_uuids.len() == 1 {
-        if let Some(uuid) = task_uuids.get(0) {
+        if let Some(uuid) = task_uuids.first() {
           self.current_selection_uuid = Some(*uuid);
         }
       }
 
-      self.last_export = Some(std::time::SystemTime::now());
       self.task_report_table.export_headers(None, &self.report)?;
       self.export_tasks()?;
       if self.config.uda_task_report_use_all_tasks_for_completion {
@@ -1321,6 +1320,10 @@ impl TaskwarriorTui {
       self.task_details.clear();
       self.dirty = false;
       self.save_history()?;
+
+      // Some operations like export or summary change the taskwarrior database.
+      // The export time therefore gets set at the end, to avoid an infinite update loop.
+      self.last_export = Some(std::time::SystemTime::now());
     }
     self.cursor_fix();
     self.update_task_table_state();
@@ -1608,20 +1611,21 @@ impl TaskwarriorTui {
     }
   }
 
-  fn get_task_files_max_mtime(&self) -> Result<SystemTime> {
-    let data_dir = shellexpand::tilde(&self.config.data_location).into_owned();
-    ["backlog.data", "completed.data", "pending.data"]
-      .iter()
-      .map(|n| fs::metadata(Path::new(&data_dir).join(n)).map(|m| m.modified()))
-      .filter_map(Result::ok)
-      .filter_map(Result::ok)
-      .max()
-      .ok_or_else(|| anyhow!("Unable to get task files max time"))
+  fn get_task_database_mtime(&self) -> Result<SystemTime> {
+    let data_dir = shellexpand::tilde(&self.config.data_location);
+    let database_path = Path::new(data_dir.as_ref()).join("taskchampion.sqlite3");
+
+    let metadata = fs::metadata(database_path).context("Fetching the metadate of the task database failed")?;
+    let mtime = metadata
+      .modified()
+      .context("Could not get mtime of task database, but fetching metadata succeeded")?;
+
+    Ok(mtime)
   }
 
   pub fn tasks_changed_since(&mut self, prev: Option<SystemTime>) -> Result<bool> {
     if let Some(prev) = prev {
-      let mtime = self.get_task_files_max_mtime()?;
+      let mtime = self.get_task_database_mtime()?;
       if mtime > prev {
         Ok(true)
       } else {
@@ -1794,7 +1798,7 @@ impl TaskwarriorTui {
     };
 
     if task_uuids.len() == 1 {
-      if let Some(uuid) = task_uuids.get(0) {
+      if let Some(uuid) = task_uuids.first() {
         self.current_selection_uuid = Some(*uuid);
       }
     }
@@ -1904,7 +1908,7 @@ impl TaskwarriorTui {
     };
 
     if task_uuids.len() == 1 {
-      if let Some(uuid) = task_uuids.get(0) {
+      if let Some(uuid) = task_uuids.first() {
         self.current_selection_uuid = Some(*uuid);
       }
     }
@@ -1957,7 +1961,7 @@ impl TaskwarriorTui {
     };
 
     if task_uuids.len() == 1 {
-      if let Some(uuid) = task_uuids.get(0) {
+      if let Some(uuid) = task_uuids.first() {
         self.current_selection_uuid = Some(*uuid);
       }
     }
@@ -2009,7 +2013,7 @@ impl TaskwarriorTui {
     };
 
     if task_uuids.len() == 1 {
-      if let Some(uuid) = task_uuids.get(0) {
+      if let Some(uuid) = task_uuids.first() {
         self.current_selection_uuid = Some(*uuid);
       }
     }
@@ -2096,7 +2100,7 @@ impl TaskwarriorTui {
     }
 
     if task_uuids.len() == 1 {
-      if let Some(uuid) = task_uuids.get(0) {
+      if let Some(uuid) = task_uuids.first() {
         self.current_selection_uuid = Some(*uuid);
       }
     }
@@ -2136,7 +2140,7 @@ impl TaskwarriorTui {
     }
 
     if task_uuids.len() == 1 {
-      if let Some(uuid) = task_uuids.get(0) {
+      if let Some(uuid) = task_uuids.first() {
         self.current_selection_uuid = Some(*uuid);
       }
     }
@@ -3763,12 +3767,27 @@ pub fn remove_tag(task: &mut Task, tag: &str) {
 }
 
 #[cfg(test)]
+// Disabled, as "'" should be a String for more readable shlex shell escaping.
+#[allow(clippy::single_char_pattern)]
 mod tests {
-  use std::{ffi::OsStr, fmt::Write, fs::File, io, path::Path};
+  use std::{
+    ffi::OsStr,
+    fmt::Write,
+    fs::File,
+    io,
+    path::{Path, PathBuf},
+  };
 
   use ratatui::{backend::TestBackend, buffer::Buffer};
 
   use super::*;
+
+  fn get_taskdata_path() -> PathBuf {
+    let taskdata_env_var = std::env::var("TASKDATA").expect("TASKDATA environment variable not set.");
+    let taskdata_path = Path::new(&taskdata_env_var).to_owned();
+
+    taskdata_path
+  }
 
   /// Returns a string representation of the given buffer for debugging purpose.
   fn buffer_view(buffer: &Buffer) -> String {
@@ -3801,7 +3820,7 @@ mod tests {
 
   fn setup() {
     use std::process::Stdio;
-    let mut f = File::open(Path::new(env!("TASKDATA")).parent().unwrap().join("export.json")).unwrap();
+    let mut f = File::open(get_taskdata_path().parent().unwrap().join("export.json")).unwrap();
     let mut s = String::new();
     f.read_to_string(&mut s).unwrap();
     let tasks = task_hookrs::import::import(s.as_bytes()).unwrap();
@@ -3812,7 +3831,7 @@ mod tests {
   }
 
   fn teardown() {
-    let cd = Path::new(env!("TASKDATA"));
+    let cd = get_taskdata_path();
     std::fs::remove_dir_all(cd).unwrap();
   }
 
@@ -3892,24 +3911,16 @@ mod tests {
     // teardown();
   }
 
-  #[test]
-  fn test_taskwarrior_tui() {
-    let r = tokio::runtime::Builder::new_multi_thread()
-      .enable_all()
-      .build()
-      .unwrap()
-      .block_on(async { _test_taskwarrior_tui().await });
-  }
-
-  async fn _test_taskwarrior_tui() {
+  #[tokio::test]
+  async fn test_taskwarrior_tui() {
     let app = TaskwarriorTui::new("next", false).await.unwrap();
 
     assert!(
       app.task_by_index(0).is_none(),
       "Expected task data to be empty but found {} tasks. Delete contents of {:?} and {:?} and run the tests again.",
       app.tasks.len(),
-      Path::new(env!("TASKDATA")),
-      Path::new(env!("TASKDATA")).parent().unwrap().join(".config")
+      get_taskdata_path(),
+      get_taskdata_path().parent().unwrap().join(".config")
     );
 
     let app = TaskwarriorTui::new("next", false).await.unwrap();
@@ -3958,7 +3969,7 @@ mod tests {
 
     let mut app = TaskwarriorTui::new("next", false).await.unwrap();
     let task = app.task_by_id(11).unwrap();
-    let tags = vec!["finance", "UNBLOCKED", "PENDING", "TAGGED", "UDA"]
+    let tags = ["finance", "UNBLOCKED", "PENDING", "TAGGED", "UDA"]
       .iter()
       .map(ToString::to_string)
       .collect::<Vec<String>>();
@@ -3977,7 +3988,7 @@ mod tests {
     app.update(true).await.unwrap();
 
     let task = app.task_by_id(11).unwrap();
-    let tags = vec!["next", "finance", "UNBLOCKED", "PENDING", "TAGGED", "UDA"]
+    let tags = ["next", "finance", "UNBLOCKED", "PENDING", "TAGGED", "UDA"]
       .iter()
       .map(ToString::to_string)
       .collect::<Vec<String>>();
@@ -3989,7 +4000,7 @@ mod tests {
     app.update(true).await.unwrap();
 
     let task = app.task_by_id(11).unwrap();
-    let tags = vec!["finance", "UNBLOCKED", "PENDING", "TAGGED", "UDA"]
+    let tags = ["finance", "UNBLOCKED", "PENDING", "TAGGED", "UDA"]
       .iter()
       .map(ToString::to_string)
       .collect::<Vec<String>>();
