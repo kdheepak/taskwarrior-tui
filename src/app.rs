@@ -434,7 +434,7 @@ impl TaskwarriorTui {
     Ok(())
   }
 
-  pub fn draw(&mut self, f: &mut Frame<impl Backend>) {
+  pub fn draw(&mut self, f: &mut Frame) {
     let rect = f.size();
     self.terminal_width = rect.width;
     self.terminal_height = rect.height;
@@ -455,7 +455,7 @@ impl TaskwarriorTui {
     }
   }
 
-  fn draw_tabs(&self, f: &mut Frame<impl Backend>, layout: Rect) {
+  fn draw_tabs(&self, f: &mut Frame, layout: Rect) {
     let titles: Vec<&str> = vec!["Tasks", "Projects", "Calendar"];
     let tab_names: Vec<_> = titles.into_iter().map(Line::from).collect();
     let selected_tab = match self.mode {
@@ -487,7 +487,7 @@ impl TaskwarriorTui {
     f.render_widget(Paragraph::new(Text::from(context)).block(navbar_block), rects[1]);
   }
 
-  pub fn draw_debug(&mut self, f: &mut Frame<impl Backend>) {
+  pub fn draw_debug(&mut self, f: &mut Frame) {
     let area = centered_rect(50, 50, f.size());
     f.render_widget(Clear, area);
     let t = format!("{}", self.current_selection);
@@ -495,7 +495,7 @@ impl TaskwarriorTui {
     f.render_widget(p, area);
   }
 
-  pub fn draw_projects(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
+  pub fn draw_projects(&mut self, f: &mut Frame, rect: Rect) {
     let data = self.projects.data.clone();
     let p = Paragraph::new(Text::from(&data[..]));
     f.render_widget(p, rect);
@@ -521,7 +521,7 @@ impl TaskwarriorTui {
     style
   }
 
-  pub fn draw_calendar(&mut self, f: &mut Frame<impl Backend>, layout: Rect) {
+  pub fn draw_calendar(&mut self, f: &mut Frame, layout: Rect) {
     let mut c = Calendar::default()
       .today_style(self.config.uda_style_calendar_today)
       .year(self.calendar_year)
@@ -532,7 +532,7 @@ impl TaskwarriorTui {
     f.render_widget(c, layout);
   }
 
-  pub fn draw_task(&mut self, f: &mut Frame<impl Backend>, layout: Rect, action: Action) {
+  pub fn draw_task(&mut self, f: &mut Frame, layout: Rect, action: Action) {
     let rects = Layout::default()
       .direction(Direction::Vertical)
       .constraints([Constraint::Min(0), Constraint::Length(2)].as_ref())
@@ -576,7 +576,7 @@ impl TaskwarriorTui {
     self.handle_task_mode_action(f, &rects, &task_ids, action);
   }
 
-  fn handle_task_mode_action(&mut self, f: &mut Frame<impl Backend>, rects: &[Rect], task_ids: &[String], action: Action) {
+  fn handle_task_mode_action(&mut self, f: &mut Frame, rects: &[Rect], task_ids: &[String], action: Action) {
     match action {
       Action::Error => {
         self.draw_command(
@@ -888,7 +888,7 @@ impl TaskwarriorTui {
     position
   }
 
-  fn draw_help_popup(&mut self, f: &mut Frame<impl Backend>, percent_x: u16, percent_y: u16) {
+  fn draw_help_popup(&mut self, f: &mut Frame, percent_x: u16, percent_y: u16) {
     let area = centered_rect(percent_x, percent_y, f.size());
     f.render_widget(Clear, area);
 
@@ -913,7 +913,7 @@ impl TaskwarriorTui {
     f.render_widget(&self.help_popup, chunks[0]);
   }
 
-  fn draw_context_menu(&mut self, f: &mut Frame<impl Backend>, percent_x: u16, percent_y: u16) {
+  fn draw_context_menu(&mut self, f: &mut Frame, percent_x: u16, percent_y: u16) {
     let rects = Layout::default()
       .direction(Direction::Vertical)
       .constraints([Constraint::Min(0)].as_ref())
@@ -972,7 +972,7 @@ impl TaskwarriorTui {
     f.render_stateful_widget(t, area, &mut self.contexts.table_state);
   }
 
-  fn draw_completion_pop_up(&mut self, f: &mut Frame<impl Backend>, rect: Rect, cursor_position: usize) {
+  fn draw_completion_pop_up(&mut self, f: &mut Frame, rect: Rect, cursor_position: usize) {
     if self.completion_list.candidates().is_empty() {
       self.show_completion_pane = false;
       return;
@@ -1018,16 +1018,7 @@ impl TaskwarriorTui {
     f.render_stateful_widget(items, rect, &mut self.completion_list.state);
   }
 
-  fn draw_command(
-    &self,
-    f: &mut Frame<impl Backend>,
-    rect: Rect,
-    text: &str,
-    title: (Span, Option<Span>),
-    position: usize,
-    cursor: bool,
-    error: Option<String>,
-  ) {
+  fn draw_command(&self, f: &mut Frame, rect: Rect, text: &str, title: (Span, Option<Span>), position: usize, cursor: bool, error: Option<String>) {
     // f.render_widget(Clear, rect);
     if cursor {
       f.set_cursor(std::cmp::min(rect.x + position as u16, rect.x + rect.width.saturating_sub(2)), rect.y + 1);
@@ -1055,7 +1046,7 @@ impl TaskwarriorTui {
     f.render_widget(p, rects[1]);
   }
 
-  fn draw_task_details(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
+  fn draw_task_details(&mut self, f: &mut Frame, rect: Rect) {
     if self.tasks.is_empty() {
       let p = Paragraph::new(Text::from("Task not found")).block(Block::default().borders(Borders::TOP));
       f.render_widget(p, rect);
@@ -1197,15 +1188,10 @@ impl TaskwarriorTui {
     widths
   }
 
-  fn draw_task_report(&mut self, f: &mut Frame<impl Backend>, rect: Rect) {
+  fn draw_task_report(&mut self, f: &mut Frame, rect: Rect) {
     let (tasks, headers) = self.get_task_report();
 
     if tasks.is_empty() {
-      if !self.current_context.is_empty() {
-        let context_style = Style::default();
-        context_style.add_modifier(Modifier::ITALIC);
-      }
-
       f.render_widget(Block::default(), rect);
       return;
     }

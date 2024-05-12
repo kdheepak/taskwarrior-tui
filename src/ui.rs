@@ -10,10 +10,7 @@ use ratatui::{
 
 use crate::app::TaskwarriorTui;
 
-pub fn draw<B>(rect: &mut Frame<B>, app: &TaskwarriorTui)
-where
-  B: Backend,
-{
+pub fn draw(rect: &mut Frame, app: &TaskwarriorTui) {
   let size = rect.size();
   let chunks = Layout::default()
     .direction(Direction::Vertical)
