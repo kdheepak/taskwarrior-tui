@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.26.3](https://github.com/kdheepak/taskwarrior-tui/compare/v0.26.2...v0.26.3) - 2024-05-12
+
+### Other
+- Update cd.yml
+
 ## [0.26.2](https://github.com/kdheepak/taskwarrior-tui/compare/v0.26.1...v0.26.2) - 2024-05-12
 
 ### Added
