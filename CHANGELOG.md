@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.26.2](https://github.com/kdheepak/taskwarrior-tui/compare/v0.26.1...v0.26.2) - 2024-05-12
+
+### Added
+- Add task duplicate
+- Add scheduled
+- Add scheduled countdown
+- Add recur to autocomplete options
+
+### Other
+- fix clippy issues
+- Update release-plz.yml with token
+
 ## [0.26.1](https://github.com/kdheepak/taskwarrior-tui/compare/v0.26.0...v0.26.1) - 2024-05-12
 
 ### Other
