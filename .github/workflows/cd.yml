@@ -121,7 +121,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - uses: actions-rs/cargo@v1
         with:
           command: build
@@ -149,7 +149,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - uses: actions-rs/cargo@v1
         with:
           command: build
@@ -179,7 +179,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - uses: actions-rs/cargo@v1
         with:
           command: build
@@ -196,7 +196,7 @@ jobs:
       TASKDATA: taskwarrior-testdata/.task
       RUST_BACKTRACE: full
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -215,7 +215,7 @@ jobs:
           sudo make install
       - run: |
           task --version
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           repository: kdheepak/taskwarrior-testdata
           path: taskwarrior-testdata

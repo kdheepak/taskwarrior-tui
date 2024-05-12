@@ -7,7 +7,7 @@ jobs:
     name: Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -25,7 +25,7 @@ jobs:
       TASKDATA: taskwarrior-testdata/.task
       RUST_BACKTRACE: full
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -43,7 +43,7 @@ jobs:
           sudo make install
       - run: |
           task --version
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           repository: kdheepak/taskwarrior-testdata
           path: taskwarrior-testdata
@@ -59,7 +59,7 @@ jobs:
     name: Rustfmt
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -75,7 +75,7 @@ jobs:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
