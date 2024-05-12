@@ -97,7 +97,7 @@ jobs:
           path: target/${{ matrix.target }}/release/taskwarrior-tui-${{ matrix.target }}.tar.gz
       - name: Releasing assets
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             target/${{ matrix.target }}/release/taskwarrior-tui-${{ matrix.target }}.tar.gz
@@ -137,7 +137,7 @@ jobs:
           path: target/debian/taskwarrior-tui.deb
       - name: Releasing assets
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             target/debian/*.deb
@@ -167,7 +167,7 @@ jobs:
           path: target/release/rpmbuild/RPMS/x86_64/taskwarrior-tui-*.x86_64.rpm
       - name: Releasing assets
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             target/release/rpmbuild/RPMS/x86_64/taskwarrior-tui-*.x86_64.rpm
