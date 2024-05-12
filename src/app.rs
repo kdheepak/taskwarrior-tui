@@ -2265,6 +2265,47 @@ impl TaskwarriorTui {
     }
   }
 
+  pub fn task_duplicate(&mut self) -> Result<(), String> {
+    if self.tasks.is_empty() {
+      return Ok(());
+    }
+
+    let task_uuids = self.selected_task_uuids();
+
+    let mut command = std::process::Command::new("task");
+    command.arg("rc.bulk=0");
+    command.arg("rc.confirmation=off");
+    command.arg("rc.dependency.confirmation=off");
+    command.arg("rc.recurrence.confirmation=off");
+    for task_uuid in &task_uuids {
+      command.arg(task_uuid.to_string());
+    }
+    command.arg("duplicate");
+
+    let output = command.output();
+    let r = match output {
+      Ok(o) => {
+        if o.status.success() {
+          Ok(())
+        } else {
+          Err(format!("Modify failed. {}", String::from_utf8_lossy(&o.stdout)))
+        }
+      }
+      Err(_) => Err(format!(
+        "Cannot run `task {:?} duplicate`. Check documentation for more information",
+        task_uuids,
+      )),
+    };
+
+    if task_uuids.len() == 1 {
+      if let Some(uuid) = task_uuids.first() {
+        self.current_selection_uuid = Some(*uuid);
+      }
+    }
+
+    r
+  }
+
   pub async fn task_edit(&mut self) -> Result<(), String> {
     if self.tasks.is_empty() {
       return Ok(());
@@ -2611,6 +2652,14 @@ impl TaskwarriorTui {
             }
           } else if input == self.keyconfig.edit {
             match self.task_edit().await {
+              Ok(_) => self.update(true).await?,
+              Err(e) => {
+                self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
+              }
+            }
+          } else if input == self.keyconfig.duplicate {
+            match self.task_duplicate() {
               Ok(_) => self.update(true).await?,
               Err(e) => {
                 self.error = Some(e);
