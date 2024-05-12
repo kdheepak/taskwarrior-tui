@@ -24,6 +24,7 @@ pub struct KeyConfig {
   pub select_all: KeyCode,
   pub undo: KeyCode,
   pub edit: KeyCode,
+  pub duplicate: KeyCode,
   pub modify: KeyCode,
   pub shell: KeyCode,
   pub log: KeyCode,
@@ -70,6 +71,7 @@ impl Default for KeyConfig {
       select_all: KeyCode::Char('V'),
       undo: KeyCode::Char('u'),
       edit: KeyCode::Char('e'),
+      duplicate: KeyCode::Char('y'),
       modify: KeyCode::Char('m'),
       shell: KeyCode::Char('!'),
       log: KeyCode::Char('l'),
@@ -123,6 +125,7 @@ impl KeyConfig {
     let select_all = Self::get_config("uda.taskwarrior-tui.keyconfig.select-all", data);
     let undo = Self::get_config("uda.taskwarrior-tui.keyconfig.undo", data);
     let edit = Self::get_config("uda.taskwarrior-tui.keyconfig.edit", data);
+    let duplicate = Self::get_config("uda.taskwarrior-tui.keyconfig.duplicate", data);
     let modify = Self::get_config("uda.taskwarrior-tui.keyconfig.modify", data);
     let shell = Self::get_config("uda.taskwarrior-tui.keyconfig.shell", data);
     let log = Self::get_config("uda.taskwarrior-tui.keyconfig.log", data);
@@ -160,6 +163,7 @@ impl KeyConfig {
     self.select_all = select_all.unwrap_or(self.select_all);
     self.undo = undo.unwrap_or(self.undo);
     self.edit = edit.unwrap_or(self.edit);
+    self.duplicate = edit.unwrap_or(self.duplicate);
     self.modify = modify.unwrap_or(self.modify);
     self.shell = shell.unwrap_or(self.shell);
     self.log = log.unwrap_or(self.log);
@@ -202,6 +206,7 @@ impl KeyConfig {
       &self.quick_tag,
       &self.undo,
       &self.edit,
+      &self.duplicate,
       &self.modify,
       &self.shell,
       &self.log,

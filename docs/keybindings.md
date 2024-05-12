@@ -18,6 +18,8 @@ Keybindings for task report:
 
     e: task {selected} edit              - Open selected task in editor
 
+    y: task {selected} duplicate         - Duplicate tasks
+
     j: {selected+=1}                     - Move down in task report
 
     k: {selected-=1}                     - Move up in task report
