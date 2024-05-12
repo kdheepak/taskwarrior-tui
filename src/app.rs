@@ -3843,11 +3843,11 @@ mod tests {
       view.push('"');
       for (x, c) in cells.iter().enumerate() {
         if skip == 0 {
-          view.push_str(&c.symbol);
+          view.push_str(c.symbol());
         } else {
-          overwritten.push((x, &c.symbol))
+          overwritten.push((x, c.symbol()))
         }
-        skip = std::cmp::max(skip, c.symbol.width()).saturating_sub(1);
+        skip = std::cmp::max(skip, c.symbol().width()).saturating_sub(1);
       }
       view.push('"');
       if !overwritten.is_empty() {
@@ -4094,22 +4094,22 @@ mod tests {
     assert_eq!(app.tasks.len(), 26);
     assert_eq!(app.current_context_filter, "");
 
-    assert_eq!(app.contexts.table_state.current_selection(), Some(0));
+    assert_eq!(app.contexts.table_state.selected(), Some(0));
     app.context_next();
     app.context_next();
     app.context_select().unwrap();
-    assert_eq!(app.contexts.table_state.current_selection(), Some(2));
+    assert_eq!(app.contexts.table_state.selected(), Some(2));
 
     assert!(app.update(true).await.is_ok());
 
     assert_eq!(app.tasks.len(), 1);
     assert_eq!(app.current_context_filter, "+finance -private");
 
-    assert_eq!(app.contexts.table_state.current_selection(), Some(2));
+    assert_eq!(app.contexts.table_state.selected(), Some(2));
     app.context_previous();
     app.context_previous();
     app.context_select().unwrap();
-    assert_eq!(app.contexts.table_state.current_selection(), Some(0));
+    assert_eq!(app.contexts.table_state.selected(), Some(0));
 
     assert!(app.update(true).await.is_ok());
 
