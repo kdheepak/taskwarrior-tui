@@ -42,31 +42,36 @@ pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime, with
     } else {
       format!("{}{}y", minus, seconds / year)
     };
-  } else if seconds >= 60 * 60 * 24 * 90 {
+  }
+  if seconds >= 60 * 60 * 24 * 90 {
     return if with_remainder {
       format!("{}{}mo{}w", minus, seconds / month, (seconds - month * (seconds / month)) / week)
     } else {
       format!("{}{}mo", minus, seconds / month)
     };
-  } else if seconds >= 60 * 60 * 24 * 14 {
+  }
+  if seconds >= 60 * 60 * 24 * 14 {
     return if with_remainder {
       format!("{}{}w{}d", minus, seconds / week, (seconds - week * (seconds / week)) / day)
     } else {
       format!("{}{}w", minus, seconds / week)
     };
-  } else if seconds >= 60 * 60 * 24 {
+  }
+  if seconds >= 60 * 60 * 24 {
     return if with_remainder {
       format!("{}{}d{}h", minus, seconds / day, (seconds - day * (seconds / day)) / hour)
     } else {
       format!("{}{}d", minus, seconds / day)
     };
-  } else if seconds >= 60 * 60 {
+  }
+  if seconds >= 60 * 60 {
     return if with_remainder {
       format!("{}{}h{}min", minus, seconds / hour, (seconds - hour * (seconds / hour)) / minute)
     } else {
       format!("{}{}h", minus, seconds / hour)
     };
-  } else if seconds >= 60 {
+  }
+  if seconds >= 60 {
     return if with_remainder {
       format!("{}{}min{}s", minus, seconds / minute, (seconds - minute * (seconds / minute)))
     } else {
@@ -256,6 +261,14 @@ impl TaskReportTable {
     match attribute {
       "id" => task.id().unwrap_or_default().to_string(),
       "scheduled.relative" => match task.scheduled() {
+        Some(v) => vague_format_date_time(
+          Local::now().naive_utc(),
+          NaiveDateTime::new(v.date(), v.time()),
+          self.date_time_vague_precise,
+        ),
+        None => "".to_string(),
+      },
+      "scheduled.countdown" => match task.scheduled() {
         Some(v) => vague_format_date_time(
           Local::now().naive_utc(),
           NaiveDateTime::new(v.date(), v.time()),
