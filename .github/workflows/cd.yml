@@ -101,30 +101,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  publish:
-    name: Publishing to Cargo
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@master
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-
-      - name: Build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release
-
-      - name: Publish
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: actions-rs/cargo@v1
-        with:
-          command: publish
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-
   homebrew:
     name: Bump Homebrew formula
     runs-on: macos-latest
@@ -208,84 +184,6 @@ jobs:
         run: cargo install cargo-aur
       - name: Build aur package
         run: cargo aur
-
-  # appimage:
-  #   name: Publish appimage package
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #     - uses: actions-rs/cargo@v1
-  #       with:
-  #         command: build
-  #         args: --release
-  #     - name: Build AppImage
-  #       run: |
-  #         wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
-  #         chmod +x linuxdeploy-x86_64.AppImage
-  #         mkdir -p AppDir/usr/bin
-  #         cp target/release/taskwarrior-tui AppDir/usr/bin/taskwarrior-tui
-  #         cat <<EOF > AppDir/taskwarrior-tui.desktop
-  #         [Desktop Entry]
-  #         Name=taskwarrior-tui
-  #         Exec=taskwarrior-tui
-  #         Icon=icon
-  #         Type=Application
-  #         Categories=Utility;
-  #         EOF
-  #         wget https://user-images.githubusercontent.com/1813121/97495331-1dda4a80-192d-11eb-94eb-c276f538cfa8.png
-  #         mv 97495331-1dda4a80-192d-11eb-94eb-c276f538cfa8.png AppDir/icon.png
-  #         ./linuxdeploy-x86_64.AppImage -d AppDir/taskwarrior-tui.desktop -i AppDir/icon.png --appdir AppDir --output appimage
-  #     - name: Upload artifacts
-  #       uses: actions/upload-artifact@v2
-  #       with:
-  #         name: taskwarrior-tui
-  #         path: taskwarrior-tui-*.AppImage
-  #     - name: Releasing assets
-  #       if: startsWith(github.ref, 'refs/tags/')
-  #       uses: softprops/action-gh-release@v1
-  #       with:
-  #         files: |
-  #           taskwarrior-tui-*.AppImage
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  snap:
-    name: Push to snap
-    runs-on: ubuntu-18.04
-    steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v2
-
-      - name: Install Snapcraft
-        uses: samuelmeuli/action-snapcraft@v1
-        with:
-          use_lxd: true
-          snapcraft_token: ${{ secrets.SNAPCRAFT_TOKEN }}
-
-      - name: Install review tools
-        run: sudo snap install review-tools
-
-      - name: Build snap
-        run: sg lxd -c 'snapcraft --use-lxd'
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: taskwarrior-tui
-          path: taskwarrior-tui_*.snap
-
-      - name: Releasing assets
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            taskwarrior-tui_*.snap
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Publish snap
-        if: startsWith(github.ref, 'refs/tags/')
-        run: snapcraft upload --release stable ./taskwarrior-tui_*.snap
 
   grcov:
     runs-on: ubuntu-latest
