@@ -1,10 +1,14 @@
 name: CD
+
 on:
+  release:
+    types: [published]
   push:
-    branches:
-      - main
     tags:
       - v*
+      
+permissions:
+  contents: write
 
 jobs:
   build:
