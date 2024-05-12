@@ -3593,6 +3593,7 @@ impl TaskwarriorTui {
         "scheduled:".to_string(),
         "wait:".to_string(),
         "depends:".to_string(),
+        "recur:".to_string(),
       ] {
         self.completion_list.insert(("attribute".to_string(), s));
       }
