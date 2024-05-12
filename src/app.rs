@@ -1273,9 +1273,9 @@ impl TaskwarriorTui {
     if tasks.iter().len() as u16 > rect.height.saturating_sub(4) {
       let mut widget = Scrollbar::new(pos, tasks.iter().len());
       widget.pos_style = self.config.uda_style_report_scrollbar;
-      widget.pos_symbol = self.config.uda_scrollbar_indicator.clone();
+      widget.pos_symbol.clone_from(&self.config.uda_scrollbar_indicator);
       widget.area_style = self.config.uda_style_report_scrollbar_area;
-      widget.area_symbol = self.config.uda_scrollbar_area.clone();
+      widget.area_symbol.clone_from(&self.config.uda_scrollbar_area);
       f.render_widget(widget, rect);
     }
   }
