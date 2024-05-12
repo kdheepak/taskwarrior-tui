@@ -1662,18 +1662,23 @@ impl TaskwarriorTui {
     let error = String::from_utf8_lossy(&output.stderr);
 
     if output.status.success() {
-      if let Ok(imported) = import(data.as_bytes()) {
-        self.all_tasks = imported;
-        info!("Imported {} tasks", self.tasks.len());
-        self.error = None;
-        if self.mode == Mode::Tasks(Action::Error) {
-          self.mode = self.previous_mode.clone().unwrap_or(Mode::Tasks(Action::Report));
-          self.previous_mode = None;
+      let imported = import(data.as_bytes());
+      match imported {
+        Ok(imported) => {
+          self.all_tasks = imported;
+          info!("Imported {} tasks", self.tasks.len());
+          self.error = None;
+          if self.mode == Mode::Tasks(Action::Error) {
+            self.mode = self.previous_mode.clone().unwrap_or(Mode::Tasks(Action::Report));
+            self.previous_mode = None;
+          }
         }
-      } else {
-        self.error = Some(format!("Unable to parse output of `{:?}`:\n`{:?}`", task, data));
-        self.mode = Mode::Tasks(Action::Error);
-        debug!("Unable to parse output: {:?}", data);
+        Err(err) => {
+          self.error = Some(format!("Unable to parse output of `{:?}`:\n`{:?}`\n\n{}", task, data, err));
+          self.mode = Mode::Tasks(Action::Error);
+          debug!("Unable to parse output: {:?}", data);
+          debug!("Error: {:?}", err);
+        }
       }
     } else {
       self.error = Some(format!("Cannot run `{:?}` - ({}) error:\n{}", &task, output.status, error));
@@ -1715,24 +1720,29 @@ impl TaskwarriorTui {
       task.arg(&self.report);
     }
 
-    info!("Running `{:?}`", task);
+    info!("Running `{:#?}`", task);
     let output = task.output()?;
     let data = String::from_utf8_lossy(&output.stdout);
     let error = String::from_utf8_lossy(&output.stderr);
 
     if output.status.success() {
-      if let Ok(imported) = import(data.as_bytes()) {
-        self.tasks = imported;
-        info!("Imported {} tasks", self.tasks.len());
-        self.error = None;
-        if self.mode == Mode::Tasks(Action::Error) {
-          self.mode = self.previous_mode.clone().unwrap_or(Mode::Tasks(Action::Report));
-          self.previous_mode = None;
+      let imported = import(data.as_bytes());
+      match imported {
+        Ok(imported) => {
+          self.tasks = imported;
+          info!("Imported {} tasks", self.tasks.len());
+          self.error = None;
+          if self.mode == Mode::Tasks(Action::Error) {
+            self.mode = self.previous_mode.clone().unwrap_or(Mode::Tasks(Action::Report));
+            self.previous_mode = None;
+          }
         }
-      } else {
-        self.error = Some(format!("Unable to parse output of `{:?}`:\n`{:?}`", task, data));
-        self.mode = Mode::Tasks(Action::Error);
-        debug!("Unable to parse output: {:?}", data);
+        Err(err) => {
+          self.error = Some(format!("Unable to parse output of `{:?}`:\n`{:?}`", task, data));
+          self.mode = Mode::Tasks(Action::Error);
+          debug!("Unable to parse output:\n\n{}", data);
+          debug!("Error: {:?}", err);
+        }
       }
     } else {
       self.error = Some(format!("Cannot run `{:?}` - ({}) error:\n{}", &task, output.status, error));
