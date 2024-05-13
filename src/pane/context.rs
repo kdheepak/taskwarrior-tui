@@ -32,7 +32,7 @@ use crate::{
   app::{Mode, TaskwarriorTui},
   event::KeyCode,
   pane::Pane,
-  table::TableState,
+  table::TaskwarriorTuiTableState,
 };
 
 #[derive(Debug, Clone, Default)]
@@ -55,7 +55,7 @@ impl ContextDetails {
 }
 
 pub struct ContextsState {
-  pub table_state: TableState,
+  pub table_state: TaskwarriorTuiTableState,
   pub report_height: u16,
   pub columns: Vec<String>,
   pub rows: Vec<ContextDetails>,
@@ -64,7 +64,7 @@ pub struct ContextsState {
 impl ContextsState {
   pub(crate) fn new() -> Self {
     Self {
-      table_state: TableState::default(),
+      table_state: TaskwarriorTuiTableState::default(),
       report_height: 0,
       columns: vec![NAME.to_string(), TYPE.to_string(), DEFINITION.to_string(), ACTIVE.to_string()],
       rows: vec![],

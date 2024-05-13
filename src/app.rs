@@ -55,7 +55,7 @@ use crate::{
     Pane,
   },
   scrollbar::Scrollbar,
-  table::{Row, Table, TableMode, TableState},
+  table::{Row, Table, TableMode, TaskwarriorTuiTableState},
   task_report::TaskReportTable,
   ui, utils,
 };
@@ -167,7 +167,7 @@ pub enum Mode {
 pub struct TaskwarriorTui {
   pub should_quit: bool,
   pub dirty: bool,
-  pub task_table_state: TableState,
+  pub task_table_state: TaskwarriorTuiTableState,
   pub current_context_filter: String,
   pub current_context: String,
   pub command: LineBuffer,
@@ -254,7 +254,7 @@ impl TaskwarriorTui {
     let mut app = Self {
       should_quit: false,
       dirty: true,
-      task_table_state: TableState::default(),
+      task_table_state: TaskwarriorTuiTableState::default(),
       tasks: vec![],
       all_tasks: vec![],
       task_details: HashMap::new(),

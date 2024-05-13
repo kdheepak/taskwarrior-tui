@@ -32,13 +32,13 @@ use crate::{
   app::{Mode, TaskwarriorTui},
   event::KeyCode,
   pane::Pane,
-  table::TableState,
+  table::TaskwarriorTuiTableState,
   utils::Changeset,
 };
 
 pub struct ProjectsState {
   pub(crate) list: Vec<Project>,
-  pub table_state: TableState,
+  pub table_state: TaskwarriorTuiTableState,
   pub current_selection: usize,
   pub marked: HashSet<Project>,
   pub columns: Vec<String>,
@@ -58,7 +58,7 @@ impl ProjectsState {
   pub(crate) fn new() -> Self {
     Self {
       list: Vec::default(),
-      table_state: TableState::default(),
+      table_state: TaskwarriorTuiTableState::default(),
       current_selection: 0,
       marked: HashSet::default(),
       columns: vec![

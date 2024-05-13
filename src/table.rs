@@ -25,16 +25,16 @@ pub enum TableMode {
 }
 
 #[derive(Clone)]
-pub struct TableState {
+pub struct TaskwarriorTuiTableState {
   offset: usize,
   current_selection: Option<usize>,
   marked: HashSet<usize>,
   mode: TableMode,
 }
 
-impl Default for TableState {
-  fn default() -> TableState {
-    TableState {
+impl Default for TaskwarriorTuiTableState {
+  fn default() -> TaskwarriorTuiTableState {
+    TaskwarriorTuiTableState {
       offset: 0,
       current_selection: Some(0),
       marked: HashSet::new(),
@@ -43,7 +43,7 @@ impl Default for TableState {
   }
 }
 
-impl TableState {
+impl TaskwarriorTuiTableState {
   pub fn mode(&self) -> TableMode {
     self.mode.clone()
   }
@@ -305,7 +305,7 @@ where
   D::Item: Display,
   R: Iterator<Item = Row<D>>,
 {
-  type State = TableState;
+  type State = TaskwarriorTuiTableState;
 
   fn render(mut self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
     buf.set_style(area, self.style);
@@ -530,7 +530,7 @@ where
   R: Iterator<Item = Row<D>>,
 {
   fn render(self, area: Rect, buf: &mut Buffer) {
-    let mut state = TableState::default();
+    let mut state = TaskwarriorTuiTableState::default();
     StatefulWidget::render(self, area, buf, &mut state);
   }
 }
