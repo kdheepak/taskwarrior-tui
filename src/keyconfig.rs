@@ -110,15 +110,15 @@ impl KeyConfig {
     Ok(kc)
   }
 
-    // Set key to value in config file, if config file contains it
+  // Set key to value in config file, if config file contains it
   fn update_key_code(key: &mut KeyCode, key_name: &str, config_file: &str) {
-      let config_name = format!("{KEYCONFIG_PREFIX}.{key_name}");
+    let config_name = format!("{KEYCONFIG_PREFIX}.{key_name}");
     let key_from_config = Self::get_config(&config_name, config_file);
 
-      if let Some(new_key) = key_from_config {
+    if let Some(new_key) = key_from_config {
       trace!("Updated action {} to new key {:#?}", key_name, new_key);
-        *key = new_key;
-      }
+      *key = new_key;
+    }
   }
 
   pub fn update(&mut self, data: &str) -> Result<()> {
@@ -292,7 +292,7 @@ mod tests {
   #[test]
   fn test_update_key() {
     let config = "uda.taskwarrior-tui.keyconfig.quit=M";
-    let target_keycode =  KeyCode::Char('M');
+    let target_keycode = KeyCode::Char('M');
 
     // Check in case defaults changed
     let default_keyconfig = KeyConfig::default();
