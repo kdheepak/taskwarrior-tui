@@ -110,54 +110,55 @@ impl KeyConfig {
     Ok(kc)
   }
 
-  pub fn update(&mut self, data: &str) -> Result<()> {
     // Set key to value in config file, if config file contains it
-    let update_key = |key: &mut KeyCode, key_name: &str| {
+  fn update_key_code(key: &mut KeyCode, key_name: &str, config_file: &str) {
       let config_name = format!("{KEYCONFIG_PREFIX}.{key_name}");
-      let key_from_config = Self::get_config(&config_name, data);
+    let key_from_config = Self::get_config(&config_name, config_file);
 
       if let Some(new_key) = key_from_config {
+      trace!("Updated action {} to new key {:#?}", key_name, new_key);
         *key = new_key;
       }
-    };
+  }
 
-    update_key(&mut self.quit, "quit");
-    update_key(&mut self.refresh, "refresh");
-    update_key(&mut self.go_to_bottom, "go-to-bottom");
-    update_key(&mut self.go_to_top, "go-to-top");
-    update_key(&mut self.down, "down");
-    update_key(&mut self.up, "up");
-    update_key(&mut self.page_down, "page-down");
-    update_key(&mut self.page_up, "page-up");
-    update_key(&mut self.delete, "delete");
-    update_key(&mut self.done, "done");
-    update_key(&mut self.start_stop, "start-stop");
-    update_key(&mut self.quick_tag, "quick-tag");
-    update_key(&mut self.select, "select");
-    update_key(&mut self.select_all, "select-all");
-    update_key(&mut self.undo, "undo");
-    update_key(&mut self.edit, "edit");
-    update_key(&mut self.duplicate, "duplicate");
-    update_key(&mut self.modify, "modify");
-    update_key(&mut self.shell, "shell");
-    update_key(&mut self.log, "log");
-    update_key(&mut self.add, "add");
-    update_key(&mut self.annotate, "annotate");
-    update_key(&mut self.filter, "filter");
-    update_key(&mut self.zoom, "zoom");
-    update_key(&mut self.context_menu, "context-menu");
-    update_key(&mut self.next_tab, "next-tab");
-    update_key(&mut self.previous_tab, "previous-tab");
-    update_key(&mut self.shortcut0, "shortcut0");
-    update_key(&mut self.shortcut1, "shortcut1");
-    update_key(&mut self.shortcut2, "shortcut2");
-    update_key(&mut self.shortcut3, "shortcut3");
-    update_key(&mut self.shortcut4, "shortcut4");
-    update_key(&mut self.shortcut5, "shortcut5");
-    update_key(&mut self.shortcut6, "shortcut6");
-    update_key(&mut self.shortcut7, "shortcut7");
-    update_key(&mut self.shortcut8, "shortcut8");
-    update_key(&mut self.shortcut9, "shortcut9");
+  pub fn update(&mut self, data: &str) -> Result<()> {
+    Self::update_key_code(&mut self.quit, "quit", data);
+    Self::update_key_code(&mut self.refresh, "refresh", data);
+    Self::update_key_code(&mut self.go_to_bottom, "go-to-bottom", data);
+    Self::update_key_code(&mut self.go_to_top, "go-to-top", data);
+    Self::update_key_code(&mut self.down, "down", data);
+    Self::update_key_code(&mut self.up, "up", data);
+    Self::update_key_code(&mut self.page_down, "page-down", data);
+    Self::update_key_code(&mut self.page_up, "page-up", data);
+    Self::update_key_code(&mut self.delete, "delete", data);
+    Self::update_key_code(&mut self.done, "done", data);
+    Self::update_key_code(&mut self.start_stop, "start-stop", data);
+    Self::update_key_code(&mut self.quick_tag, "quick-tag", data);
+    Self::update_key_code(&mut self.select, "select", data);
+    Self::update_key_code(&mut self.select_all, "select-all", data);
+    Self::update_key_code(&mut self.undo, "undo", data);
+    Self::update_key_code(&mut self.edit, "edit", data);
+    Self::update_key_code(&mut self.duplicate, "duplicate", data);
+    Self::update_key_code(&mut self.modify, "modify", data);
+    Self::update_key_code(&mut self.shell, "shell", data);
+    Self::update_key_code(&mut self.log, "log", data);
+    Self::update_key_code(&mut self.add, "add", data);
+    Self::update_key_code(&mut self.annotate, "annotate", data);
+    Self::update_key_code(&mut self.filter, "filter", data);
+    Self::update_key_code(&mut self.zoom, "zoom", data);
+    Self::update_key_code(&mut self.context_menu, "context-menu", data);
+    Self::update_key_code(&mut self.next_tab, "next-tab", data);
+    Self::update_key_code(&mut self.previous_tab, "previous-tab", data);
+    Self::update_key_code(&mut self.shortcut0, "shortcut0", data);
+    Self::update_key_code(&mut self.shortcut1, "shortcut1", data);
+    Self::update_key_code(&mut self.shortcut2, "shortcut2", data);
+    Self::update_key_code(&mut self.shortcut3, "shortcut3", data);
+    Self::update_key_code(&mut self.shortcut4, "shortcut4", data);
+    Self::update_key_code(&mut self.shortcut5, "shortcut5", data);
+    Self::update_key_code(&mut self.shortcut6, "shortcut6", data);
+    Self::update_key_code(&mut self.shortcut7, "shortcut7", data);
+    Self::update_key_code(&mut self.shortcut8, "shortcut8", data);
+    Self::update_key_code(&mut self.shortcut9, "shortcut9", data);
 
     let keys_to_check = self.keycodes_for_duplicate_check();
     self.check_duplicates(keys_to_check)
