@@ -1,7 +1,7 @@
 use std::{collections::HashSet, error::Error, hash::Hash};
 
 use anyhow::{anyhow, Result};
-use log::{debug, error, info, warn};
+use log::{debug, error, info, trace, warn};
 use serde::{Deserialize, Serialize};
 
 use crate::event::KeyCode;
@@ -214,6 +214,10 @@ impl KeyConfig {
       let config_variants = vec![config.to_owned(), config.replace('-', "_")];
 
       for config in &config_variants {
+        if !line.starts_with(config) {
+          continue;
+        }
+
         let trimmed_line = line
           .trim_start_matches(config)
           .trim_start()
@@ -224,7 +228,7 @@ impl KeyConfig {
         let chars: Vec<char> = trimmed_line.chars().collect();
 
         match chars.len() {
-          0 => debug!("Found no override key for {}", config),
+          0 => error!("Found no override key for {} in line {}, only the config prefix", config, line),
           1 => {
             let key_char = chars.first();
             match key_char {
@@ -242,6 +246,7 @@ impl KeyConfig {
       }
     }
 
+    trace!("Could not find a key override for KeyConfig {}", config);
     None
   }
 }
