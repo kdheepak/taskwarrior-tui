@@ -249,4 +249,18 @@ impl KeyConfig {
 #[cfg(test)]
 mod tests {
   use super::*;
+  #[test]
+  fn test_read_key_config() {
+    let config_prefix = "uda.taskwarrior-tui.keyconfig.quit";
+    let config_name = format!("{config_prefix}");
+
+    let valid_line = "uda.taskwarrior-tui.keyconfig.quit=q";
+    assert!(KeyConfig::get_config(&config_name, valid_line).is_some());
+
+    let invalid_line = "uda.taskwarrior-tui.keyconfig.quit=";
+    assert!(KeyConfig::get_config(&config_name, invalid_line).is_none());
+
+    let invalid_line = "uda.taskwarrior-tui.keyconfig.quit=Qt";
+    assert!(KeyConfig::get_config(&config_name, invalid_line).is_none());
+  }
 }
