@@ -249,6 +249,25 @@ impl KeyConfig {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  // Test if duplicate keys will produce a corresponding error
+  #[ignore = "Needs sorting in check_duplicates"]
+  #[test]
+  fn test_duplicate_key_error() {
+    let kc = KeyConfig::default();
+
+    let mut keys_to_check = kc.keycodes_for_duplicate_check();
+
+    // Replace first and last with colliding key
+    // This way the duplicate check for non-consecutive keys is assured and correct sorting is tested
+    assert!(keys_to_check.len() >= 3);
+    *keys_to_check.first_mut().unwrap() = &KeyCode::Char('E');
+    *keys_to_check.last_mut().unwrap() = &KeyCode::Char('E');
+
+    let res = kc.check_duplicates(keys_to_check);
+    assert!(res.is_err())
+  }
+
   #[test]
   fn test_read_key_config() {
     let config_prefix = "uda.taskwarrior-tui.keyconfig.quit";
