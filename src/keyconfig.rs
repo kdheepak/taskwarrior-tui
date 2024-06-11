@@ -229,7 +229,7 @@ impl KeyConfig {
         let chars: Vec<char> = trimmed_line.chars().collect();
 
         match chars.len() {
-          0 => error!("Found no override key for {} in line {}, only the config prefix", config, line),
+          0 => error!("Found no override key for action {} in line {}, only the config prefix", config, line),
           1 => {
             let key_char = chars.first();
             match key_char {
@@ -238,7 +238,7 @@ impl KeyConfig {
             }
           }
           _ => error!(
-            "Found multiple characters({}) in {} for {}, instead of the expected 1",
+            "Found multiple characters({}) in {} for action {}, instead of the expected 1",
             chars.len(),
             line,
             config
@@ -247,7 +247,7 @@ impl KeyConfig {
       }
     }
 
-    trace!("Could not find a key override for KeyConfig {}", config);
+    trace!("Could not find a key override for action {}", config);
     None
   }
 }
