@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::event::KeyCode;
 
+static KEYCONFIG_PREFIX: &str = "uda.taskwarrior-tui.keyconfig";
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct KeyConfig {
   pub quit: KeyCode,
@@ -109,81 +111,53 @@ impl KeyConfig {
   }
 
   pub fn update(&mut self, data: &str) -> Result<()> {
-    let quit = Self::get_config("uda.taskwarrior-tui.keyconfig.quit", data);
-    let refresh = Self::get_config("uda.taskwarrior-tui.keyconfig.refresh", data);
-    let go_to_bottom = Self::get_config("uda.taskwarrior-tui.keyconfig.go-to-bottom", data);
-    let go_to_top = Self::get_config("uda.taskwarrior-tui.keyconfig.go-to-top", data);
-    let down = Self::get_config("uda.taskwarrior-tui.keyconfig.down", data);
-    let up = Self::get_config("uda.taskwarrior-tui.keyconfig.up", data);
-    let page_down = Self::get_config("uda.taskwarrior-tui.keyconfig.page-down", data);
-    let page_up = Self::get_config("uda.taskwarrior-tui.keyconfig.page-up", data);
-    let delete = Self::get_config("uda.taskwarrior-tui.keyconfig.delete", data);
-    let done = Self::get_config("uda.taskwarrior-tui.keyconfig.done", data);
-    let start_stop = Self::get_config("uda.taskwarrior-tui.keyconfig.start-stop", data);
-    let quick_tag = Self::get_config("uda.taskwarrior-tui.keyconfig.quick-tag", data);
-    let select = Self::get_config("uda.taskwarrior-tui.keyconfig.select", data);
-    let select_all = Self::get_config("uda.taskwarrior-tui.keyconfig.select-all", data);
-    let undo = Self::get_config("uda.taskwarrior-tui.keyconfig.undo", data);
-    let edit = Self::get_config("uda.taskwarrior-tui.keyconfig.edit", data);
-    let duplicate = Self::get_config("uda.taskwarrior-tui.keyconfig.duplicate", data);
-    let modify = Self::get_config("uda.taskwarrior-tui.keyconfig.modify", data);
-    let shell = Self::get_config("uda.taskwarrior-tui.keyconfig.shell", data);
-    let log = Self::get_config("uda.taskwarrior-tui.keyconfig.log", data);
-    let add = Self::get_config("uda.taskwarrior-tui.keyconfig.add", data);
-    let annotate = Self::get_config("uda.taskwarrior-tui.keyconfig.annotate", data);
-    let filter = Self::get_config("uda.taskwarrior-tui.keyconfig.filter", data);
-    let zoom = Self::get_config("uda.taskwarrior-tui.keyconfig.zoom", data);
-    let context_menu = Self::get_config("uda.taskwarrior-tui.keyconfig.context-menu", data);
-    let next_tab = Self::get_config("uda.taskwarrior-tui.keyconfig.next-tab", data);
-    let previous_tab = Self::get_config("uda.taskwarrior-tui.keyconfig.previous-tab", data);
-    let shortcut0 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut0", data);
-    let shortcut1 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut1", data);
-    let shortcut2 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut2", data);
-    let shortcut3 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut3", data);
-    let shortcut4 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut4", data);
-    let shortcut5 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut5", data);
-    let shortcut6 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut6", data);
-    let shortcut7 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut7", data);
-    let shortcut8 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut8", data);
-    let shortcut9 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut9", data);
+    // Set key to value in config file, if config file contains it
+    let update_key = | key: &mut KeyCode, key_name: &str | {
+      let config_name = format!("{KEYCONFIG_PREFIX}.{key_name}");
+      let key_from_config = Self::get_config(&config_name, data);
 
-    self.quit = quit.unwrap_or(self.quit);
-    self.refresh = refresh.unwrap_or(self.refresh);
-    self.go_to_bottom = go_to_bottom.unwrap_or(self.go_to_bottom);
-    self.go_to_top = go_to_top.unwrap_or(self.go_to_top);
-    self.down = down.unwrap_or(self.down);
-    self.up = up.unwrap_or(self.up);
-    self.page_down = page_down.unwrap_or(self.page_down);
-    self.page_up = page_up.unwrap_or(self.page_up);
-    self.delete = delete.unwrap_or(self.delete);
-    self.done = done.unwrap_or(self.done);
-    self.start_stop = start_stop.unwrap_or(self.start_stop);
-    self.quick_tag = quick_tag.unwrap_or(self.quick_tag);
-    self.select = select.unwrap_or(self.select);
-    self.select_all = select_all.unwrap_or(self.select_all);
-    self.undo = undo.unwrap_or(self.undo);
-    self.edit = edit.unwrap_or(self.edit);
-    self.duplicate = duplicate.unwrap_or(self.duplicate);
-    self.modify = modify.unwrap_or(self.modify);
-    self.shell = shell.unwrap_or(self.shell);
-    self.log = log.unwrap_or(self.log);
-    self.add = add.unwrap_or(self.add);
-    self.annotate = annotate.unwrap_or(self.annotate);
-    self.filter = filter.unwrap_or(self.filter);
-    self.zoom = zoom.unwrap_or(self.zoom);
-    self.context_menu = context_menu.unwrap_or(self.context_menu);
-    self.next_tab = next_tab.unwrap_or(self.next_tab);
-    self.previous_tab = previous_tab.unwrap_or(self.previous_tab);
-    self.shortcut0 = shortcut0.unwrap_or(self.shortcut0);
-    self.shortcut1 = shortcut1.unwrap_or(self.shortcut1);
-    self.shortcut2 = shortcut2.unwrap_or(self.shortcut2);
-    self.shortcut3 = shortcut3.unwrap_or(self.shortcut3);
-    self.shortcut4 = shortcut4.unwrap_or(self.shortcut4);
-    self.shortcut5 = shortcut5.unwrap_or(self.shortcut5);
-    self.shortcut6 = shortcut6.unwrap_or(self.shortcut6);
-    self.shortcut7 = shortcut7.unwrap_or(self.shortcut7);
-    self.shortcut8 = shortcut8.unwrap_or(self.shortcut8);
-    self.shortcut9 = shortcut9.unwrap_or(self.shortcut9);
+      if let Some(new_key) = key_from_config {
+        *key = new_key;
+      }
+    };
+
+    update_key(&mut self.quit, "quit");
+    update_key(&mut self.refresh, "refresh");
+    update_key(&mut self.go_to_bottom, "go-to-bottom");
+    update_key(&mut self.go_to_top, "go-to-top");
+    update_key(&mut self.down, "down");
+    update_key(&mut self.up, "up");
+    update_key(&mut self.page_down, "page-down");
+    update_key(&mut self.page_up, "page-up");
+    update_key(&mut self.delete, "delete");
+    update_key(&mut self.done, "done");
+    update_key(&mut self.start_stop, "start-stop");
+    update_key(&mut self.quick_tag, "quick-tag");
+    update_key(&mut self.select, "select");
+    update_key(&mut self.select_all, "select-all");
+    update_key(&mut self.undo, "undo");
+    update_key(&mut self.edit, "edit");
+    update_key(&mut self.duplicate, "duplicate");
+    update_key(&mut self.modify, "modify");
+    update_key(&mut self.shell, "shell");
+    update_key(&mut self.log, "log");
+    update_key(&mut self.add, "add");
+    update_key(&mut self.annotate, "annotate");
+    update_key(&mut self.filter, "filter");
+    update_key(&mut self.zoom, "zoom");
+    update_key(&mut self.context_menu, "context-menu");
+    update_key(&mut self.next_tab, "next-tab");
+    update_key(&mut self.previous_tab, "previous-tab");
+    update_key(&mut self.shortcut0, "shortcut0");
+    update_key(&mut self.shortcut1, "shortcut1");
+    update_key(&mut self.shortcut2, "shortcut2");
+    update_key(&mut self.shortcut3, "shortcut3");
+    update_key(&mut self.shortcut4, "shortcut4");
+    update_key(&mut self.shortcut5, "shortcut5");
+    update_key(&mut self.shortcut6, "shortcut6");
+    update_key(&mut self.shortcut7, "shortcut7");
+    update_key(&mut self.shortcut8, "shortcut8");
+    update_key(&mut self.shortcut9, "shortcut9");
 
     self.check()
   }
