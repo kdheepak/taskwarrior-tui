@@ -285,7 +285,7 @@ mod tests {
     let invalid_line = "uda.taskwarrior-tui.keyconfig.quit=";
     assert!(KeyConfig::get_config(&config_name, invalid_line).is_none());
 
-    let invalid_line = "uda.taskwarrior-tui.keyconfig.quit=Qt";
+    let invalid_line = "uda.taskwarrior-tui.keyconfig.quit=qt";
     assert!(KeyConfig::get_config(&config_name, invalid_line).is_none());
   }
 
