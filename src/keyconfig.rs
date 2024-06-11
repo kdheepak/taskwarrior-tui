@@ -288,4 +288,20 @@ mod tests {
     let invalid_line = "uda.taskwarrior-tui.keyconfig.quit=Qt";
     assert!(KeyConfig::get_config(&config_name, invalid_line).is_none());
   }
+
+  #[test]
+  fn test_update_key() {
+    let config = "uda.taskwarrior-tui.keyconfig.quit=M";
+    let target_keycode =  KeyCode::Char('M');
+
+    // Check in case defaults changed
+    let default_keyconfig = KeyConfig::default();
+    let default_keycodes = KeyConfig::keycodes_for_duplicate_check(&default_keyconfig);
+    for keycode in default_keycodes {
+      assert_ne!(*keycode, target_keycode);
+    }
+
+    let kc = KeyConfig::new(&config).expect("Changing KeyConfig failed");
+    assert_eq!(kc.quit, target_keycode);
+  }
 }
