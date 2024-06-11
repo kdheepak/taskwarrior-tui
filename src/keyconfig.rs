@@ -112,7 +112,7 @@ impl KeyConfig {
 
   pub fn update(&mut self, data: &str) -> Result<()> {
     // Set key to value in config file, if config file contains it
-    let update_key = | key: &mut KeyCode, key_name: &str | {
+    let update_key = |key: &mut KeyCode, key_name: &str| {
       let config_name = format!("{KEYCONFIG_PREFIX}.{key_name}");
       let key_from_config = Self::get_config(&config_name, data);
 
