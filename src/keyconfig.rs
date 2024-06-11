@@ -194,6 +194,8 @@ impl KeyConfig {
       &self.previous_tab,
     ];
     let l = elements.len();
+    // TODO: Write Ord implementation for KeyCode.
+    // Vecs need to be sorted for dedup to work correctly.
     elements.dedup();
     if l == elements.len() {
       Ok(())
