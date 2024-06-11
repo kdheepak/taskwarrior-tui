@@ -116,7 +116,7 @@ impl KeyConfig {
     let key_from_config = Self::get_config(&config_name, config_file);
 
     if let Some(new_key) = key_from_config {
-      trace!("Updated action {} to new key {:#?}", key_name, new_key);
+      trace!("Updated action {} to new key {:?}", key_name, new_key);
       *key = new_key;
     }
   }
