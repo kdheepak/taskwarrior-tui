@@ -210,29 +210,40 @@ impl KeyConfig {
 
   fn get_config(config: &str, data: &str) -> Option<KeyCode> {
     for line in data.split('\n') {
-      if line.starts_with(config) {
-        let line = line.trim_start_matches(config).trim_start().trim_end().to_string();
-        if has_just_one_char(&line) {
-          return Some(KeyCode::Char(line.chars().next().unwrap()));
-        } else {
-          error!("Found multiple characters in {} for {}", line, config);
-        }
-      } else if line.starts_with(&config.replace('-', "_")) {
-        let line = line.trim_start_matches(&config.replace('-', "_")).trim_start().trim_end().to_string();
-        if has_just_one_char(&line) {
-          return Some(KeyCode::Char(line.chars().next().unwrap()));
-        } else {
-          error!("Found multiple characters in {} for {}", line, config);
+      // Provide leeway for swapped - and _ in keyconfigs
+      let config_variants = vec![config.to_owned(), config.replace('-', "_")];
+
+      for config in &config_variants {
+        let trimmed_line = line
+          .trim_start_matches(config)
+          .trim_start()
+          .trim_start_matches('=')
+          .trim_end()
+          .to_string();
+
+        let chars: Vec<char> = trimmed_line.chars().collect();
+
+        match chars.len() {
+          0 => debug!("Found no override key for {}", config),
+          1 => {
+            let key_char = chars.first();
+            match key_char {
+              Some(key_char) => return Some(KeyCode::Char(*key_char)),
+              None => error!("Encountered impossible error. Could not fetch first character in Vector of length 1"),
+            }
+          }
+          _ => error!(
+            "Found multiple characters({}) in {} for {}, instead of the expected 1",
+            chars.len(),
+            line,
+            config
+          ),
         }
       }
     }
+
     None
   }
-}
-
-fn has_just_one_char(s: &str) -> bool {
-  let mut chars = s.chars();
-  chars.next().is_some() && chars.next().is_none()
 }
 
 #[cfg(test)]
