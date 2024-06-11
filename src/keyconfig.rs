@@ -1,7 +1,7 @@
 use std::{collections::HashSet, error::Error, hash::Hash};
 
 use anyhow::{anyhow, Result};
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 
 use crate::event::KeyCode;
@@ -159,11 +159,12 @@ impl KeyConfig {
     update_key(&mut self.shortcut8, "shortcut8");
     update_key(&mut self.shortcut9, "shortcut9");
 
-    self.check()
+    let keys_to_check = self.keycodes_for_duplicate_check();
+    self.check_duplicates(keys_to_check)
   }
 
-  pub fn check(&self) -> Result<()> {
-    let mut elements = vec![
+  fn keycodes_for_duplicate_check(&self) -> Vec<&KeyCode> {
+    vec![
       &self.quit,
       &self.refresh,
       &self.go_to_bottom,
@@ -192,7 +193,10 @@ impl KeyConfig {
       &self.context_menu,
       &self.next_tab,
       &self.previous_tab,
-    ];
+    ]
+  }
+
+  pub fn check_duplicates(&self, mut elements: Vec<&KeyCode>) -> Result<()> {
     let l = elements.len();
     // TODO: Write Ord implementation for KeyCode.
     // Vecs need to be sorted for dedup to work correctly.
