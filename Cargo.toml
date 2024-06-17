@@ -41,7 +41,7 @@ unicode-segmentation = "1.11.0"
 unicode-truncate = "1.0.0"
 unicode-width = "0.1.13"
 uuid = { version = "1.8.0", features = ["serde", "v4"] }
-versions = "6.2.0"
+versions = "6.3.0"
 
 [package.metadata.rpm]
 package = "taskwarrior-tui"
