@@ -1251,6 +1251,8 @@ impl TaskwarriorTui {
       )
       .highlight_style(highlight_style)
       .highlight_symbol(&self.config.uda_selection_indicator)
+      .mark_highlight_symbol(&self.config.uda_mark_highlight_indicator)
+      .unmark_highlight_symbol(&self.config.uda_unmark_highlight_indicator)
       .mark_symbol(&self.config.uda_mark_indicator)
       .unmark_symbol(&self.config.uda_unmark_indicator)
       .widths(&constraints);
