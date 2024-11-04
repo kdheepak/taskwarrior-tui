@@ -264,8 +264,20 @@ impl KeyConfig {
 mod tests {
   use super::*;
 
-  // Test if duplicate keys will produce a corresponding error
-  #[ignore = "Needs sorting in check_duplicates"]
+  #[test]
+  #[should_panic]
+  fn test_invalid_key_variant_panic() {
+    let kc = KeyConfig::default();
+    let mut keys_to_check = kc.keycodes_for_duplicate_check();
+
+    // We need at least 2 keys for the compare logic to run
+    assert!(keys_to_check.len() >= 2);
+    *keys_to_check.first_mut().unwrap() = &KeyCode::Backspace;
+
+    // This line will panic
+    let _ = kc.check_duplicates(keys_to_check);
+  }
+
   #[test]
   fn test_duplicate_key_error() {
     let kc = KeyConfig::default();
