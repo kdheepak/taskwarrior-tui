@@ -281,7 +281,6 @@ mod tests {
   #[test]
   fn test_duplicate_key_error() {
     let kc = KeyConfig::default();
-
     let mut keys_to_check = kc.keycodes_for_duplicate_check();
 
     // Replace first and last with colliding key
