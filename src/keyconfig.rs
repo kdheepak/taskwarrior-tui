@@ -199,9 +199,17 @@ impl KeyConfig {
 
   pub fn check_duplicates(&self, mut elements: Vec<&KeyCode>) -> Result<()> {
     let l = elements.len();
-    // TODO: Write Ord implementation for KeyCode.
+
     // Vecs need to be sorted for dedup to work correctly.
+    // TODO: Replace once Key-Handling has been rewritten from ground up and Non-Char KeyCodes are supported.
+    elements.sort_by(|a, b| match (a, b) {
+      (KeyCode::Char(a_char), KeyCode::Char(b_char)) => a_char.cmp(b_char),
+      _ => {
+        panic!("Non-Char Keycodes are not yet supported. Found KeyCodes {:#?} and {:#?} to compare", a, b);
+      }
+    });
     elements.dedup();
+
     if l == elements.len() {
       Ok(())
     } else {
