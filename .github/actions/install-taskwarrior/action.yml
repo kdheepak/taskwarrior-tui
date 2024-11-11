@@ -1,0 +1,45 @@
+name: 'Install Taskwarrior'
+description: 'Builds taskwarrior from the latest stable release and installs it'
+inputs:
+  secret_gh_token: 
+    description: "GH token for downloading the assets"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    # This pattern should only match match assets with a [numbers and dots] suffix
+    - name: Download latest stable taskwarrior release
+      run: |
+        gh release download -p "task-[0-9.]*.tar.gz" -R "GothenburgBitFactory/taskwarrior" -D /tmp/download
+      shell: bash
+      env: 
+        GH_TOKEN: ${{ inputs.secret_gh_token }}
+    # Future proofing  
+    - name: Check that we only got one release asset
+      run: |
+        if [ $(ls -1 /tmp/download | wc -l) -ne 1 ]
+        then 
+          echo "Expected exactly one release asset"
+          exit 1
+        else
+          echo "Got expected number of release assets" 
+        fi
+      shell: bash  
+    - name: Extract taskwarrior without version number
+      run: |
+        cd /tmp/download
+        find . -name "*.tar.gz" -exec mv {} task.tar.gz \; 
+        tar -xf task.tar.gz --transform='s;^task-[0-9.]*/;task/;'
+        cd /tmp
+        mv download/task taskwarrior
+        rm -rf download
+      shell: bash  
+    - name: Compile taskwarrior
+      run: |
+        cd /tmp/taskwarrior
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release .
+        cmake --build build
+        sudo cmake --install build
+        cd ..
+        rm -rf taskwarrior/
+      shell: bash  

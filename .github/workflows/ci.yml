@@ -32,15 +32,10 @@ jobs:
           toolchain: stable
           override: true
       - run: sudo apt-get update
-      - name: Compile taskwarrior
-        run: |
-          cd /tmp
-          git clone https://github.com/GothenburgBitFactory/taskwarrior
-          cd taskwarrior
-          git checkout v3.0.0
-          cmake -DCMAKE_BUILD_TYPE=release -DENABLE_SYNC=OFF .
-          make
-          sudo make install
+      - name: 'Install Taskwarrior'
+        uses: ./.github/actions/install-taskwarrior
+        with:
+          secret_gh_token: ${{ secrets.GITHUB_TOKEN }}
       - run: |
           task --version
       - uses: actions/checkout@v4
