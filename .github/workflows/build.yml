@@ -82,7 +82,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: taskwarrior-tui
+          name: taskwarrior-tui-${{ matrix.target }}
           path: target/${{ matrix.target }}/release/taskwarrior-tui-${{ matrix.target }}.tar.gz
       - name: Releasing assets
         if: startsWith(github.ref, 'refs/tags/')
