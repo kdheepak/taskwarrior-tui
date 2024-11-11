@@ -69,6 +69,8 @@ jobs:
           file: target/${{ matrix.target }}/release/taskwarrior-tui${{ matrix.binary_postfix }}
           args: ${{ matrix.upx_args }}
           strip: ${{ matrix.strip }}
+        # MacOS Compression disabled due to bug https://github.com/upx/upx/blob/44e4bd0b5454ff8aee1ff3376974dfe6014300d9/NEWS#L31  
+        if: ${{ matrix.os  != 'macOS-latest' }}
       - name: Packaging binary
         shell: bash
         run: |
