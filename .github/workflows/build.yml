@@ -54,12 +54,12 @@ jobs:
       MACOSX_DEPLOYMENT_TARGET: 10.7
     steps:
       - uses: actions/checkout@master
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
           target: ${{ matrix.target }}
-          default: true
-      - uses: actions-rs/cargo@v1
+          override: true
+      - uses: clechasseur/rs-cargo@v2
         with:
           command: build
           args: --release ${{matrix.features}} --target=${{ matrix.target }}

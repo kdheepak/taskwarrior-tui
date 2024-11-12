@@ -64,12 +64,12 @@ jobs:
       MACOSX_DEPLOYMENT_TARGET: 10.7
     steps:
       - uses: actions/checkout@master
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
           target: ${{ matrix.target }}
-          default: true
-      - uses: actions-rs/cargo@v1
+          override: true
+      - uses: clechasseur/rs-cargo@v2
         with:
           command: build
           args: --release ${{matrix.features}} --target=${{ matrix.target }}
@@ -122,7 +122,7 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
-      - uses: actions-rs/cargo@v1
+      - uses: clechasseur/rs-cargo@v2
         with:
           command: build
           args: --release
@@ -150,7 +150,7 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
-      - uses: actions-rs/cargo@v1
+      - uses: clechasseur/rs-cargo@v2
         with:
           command: build
           args: --release
@@ -180,7 +180,7 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
-      - uses: actions-rs/cargo@v1
+      - uses: clechasseur/rs-cargo@v2
         with:
           command: build
           args: --release
@@ -198,11 +198,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: nightly
           override: true
-          profile: minimal
+          components: llvm-tools-preview
       - run: sudo apt-get update
       - name: 'Install Taskwarrior'
         uses: ./.github/actions/install-taskwarrior
@@ -217,36 +217,40 @@ jobs:
       - run: |
           # prepare taskwarrior, initial setup
           task rc.confirmation=off || echo 0
-      - name: Execute tests
-        uses: actions-rs/cargo@v1
+      - name: Clean environment for grcov
+        uses: clechasseur/rs-cargo@v2
+        with:
+          command: clean
+      - name: Build taskwarrior-tui with coverage
+        uses: clechasseur/rs-cargo@v2
+        with:
+          command: build
+        env:
+          RUSTFLAGS: "-Cinstrument-coverage"  
+      - name: Run taskwarrior-tui tests in coverage environment
+        uses: clechasseur/rs-cargo@v2
         with:
           command: test
-          args: --all
+          args: --worksoace   
         env:
-          CARGO_INCREMENTAL: 0
-          RUSTFLAGS: "-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests"
-
-      # Note that `actions-rs/grcov` Action can install `grcov` too,
-      # but can't use faster installation methods yet.
-      # As a temporary experiment `actions-rs/install` Action plugged in here.
-      # Consider **NOT** to copy that into your workflow,
-      # but use `actions-rs/grcov` only
-      - name: Pre-installing grcov
-        uses: actions-rs/install@v0.1
+          RUSTFLAGS: "-Cinstrument-coverage"
+          LLVM_PROFILE_FILE: "your_name-%p-%m.profraw"
+      - name: Install grcov
+        uses: clechasseur/rs-cargo@v2
         with:
-          crate: grcov
-          use-tool-cache: true
-
+          command: install
+          args: grcov
       - name: Gather coverage data
-        id: coverage
-        uses: actions-rs/grcov@v0.1
-
+        run: |
+          mkdir ./target/debug/coverage/
+          grcov . -s . --binary-path ./target/debug/ -t lcov --branch --ignore-not-existing -o ./target/debug/coverage/
+        shell: bash
       - name: Coveralls upload
         uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           parallel: true
-          path-to-lcov: ${{ steps.coverage.outputs.report }}
+          file: ./target/debug/coverage/lcov
 
   grcov_finalize:
     runs-on: ubuntu-latest
