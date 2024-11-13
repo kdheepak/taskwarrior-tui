@@ -1,5 +1,7 @@
 name: Build
-on: [pull_request]
+on: 
+  pull_request:
+  workflow_call:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -11,9 +13,6 @@ jobs:
             target: x86_64-apple-darwin
             rust_flags: ''
             features: ''
-            binary_postfix: ''
-            upx_args: --best
-            strip: true
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             rust_flags: ''
@@ -66,7 +65,7 @@ jobs:
       - name: Compress binaries
         uses: svenstaro/upx-action@v2
         with:
-          file: target/${{ matrix.target }}/release/taskwarrior-tui${{ matrix.binary_postfix }}
+          files: target/${{ matrix.target }}/release/taskwarrior-tui${{ matrix.binary_postfix }}
           args: ${{ matrix.upx_args }}
           strip: ${{ matrix.strip }}
         # MacOS Compression disabled due to bug https://github.com/upx/upx/blob/44e4bd0b5454ff8aee1ff3376974dfe6014300d9/NEWS#L31  
