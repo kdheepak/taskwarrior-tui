@@ -1,7 +1,7 @@
 # This action definition may look complicated, but it only builds taskwarrior from the latest source release and installs it.
 # The rest of the file is caching of results and checks to avoid ambiguous failure in case taskwarrior changes their release strategy. 
-name: 'Install Taskwarrior'
-description: 'Builds latests stable taskwarrior release install it'
+name: Install Taskwarrior
+description: Builds latests stable taskwarrior release install it
 inputs:
   secret_gh_token:
     description: "GH token used for downloading the release asset"
@@ -13,7 +13,7 @@ runs:
   using: "composite"
   steps:
     - name: Update apt
-      run: sudo apt get update
+      run: sudo apt-get update
       shell: bash
     - name: Install libuuid
       run: sudo apt-get install uuid-dev uuid-runtime
@@ -51,13 +51,13 @@ runs:
       uses: actions/cache/restore@v4
       with:
         path: /tmp/task.deb
-        key: ${{ runner.os }}-taskwarrior-${{ steps.calculate-task-sha256.outputs.task_sha256 }}
+        key: ${{ runner.os }}-taskwarrior-${{ steps.calculate-task-sha256.outputs.task_sha256 }}-rust-${{ inputs.rust_toolchain }}
 
     - name: Install rust toolchain and rust cache
       if: steps.cache-taskwarrior-restore.outputs.cache-hit != 'true'
       uses: actions-rust-lang/setup-rust-toolchain@v1
       with:
-        toolchain: inputs.rust_toolchain
+        toolchain: ${{ inputs.rust_toolchain }}
         override: false
     - name: Extract taskwarrior source code
       if: steps.cache-taskwarrior-restore.outputs.cache-hit != 'true'
@@ -100,4 +100,7 @@ runs:
 
     - name: Install taskwarrior
       run: sudo dpkg -i /tmp/task.deb
+      shell: bash
+    - name: Test if installation worked
+      run: task --version
       shell: bash

@@ -19,37 +19,41 @@ jobs:
   test:
     name: Test Suite
     runs-on: ubuntu-latest
-    env:
-      TASKRC: taskwarrior-testdata/.taskrc
-      TASKDATA: taskwarrior-testdata/.task
-      RUST_BACKTRACE: full
     steps:
       - uses: actions/checkout@v4
-      - run: sudo apt-get update
-      - name: 'Install Taskwarrior'
+      - name: Install Taskwarrior
         uses: ./.github/actions/install-taskwarrior
         with:
           secret_gh_token: ${{ secrets.GITHUB_TOKEN }}
-      - run: |
-          task --version
-      - uses: actions/checkout@v4
-        with:
-          repository: kdheepak/taskwarrior-testdata
-          path: taskwarrior-testdata
       - run: |
           # prepare taskwarrior, initial setup
           task rc.confirmation=off || echo 0
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
-          override: true    
+          override: true
+      - name: Install testdata
+        uses: actions/checkout@v4
+        with:
+          repository: kdheepak/taskwarrior-testdata
+          path: taskwarrior-testdata
       - uses: clechasseur/rs-cargo@v2
         with:
           command: test
           args: --workspace -- --nocapture
+        env:
+          TASKRC: taskwarrior-testdata/.taskrc
+          TASKDATA: taskwarrior-testdata/.task
+          RUST_BACKTRACE: full
+          
+  
+  generate_coverage:
+    uses: ./.github/workflows/generate_coverage.yml
+    # Avoid double-compiling taskwarrior if not cached, or wasting CI time if tests fail
+    needs: test
 
   fmt:
-    name: Rustfmt
+    name: Rustfm
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
