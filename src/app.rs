@@ -505,17 +505,14 @@ impl TaskwarriorTui {
     let virtual_tag_names_in_precedence = &self.config.rule_precedence_color;
     let mut style = Style::default();
     for tag_name in virtual_tag_names_in_precedence.iter().rev() {
-      match tag_name.as_str() {
-        "project." => {
-          let s = self
-            .config
-            .color
-            .get(&format!("color.project.{}", project[0]))
-            .copied()
-            .unwrap_or_default();
-          style = style.patch(s);
-        }
-        &_ => {}
+      if tag_name.as_str() == "project." {
+        let s = self
+          .config
+          .color
+          .get(&format!("color.project.{}", project[0]))
+          .copied()
+          .unwrap_or_default();
+        style = style.patch(s);
       }
     }
     style
