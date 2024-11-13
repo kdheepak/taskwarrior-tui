@@ -67,6 +67,8 @@ pub struct Config {
   pub uda_task_report_looping: bool,
   pub uda_task_report_jump_to_task_on_add: bool,
   pub uda_selection_indicator: String,
+  pub uda_mark_highlight_indicator: String,
+  pub uda_unmark_highlight_indicator: String,
   pub uda_mark_indicator: String,
   pub uda_unmark_indicator: String,
   pub uda_scrollbar_indicator: String,
@@ -133,6 +135,8 @@ impl Config {
     let uda_task_report_looping = Self::get_uda_task_report_looping(data);
     let uda_task_report_jump_to_task_on_add = Self::get_uda_task_report_jump_to_task_on_add(data);
     let uda_selection_indicator = Self::get_uda_selection_indicator(data);
+    let uda_mark_highlight_indicator = Self::get_uda_mark_highlight_indicator(data);
+    let uda_unmark_highlight_indicator = Self::get_uda_unmark_highlight_indicator(data);
     let uda_mark_indicator = Self::get_uda_mark_indicator(data);
     let uda_unmark_indicator = Self::get_uda_unmark_indicator(data);
     let uda_scrollbar_indicator = Self::get_uda_scrollbar_indicator(data);
@@ -198,6 +202,8 @@ impl Config {
       uda_task_report_looping,
       uda_task_report_jump_to_task_on_add,
       uda_selection_indicator,
+      uda_mark_highlight_indicator,
+      uda_unmark_highlight_indicator,
       uda_mark_indicator,
       uda_unmark_indicator,
       uda_scrollbar_indicator,
