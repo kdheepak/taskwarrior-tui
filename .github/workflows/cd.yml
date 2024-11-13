@@ -197,12 +197,6 @@ jobs:
       RUST_BACKTRACE: full
     steps:
       - uses: actions/checkout@v4
-      - name: Install toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: nightly
-          override: true
-          components: llvm-tools-preview
       - run: sudo apt-get update
       - name: 'Install Taskwarrior'
         uses: ./.github/actions/install-taskwarrior
@@ -217,6 +211,12 @@ jobs:
       - run: |
           # prepare taskwarrior, initial setup
           task rc.confirmation=off || echo 0
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+          components: llvm-tools-preview
       - name: Clean environment for grcov
         uses: clechasseur/rs-cargo@v2
         with:

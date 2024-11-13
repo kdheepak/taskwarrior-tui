@@ -1,45 +1,103 @@
+# This action definition may look complicated, but it only builds taskwarrior from the latest source release and installs it.
+# The rest of the file is caching of results and checks to avoid ambiguous failure in case taskwarrior changes their release strategy. 
 name: 'Install Taskwarrior'
-description: 'Builds taskwarrior from the latest stable release and installs it'
+description: 'Builds latests stable taskwarrior release install it'
 inputs:
-  secret_gh_token: 
-    description: "GH token for downloading the assets"
+  secret_gh_token:
+    description: "GH token used for downloading the release asset"
     required: true
+  rust_toolchain:
+    description: "Rust toolchain to compile taskwarrior with"
+    default: stable  
 runs:
   using: "composite"
   steps:
-    # This pattern should only match match assets with a [numbers and dots] suffix
-    - name: Download latest stable taskwarrior release
-      run: |
-        gh release download -p "task-[0-9.]*.tar.gz" -R "GothenburgBitFactory/taskwarrior" -D /tmp/download
+    - name: Update apt
+      run: sudo apt get update
       shell: bash
-      env: 
+    - name: Install libuuid
+      run: sudo apt-get install uuid-dev uuid-runtime
+      shell: bash
+
+    - name: Download latest stable taskwarrior source release
+      # This pattern only matches assets with a [numbers and dots] version suffix
+      run: gh release download --repo "GothenburgBitFactory/taskwarrior" --pattern "task-[0-9.]*.tar.gz" --dir /tmp/download
+      shell: bash
+      env:
         GH_TOKEN: ${{ inputs.secret_gh_token }}
-    # Future proofing  
-    - name: Check that we only got one release asset
+    - name: Ensure that we only got one release asset
       run: |
-        if [ $(ls -1 /tmp/download | wc -l) -ne 1 ]
-        then 
-          echo "Expected exactly one release asset"
+        number_of_assets=$(ls -1 /tmp/download | wc -l)
+        if [ $number_of_assets -ne 1 ]
+        then
+          echo "Expected exactly one release asset, got $number_of_assets instead"
           exit 1
         else
-          echo "Got expected number of release assets" 
+          echo "Got expected number of release assets"
         fi
-      shell: bash  
-    - name: Extract taskwarrior without version number
+      shell: bash
+    - name: Move taskwarrior source to task.tar.gz
       run: |
         cd /tmp/download
-        find . -name "*.tar.gz" -exec mv {} task.tar.gz \; 
+        find . -name "*.tar.gz" -exec mv {} task.tar.gz \;
+      shell: bash
+
+    - name: Calculate SHA256 of task.tar.gz source(version cache check)
+      id: calculate-task-sha256
+      run: echo "task_sha256=$(/usr/bin/sha256sum /tmp/download/task.tar.gz | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+      shell: bash
+    - name: Restore cached taskwarrior build
+      id: cache-taskwarrior-restore
+      uses: actions/cache/restore@v4
+      with:
+        path: /tmp/task.deb
+        key: ${{ runner.os }}-taskwarrior-${{ steps.calculate-task-sha256.outputs.task_sha256 }}
+
+    - name: Install rust toolchain and rust cache
+      if: steps.cache-taskwarrior-restore.outputs.cache-hit != 'true'
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        toolchain: inputs.rust_toolchain
+        override: false
+    - name: Extract taskwarrior source code
+      if: steps.cache-taskwarrior-restore.outputs.cache-hit != 'true'
+      run: |
+        cd /tmp/download
+        # Remove the version suffix from extracted directory
         tar -xf task.tar.gz --transform='s;^task-[0-9.]*/;task/;'
         cd /tmp
         mv download/task taskwarrior
         rm -rf download
-      shell: bash  
-    - name: Compile taskwarrior
+      shell: bash
+    - name: Set selected rust toolchain as default for taskwarrior
+      if: steps.cache-taskwarrior-restore.outputs.cache-hit != 'true'
+      run: rustup override set ${{ inputs.rust_toolchain }} --path /tmp/taskwarrior
+      shell: bash
+    - name: Compile and install taskwarrior
+      if: steps.cache-taskwarrior-restore.outputs.cache-hit != 'true'
       run: |
         cd /tmp/taskwarrior
         cmake -S . -B build -DCMAKE_BUILD_TYPE=Release .
-        cmake --build build
-        sudo cmake --install build
-        cd ..
-        rm -rf taskwarrior/
-      shell: bash  
+        cmake --build build -j $(nproc)
+        cd build
+        # Create a stub debian package. WARNING: This package has no dependencies set
+        cpack -D CPACK_PACKAGE_CONTACT="stub" -D CPACK_PACKAGE_FILE_NAME="task" -G DEB
+        mv task.deb /tmp
+        cd /tmp
+        rm -rf /tmp/taskwarrior/
+      shell: bash
+    - name: Unset rust toolchain again
+      if: steps.cache-taskwarrior-restore.outputs.cache-hit != 'true'
+      run: rustup override unset --path /tmp/taskwarrior
+      shell: bash
+    - name: Cache taskwarrior build result
+      if: steps.cache-taskwarrior-restore.outputs.cache-hit != 'true'
+      id: cache-taskwarrior-save
+      uses: actions/cache/save@v4
+      with:
+        path: /tmp/task.deb
+        key: ${{ steps.cache-taskwarrior-restore.outputs.cache-primary-key }}
+
+    - name: Install taskwarrior
+      run: sudo dpkg -i /tmp/task.deb
+      shell: bash
