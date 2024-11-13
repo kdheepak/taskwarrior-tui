@@ -11,8 +11,11 @@ permissions:
   contents: write
 
 jobs:
-  call_build:
+  build:
     uses: ./.github/workflows/build.yml
+
+  generate_coverage:
+    uses: ./.github/workflows/generate_coverage.yml
 
   homebrew:
     name: Bump Homebrew formula
@@ -97,76 +100,3 @@ jobs:
         run: cargo install cargo-aur
       - name: Build aur package
         run: cargo aur
-
-  grcov:
-    runs-on: ubuntu-latest
-    env:
-      TASKRC: taskwarrior-testdata/.taskrc
-      TASKDATA: taskwarrior-testdata/.task
-      RUST_BACKTRACE: full
-    steps:
-      - uses: actions/checkout@v4
-      - run: sudo apt-get update
-      - name: 'Install Taskwarrior'
-        uses: ./.github/actions/install-taskwarrior
-        with:
-          secret_gh_token: ${{ secrets.GITHUB_TOKEN }}
-      - run: |
-          task --version
-      - uses: actions/checkout@v4
-        with:
-          repository: kdheepak/taskwarrior-testdata
-          path: taskwarrior-testdata
-      - run: |
-          # prepare taskwarrior, initial setup
-          task rc.confirmation=off || echo 0
-      - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: nightly
-          override: true
-          components: llvm-tools-preview
-      - name: Clean environment for grcov
-        uses: clechasseur/rs-cargo@v2
-        with:
-          command: clean
-      - name: Build taskwarrior-tui with coverage
-        uses: clechasseur/rs-cargo@v2
-        with:
-          command: build
-        env:
-          RUSTFLAGS: "-Cinstrument-coverage"  
-      - name: Run taskwarrior-tui tests in coverage environment
-        uses: clechasseur/rs-cargo@v2
-        with:
-          command: test
-          args: --worksoace   
-        env:
-          RUSTFLAGS: "-Cinstrument-coverage"
-          LLVM_PROFILE_FILE: "your_name-%p-%m.profraw"
-      - name: Install grcov
-        uses: clechasseur/rs-cargo@v2
-        with:
-          command: install
-          args: grcov
-      - name: Gather coverage data
-        run: |
-          mkdir ./target/debug/coverage/
-          grcov . -s . --binary-path ./target/debug/ -t lcov --branch --ignore-not-existing -o ./target/debug/coverage/
-        shell: bash
-      - name: Coveralls upload
-        uses: coverallsapp/github-action@master
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          parallel: true
-          file: ./target/debug/coverage/lcov
-
-  grcov_finalize:
-    runs-on: ubuntu-latest
-    needs: grcov
-    steps:
-      - name: Coveralls finalization
-        uses: coverallsapp/github-action@master
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          parallel-finished: true
