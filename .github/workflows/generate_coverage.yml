@@ -16,23 +16,18 @@ jobs:
           # prepare taskwarrior, initial setup
           task rc.confirmation=off || echo 0
 
-      - name: Install Rust toolchain for grcov compilation
+      - name: Install Rust toolchains for grcov and taskwarrior-tui compilation
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
           override: true
+          components: llvm-tools-preview
       - name: Install grcov
         uses: clechasseur/rs-cargo@v2
         with:
           command: install
           args: grcov
 
-      - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: nightly
-          override: true
-          components: llvm-tools-preview
       - name: Checkout testdata
         uses: actions/checkout@v4
         with:
