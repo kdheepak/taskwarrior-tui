@@ -45,15 +45,15 @@ jobs:
           TASKRC: taskwarrior-testdata/.taskrc
           TASKDATA: taskwarrior-testdata/.task
           RUST_BACKTRACE: full
-          
-  
+
+
   generate_coverage:
     uses: ./.github/workflows/generate_coverage.yml
     # Avoid double-compiling taskwarrior if not cached, or wasting CI time if tests fail
     needs: test
 
   fmt:
-    name: Rustfm
+    name: Rustfmt
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
