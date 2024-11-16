@@ -1,10 +1,12 @@
 use std::{collections::HashSet, error::Error, hash::Hash};
 
 use anyhow::{anyhow, Result};
-use log::{error, info, warn};
+use log::{debug, error, info, trace, warn};
 use serde::{Deserialize, Serialize};
 
 use crate::event::KeyCode;
+
+static KEYCONFIG_PREFIX: &str = "uda.taskwarrior-tui.keyconfig";
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct KeyConfig {
@@ -108,88 +110,62 @@ impl KeyConfig {
     Ok(kc)
   }
 
-  pub fn update(&mut self, data: &str) -> Result<()> {
-    let quit = Self::get_config("uda.taskwarrior-tui.keyconfig.quit", data);
-    let refresh = Self::get_config("uda.taskwarrior-tui.keyconfig.refresh", data);
-    let go_to_bottom = Self::get_config("uda.taskwarrior-tui.keyconfig.go-to-bottom", data);
-    let go_to_top = Self::get_config("uda.taskwarrior-tui.keyconfig.go-to-top", data);
-    let down = Self::get_config("uda.taskwarrior-tui.keyconfig.down", data);
-    let up = Self::get_config("uda.taskwarrior-tui.keyconfig.up", data);
-    let page_down = Self::get_config("uda.taskwarrior-tui.keyconfig.page-down", data);
-    let page_up = Self::get_config("uda.taskwarrior-tui.keyconfig.page-up", data);
-    let delete = Self::get_config("uda.taskwarrior-tui.keyconfig.delete", data);
-    let done = Self::get_config("uda.taskwarrior-tui.keyconfig.done", data);
-    let start_stop = Self::get_config("uda.taskwarrior-tui.keyconfig.start-stop", data);
-    let quick_tag = Self::get_config("uda.taskwarrior-tui.keyconfig.quick-tag", data);
-    let select = Self::get_config("uda.taskwarrior-tui.keyconfig.select", data);
-    let select_all = Self::get_config("uda.taskwarrior-tui.keyconfig.select-all", data);
-    let undo = Self::get_config("uda.taskwarrior-tui.keyconfig.undo", data);
-    let edit = Self::get_config("uda.taskwarrior-tui.keyconfig.edit", data);
-    let duplicate = Self::get_config("uda.taskwarrior-tui.keyconfig.duplicate", data);
-    let modify = Self::get_config("uda.taskwarrior-tui.keyconfig.modify", data);
-    let shell = Self::get_config("uda.taskwarrior-tui.keyconfig.shell", data);
-    let log = Self::get_config("uda.taskwarrior-tui.keyconfig.log", data);
-    let add = Self::get_config("uda.taskwarrior-tui.keyconfig.add", data);
-    let annotate = Self::get_config("uda.taskwarrior-tui.keyconfig.annotate", data);
-    let filter = Self::get_config("uda.taskwarrior-tui.keyconfig.filter", data);
-    let zoom = Self::get_config("uda.taskwarrior-tui.keyconfig.zoom", data);
-    let context_menu = Self::get_config("uda.taskwarrior-tui.keyconfig.context-menu", data);
-    let next_tab = Self::get_config("uda.taskwarrior-tui.keyconfig.next-tab", data);
-    let previous_tab = Self::get_config("uda.taskwarrior-tui.keyconfig.previous-tab", data);
-    let shortcut0 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut0", data);
-    let shortcut1 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut1", data);
-    let shortcut2 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut2", data);
-    let shortcut3 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut3", data);
-    let shortcut4 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut4", data);
-    let shortcut5 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut5", data);
-    let shortcut6 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut6", data);
-    let shortcut7 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut7", data);
-    let shortcut8 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut8", data);
-    let shortcut9 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut9", data);
+  // Set key to value in config file, if config file contains it
+  fn update_key_code(key: &mut KeyCode, key_name: &str, config_file: &str) {
+    let config_name = format!("{KEYCONFIG_PREFIX}.{key_name}");
+    let key_from_config = Self::get_config(&config_name, config_file);
 
-    self.quit = quit.unwrap_or(self.quit);
-    self.refresh = refresh.unwrap_or(self.refresh);
-    self.go_to_bottom = go_to_bottom.unwrap_or(self.go_to_bottom);
-    self.go_to_top = go_to_top.unwrap_or(self.go_to_top);
-    self.down = down.unwrap_or(self.down);
-    self.up = up.unwrap_or(self.up);
-    self.page_down = page_down.unwrap_or(self.page_down);
-    self.page_up = page_up.unwrap_or(self.page_up);
-    self.delete = delete.unwrap_or(self.delete);
-    self.done = done.unwrap_or(self.done);
-    self.start_stop = start_stop.unwrap_or(self.start_stop);
-    self.quick_tag = quick_tag.unwrap_or(self.quick_tag);
-    self.select = select.unwrap_or(self.select);
-    self.select_all = select_all.unwrap_or(self.select_all);
-    self.undo = undo.unwrap_or(self.undo);
-    self.edit = edit.unwrap_or(self.edit);
-    self.duplicate = edit.unwrap_or(self.duplicate);
-    self.modify = modify.unwrap_or(self.modify);
-    self.shell = shell.unwrap_or(self.shell);
-    self.log = log.unwrap_or(self.log);
-    self.add = add.unwrap_or(self.add);
-    self.annotate = annotate.unwrap_or(self.annotate);
-    self.filter = filter.unwrap_or(self.filter);
-    self.zoom = zoom.unwrap_or(self.zoom);
-    self.context_menu = context_menu.unwrap_or(self.context_menu);
-    self.next_tab = next_tab.unwrap_or(self.next_tab);
-    self.previous_tab = previous_tab.unwrap_or(self.previous_tab);
-    self.shortcut0 = shortcut0.unwrap_or(self.shortcut0);
-    self.shortcut1 = shortcut1.unwrap_or(self.shortcut1);
-    self.shortcut2 = shortcut2.unwrap_or(self.shortcut2);
-    self.shortcut3 = shortcut3.unwrap_or(self.shortcut3);
-    self.shortcut4 = shortcut4.unwrap_or(self.shortcut4);
-    self.shortcut5 = shortcut5.unwrap_or(self.shortcut5);
-    self.shortcut6 = shortcut6.unwrap_or(self.shortcut6);
-    self.shortcut7 = shortcut7.unwrap_or(self.shortcut7);
-    self.shortcut8 = shortcut8.unwrap_or(self.shortcut8);
-    self.shortcut9 = shortcut9.unwrap_or(self.shortcut9);
-
-    self.check()
+    if let Some(new_key) = key_from_config {
+      trace!("Updated action {} to new key {:?}", key_name, new_key);
+      *key = new_key;
+    }
   }
 
-  pub fn check(&self) -> Result<()> {
-    let mut elements = vec![
+  pub fn update(&mut self, data: &str) -> Result<()> {
+    Self::update_key_code(&mut self.quit, "quit", data);
+    Self::update_key_code(&mut self.refresh, "refresh", data);
+    Self::update_key_code(&mut self.go_to_bottom, "go-to-bottom", data);
+    Self::update_key_code(&mut self.go_to_top, "go-to-top", data);
+    Self::update_key_code(&mut self.down, "down", data);
+    Self::update_key_code(&mut self.up, "up", data);
+    Self::update_key_code(&mut self.page_down, "page-down", data);
+    Self::update_key_code(&mut self.page_up, "page-up", data);
+    Self::update_key_code(&mut self.delete, "delete", data);
+    Self::update_key_code(&mut self.done, "done", data);
+    Self::update_key_code(&mut self.start_stop, "start-stop", data);
+    Self::update_key_code(&mut self.quick_tag, "quick-tag", data);
+    Self::update_key_code(&mut self.select, "select", data);
+    Self::update_key_code(&mut self.select_all, "select-all", data);
+    Self::update_key_code(&mut self.undo, "undo", data);
+    Self::update_key_code(&mut self.edit, "edit", data);
+    Self::update_key_code(&mut self.duplicate, "duplicate", data);
+    Self::update_key_code(&mut self.modify, "modify", data);
+    Self::update_key_code(&mut self.shell, "shell", data);
+    Self::update_key_code(&mut self.log, "log", data);
+    Self::update_key_code(&mut self.add, "add", data);
+    Self::update_key_code(&mut self.annotate, "annotate", data);
+    Self::update_key_code(&mut self.filter, "filter", data);
+    Self::update_key_code(&mut self.zoom, "zoom", data);
+    Self::update_key_code(&mut self.context_menu, "context-menu", data);
+    Self::update_key_code(&mut self.next_tab, "next-tab", data);
+    Self::update_key_code(&mut self.previous_tab, "previous-tab", data);
+    Self::update_key_code(&mut self.shortcut0, "shortcut0", data);
+    Self::update_key_code(&mut self.shortcut1, "shortcut1", data);
+    Self::update_key_code(&mut self.shortcut2, "shortcut2", data);
+    Self::update_key_code(&mut self.shortcut3, "shortcut3", data);
+    Self::update_key_code(&mut self.shortcut4, "shortcut4", data);
+    Self::update_key_code(&mut self.shortcut5, "shortcut5", data);
+    Self::update_key_code(&mut self.shortcut6, "shortcut6", data);
+    Self::update_key_code(&mut self.shortcut7, "shortcut7", data);
+    Self::update_key_code(&mut self.shortcut8, "shortcut8", data);
+    Self::update_key_code(&mut self.shortcut9, "shortcut9", data);
+
+    let keys_to_check = self.keycodes_for_duplicate_check();
+    self.check_duplicates(keys_to_check)
+  }
+
+  fn keycodes_for_duplicate_check(&self) -> Vec<&KeyCode> {
+    vec![
       &self.quit,
       &self.refresh,
       &self.go_to_bottom,
@@ -218,9 +194,22 @@ impl KeyConfig {
       &self.context_menu,
       &self.next_tab,
       &self.previous_tab,
-    ];
+    ]
+  }
+
+  pub fn check_duplicates(&self, mut elements: Vec<&KeyCode>) -> Result<()> {
     let l = elements.len();
+
+    // Vecs need to be sorted for dedup to work correctly.
+    // TODO: Replace once Key-Handling has been rewritten from ground up and Non-Char KeyCodes are supported.
+    elements.sort_by(|a, b| match (a, b) {
+      (KeyCode::Char(a_char), KeyCode::Char(b_char)) => a_char.cmp(b_char),
+      _ => {
+        panic!("Non-Char Keycodes are not yet supported. Found KeyCodes {:#?} and {:#?} to compare", a, b);
+      }
+    });
     elements.dedup();
+
     if l == elements.len() {
       Ok(())
     } else {
@@ -230,32 +219,108 @@ impl KeyConfig {
 
   fn get_config(config: &str, data: &str) -> Option<KeyCode> {
     for line in data.split('\n') {
-      if line.starts_with(config) {
-        let line = line.trim_start_matches(config).trim_start().trim_end().to_string();
-        if has_just_one_char(&line) {
-          return Some(KeyCode::Char(line.chars().next().unwrap()));
-        } else {
-          error!("Found multiple characters in {} for {}", line, config);
+      // Provide leeway for swapped - and _ in keyconfigs
+      let config_variants = vec![config.to_owned(), config.replace('-', "_")];
+
+      for config in &config_variants {
+        if !line.starts_with(config) {
+          continue;
         }
-      } else if line.starts_with(&config.replace('-', "_")) {
-        let line = line.trim_start_matches(&config.replace('-', "_")).trim_start().trim_end().to_string();
-        if has_just_one_char(&line) {
-          return Some(KeyCode::Char(line.chars().next().unwrap()));
-        } else {
-          error!("Found multiple characters in {} for {}", line, config);
+
+        let trimmed_line = line
+          .trim_start_matches(config)
+          .trim_start()
+          .trim_start_matches('=')
+          .trim_end()
+          .to_string();
+
+        let chars: Vec<char> = trimmed_line.chars().collect();
+
+        match chars.len() {
+          0 => error!("Found no override key for action {} in line {}, only the config prefix", config, line),
+          1 => {
+            let key_char = chars.first();
+            match key_char {
+              Some(key_char) => return Some(KeyCode::Char(*key_char)),
+              None => error!("Encountered impossible error. Could not fetch first character in Vector of length 1"),
+            }
+          }
+          _ => error!(
+            "Found multiple characters({}) in {} for action {}, instead of the expected 1",
+            chars.len(),
+            line,
+            config
+          ),
         }
       }
     }
+
+    trace!("Could not find a key override for action {}", config);
     None
   }
-}
-
-fn has_just_one_char(s: &str) -> bool {
-  let mut chars = s.chars();
-  chars.next().is_some() && chars.next().is_none()
 }
 
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  #[should_panic]
+  fn test_invalid_key_variant_panic() {
+    let kc = KeyConfig::default();
+    let mut keys_to_check = kc.keycodes_for_duplicate_check();
+
+    // We need at least 2 keys for the compare logic to run
+    assert!(keys_to_check.len() >= 2);
+    *keys_to_check.first_mut().unwrap() = &KeyCode::Backspace;
+
+    // This line will panic
+    let _ = kc.check_duplicates(keys_to_check);
+  }
+
+  #[test]
+  fn test_duplicate_key_error() {
+    let kc = KeyConfig::default();
+    let mut keys_to_check = kc.keycodes_for_duplicate_check();
+
+    // Replace first and last with colliding key
+    // This way the duplicate check for non-consecutive keys is assured and correct sorting is tested
+    assert!(keys_to_check.len() >= 3);
+    *keys_to_check.first_mut().unwrap() = &KeyCode::Char('E');
+    *keys_to_check.last_mut().unwrap() = &KeyCode::Char('E');
+
+    let res = kc.check_duplicates(keys_to_check);
+    assert!(res.is_err())
+  }
+
+  #[test]
+  fn test_read_key_config() {
+    let config_prefix = "uda.taskwarrior-tui.keyconfig.quit";
+    let config_name = format!("{config_prefix}");
+
+    let valid_line = "uda.taskwarrior-tui.keyconfig.quit=q";
+    assert!(KeyConfig::get_config(&config_name, valid_line).is_some());
+
+    let invalid_line = "uda.taskwarrior-tui.keyconfig.quit=";
+    assert!(KeyConfig::get_config(&config_name, invalid_line).is_none());
+
+    let invalid_line = "uda.taskwarrior-tui.keyconfig.quit=qt";
+    assert!(KeyConfig::get_config(&config_name, invalid_line).is_none());
+  }
+
+  #[test]
+  fn test_update_key() {
+    let config = "uda.taskwarrior-tui.keyconfig.quit=M";
+    let target_keycode = KeyCode::Char('M');
+
+    // Check in case defaults changed
+    let default_keyconfig = KeyConfig::default();
+    let default_keycodes = KeyConfig::keycodes_for_duplicate_check(&default_keyconfig);
+    for keycode in default_keycodes {
+      assert_ne!(*keycode, target_keycode);
+    }
+
+    let kc = KeyConfig::new(&config).expect("Changing KeyConfig failed");
+    assert_eq!(kc.quit, target_keycode);
+  }
 }
