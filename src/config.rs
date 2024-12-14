@@ -698,6 +698,13 @@ impl Config {
       .unwrap_or(false)
   }
 
+  fn get_uda_selection_dim(data: &str) -> bool {
+    Self::get_config("uda.taskwarrior-tui.selection.dim", data)
+      .unwrap_or_default()
+      .get_bool()
+      .unwrap_or(false)
+  }
+
   fn get_uda_selection_blink(data: &str) -> bool {
     Self::get_config("uda.taskwarrior-tui.selection.blink", data)
       .unwrap_or_default()
@@ -707,13 +714,6 @@ impl Config {
 
   fn get_uda_selection_reverse(data: &str) -> bool {
     Self::get_config("uda.taskwarrior-tui.selection.reverse", data)
-      .unwrap_or_default()
-      .get_bool()
-      .unwrap_or(false)
-  }
-
-  fn get_uda_selection_dim(data: &str) -> bool {
-    Self::get_config("uda.taskwarrior-tui.selection.dim", data)
       .unwrap_or_default()
       .get_bool()
       .unwrap_or(false)
