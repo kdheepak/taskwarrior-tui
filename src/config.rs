@@ -146,6 +146,7 @@ impl Config {
     let uda_selection_dim = Self::get_uda_selection_dim(data);
     let uda_selection_blink = Self::get_uda_selection_blink(data);
     let uda_selection_reverse = Self::get_uda_selection_reverse(data);
+    let uda_unselected_dim = Self::get_uda_unselected_dim(data);
     let uda_calendar_months_per_row = Self::get_uda_months_per_row(data);
     let uda_style_report_selection = Self::get_uda_style("report.selection", data);
     let uda_style_report_scrollbar = Self::get_uda_style("report.scrollbar", data);
@@ -213,6 +214,7 @@ impl Config {
       uda_selection_dim,
       uda_selection_blink,
       uda_selection_reverse,
+      uda_unselected_dim,
       uda_calendar_months_per_row,
       uda_style_report_selection,
       uda_style_context_active,
@@ -691,8 +693,8 @@ impl Config {
       .unwrap_or(false)
   }
 
-  fn get_uda_selection_dim(data: &str) -> bool {
-    Self::get_config("uda.taskwarrior-tui.selection.dim", data)
+  fn get_uda_unselected_dim(data: &str) -> bool {
+    Self::get_config("uda.taskwarrior-tui.unselected.dim", data)
       .unwrap_or_default()
       .get_bool()
       .unwrap_or(false)
@@ -707,6 +709,13 @@ impl Config {
 
   fn get_uda_selection_reverse(data: &str) -> bool {
     Self::get_config("uda.taskwarrior-tui.selection.reverse", data)
+      .unwrap_or_default()
+      .get_bool()
+      .unwrap_or(false)
+  }
+
+  fn get_uda_selection_dim(data: &str) -> bool {
+    Self::get_config("uda.taskwarrior-tui.selection.dim", data)
       .unwrap_or_default()
       .get_bool()
       .unwrap_or(false)
