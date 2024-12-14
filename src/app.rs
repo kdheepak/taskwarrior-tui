@@ -1227,6 +1227,12 @@ impl TaskwarriorTui {
         if self.config.uda_selection_reverse {
           highlight_style = highlight_style.add_modifier(Modifier::REVERSED);
         }
+      } else {
+        // act on unselected items
+        highlight_style = style.patch(self.config.uda_style_report_unselected);
+        if self.config.uda_unselected_dim {
+          highlight_style = highlight_style.add_modifier(Modifier::DIM);
+        }
       }
       rows.push(Row::StyledData(task.iter(), style));
     }

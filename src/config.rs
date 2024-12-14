@@ -80,9 +80,11 @@ pub struct Config {
   pub uda_selection_dim: bool,
   pub uda_selection_blink: bool,
   pub uda_selection_reverse: bool,
+  pub uda_unselected_dim: bool,
   pub uda_calendar_months_per_row: usize,
   pub uda_style_context_active: Style,
   pub uda_style_report_selection: Style,
+  pub uda_style_report_unselected: Style,
   pub uda_style_calendar_title: Style,
   pub uda_style_calendar_today: Style,
   pub uda_style_navbar: Style,
@@ -149,6 +151,7 @@ impl Config {
     let uda_unselected_dim = Self::get_uda_unselected_dim(data);
     let uda_calendar_months_per_row = Self::get_uda_months_per_row(data);
     let uda_style_report_selection = Self::get_uda_style("report.selection", data);
+    let uda_style_report_unselected = Self::get_uda_style("report.unselected", data);
     let uda_style_report_scrollbar = Self::get_uda_style("report.scrollbar", data);
     let uda_style_report_scrollbar_area = Self::get_uda_style("report.scrollbar.area", data);
     let uda_style_calendar_title = Self::get_uda_style("calendar.title", data);
@@ -162,6 +165,7 @@ impl Config {
     let uda_background_process = Self::get_uda_background_process(data);
     let uda_background_process_period = Self::get_uda_background_process_period(data);
     let uda_style_report_selection = uda_style_report_selection.unwrap_or_default();
+    let uda_style_report_unselected = uda_style_report_unselected.unwrap_or_default();
     let uda_style_report_scrollbar = uda_style_report_scrollbar.unwrap_or_else(|| Style::default().fg(Color::Black));
     let uda_style_report_scrollbar_area = uda_style_report_scrollbar_area.unwrap_or_default();
     let uda_style_calendar_title = uda_style_calendar_title.unwrap_or_default();
@@ -217,6 +221,7 @@ impl Config {
       uda_unselected_dim,
       uda_calendar_months_per_row,
       uda_style_report_selection,
+      uda_style_report_unselected,
       uda_style_context_active,
       uda_style_calendar_title,
       uda_style_calendar_today,
@@ -693,13 +698,6 @@ impl Config {
       .unwrap_or(false)
   }
 
-  fn get_uda_unselected_dim(data: &str) -> bool {
-    Self::get_config("uda.taskwarrior-tui.unselected.dim", data)
-      .unwrap_or_default()
-      .get_bool()
-      .unwrap_or(false)
-  }
-
   fn get_uda_selection_blink(data: &str) -> bool {
     Self::get_config("uda.taskwarrior-tui.selection.blink", data)
       .unwrap_or_default()
@@ -716,6 +714,13 @@ impl Config {
 
   fn get_uda_selection_dim(data: &str) -> bool {
     Self::get_config("uda.taskwarrior-tui.selection.dim", data)
+      .unwrap_or_default()
+      .get_bool()
+      .unwrap_or(false)
+  }
+
+  fn get_uda_unselected_dim(data: &str) -> bool {
+    Self::get_config("uda.taskwarrior-tui.unselected.dim", data)
       .unwrap_or_default()
       .get_bool()
       .unwrap_or(false)
