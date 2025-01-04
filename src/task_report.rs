@@ -29,17 +29,11 @@ pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime, with
     ""
   };
 
-  // year in sec = 60 * 60 * 24 * 365
-  const YEAR: i64 = 31536000;
-  // month in sec = 60 * 60 * 24 * 30
-  const MONTH: i64 = 2592000;
-  // week in sec = 60 * 60 * 24 * 7
-  const WEEK: i64 = 604800;
-  // day in sec = 60 * 60 * 24
-  const DAY: i64 = 86400;
-  // hour in sec = 60 * 60
-  const HOUR: i64 = 3600;
-  // minture in sec = 60
+  const YEAR: i64 =  60 * 60 * 24 * 365;
+  const MONTH: i64 = 60 * 60 * 24 * 30;
+  const WEEK: i64 = 60 * 60 * 24 * 7;
+  const DAY: i64 = 60 * 60 * 24;
+  const HOUR: i64 = 60 * 60;
   const MINUTE: i64 = 60;
 
   if seconds >= YEAR {
