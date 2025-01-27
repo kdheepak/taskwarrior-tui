@@ -29,53 +29,53 @@ pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime, with
     ""
   };
 
-  let year = 60 * 60 * 24 * 365;
-  let month = 60 * 60 * 24 * 30;
-  let week = 60 * 60 * 24 * 7;
-  let day = 60 * 60 * 24;
-  let hour = 60 * 60;
-  let minute = 60;
+  const YEAR: i64 =  60 * 60 * 24 * 365;
+  const MONTH: i64 = 60 * 60 * 24 * 30;
+  const WEEK: i64 = 60 * 60 * 24 * 7;
+  const DAY: i64 = 60 * 60 * 24;
+  const HOUR: i64 = 60 * 60;
+  const MINUTE: i64 = 60;
 
-  if seconds >= 60 * 60 * 24 * 365 {
+  if seconds >= YEAR {
     return if with_remainder {
-      format!("{}{}y{}mo", minus, seconds / year, (seconds - year * (seconds / year)) / month)
+      format!("{}{}y{}mo", minus, seconds / YEAR, (seconds - YEAR * (seconds / YEAR)) / MONTH)
     } else {
-      format!("{}{}y", minus, seconds / year)
+      format!("{}{}y", minus, seconds / YEAR)
     };
   }
-  if seconds >= 60 * 60 * 24 * 90 {
+  if seconds >= MONTH * 3 {
     return if with_remainder {
-      format!("{}{}mo{}w", minus, seconds / month, (seconds - month * (seconds / month)) / week)
+      format!("{}{}mo{}w", minus, seconds / MONTH, (seconds - MONTH * (seconds / MONTH)) / WEEK)
     } else {
-      format!("{}{}mo", minus, seconds / month)
+      format!("{}{}mo", minus, seconds / MONTH)
     };
   }
-  if seconds >= 60 * 60 * 24 * 14 {
+  if seconds >= WEEK * 2 {
     return if with_remainder {
-      format!("{}{}w{}d", minus, seconds / week, (seconds - week * (seconds / week)) / day)
+      format!("{}{}w{}d", minus, seconds / WEEK, (seconds - WEEK * (seconds / WEEK)) / DAY)
     } else {
-      format!("{}{}w", minus, seconds / week)
+      format!("{}{}w", minus, seconds / WEEK)
     };
   }
-  if seconds >= 60 * 60 * 24 {
+  if seconds >= DAY {
     return if with_remainder {
-      format!("{}{}d{}h", minus, seconds / day, (seconds - day * (seconds / day)) / hour)
+      format!("{}{}d{}h", minus, seconds / DAY, (seconds - DAY * (seconds / DAY)) / HOUR)
     } else {
-      format!("{}{}d", minus, seconds / day)
+      format!("{}{}d", minus, seconds / DAY)
     };
   }
-  if seconds >= 60 * 60 {
+  if seconds >= HOUR {
     return if with_remainder {
-      format!("{}{}h{}min", minus, seconds / hour, (seconds - hour * (seconds / hour)) / minute)
+      format!("{}{}h{}min", minus, seconds / HOUR, (seconds - HOUR * (seconds / HOUR)) / MINUTE)
     } else {
-      format!("{}{}h", minus, seconds / hour)
+      format!("{}{}h", minus, seconds / HOUR)
     };
   }
-  if seconds >= 60 {
+  if seconds >= MINUTE {
     return if with_remainder {
-      format!("{}{}min{}s", minus, seconds / minute, (seconds - minute * (seconds / minute)))
+      format!("{}{}min{}s", minus, seconds / MINUTE, (seconds - MINUTE * (seconds / MINUTE)))
     } else {
-      format!("{}{}min", minus, seconds / minute)
+      format!("{}{}min", minus, seconds / MINUTE)
     };
   }
   format!("{}{}s", minus, seconds)
