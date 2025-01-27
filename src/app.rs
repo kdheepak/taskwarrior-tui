@@ -1112,6 +1112,10 @@ impl TaskwarriorTui {
     let virtual_tag_names_in_precedence = &self.config.rule_precedence_color;
 
     let mut style = Style::default();
+    if self.config.uda_unselected_dim {
+      style = style.patch(self.config.uda_style_report_unselected);
+      style = style.add_modifier(Modifier::DIM);
+    }
 
     for tag_name in virtual_tag_names_in_precedence.iter().rev() {
       if tag_name == "uda." || tag_name == "priority" {
