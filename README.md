@@ -1,7 +1,9 @@
 # `taskwarrior-tui`
 
 > [!IMPORTANT]
-> [`taskwarrior` v3.x](https://github.com/GothenburgBitFactory/taskwarrior/releases/tag/v3.0.0) may break `taskwarrior-tui` features in unexpected ways. Please file a bug report if you encounter a bug. 
+> [`taskwarrior` v3.x](https://github.com/GothenburgBitFactory/taskwarrior/releases/tag/v3.0.0) may break `taskwarrior-tui` features in unexpected ways. Please file a bug report if you encounter a bug.
+>
+> taskwarrior-tui [v0.25.4](https://github.com/kdheepak/taskwarrior-tui/releases/tag/v0.25.4) is the last version supporting taskwarrior v2.x as backend.
 
 [![CI](https://github.com/kdheepak/taskwarrior-tui/workflows/CI/badge.svg)](https://github.com/kdheepak/taskwarrior-tui/actions?query=workflow%3ACI)
 [![](https://img.shields.io/github/license/kdheepak/taskwarrior-tui)](./LICENSE)
