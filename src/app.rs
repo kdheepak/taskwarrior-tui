@@ -22,14 +22,7 @@ use futures::SinkExt;
 use lazy_static::lazy_static;
 use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
 use ratatui::{
-  backend::{Backend, CrosstermBackend},
-  layout::{Alignment, Constraint, Direction, Layout, Margin, Rect},
-  style::{Color, Modifier, Style},
-  symbols::bar::FULL,
-  Frame,
-  text::{Line, Span, Text},
-  widgets::{Block, BorderType, Borders, Clear, Gauge, LineGauge, List, ListItem, Paragraph, Tabs, Wrap},
-  Terminal,
+  backend::{Backend, CrosstermBackend}, layout::{Alignment, Constraint, Direction, Layout, Margin, Position, Rect}, style::{Color, Modifier, Style}, symbols::bar::FULL, text::{Line, Span, Text}, widgets::{Block, BorderType, Borders, Clear, Gauge, LineGauge, List, ListItem, Paragraph, Tabs, Wrap}, Frame, Terminal
 };
 use regex::Regex;
 use rustyline::{history::SearchDirection as HistoryDirection, line_buffer::LineBuffer, At, Editor, Word};
@@ -1018,7 +1011,8 @@ impl TaskwarriorTui {
   fn draw_command(&self, f: &mut Frame, rect: Rect, text: &str, title: (Span, Option<Span>), position: usize, cursor: bool, error: Option<String>) {
     // f.render_widget(Clear, rect);
     if cursor {
-      f.set_cursor(std::cmp::min(rect.x + position as u16, rect.x + rect.width.saturating_sub(2)), rect.y + 1);
+      let position = Position::new(std::cmp::min(rect.x + position as u16, rect.x + rect.width.saturating_sub(2)), rect.y + 1);
+      f.set_cursor_position(position);
     }
     let rects = Layout::default()
       .direction(Direction::Vertical)
@@ -3823,7 +3817,7 @@ mod tests {
     path::{Path, PathBuf},
   };
 
-  use ratatui::{backend::TestBackend, buffer::Buffer};
+  use ratatui::{backend::TestBackend, buffer::Buffer, prelude::Position};
 
   use super::*;
 
@@ -4407,13 +4401,14 @@ mod tests {
         let rects = Layout::default()
           .direction(Direction::Vertical)
           .constraints([Constraint::Min(0), Constraint::Length(3)].as_ref())
-          .split(f.size());
+          .split(f.area());
 
-        let position = TaskwarriorTui::get_position(&app.modify);
-        f.set_cursor(
-          std::cmp::min(rects[1].x + position as u16, rects[1].x + rects[1].width.saturating_sub(2)),
+        let taskwarror_position = TaskwarriorTui::get_position(&app.modify);
+        let position = Position::new(
+          std::cmp::min(rects[1].x + taskwarror_position as u16, rects[1].x + rects[1].width.saturating_sub(2)),
           rects[1].y + 1,
-        );
+                );
+        f.set_cursor_position(position);
         f.render_widget(Clear, rects[1]);
         let selected = app.current_selection;
         let task_ids = if app.tasks.is_empty() {
@@ -4444,7 +4439,7 @@ mod tests {
           rects[1],
           app.modify.as_str(),
           (Span::styled(label, Style::default().add_modifier(Modifier::BOLD)), None),
-          position,
+          taskwarror_position,
           true,
           app.error.clone(),
         );
@@ -4461,13 +4456,11 @@ mod tests {
         let rects = Layout::default()
           .direction(Direction::Vertical)
           .constraints([Constraint::Min(0), Constraint::Length(3)].as_ref())
-          .split(f.size());
+          .split(f.area());
 
-        let position = TaskwarriorTui::get_position(&app.modify);
-        f.set_cursor(
-          std::cmp::min(rects[1].x + position as u16, rects[1].x + rects[1].width.saturating_sub(2)),
-          rects[1].y + 1,
-        );
+        let taskwarrior_position = TaskwarriorTui::get_position(&app.modify);
+        let position = Position::new(std::cmp::min(rects[1].x + taskwarrior_position as u16, rects[1].x + rects[1].width.saturating_sub(2)), rects[1].y + 1);
+        f.set_cursor_position(position);
         f.render_widget(Clear, rects[1]);
         let selected = app.current_selection;
         let task_ids = if app.tasks.is_empty() {
@@ -4498,7 +4491,7 @@ mod tests {
           rects[1],
           app.modify.as_str(),
           (Span::styled(label, Style::default().add_modifier(Modifier::BOLD)), None),
-          position,
+          taskwarrior_position,
           true,
           app.error.clone(),
         );
