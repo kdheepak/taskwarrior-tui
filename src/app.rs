@@ -4311,17 +4311,16 @@ mod tests {
 
     for i in 0..=49 {
       // First line
-      expected.get_mut(i, 0).set_style(Style::default().add_modifier(Modifier::REVERSED));
+      expected[(i, 0)].set_style(Style::default().add_modifier(Modifier::REVERSED));
     }
     for i in 1..=5 {
       // Tasks
-      expected
-        .get_mut(i, 0)
+      expected[(i, 0)]
         .set_style(Style::default().add_modifier(Modifier::BOLD).add_modifier(Modifier::REVERSED));
     }
     for i in 0..=49 {
       // Command line
-      expected.get_mut(i, 13).set_style(Style::default().add_modifier(Modifier::REVERSED));
+      expected[(i, 13)].set_style(Style::default().add_modifier(Modifier::REVERSED));
     }
 
     let mut app = TaskwarriorTui::new("next", false).await.unwrap();
@@ -4367,13 +4366,13 @@ mod tests {
 
     for i in 0..=13 {
       // Task
-      expected1.get_mut(i, 0).set_style(Style::default().add_modifier(Modifier::BOLD));
-      expected2.get_mut(i, 0).set_style(Style::default().add_modifier(Modifier::BOLD));
+      expected1[(i, 0)].set_style(Style::default().add_modifier(Modifier::BOLD));
+      expected2[(i, 0)].set_style(Style::default().add_modifier(Modifier::BOLD));
     }
     for i in 0..=24 {
       // Command line
-      expected1.get_mut(i, 0).set_style(Style::default().add_modifier(Modifier::REVERSED));
-      expected2.get_mut(i, 0).set_style(Style::default().add_modifier(Modifier::REVERSED));
+      expected1[(i, 0)].set_style(Style::default().add_modifier(Modifier::REVERSED));
+      expected2[(i, 0)].set_style(Style::default().add_modifier(Modifier::REVERSED));
     }
 
     let mut app = TaskwarriorTui::new("next", false).await.unwrap();
@@ -4531,11 +4530,11 @@ mod tests {
 
     for i in 1..=4 {
       // Task
-      expected.get_mut(i, 0).set_style(Style::default().add_modifier(Modifier::BOLD));
+      expected[(i, 0)].set_style(Style::default().add_modifier(Modifier::BOLD));
     }
     for i in 6..=13 {
       // Calendar
-      expected.get_mut(i, 0).set_style(Style::default().add_modifier(Modifier::DIM));
+      expected[(i, 0)].set_style(Style::default().add_modifier(Modifier::DIM));
     }
 
     for r in &[
@@ -4550,19 +4549,17 @@ mod tests {
       44..=48, // Urg
     ] {
       for i in r.clone() {
-        expected.get_mut(i, 1).set_style(Style::default().add_modifier(Modifier::UNDERLINED));
+        expected[(i, 1)].set_style(Style::default().add_modifier(Modifier::UNDERLINED));
       }
     }
 
     for i in 1..expected.area().width - 1 {
-      expected
-        .get_mut(i, 3)
+      expected[(i, 3)]
         .set_style(Style::default().fg(Color::Indexed(1)).bg(Color::Reset).add_modifier(Modifier::BOLD));
     }
 
     for i in 1..expected.area().width - 1 {
-      expected
-        .get_mut(i, 4)
+      expected[(i, 4)]
         .set_style(Style::default().fg(Color::Indexed(1)).bg(Color::Indexed(4)));
     }
 
@@ -4673,36 +4670,33 @@ mod tests {
 
     for i in 0..=49 {
       // First line
-      expected.get_mut(i, 0).set_style(Style::default().add_modifier(Modifier::REVERSED));
+      expected[(i, 0)].set_style(Style::default().add_modifier(Modifier::REVERSED));
     }
     for i in 20..=27 {
       // Calendar
-      expected
-        .get_mut(i, 0)
+      expected[(i, 0)]
         .set_style(Style::default().add_modifier(Modifier::BOLD).add_modifier(Modifier::REVERSED));
     }
 
     for i in 0..=49 {
-      expected.get_mut(i, 2).set_style(Style::default().add_modifier(Modifier::UNDERLINED));
+      expected[(i, 2)].set_style(Style::default().add_modifier(Modifier::UNDERLINED));
     }
 
     for i in 3..=22 {
-      expected.get_mut(i, 4).set_style(Style::default().bg(Color::Reset));
+      expected[(i, 4)].set_style(Style::default().bg(Color::Reset));
     }
 
     for i in 25..=44 {
-      expected.get_mut(i, 4).set_style(Style::default().bg(Color::Reset));
+      expected[(i, 4)].set_style(Style::default().bg(Color::Reset));
     }
 
     for i in 3..=22 {
-      expected
-        .get_mut(i, 5)
+      expected[(i, 5)]
         .set_style(Style::default().bg(Color::Reset).add_modifier(Modifier::UNDERLINED));
     }
 
     for i in 25..=44 {
-      expected
-        .get_mut(i, 5)
+      expected[(i, 5)]
         .set_style(Style::default().bg(Color::Reset).add_modifier(Modifier::UNDERLINED));
     }
 
@@ -4748,11 +4742,11 @@ mod tests {
 
     for i in 1..=4 {
       // Calendar
-      expected.get_mut(i, 0).set_style(Style::default().add_modifier(Modifier::BOLD));
+      expected[(i, 0)].set_style(Style::default().add_modifier(Modifier::BOLD));
     }
-    expected.get_mut(3, 11).set_style(Style::default().fg(Color::Gray));
-    expected.get_mut(4, 11).set_style(Style::default().fg(Color::Gray));
-    expected.get_mut(5, 11).set_style(Style::default().fg(Color::Gray));
+    expected[(2, 11)].set_style(Style::default().fg(Color::Gray));
+    expected[(4, 11)].set_style(Style::default().fg(Color::Gray));
+    expected[(5, 11)].set_style(Style::default().fg(Color::Gray));
 
     let mut app = TaskwarriorTui::new("next", false).await.unwrap();
 
@@ -4790,27 +4784,27 @@ mod tests {
 
     for i in 1..=7 {
       // Task
-      expected.get_mut(i, 0).set_style(Style::default().add_modifier(Modifier::BOLD));
+      expected[(i, 0)].set_style(Style::default().add_modifier(Modifier::BOLD));
     }
 
     for i in 1..=10 {
       // Task
-      expected.get_mut(i, 1).set_style(Style::default().add_modifier(Modifier::UNDERLINED));
+      expected[(i, 1)].set_style(Style::default().add_modifier(Modifier::UNDERLINED));
     }
 
     for i in 12..=71 {
       // Task
-      expected.get_mut(i, 1).set_style(Style::default().add_modifier(Modifier::UNDERLINED));
+      expected[(i, 1)].set_style(Style::default().add_modifier(Modifier::UNDERLINED));
     }
 
     for i in 73..=78 {
       // Task
-      expected.get_mut(i, 1).set_style(Style::default().add_modifier(Modifier::UNDERLINED));
+      expected[(i, 1)].set_style(Style::default().add_modifier(Modifier::UNDERLINED));
     }
 
     for i in 1..=78 {
       // Task
-      expected.get_mut(i, 3).set_style(Style::default().add_modifier(Modifier::BOLD));
+      expected[(i, 3)].set_style(Style::default().add_modifier(Modifier::BOLD));
     }
 
     let mut app = TaskwarriorTui::new("next", false).await.unwrap();
