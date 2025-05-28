@@ -4348,7 +4348,7 @@ mod tests {
       })
       .unwrap();
 
-    assert_eq!(terminal.backend().size().unwrap(), expected.area);
+    assert_eq!(terminal.backend().size().unwrap(), expected.area.into());
     terminal.backend().assert_buffer(&expected);
   }
 
@@ -4452,7 +4452,7 @@ mod tests {
       })
       .unwrap();
 
-    assert_eq!(terminal.backend().size().unwrap(), expected1.area);
+    assert_eq!(terminal.backend().size().unwrap(), expected1.area.into());
     terminal.backend().assert_buffer(&expected1);
 
     app.modify.move_home();
@@ -4506,7 +4506,7 @@ mod tests {
       })
       .unwrap();
 
-    assert_eq!(terminal.backend().size().unwrap(), expected2.area);
+    assert_eq!(terminal.backend().size().unwrap(), expected2.area.into());
     terminal.backend().assert_buffer(&expected2);
   }
 
@@ -4648,7 +4648,7 @@ mod tests {
       .output()
       .unwrap();
 
-    assert_eq!(terminal.backend().size().unwrap(), expected.area);
+    assert_eq!(terminal.backend().size().unwrap(), expected.area.into());
     terminal.backend().assert_buffer(&expected);
   }
 
@@ -4726,7 +4726,7 @@ mod tests {
       })
       .unwrap();
 
-    assert_eq!(terminal.backend().size().unwrap(), expected.area);
+    assert_eq!(terminal.backend().size().unwrap(), expected.area.into());
     terminal.backend().assert_buffer(&expected);
   }
 
@@ -4769,7 +4769,7 @@ mod tests {
       })
       .unwrap();
 
-    assert_eq!(terminal.backend().size().unwrap(), expected.area);
+    assert_eq!(terminal.backend().size().unwrap(), expected.area.into());
     terminal.backend().assert_buffer(&expected);
   }
 
@@ -4828,7 +4828,7 @@ mod tests {
       })
       .unwrap();
 
-    assert_eq!(terminal.backend().size().unwrap(), expected.area);
+    assert_eq!(terminal.backend().size().unwrap(), expected.area.into());
     terminal.backend().assert_buffer(&expected);
   }
 
