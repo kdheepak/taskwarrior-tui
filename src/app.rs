@@ -435,14 +435,14 @@ impl TaskwarriorTui {
   }
 
   pub fn draw(&mut self, f: &mut Frame) {
-    let rect = f.size();
+    let rect = f.area();
     self.terminal_width = rect.width;
     self.terminal_height = rect.height;
 
     let chunks = Layout::default()
       .direction(Direction::Vertical)
       .constraints([Constraint::Length(1), Constraint::Min(0)])
-      .split(f.size());
+      .split(f.area());
 
     let tab_layout = chunks[0];
     let main_layout = chunks[1];
@@ -488,7 +488,7 @@ impl TaskwarriorTui {
   }
 
   pub fn draw_debug(&mut self, f: &mut Frame) {
-    let area = centered_rect(50, 50, f.size());
+    let area = centered_rect(50, 50, f.area());
     f.render_widget(Clear, area);
     let t = format!("{}", self.current_selection);
     let p = Paragraph::new(Text::from(t)).block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded));
@@ -587,7 +587,7 @@ impl TaskwarriorTui {
         );
         let text = self.error.clone().unwrap_or_else(|| "Unknown error.".to_string());
         let title = vec![Span::styled("Error", Style::default().add_modifier(Modifier::BOLD))];
-        let rect = centered_rect(90, 60, f.size());
+        let rect = centered_rect(90, 60, f.area());
         f.render_widget(Clear, rect);
         let p = Paragraph::new(Text::from(text))
           .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).title(title))
@@ -597,7 +597,7 @@ impl TaskwarriorTui {
         let rects = Layout::default()
           .direction(Direction::Vertical)
           .constraints([Constraint::Min(0)].as_ref())
-          .split(f.size());
+          .split(f.area());
       }
       Action::Report => {
         // reset error when entering Action::Report
@@ -886,7 +886,7 @@ impl TaskwarriorTui {
   }
 
   fn draw_help_popup(&mut self, f: &mut Frame, percent_x: u16, percent_y: u16) {
-    let area = centered_rect(percent_x, percent_y, f.size());
+    let area = centered_rect(percent_x, percent_y, f.area());
     f.render_widget(Clear, area);
 
     let chunks = Layout::default()
@@ -914,9 +914,9 @@ impl TaskwarriorTui {
     let rects = Layout::default()
       .direction(Direction::Vertical)
       .constraints([Constraint::Min(0)].as_ref())
-      .split(f.size());
+      .split(f.area());
 
-    let area = centered_rect(percent_x, percent_y, f.size());
+    let area = centered_rect(percent_x, percent_y, f.area());
 
     f.render_widget(Clear, area.inner(Margin { vertical: 0, horizontal: 0 }));
 
@@ -995,7 +995,7 @@ impl TaskwarriorTui {
       .highlight_style(self.config.uda_style_report_completion_pane_highlight)
       .highlight_symbol(&self.config.uda_selection_indicator);
 
-    let area = f.size();
+    let area = f.area();
 
     let mut rect = rect;
     rect.height = std::cmp::min(area.height / 2, self.completion_list.len() as u16 + 2);
