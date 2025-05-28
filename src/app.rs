@@ -26,7 +26,7 @@ use ratatui::{
   layout::{Alignment, Constraint, Direction, Layout, Margin, Rect},
   style::{Color, Modifier, Style},
   symbols::bar::FULL,
-  terminal::Frame,
+  Frame,
   text::{Line, Span, Text},
   widgets::{Block, BorderType, Borders, Clear, Gauge, LineGauge, List, ListItem, Paragraph, Tabs, Wrap},
   Terminal,
