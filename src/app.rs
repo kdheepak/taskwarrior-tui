@@ -377,7 +377,7 @@ impl TaskwarriorTui {
   pub async fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> Result<()> {
     loop {
       if self.requires_redraw {
-        terminal.resize(terminal.size()?)?;
+        terminal.autoresize()?;
         self.requires_redraw = false;
       }
       terminal.draw(|f| self.draw(f))?;
