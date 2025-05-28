@@ -896,7 +896,7 @@ impl TaskwarriorTui {
 
     let gauge = LineGauge::default()
       .block(Block::default())
-      .gauge_style(Style::default().fg(Color::Gray))
+      .filled_style(Style::default().fg(Color::Gray))
       .ratio(ratio);
 
     f.render_widget(gauge, chunks[1]);
