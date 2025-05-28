@@ -918,7 +918,7 @@ impl TaskwarriorTui {
 
     let area = centered_rect(percent_x, percent_y, f.size());
 
-    f.render_widget(Clear, area.inner(&Margin { vertical: 0, horizontal: 0 }));
+    f.render_widget(Clear, area.inner(Margin { vertical: 0, horizontal: 0 }));
 
     let (contexts, headers) = self.get_all_contexts();
 
