@@ -297,7 +297,7 @@ where
   }
 }
 
-impl<'a, H, D, R> StatefulWidget for Table<'a, H, R>
+impl<H, D, R> StatefulWidget for Table<'_, H, R>
 where
   H: Iterator,
   H::Item: Display,
@@ -521,7 +521,7 @@ where
   }
 }
 
-impl<'a, H, D, R> Widget for Table<'a, H, R>
+impl<H, D, R> Widget for Table<'_, H, R>
 where
   H: Iterator,
   H::Item: Display,

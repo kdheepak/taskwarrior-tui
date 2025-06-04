@@ -92,7 +92,7 @@ impl<'a> Calendar<'a> {
   }
 }
 
-impl<'a> Widget for Calendar<'a> {
+impl Widget for Calendar<'_> {
   fn render(mut self, area: Rect, buf: &mut Buffer) {
     let month_names = Self::generate_month_names();
     buf.set_style(area, self.style);
