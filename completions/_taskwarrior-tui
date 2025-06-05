@@ -14,7 +14,7 @@ _taskwarrior-tui() {
     fi
 
     local context curcontext="$curcontext" state line
-    _arguments "${_arguments_options[@]}" \
+    _arguments "${_arguments_options[@]}" : \
 '-d+[Sets the data folder for taskwarrior-tui]:FOLDER: ' \
 '--data=[Sets the data folder for taskwarrior-tui]:FOLDER: ' \
 '-c+[Sets the config folder for taskwarrior-tui (currently not used)]:FOLDER: ' \
