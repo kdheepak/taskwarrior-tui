@@ -97,7 +97,7 @@ impl HistoryContext {
     };
 
     log::debug!("Using history index = {} for searching", history_index);
-    return if let Some(history_index) = self.history.starts_with(buf, history_index, dir).unwrap() {
+    if let Some(history_index) = self.history.starts_with(buf, history_index, dir).unwrap() {
       log::debug!("Found index {:?}", history_index);
       log::debug!("Previous index {:?}", self.history_index);
       self.history_index = Some(history_index.idx);
@@ -116,7 +116,7 @@ impl HistoryContext {
     } else {
       log::debug!("History index = {}. Found no match.", history_index);
       None
-    };
+    }
   }
 
   pub fn add(&mut self, buf: &str) {

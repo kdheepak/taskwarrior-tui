@@ -112,7 +112,7 @@ impl ProjectsState {
 
   pub fn last_line(&self, line: &str) -> bool {
     let words = line.trim().split(' ').map(|s| s.trim()).collect::<Vec<&str>>();
-    return words.len() == 2 && words[0].chars().map(|c| c.is_numeric()).all(|b| b) && (words[1] == "project" || words[1] == "projects");
+    words.len() == 2 && words[0].chars().all(|c| c.is_numeric()) && (words[1] == "project" || words[1] == "projects")
   }
 
   pub fn update_data(&mut self) -> Result<()> {
