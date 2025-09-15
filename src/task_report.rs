@@ -18,6 +18,12 @@ pub fn format_date(dt: NaiveDateTime) -> String {
   dt.format("%Y-%m-%d").to_string()
 }
 
+pub fn format_date_formatted(dt: NaiveDateTime, format: String) -> String {
+  let offset = Local.offset_from_utc_datetime(&dt);
+  let dt = DateTime::<Local>::from_naive_utc_and_offset(dt, offset);
+  dt.format(&format).to_string()
+}
+
 pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime, with_remainder: bool) -> String {
   let to_dt = Local.from_local_datetime(&to_dt).unwrap();
   let from_dt = Local.from_local_datetime(&from_dt).unwrap();
@@ -88,6 +94,7 @@ pub struct TaskReportTable {
   pub virtual_tags: Vec<String>,
   pub description_width: usize,
   pub date_time_vague_precise: bool,
+  pub date_format: String,
 }
 
 impl TaskReportTable {
@@ -135,6 +142,7 @@ impl TaskReportTable {
       virtual_tags: virtual_tags.iter().map(ToString::to_string).collect::<Vec<_>>(),
       description_width: 100,
       date_time_vague_precise: false,
+      date_format: "%Y-%m-%d".to_string(),
     };
     task_report_table.export_headers(Some(data), report)?;
     Ok(task_report_table)
@@ -167,7 +175,7 @@ impl TaskReportTable {
     let output = Command::new("task")
       .arg("show")
       .arg("rc.defaultwidth=0")
-      .arg(format!("report.{}.labels", report))
+      .arg(format!("report.{}", report))
       .output()?;
     let data = String::from_utf8_lossy(&output.stdout);
 
@@ -177,6 +185,17 @@ impl TaskReportTable {
         for label in label_names.split(',') {
           self.labels.push(label.to_string());
         }
+      }
+      else if line.starts_with(format!("report.{}.dateformat", report).as_str()) {
+        let taskwarrior_dateformat = line.split_once(' ').unwrap().1.to_string();
+        self.date_format = taskwarrior_dateformat.chars().map(|c| {
+          if c.is_alphabetic() {
+            format!("%{}", c)
+          } else {
+            c.to_string()
+          }
+        }).collect::<String>();
+        println!("found date format: {}", self.date_format);
       }
     }
 
@@ -289,7 +308,7 @@ impl TaskReportTable {
         None => "".to_string(),
       },
       "due" => match task.due() {
-        Some(v) => format_date(NaiveDateTime::new(v.date(), v.time())),
+        Some(v) => format_date_formatted(NaiveDateTime::new(v.date(), v.time()), self.date_format.clone()),
         None => "".to_string(),
       },
       "until.remaining" => match task.until() {
