@@ -87,6 +87,33 @@ pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime, with
   format!("{}{}s", minus, seconds)
 }
 
+fn taskwarrior_to_chrono(fmt: &str) -> String {
+    fmt.chars().map(|c| match c {
+        'Y' => "%Y".to_string(),
+        'y' => "%y".to_string(),
+        'M' => "%m".to_string(),
+        'm' => "%-m".to_string(),
+        'D' => "%d".to_string(),
+        'd' => "%-d".to_string(),
+        'A' => "%A".to_string(),
+        'a' => "%a".to_string(),
+        'B' => "%B".to_string(),
+        'b' => "%b".to_string(),
+        'V' => "%V".to_string(),
+        'v' => "%-V".to_string(),
+        'J' => "%j".to_string(),   // three-digit Julian
+        'j' => "%-j".to_string(),  // minimal-digit Julian
+        'H' => "%H".to_string(),
+        'h' => "%-H".to_string(),
+        'N' => "%M".to_string(),
+        'n' => "%-M".to_string(),
+        'S' => "%S".to_string(),
+        's' => "%-S".to_string(),
+        // `w` cannot be mapped directly; handled separately
+        other => other.to_string(),
+    }).collect()
+}
+
 pub struct TaskReportTable {
   pub labels: Vec<String>,
   pub columns: Vec<String>,
@@ -187,15 +214,8 @@ impl TaskReportTable {
         }
       }
       else if line.starts_with(format!("report.{}.dateformat", report).as_str()) {
-        let taskwarrior_dateformat = line.split_once(' ').unwrap().1.to_string();
-        self.date_format = taskwarrior_dateformat.chars().map(|c| {
-          if c.is_alphabetic() {
-            format!("%{}", c)
-          } else {
-            c.to_string()
-          }
-        }).collect::<String>();
-        println!("found date format: {}", self.date_format);
+        let taskwarrior_dateformat = line.split_once(' ').unwrap().1;
+        self.date_format = taskwarrior_to_chrono(taskwarrior_dateformat);
       }
     }
 
