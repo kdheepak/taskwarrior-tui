@@ -12,16 +12,11 @@ pub fn format_date_time(dt: NaiveDateTime) -> String {
   dt.format("%Y-%m-%d %H:%M:%S").to_string()
 }
 
-pub fn format_date(dt: NaiveDateTime) -> String {
+pub fn format_date(dt: NaiveDateTime, format: Option<String>) -> String {
   let offset = Local.offset_from_utc_datetime(&dt);
   let dt = DateTime::<Local>::from_naive_utc_and_offset(dt, offset);
-  dt.format("%Y-%m-%d").to_string()
-}
-
-pub fn format_date_formatted(dt: NaiveDateTime, format: String) -> String {
-  let offset = Local.offset_from_utc_datetime(&dt);
-  let dt = DateTime::<Local>::from_naive_utc_and_offset(dt, offset);
-  dt.format(&format).to_string()
+  let format_str = format.unwrap_or("%Y-%m-%d".to_string());
+  dt.format(&format_str).to_string()
 }
 
 pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime, with_remainder: bool) -> String {
@@ -316,7 +311,7 @@ impl TaskReportTable {
         None => "".to_string(),
       },
       "scheduled" => match task.scheduled() {
-        Some(v) => format_date(NaiveDateTime::new(v.date(), v.time())),
+        Some(v) => format_date(NaiveDateTime::new(v.date(), v.time()), None),
         None => "".to_string(),
       },
       "due.relative" => match task.due() {
@@ -328,7 +323,7 @@ impl TaskReportTable {
         None => "".to_string(),
       },
       "due" => match task.due() {
-        Some(v) => format_date_formatted(NaiveDateTime::new(v.date(), v.time()), self.date_format.clone()),
+        Some(v) => format_date(NaiveDateTime::new(v.date(), v.time()), Some(self.date_format.clone())),
         None => "".to_string(),
       },
       "until.remaining" => match task.until() {
@@ -340,7 +335,7 @@ impl TaskReportTable {
         None => "".to_string(),
       },
       "until" => match task.until() {
-        Some(v) => format_date(NaiveDateTime::new(v.date(), v.time())),
+        Some(v) => format_date(NaiveDateTime::new(v.date(), v.time()), None),
         None => "".to_string(),
       },
       "entry.age" => vague_format_date_time(
@@ -348,7 +343,7 @@ impl TaskReportTable {
         Local::now().naive_utc(),
         self.date_time_vague_precise,
       ),
-      "entry" => format_date(NaiveDateTime::new(task.entry().date(), task.entry().time())),
+      "entry" => format_date(NaiveDateTime::new(task.entry().date(), task.entry().time()), None),
       "start.age" => match task.start() {
         Some(v) => vague_format_date_time(
           NaiveDateTime::new(v.date(), v.time()),
@@ -358,7 +353,7 @@ impl TaskReportTable {
         None => "".to_string(),
       },
       "start" => match task.start() {
-        Some(v) => format_date(NaiveDateTime::new(v.date(), v.time())),
+        Some(v) => format_date(NaiveDateTime::new(v.date(), v.time()), None),
         None => "".to_string(),
       },
       "end.age" => match task.end() {
@@ -370,7 +365,7 @@ impl TaskReportTable {
         None => "".to_string(),
       },
       "end" => match task.end() {
-        Some(v) => format_date(NaiveDateTime::new(v.date(), v.time())),
+        Some(v) => format_date(NaiveDateTime::new(v.date(), v.time()), None),
         None => "".to_string(),
       },
       "status.short" => task.status().to_string().chars().next().unwrap().to_string(),
