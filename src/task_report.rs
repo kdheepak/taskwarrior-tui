@@ -30,7 +30,7 @@ pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime, with
     ""
   };
 
-  const YEAR: i64 =  60 * 60 * 24 * 365;
+  const YEAR: i64 = 60 * 60 * 24 * 365;
   const MONTH: i64 = 60 * 60 * 24 * 30;
   const WEEK: i64 = 60 * 60 * 24 * 7;
   const DAY: i64 = 60 * 60 * 24;
@@ -83,30 +83,33 @@ pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime, with
 }
 
 fn taskwarrior_to_chrono(fmt: &str) -> String {
-    fmt.chars().map(|c| match c {
-        'Y' => "%Y".to_string(),  // four-digit year
-        'y' => "%y".to_string(),  // two-digit year
-        'M' => "%m".to_string(),  // two-digit month
-        'm' => "%-m".to_string(), // minimal digit month
-        'D' => "%d".to_string(),  // two-digit day
-        'd' => "%-d".to_string(), // minimal-digit day
-        'A' => "%A".to_string(),  // short name of weekday
-        'a' => "%a".to_string(),  // long name of weekday
-        'B' => "%B".to_string(),  // long name of month
-        'b' => "%b".to_string(),  // short name of month
-        'V' => "%V".to_string(),  // two-digit week
-        'v' => "%-V".to_string(), // minimal-digit week
-        'J' => "%j".to_string(),   // three-digit Julian day (e.g. 023 or 365)
-        'j' => "%-j".to_string(),  // Julian day (e.g. 23 or 365)
-        'H' => "%H".to_string(),  // two-digit hour
-        'h' => "%-H".to_string(), // minimal-digit hour
-        'N' => "%M".to_string(), // two-digit minutes
-        'n' => "%-M".to_string(), // minimal-digit minutes
-        'S' => "%S".to_string(), // two-digit seconds
-        's' => "%-S".to_string(), // minimal-digit seconds
-        'w' => "%u".to_string(),  // week day (e.g. 0 for Monday, 5 for Friday)
-        other => other.to_string(),
-    }).collect()
+  fmt
+    .chars()
+    .map(|c| match c {
+      'Y' => "%Y".to_string(),  // four-digit year
+      'y' => "%y".to_string(),  // two-digit year
+      'M' => "%m".to_string(),  // two-digit month
+      'm' => "%-m".to_string(), // minimal digit month
+      'D' => "%d".to_string(),  // two-digit day
+      'd' => "%-d".to_string(), // minimal-digit day
+      'A' => "%A".to_string(),  // short name of weekday
+      'a' => "%a".to_string(),  // long name of weekday
+      'B' => "%B".to_string(),  // long name of month
+      'b' => "%b".to_string(),  // short name of month
+      'V' => "%V".to_string(),  // two-digit week
+      'v' => "%-V".to_string(), // minimal-digit week
+      'J' => "%j".to_string(),  // three-digit Julian day (e.g. 023 or 365)
+      'j' => "%-j".to_string(), // Julian day (e.g. 23 or 365)
+      'H' => "%H".to_string(),  // two-digit hour
+      'h' => "%-H".to_string(), // minimal-digit hour
+      'N' => "%M".to_string(),  // two-digit minutes
+      'n' => "%-M".to_string(), // minimal-digit minutes
+      'S' => "%S".to_string(),  // two-digit seconds
+      's' => "%-S".to_string(), // minimal-digit seconds
+      'w' => "%u".to_string(),  // week day (e.g. 0 for Monday, 5 for Friday)
+      other => other.to_string(),
+    })
+    .collect()
 }
 
 pub struct TaskReportTable {
@@ -207,8 +210,7 @@ impl TaskReportTable {
         for label in label_names.split(',') {
           self.labels.push(label.to_string());
         }
-      }
-      else if line.starts_with(format!("report.{}.dateformat", report).as_str()) {
+      } else if line.starts_with(format!("report.{}.dateformat", report).as_str()) {
         let taskwarrior_dateformat = line.split_once(' ').unwrap().1;
         self.date_format = taskwarrior_to_chrono(taskwarrior_dateformat);
       }
