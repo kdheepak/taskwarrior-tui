@@ -200,7 +200,7 @@ impl TaskReportTable {
     let output = Command::new("task")
       .arg("show")
       .arg("rc.defaultwidth=0")
-      .arg(format!("report.{}", report))
+      .arg(format!("report.{}.labels", report))
       .output()?;
     let data = String::from_utf8_lossy(&output.stdout);
 
@@ -210,9 +210,20 @@ impl TaskReportTable {
         for label in label_names.split(',') {
           self.labels.push(label.to_string());
         }
-      } else if line.starts_with(format!("report.{}.dateformat", report).as_str()) {
+      }
+    }
+
+    let output = Command::new("task")
+      .arg("show")
+      .arg("rc.defaultwidth=0")
+      .arg(format!("report.{}.dateformat", report))
+      .output()?;
+    let data = String::from_utf8_lossy(&output.stdout);
+
+    for line in data.split('\n') {
+      if line.starts_with(format!("report.{}.dateformat", report).as_str()) {
         let taskwarrior_dateformat = line.split_once(' ').unwrap().1;
-        self.date_format = taskwarrior_to_chrono(taskwarrior_dateformat);
+        self.date_format = taskwarrior_to_chrono(taskwarrior_dateformat.trim());
       }
     }
 
