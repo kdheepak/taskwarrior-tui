@@ -2,7 +2,7 @@ use std::{error::Error, io};
 
 use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
 use ratatui::{
-  layout::{Constraint, Corner, Direction, Layout},
+  layout::{Constraint, Direction, Layout},
   style::{Color, Modifier, Style},
   text::{Line, Span},
   widgets::{Block, Borders, List, ListItem, ListState},
