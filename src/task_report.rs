@@ -12,10 +12,11 @@ pub fn format_date_time(dt: NaiveDateTime) -> String {
   dt.format("%Y-%m-%d %H:%M:%S").to_string()
 }
 
-pub fn format_date(dt: NaiveDateTime) -> String {
+pub fn format_date(dt: NaiveDateTime, format: Option<String>) -> String {
   let offset = Local.offset_from_utc_datetime(&dt);
   let dt = DateTime::<Local>::from_naive_utc_and_offset(dt, offset);
-  dt.format("%Y-%m-%d").to_string()
+  let format_str = format.unwrap_or("%Y-%m-%d".to_string());
+  dt.format(&format_str).to_string()
 }
 
 pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime, with_remainder: bool) -> String {
@@ -29,7 +30,7 @@ pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime, with
     ""
   };
 
-  const YEAR: i64 =  60 * 60 * 24 * 365;
+  const YEAR: i64 = 60 * 60 * 24 * 365;
   const MONTH: i64 = 60 * 60 * 24 * 30;
   const WEEK: i64 = 60 * 60 * 24 * 7;
   const DAY: i64 = 60 * 60 * 24;
@@ -81,6 +82,36 @@ pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime, with
   format!("{}{}s", minus, seconds)
 }
 
+fn taskwarrior_to_chrono(fmt: &str) -> String {
+  fmt
+    .chars()
+    .map(|c| match c {
+      'Y' => "%Y".to_string(),  // four-digit year
+      'y' => "%y".to_string(),  // two-digit year
+      'M' => "%m".to_string(),  // two-digit month
+      'm' => "%-m".to_string(), // minimal digit month
+      'D' => "%d".to_string(),  // two-digit day
+      'd' => "%-d".to_string(), // minimal-digit day
+      'A' => "%A".to_string(),  // short name of weekday
+      'a' => "%a".to_string(),  // long name of weekday
+      'B' => "%B".to_string(),  // long name of month
+      'b' => "%b".to_string(),  // short name of month
+      'V' => "%V".to_string(),  // two-digit week
+      'v' => "%-V".to_string(), // minimal-digit week
+      'J' => "%j".to_string(),  // three-digit Julian day (e.g. 023 or 365)
+      'j' => "%-j".to_string(), // Julian day (e.g. 23 or 365)
+      'H' => "%H".to_string(),  // two-digit hour
+      'h' => "%-H".to_string(), // minimal-digit hour
+      'N' => "%M".to_string(),  // two-digit minutes
+      'n' => "%-M".to_string(), // minimal-digit minutes
+      'S' => "%S".to_string(),  // two-digit seconds
+      's' => "%-S".to_string(), // minimal-digit seconds
+      'w' => "%u".to_string(),  // week day (e.g. 0 for Monday, 5 for Friday)
+      other => other.to_string(),
+    })
+    .collect()
+}
+
 pub struct TaskReportTable {
   pub labels: Vec<String>,
   pub columns: Vec<String>,
@@ -88,6 +119,7 @@ pub struct TaskReportTable {
   pub virtual_tags: Vec<String>,
   pub description_width: usize,
   pub date_time_vague_precise: bool,
+  pub date_format: String,
 }
 
 impl TaskReportTable {
@@ -135,6 +167,7 @@ impl TaskReportTable {
       virtual_tags: virtual_tags.iter().map(ToString::to_string).collect::<Vec<_>>(),
       description_width: 100,
       date_time_vague_precise: false,
+      date_format: "%Y-%m-%d".to_string(),
     };
     task_report_table.export_headers(Some(data), report)?;
     Ok(task_report_table)
@@ -177,6 +210,20 @@ impl TaskReportTable {
         for label in label_names.split(',') {
           self.labels.push(label.to_string());
         }
+      }
+    }
+
+    let output = Command::new("task")
+      .arg("show")
+      .arg("rc.defaultwidth=0")
+      .arg(format!("report.{}.dateformat", report))
+      .output()?;
+    let data = String::from_utf8_lossy(&output.stdout);
+
+    for line in data.split('\n') {
+      if line.starts_with(format!("report.{}.dateformat", report).as_str()) {
+        let taskwarrior_dateformat = line.split_once(' ').unwrap().1;
+        self.date_format = taskwarrior_to_chrono(taskwarrior_dateformat.trim());
       }
     }
 
@@ -277,7 +324,7 @@ impl TaskReportTable {
         None => "".to_string(),
       },
       "scheduled" => match task.scheduled() {
-        Some(v) => format_date(NaiveDateTime::new(v.date(), v.time())),
+        Some(v) => format_date(NaiveDateTime::new(v.date(), v.time()), None),
         None => "".to_string(),
       },
       "due.relative" => match task.due() {
@@ -289,7 +336,7 @@ impl TaskReportTable {
         None => "".to_string(),
       },
       "due" => match task.due() {
-        Some(v) => format_date(NaiveDateTime::new(v.date(), v.time())),
+        Some(v) => format_date(NaiveDateTime::new(v.date(), v.time()), Some(self.date_format.clone())),
         None => "".to_string(),
       },
       "until.remaining" => match task.until() {
@@ -301,7 +348,7 @@ impl TaskReportTable {
         None => "".to_string(),
       },
       "until" => match task.until() {
-        Some(v) => format_date(NaiveDateTime::new(v.date(), v.time())),
+        Some(v) => format_date(NaiveDateTime::new(v.date(), v.time()), None),
         None => "".to_string(),
       },
       "entry.age" => vague_format_date_time(
@@ -309,7 +356,7 @@ impl TaskReportTable {
         Local::now().naive_utc(),
         self.date_time_vague_precise,
       ),
-      "entry" => format_date(NaiveDateTime::new(task.entry().date(), task.entry().time())),
+      "entry" => format_date(NaiveDateTime::new(task.entry().date(), task.entry().time()), None),
       "start.age" => match task.start() {
         Some(v) => vague_format_date_time(
           NaiveDateTime::new(v.date(), v.time()),
@@ -319,7 +366,7 @@ impl TaskReportTable {
         None => "".to_string(),
       },
       "start" => match task.start() {
-        Some(v) => format_date(NaiveDateTime::new(v.date(), v.time())),
+        Some(v) => format_date(NaiveDateTime::new(v.date(), v.time()), None),
         None => "".to_string(),
       },
       "end.age" => match task.end() {
@@ -331,7 +378,7 @@ impl TaskReportTable {
         None => "".to_string(),
       },
       "end" => match task.end() {
-        Some(v) => format_date(NaiveDateTime::new(v.date(), v.time())),
+        Some(v) => format_date(NaiveDateTime::new(v.date(), v.time()), None),
         None => "".to_string(),
       },
       "status.short" => task.status().to_string().chars().next().unwrap().to_string(),

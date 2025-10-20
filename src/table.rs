@@ -87,7 +87,7 @@ impl TaskwarriorTuiTableState {
     }
   }
 
-  pub fn marked(&self) -> std::collections::hash_set::Iter<usize> {
+  pub fn marked(&'_ self) -> std::collections::hash_set::Iter<'_, usize> {
     self.marked.iter()
   }
 
