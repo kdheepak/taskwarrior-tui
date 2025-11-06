@@ -84,7 +84,7 @@ Pre-compiled releases are available on the [GitHub repo](https://github.com/kdhe
 
 See <https://kdheepak.com/taskwarrior-tui/installation/> on instructions for using package managers on various platforms.
 
-If you are compiling from source, you'll need to most recent stable rust compiler.
+If you are compiling from source, you'll need the most recent stable rust compiler.
 
 ### Configuration
 
