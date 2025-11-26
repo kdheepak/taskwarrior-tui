@@ -163,7 +163,7 @@ impl KeyConfig {
     self.select_all = select_all.unwrap_or(self.select_all);
     self.undo = undo.unwrap_or(self.undo);
     self.edit = edit.unwrap_or(self.edit);
-    self.duplicate = edit.unwrap_or(self.duplicate);
+    self.duplicate = duplicate.unwrap_or(self.duplicate);
     self.modify = modify.unwrap_or(self.modify);
     self.shell = shell.unwrap_or(self.shell);
     self.log = log.unwrap_or(self.log);
