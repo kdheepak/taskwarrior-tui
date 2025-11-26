@@ -1,5 +1,11 @@
 # Default Keybindings
 
+> [!NOTE]
+> If any bindings are changed in the `.taskrc`, the built-in help menu will show
+> them instead of the defaults. Please see
+> [configuration/keys](./configuration/keys.md) for details on custom
+> keybindings.
+
 Keybindings:
 
     Esc:                                 - Exit current action

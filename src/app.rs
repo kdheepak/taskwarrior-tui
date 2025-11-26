@@ -275,7 +275,7 @@ impl TaskwarriorTui {
       config: c,
       task_report_table: TaskReportTable::new(&data, report)?,
       calendar_year: Local::now().year(),
-      help_popup: Help::new(),
+      help_popup: Help::new(&kc),
       last_export: None,
       keyconfig: kc,
       terminal_width: w,
@@ -1780,7 +1780,10 @@ impl TaskwarriorTui {
             Ok(o) => {
               let output = String::from_utf8_lossy(&o.stdout);
               if !output.is_empty() {
-                Err(format!("Shell command `{}` ran successfully but printed the following output:\n\n{}\n\nSuppress output of shell commands to prevent the error prompt from showing up.", shell, output))
+                Err(format!(
+                  "Shell command `{}` ran successfully but printed the following output:\n\n{}\n\nSuppress output of shell commands to prevent the error prompt from showing up.",
+                  shell, output
+                ))
               } else {
                 Ok(())
               }
@@ -4733,7 +4736,7 @@ mod tests {
   async fn test_draw_help_popup() {
     let mut expected = Buffer::with_lines(vec![
       "╭Help──────────────────────────────────╮",
-      "│# Default Keybindings                 │",
+      "│# Keybindings                         │",
       "│                                      │",
       "│Keybindings:                          │",
       "│                                      │",
@@ -4743,7 +4746,7 @@ mod tests {
       "│                                      │",
       "│    [: Previous view                  │",
       "╰──────────────────────────────────────╯",
-      "9% ─────────────────────────────────────",
+      "8% ─────────────────────────────────────",
     ]);
 
     for i in 1..=4 {
@@ -4752,7 +4755,6 @@ mod tests {
     }
     expected.get_mut(3, 11).set_style(Style::default().fg(Color::Gray));
     expected.get_mut(4, 11).set_style(Style::default().fg(Color::Gray));
-    expected.get_mut(5, 11).set_style(Style::default().fg(Color::Gray));
 
     let mut app = TaskwarriorTui::new("next", false).await.unwrap();
 

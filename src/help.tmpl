@@ -1,0 +1,139 @@
+# Keybindings
+
+Keybindings:
+
+    Esc:                                 - Exit current action
+
+    {{next_tab}}: Next view                         - Go to next view
+
+    {{previous_tab}}: Previous view                     - Go to previous view
+
+Keybindings for task report:
+
+    {{filter}}: task {string}                     - Filter task report
+
+    {{add}}: task add {string}                 - Add new task
+
+    {{done}}: task {selected} done              - Mark task as done
+
+    {{edit}}: task {selected} edit              - Open selected task in editor
+
+    {{duplicate}}: task {selected} duplicate         - Duplicate tasks
+
+    {{down}}: {selected+=1}                     - Move down in task report
+
+    {{up}}: {selected-=1}                     - Move up in task report
+
+    {{page_down}}: {selected+=pageheight}            - Move page down in task report
+
+    {{page_up}}: {selected-=pageheight}            - Move page up in task report
+
+    {{go_to_top}}: {selected=first}                  - Go to top
+
+    {{go_to_bottom}}: {selected=last}                   - Go to bottom
+
+    {{log}}: task log {string}                 - Log new task
+
+    {{modify}}: task {selected} modify {string}   - Modify selected task
+
+    {{quit}}: exit                              - Quit
+
+    {{start_stop}}: task {selected} start/stop        - Toggle start and stop
+
+    {{quick_tag}}: task {selected} +{tag}/-{tag}     - Toggle {uda.taskwarrior-tui.quick-tag.name} (default: `next`)
+
+    {{undo}}: task undo                         - Undo
+
+    {{select}}: {toggle mark on selected}         - Toggle mark on selected
+
+    {{select_all}}: {toggle marks on all tasks}       - Toggle marks on all tasks in current filter report
+
+    {{delete}}: task {selected} delete            - Delete
+
+    {{zoom}}: toggle task info                  - Toggle task info view
+
+    {{annotate}}: task {selected} annotate {string} - Annotate current task
+
+    Ctrl-e: scroll down task details     - Scroll task details view down one line
+
+    Ctrl-y: scroll up task details       - Scroll task details view up one line
+
+    {{shell}}: {string}                          - Custom shell command
+
+    {{shortcut0}}: {string}                        - Run user defined shortcut 0
+
+    {{shortcut1}}: {string}                        - Run user defined shortcut 1
+
+    {{shortcut2}}: {string}                        - Run user defined shortcut 2
+
+    {{shortcut3}}: {string}                        - Run user defined shortcut 3
+
+    {{shortcut4}}: {string}                        - Run user defined shortcut 4
+
+    {{shortcut5}}: {string}                        - Run user defined shortcut 5
+
+    {{shortcut6}}: {string}                        - Run user defined shortcut 6
+
+    {{shortcut7}}: {string}                        - Run user defined shortcut 7
+
+    {{shortcut8}}: {string}                        - Run user defined shortcut 8
+
+    :: {task id}                         - Jump to task id
+
+    {{context_menu}}: context switcher menu             - Open context switcher menu
+
+    {{help}}: help                              - Help menu
+
+Keybindings for filter / command prompt:
+
+    Ctrl + f | Right: move forward       - Move forward one character
+
+    Ctrl + b | Left: move backward       - Move backward one character
+
+    Ctrl + h | Backspace: backspace      - Delete one character back
+
+    Ctrl + d | Delete: delete            - Delete one character forward
+
+    Ctrl + a | Home: home                - Go to the beginning of line
+
+    Ctrl + e | End: end                  - Go to the end of line
+
+    Ctrl + k: delete to end              - Delete to the end of line
+
+    Ctrl + u: delete to beginning        - Delete to the beginning of line
+
+    Ctrl + w: delete previous word       - Delete previous word
+
+    Alt + d: delete next word            - Delete next word
+
+    Alt + b: move to previous word       - Move to previous word
+
+    Alt + f: move to next word           - Move to next word
+
+    Alt + t: transpose words             - Transpose words
+
+    Up: scroll history                   - Go backward in history matching from beginning of line to cursor
+
+    Down: scroll history                 - Go forward in history matching from beginning of line to cursor
+
+    TAB | Ctrl + n: tab complete         - Open tab completion and selection first element OR cycle to next element
+
+    BACKTAB | Ctrl + p: tab complete     - Cycle to previous element
+
+Keybindings for context switcher:
+
+    {{down}}: {selected+=1}                     - Move forward a context
+
+    {{up}}: {selected-=1}                     - Move back a context
+
+    Enter: task context {selected}       - Select highlighted context
+
+Keybindings for calendar:
+
+    {{down}}: {selected+=1}                     - Move forward a year in calendar
+
+    {{up}}: {selected-=1}                     - Move back a year in calendar
+
+    {{page_down}}: {selected+=10}                    - Move forward a decade in calendar
+
+    {{page_up}}: {selected-=10}                    - Move back a decade in calendar
