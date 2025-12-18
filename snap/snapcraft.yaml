@@ -1,5 +1,5 @@
 name: taskwarrior-tui
-base: core20
+base: core24
 version: git
 summary: A terminal user interface for taskwarrior
 description: |
@@ -10,24 +10,31 @@ confinement: strict
 
 apps:
   task:
-    command: usr/local/bin/task
+    command: usr/bin/task
     environment:
       PATH: $SNAP/usr/bin:$SNAP/usr/local/bin/:$PATH:$SNAP/bin/:$PATH
+      MANPATH: $SNAP/usr/share/man
 
   taskwarrior-tui:
     command: bin/taskwarrior-tui
+    desktop: usr/share/applications/taskwarrior-tui.desktop
     environment:
       PATH: $SNAP/usr/bin:$SNAP/usr/local/bin/:$PATH:$SNAP/bin/:$PATH
+      MANPATH: $SNAP/usr/share/man
 
 parts:
   task:
-    plugin: cmake
-    source: https://github.com/GothenburgBitFactory/taskwarrior.git
-    source-type: git
-    build-packages:
-      - build-essential
-      - gnutls-dev
-      - uuid-dev
+    plugin: nil
+    stage-packages:
+      - taskwarrior
+
   taskwarrior-tui:
     plugin: rust
     source: .
+
+  desktop-and-man:
+    plugin: dump
+    source: .
+    organize:
+      docs/taskwarrior-tui.desktop: usr/share/applications/taskwarrior-tui.desktop
+      docs/taskwarrior-tui.1: usr/share/man/man1/taskwarrior-tui.1
