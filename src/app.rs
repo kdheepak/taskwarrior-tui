@@ -32,7 +32,7 @@ use ratatui::{
 };
 use regex::Regex;
 use rustyline::{history::SearchDirection as HistoryDirection, line_buffer::LineBuffer, At, Editor, Word};
-use task_hookrs::{date::Date, import::import, project::Project, status::TaskStatus, task::Task};
+use task_hookrs::{date::Date, import::import, project::Project, status::TaskStatus, task::Task, uda::UDAValue};
 use unicode_segmentation::{Graphemes, UnicodeSegmentation};
 use unicode_width::UnicodeWidthStr;
 use uuid::Uuid;
@@ -1114,9 +1114,20 @@ impl TaskwarriorTui {
     let mut style = Style::default();
 
     for tag_name in virtual_tag_names_in_precedence.iter().rev() {
-      if tag_name == "uda." || tag_name == "priority" {
+      if tag_name == "uda.priority." || tag_name == "priority" {
         if let Some(p) = task.priority() {
           let s = self.config.color.get(&format!("color.uda.priority.{}", p)).copied().unwrap_or_default();
+          style = style.patch(s);
+        }
+      } else if tag_name == "uda." {
+        for (uda_name, uda_value) in task.uda().iter() {
+          let uda_value_str = match uda_value {
+            UDAValue::Str(s) => s.to_string(),
+            UDAValue::F64(f) => f.to_string(),
+            UDAValue::U64(u) => u.to_string(),
+          };
+          let color_uda_name = format!("color.uda.{}.{}", uda_name, uda_value_str);
+          let s = self.config.color.get(&color_uda_name).copied().unwrap_or_default();
           style = style.patch(s);
         }
       } else if tag_name == "tag." {
