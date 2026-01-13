@@ -374,10 +374,10 @@ impl TaskwarriorTui {
     self.event_loop.rx.recv().await
   }
 
-  pub async fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> Result<()> {
+  pub async fn run(&mut self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> {
     loop {
       if self.requires_redraw {
-        terminal.resize(terminal.size()?)?;
+        terminal.autoresize()?;
         self.requires_redraw = false;
       }
       terminal.draw(|f| self.draw(f))?;
