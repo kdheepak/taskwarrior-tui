@@ -993,9 +993,9 @@ impl TaskwarriorTui {
       .block(Block::default().borders(Borders::NONE).title(""))
       .style(self.config.uda_style_report_completion_pane)
       .highlight_style(self.config.uda_style_report_completion_pane_highlight)
-      .highlight_symbol(&self.config.uda_selection_indicator);
+      .highlight_symbol(self.config.uda_selection_indicator.as_str());
 
-    let area = f.size();
+    let area = f.area();
 
     let mut rect = rect;
     rect.height = std::cmp::min(area.height / 2, self.completion_list.len() as u16 + 2);
@@ -1018,7 +1018,8 @@ impl TaskwarriorTui {
   fn draw_command(&self, f: &mut Frame, rect: Rect, text: &str, title: (Span, Option<Span>), position: usize, cursor: bool, error: Option<String>) {
     // f.render_widget(Clear, rect);
     if cursor {
-      f.set_cursor(std::cmp::min(rect.x + position as u16, rect.x + rect.width.saturating_sub(2)), rect.y + 1);
+      let position = Position::new(std::cmp::min(rect.x + position as u16, rect.x + rect.width.saturating_sub(2)), rect.y + 1);
+      f.set_cursor_position(position);
     }
     let rects = Layout::default()
       .direction(Direction::Vertical)
