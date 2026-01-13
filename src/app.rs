@@ -23,10 +23,10 @@ use lazy_static::lazy_static;
 use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
 use ratatui::{
   backend::{Backend, CrosstermBackend},
-  layout::{Alignment, Constraint, Direction, Layout, Margin, Rect},
+  layout::{Alignment, Constraint, Direction, Layout, Margin, Position, Rect},
   style::{Color, Modifier, Style},
   symbols::bar::FULL,
-  terminal::Frame,
+  Frame,
   text::{Line, Span, Text},
   widgets::{Block, BorderType, Borders, Clear, Gauge, LineGauge, List, ListItem, Paragraph, Tabs, Wrap},
   Terminal,
