@@ -26,10 +26,9 @@ use ratatui::{
   layout::{Alignment, Constraint, Direction, Layout, Margin, Position, Rect},
   style::{Color, Modifier, Style},
   symbols::bar::FULL,
-  Frame,
   text::{Line, Span, Text},
   widgets::{Block, BorderType, Borders, Clear, Gauge, LineGauge, List, ListItem, Paragraph, Tabs, Wrap},
-  Terminal,
+  Frame, Terminal,
 };
 use regex::Regex;
 use rustyline::{history::SearchDirection as HistoryDirection, line_buffer::LineBuffer, At, Editor, Word};
@@ -4319,8 +4318,7 @@ mod tests {
     }
     for i in 1..=5 {
       // Tasks
-      expected[(i, 0)]
-        .set_style(Style::default().add_modifier(Modifier::BOLD).add_modifier(Modifier::REVERSED));
+      expected[(i, 0)].set_style(Style::default().add_modifier(Modifier::BOLD).add_modifier(Modifier::REVERSED));
     }
     for i in 0..=49 {
       // Command line
@@ -4560,13 +4558,11 @@ mod tests {
     }
 
     for i in 1..expected.area().width - 1 {
-      expected[(i, 3)]
-        .set_style(Style::default().fg(Color::Indexed(1)).bg(Color::Reset).add_modifier(Modifier::BOLD));
+      expected[(i, 3)].set_style(Style::default().fg(Color::Indexed(1)).bg(Color::Reset).add_modifier(Modifier::BOLD));
     }
 
     for i in 1..expected.area().width - 1 {
-      expected[(i, 4)]
-        .set_style(Style::default().fg(Color::Indexed(1)).bg(Color::Indexed(4)));
+      expected[(i, 4)].set_style(Style::default().fg(Color::Indexed(1)).bg(Color::Indexed(4)));
     }
 
     let mut app = TaskwarriorTui::new("next", false).await.unwrap();
@@ -4680,8 +4676,7 @@ mod tests {
     }
     for i in 20..=27 {
       // Calendar
-      expected[(i, 0)]
-        .set_style(Style::default().add_modifier(Modifier::BOLD).add_modifier(Modifier::REVERSED));
+      expected[(i, 0)].set_style(Style::default().add_modifier(Modifier::BOLD).add_modifier(Modifier::REVERSED));
     }
 
     for i in 0..=49 {
@@ -4697,13 +4692,11 @@ mod tests {
     }
 
     for i in 3..=22 {
-      expected[(i, 5)]
-        .set_style(Style::default().bg(Color::Reset).add_modifier(Modifier::UNDERLINED));
+      expected[(i, 5)].set_style(Style::default().bg(Color::Reset).add_modifier(Modifier::UNDERLINED));
     }
 
     for i in 25..=44 {
-      expected[(i, 5)]
-        .set_style(Style::default().bg(Color::Reset).add_modifier(Modifier::UNDERLINED));
+      expected[(i, 5)].set_style(Style::default().bg(Color::Reset).add_modifier(Modifier::UNDERLINED));
     }
 
     let mut app = TaskwarriorTui::new("next", false).await.unwrap();
