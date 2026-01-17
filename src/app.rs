@@ -4736,15 +4736,17 @@ mod tests {
       "│                                      │",
       "│    [: Previous view                  │",
       "╰──────────────────────────────────────╯",
-      "8% ─────────────────────────────────────",
+      "  8% ───────────────────────────────────",
     ]);
 
     for i in 1..=4 {
       // Calendar
       expected[(i, 0)].set_style(Style::default().add_modifier(Modifier::BOLD));
     }
-    expected[(3, 11)].set_style(Style::default().fg(Color::Gray));
-    expected[(4, 11)].set_style(Style::default().fg(Color::Gray));
+    expected[(3, 11)].set_style(Style::default().fg(Color::Reset));
+    expected[(4, 11)].set_style(Style::default().fg(Color::Reset));
+    expected[(5, 11)].set_style(Style::default().fg(Color::Gray));
+    expected[(6, 11)].set_style(Style::default().fg(Color::Gray));
 
     let mut app = TaskwarriorTui::new("next", false).await.unwrap();
 
