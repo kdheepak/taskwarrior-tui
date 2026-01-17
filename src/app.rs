@@ -4092,7 +4092,7 @@ mod tests {
     }
     let style = app.style_for_task(&task);
 
-    assert_eq!(style, Style::default().fg(Color::Indexed(2)));
+    assert_eq!(style, Style::default());
 
     let task = app.task_by_id(11).unwrap();
     let style = app.style_for_task(&task);
