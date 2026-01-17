@@ -11,7 +11,7 @@ use ratatui::{
 use crate::app::TaskwarriorTui;
 
 pub fn draw(rect: &mut Frame, app: &TaskwarriorTui) {
-  let size = rect.size();
+  let size = rect.area();
   let chunks = Layout::default()
     .direction(Direction::Vertical)
     .constraints([Constraint::Length(3), Constraint::Min(10), Constraint::Length(3)].as_ref())

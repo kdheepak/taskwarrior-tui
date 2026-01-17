@@ -23,13 +23,12 @@ use lazy_static::lazy_static;
 use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
 use ratatui::{
   backend::{Backend, CrosstermBackend},
-  layout::{Alignment, Constraint, Direction, Layout, Margin, Rect},
+  layout::{Alignment, Constraint, Direction, Layout, Margin, Position, Rect},
   style::{Color, Modifier, Style},
   symbols::bar::FULL,
-  terminal::Frame,
   text::{Line, Span, Text},
   widgets::{Block, BorderType, Borders, Clear, Gauge, LineGauge, List, ListItem, Paragraph, Tabs, Wrap},
-  Terminal,
+  Frame, Terminal,
 };
 use regex::Regex;
 use rustyline::{history::SearchDirection as HistoryDirection, line_buffer::LineBuffer, At, Editor, Word};
@@ -374,10 +373,10 @@ impl TaskwarriorTui {
     self.event_loop.rx.recv().await
   }
 
-  pub async fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> Result<()> {
+  pub async fn run(&mut self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> {
     loop {
       if self.requires_redraw {
-        terminal.resize(terminal.size()?)?;
+        terminal.autoresize()?;
         self.requires_redraw = false;
       }
       terminal.draw(|f| self.draw(f))?;
@@ -435,14 +434,14 @@ impl TaskwarriorTui {
   }
 
   pub fn draw(&mut self, f: &mut Frame) {
-    let rect = f.size();
+    let rect = f.area();
     self.terminal_width = rect.width;
     self.terminal_height = rect.height;
 
     let chunks = Layout::default()
       .direction(Direction::Vertical)
       .constraints([Constraint::Length(1), Constraint::Min(0)])
-      .split(f.size());
+      .split(f.area());
 
     let tab_layout = chunks[0];
     let main_layout = chunks[1];
@@ -488,7 +487,7 @@ impl TaskwarriorTui {
   }
 
   pub fn draw_debug(&mut self, f: &mut Frame) {
-    let area = centered_rect(50, 50, f.size());
+    let area = centered_rect(50, 50, f.area());
     f.render_widget(Clear, area);
     let t = format!("{}", self.current_selection);
     let p = Paragraph::new(Text::from(t)).block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded));
@@ -587,7 +586,7 @@ impl TaskwarriorTui {
         );
         let text = self.error.clone().unwrap_or_else(|| "Unknown error.".to_string());
         let title = vec![Span::styled("Error", Style::default().add_modifier(Modifier::BOLD))];
-        let rect = centered_rect(90, 60, f.size());
+        let rect = centered_rect(90, 60, f.area());
         f.render_widget(Clear, rect);
         let p = Paragraph::new(Text::from(text))
           .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).title(title))
@@ -597,7 +596,7 @@ impl TaskwarriorTui {
         let rects = Layout::default()
           .direction(Direction::Vertical)
           .constraints([Constraint::Min(0)].as_ref())
-          .split(f.size());
+          .split(f.area());
       }
       Action::Report => {
         // reset error when entering Action::Report
@@ -886,7 +885,7 @@ impl TaskwarriorTui {
   }
 
   fn draw_help_popup(&mut self, f: &mut Frame, percent_x: u16, percent_y: u16) {
-    let area = centered_rect(percent_x, percent_y, f.size());
+    let area = centered_rect(percent_x, percent_y, f.area());
     f.render_widget(Clear, area);
 
     let chunks = Layout::default()
@@ -903,7 +902,7 @@ impl TaskwarriorTui {
 
     let gauge = LineGauge::default()
       .block(Block::default())
-      .gauge_style(Style::default().fg(Color::Gray))
+      .filled_style(Style::default().fg(Color::Gray))
       .ratio(ratio);
 
     f.render_widget(gauge, chunks[1]);
@@ -914,11 +913,11 @@ impl TaskwarriorTui {
     let rects = Layout::default()
       .direction(Direction::Vertical)
       .constraints([Constraint::Min(0)].as_ref())
-      .split(f.size());
+      .split(f.area());
 
-    let area = centered_rect(percent_x, percent_y, f.size());
+    let area = centered_rect(percent_x, percent_y, f.area());
 
-    f.render_widget(Clear, area.inner(&Margin { vertical: 0, horizontal: 0 }));
+    f.render_widget(Clear, area.inner(Margin { vertical: 0, horizontal: 0 }));
 
     let (contexts, headers) = self.get_all_contexts();
 
@@ -993,9 +992,9 @@ impl TaskwarriorTui {
       .block(Block::default().borders(Borders::NONE).title(""))
       .style(self.config.uda_style_report_completion_pane)
       .highlight_style(self.config.uda_style_report_completion_pane_highlight)
-      .highlight_symbol(&self.config.uda_selection_indicator);
+      .highlight_symbol(self.config.uda_selection_indicator.as_str());
 
-    let area = f.size();
+    let area = f.area();
 
     let mut rect = rect;
     rect.height = std::cmp::min(area.height / 2, self.completion_list.len() as u16 + 2);
@@ -1018,7 +1017,8 @@ impl TaskwarriorTui {
   fn draw_command(&self, f: &mut Frame, rect: Rect, text: &str, title: (Span, Option<Span>), position: usize, cursor: bool, error: Option<String>) {
     // f.render_widget(Clear, rect);
     if cursor {
-      f.set_cursor(std::cmp::min(rect.x + position as u16, rect.x + rect.width.saturating_sub(2)), rect.y + 1);
+      let position = Position::new(std::cmp::min(rect.x + position as u16, rect.x + rect.width.saturating_sub(2)), rect.y + 1);
+      f.set_cursor_position(position);
     }
     let rects = Layout::default()
       .direction(Direction::Vertical)
@@ -4314,17 +4314,15 @@ mod tests {
 
     for i in 0..=49 {
       // First line
-      expected.get_mut(i, 0).set_style(Style::default().add_modifier(Modifier::REVERSED));
+      expected[(i, 0)].set_style(Style::default().add_modifier(Modifier::REVERSED));
     }
     for i in 1..=5 {
       // Tasks
-      expected
-        .get_mut(i, 0)
-        .set_style(Style::default().add_modifier(Modifier::BOLD).add_modifier(Modifier::REVERSED));
+      expected[(i, 0)].set_style(Style::default().add_modifier(Modifier::BOLD).add_modifier(Modifier::REVERSED));
     }
     for i in 0..=49 {
       // Command line
-      expected.get_mut(i, 13).set_style(Style::default().add_modifier(Modifier::REVERSED));
+      expected[(i, 13)].set_style(Style::default().add_modifier(Modifier::REVERSED));
     }
 
     let mut app = TaskwarriorTui::new("next", false).await.unwrap();
@@ -4351,7 +4349,7 @@ mod tests {
       })
       .unwrap();
 
-    assert_eq!(terminal.backend().size().unwrap(), expected.area);
+    assert_eq!(terminal.backend().size().unwrap(), expected.area.into());
     terminal.backend().assert_buffer(&expected);
   }
 
@@ -4370,13 +4368,13 @@ mod tests {
 
     for i in 0..=13 {
       // Task
-      expected1.get_mut(i, 0).set_style(Style::default().add_modifier(Modifier::BOLD));
-      expected2.get_mut(i, 0).set_style(Style::default().add_modifier(Modifier::BOLD));
+      expected1[(i, 0)].set_style(Style::default().add_modifier(Modifier::BOLD));
+      expected2[(i, 0)].set_style(Style::default().add_modifier(Modifier::BOLD));
     }
     for i in 0..=24 {
       // Command line
-      expected1.get_mut(i, 0).set_style(Style::default().add_modifier(Modifier::REVERSED));
-      expected2.get_mut(i, 0).set_style(Style::default().add_modifier(Modifier::REVERSED));
+      expected1[(i, 0)].set_style(Style::default().add_modifier(Modifier::REVERSED));
+      expected2[(i, 0)].set_style(Style::default().add_modifier(Modifier::REVERSED));
     }
 
     let mut app = TaskwarriorTui::new("next", false).await.unwrap();
@@ -4411,13 +4409,14 @@ mod tests {
         let rects = Layout::default()
           .direction(Direction::Vertical)
           .constraints([Constraint::Min(0), Constraint::Length(3)].as_ref())
-          .split(f.size());
+          .split(f.area());
 
-        let position = TaskwarriorTui::get_position(&app.modify);
-        f.set_cursor(
-          std::cmp::min(rects[1].x + position as u16, rects[1].x + rects[1].width.saturating_sub(2)),
+        let taskwarrior_position = TaskwarriorTui::get_position(&app.modify);
+        let position = Position::new(
+          std::cmp::min(rects[1].x + taskwarrior_position as u16, rects[1].x + rects[1].width.saturating_sub(2)),
           rects[1].y + 1,
         );
+        f.set_cursor_position(position);
         f.render_widget(Clear, rects[1]);
         let selected = app.current_selection;
         let task_ids = if app.tasks.is_empty() {
@@ -4448,14 +4447,14 @@ mod tests {
           rects[1],
           app.modify.as_str(),
           (Span::styled(label, Style::default().add_modifier(Modifier::BOLD)), None),
-          position,
+          taskwarrior_position,
           true,
           app.error.clone(),
         );
       })
       .unwrap();
 
-    assert_eq!(terminal.backend().size().unwrap(), expected1.area);
+    assert_eq!(terminal.backend().size().unwrap(), expected1.area.into());
     terminal.backend().assert_buffer(&expected1);
 
     app.modify.move_home();
@@ -4465,13 +4464,14 @@ mod tests {
         let rects = Layout::default()
           .direction(Direction::Vertical)
           .constraints([Constraint::Min(0), Constraint::Length(3)].as_ref())
-          .split(f.size());
+          .split(f.area());
 
-        let position = TaskwarriorTui::get_position(&app.modify);
-        f.set_cursor(
-          std::cmp::min(rects[1].x + position as u16, rects[1].x + rects[1].width.saturating_sub(2)),
+        let taskwarrior_position = TaskwarriorTui::get_position(&app.modify);
+        let position = Position::new(
+          std::cmp::min(rects[1].x + taskwarrior_position as u16, rects[1].x + rects[1].width.saturating_sub(2)),
           rects[1].y + 1,
         );
+        f.set_cursor_position(position);
         f.render_widget(Clear, rects[1]);
         let selected = app.current_selection;
         let task_ids = if app.tasks.is_empty() {
@@ -4502,14 +4502,14 @@ mod tests {
           rects[1],
           app.modify.as_str(),
           (Span::styled(label, Style::default().add_modifier(Modifier::BOLD)), None),
-          position,
+          taskwarrior_position,
           true,
           app.error.clone(),
         );
       })
       .unwrap();
 
-    assert_eq!(terminal.backend().size().unwrap(), expected2.area);
+    assert_eq!(terminal.backend().size().unwrap(), expected2.area.into());
     terminal.backend().assert_buffer(&expected2);
   }
 
@@ -4534,11 +4534,11 @@ mod tests {
 
     for i in 1..=4 {
       // Task
-      expected.get_mut(i, 0).set_style(Style::default().add_modifier(Modifier::BOLD));
+      expected[(i, 0)].set_style(Style::default().add_modifier(Modifier::BOLD));
     }
     for i in 6..=13 {
       // Calendar
-      expected.get_mut(i, 0).set_style(Style::default().add_modifier(Modifier::DIM));
+      expected[(i, 0)].set_style(Style::default().add_modifier(Modifier::DIM));
     }
 
     for r in &[
@@ -4553,20 +4553,16 @@ mod tests {
       44..=48, // Urg
     ] {
       for i in r.clone() {
-        expected.get_mut(i, 1).set_style(Style::default().add_modifier(Modifier::UNDERLINED));
+        expected[(i, 1)].set_style(Style::default().add_modifier(Modifier::UNDERLINED));
       }
     }
 
     for i in 1..expected.area().width - 1 {
-      expected
-        .get_mut(i, 3)
-        .set_style(Style::default().fg(Color::Indexed(1)).bg(Color::Reset).add_modifier(Modifier::BOLD));
+      expected[(i, 3)].set_style(Style::default().fg(Color::Indexed(1)).bg(Color::Reset).add_modifier(Modifier::BOLD));
     }
 
     for i in 1..expected.area().width - 1 {
-      expected
-        .get_mut(i, 4)
-        .set_style(Style::default().fg(Color::Indexed(1)).bg(Color::Indexed(4)));
+      expected[(i, 4)].set_style(Style::default().fg(Color::Indexed(1)).bg(Color::Indexed(4)));
     }
 
     let mut app = TaskwarriorTui::new("next", false).await.unwrap();
@@ -4651,7 +4647,7 @@ mod tests {
       .output()
       .unwrap();
 
-    assert_eq!(terminal.backend().size().unwrap(), expected.area);
+    assert_eq!(terminal.backend().size().unwrap(), expected.area.into());
     terminal.backend().assert_buffer(&expected);
   }
 
@@ -4676,37 +4672,31 @@ mod tests {
 
     for i in 0..=49 {
       // First line
-      expected.get_mut(i, 0).set_style(Style::default().add_modifier(Modifier::REVERSED));
+      expected[(i, 0)].set_style(Style::default().add_modifier(Modifier::REVERSED));
     }
     for i in 20..=27 {
       // Calendar
-      expected
-        .get_mut(i, 0)
-        .set_style(Style::default().add_modifier(Modifier::BOLD).add_modifier(Modifier::REVERSED));
+      expected[(i, 0)].set_style(Style::default().add_modifier(Modifier::BOLD).add_modifier(Modifier::REVERSED));
     }
 
     for i in 0..=49 {
-      expected.get_mut(i, 2).set_style(Style::default().add_modifier(Modifier::UNDERLINED));
+      expected[(i, 2)].set_style(Style::default().add_modifier(Modifier::UNDERLINED));
     }
 
     for i in 3..=22 {
-      expected.get_mut(i, 4).set_style(Style::default().bg(Color::Reset));
+      expected[(i, 4)].set_style(Style::default().bg(Color::Reset));
     }
 
     for i in 25..=44 {
-      expected.get_mut(i, 4).set_style(Style::default().bg(Color::Reset));
+      expected[(i, 4)].set_style(Style::default().bg(Color::Reset));
     }
 
     for i in 3..=22 {
-      expected
-        .get_mut(i, 5)
-        .set_style(Style::default().bg(Color::Reset).add_modifier(Modifier::UNDERLINED));
+      expected[(i, 5)].set_style(Style::default().bg(Color::Reset).add_modifier(Modifier::UNDERLINED));
     }
 
     for i in 25..=44 {
-      expected
-        .get_mut(i, 5)
-        .set_style(Style::default().bg(Color::Reset).add_modifier(Modifier::UNDERLINED));
+      expected[(i, 5)].set_style(Style::default().bg(Color::Reset).add_modifier(Modifier::UNDERLINED));
     }
 
     let mut app = TaskwarriorTui::new("next", false).await.unwrap();
@@ -4729,7 +4719,7 @@ mod tests {
       })
       .unwrap();
 
-    assert_eq!(terminal.backend().size().unwrap(), expected.area);
+    assert_eq!(terminal.backend().size().unwrap(), expected.area.into());
     terminal.backend().assert_buffer(&expected);
   }
 
@@ -4746,15 +4736,17 @@ mod tests {
       "│                                      │",
       "│    [: Previous view                  │",
       "╰──────────────────────────────────────╯",
-      "8% ─────────────────────────────────────",
+      "  8% ───────────────────────────────────",
     ]);
 
     for i in 1..=4 {
       // Calendar
-      expected.get_mut(i, 0).set_style(Style::default().add_modifier(Modifier::BOLD));
+      expected[(i, 0)].set_style(Style::default().add_modifier(Modifier::BOLD));
     }
-    expected.get_mut(3, 11).set_style(Style::default().fg(Color::Gray));
-    expected.get_mut(4, 11).set_style(Style::default().fg(Color::Gray));
+    expected[(3, 11)].set_style(Style::default().fg(Color::Reset));
+    expected[(4, 11)].set_style(Style::default().fg(Color::Reset));
+    expected[(5, 11)].set_style(Style::default().fg(Color::Gray));
+    expected[(6, 11)].set_style(Style::default().fg(Color::Gray));
 
     let mut app = TaskwarriorTui::new("next", false).await.unwrap();
 
@@ -4771,7 +4763,7 @@ mod tests {
       })
       .unwrap();
 
-    assert_eq!(terminal.backend().size().unwrap(), expected.area);
+    assert_eq!(terminal.backend().size().unwrap(), expected.area.into());
     terminal.backend().assert_buffer(&expected);
   }
 
@@ -4792,27 +4784,27 @@ mod tests {
 
     for i in 1..=7 {
       // Task
-      expected.get_mut(i, 0).set_style(Style::default().add_modifier(Modifier::BOLD));
+      expected[(i, 0)].set_style(Style::default().add_modifier(Modifier::BOLD));
     }
 
     for i in 1..=10 {
       // Task
-      expected.get_mut(i, 1).set_style(Style::default().add_modifier(Modifier::UNDERLINED));
+      expected[(i, 1)].set_style(Style::default().add_modifier(Modifier::UNDERLINED));
     }
 
     for i in 12..=71 {
       // Task
-      expected.get_mut(i, 1).set_style(Style::default().add_modifier(Modifier::UNDERLINED));
+      expected[(i, 1)].set_style(Style::default().add_modifier(Modifier::UNDERLINED));
     }
 
     for i in 73..=78 {
       // Task
-      expected.get_mut(i, 1).set_style(Style::default().add_modifier(Modifier::UNDERLINED));
+      expected[(i, 1)].set_style(Style::default().add_modifier(Modifier::UNDERLINED));
     }
 
     for i in 1..=78 {
       // Task
-      expected.get_mut(i, 3).set_style(Style::default().add_modifier(Modifier::BOLD));
+      expected[(i, 3)].set_style(Style::default().add_modifier(Modifier::BOLD));
     }
 
     let mut app = TaskwarriorTui::new("next", false).await.unwrap();
@@ -4830,7 +4822,7 @@ mod tests {
       })
       .unwrap();
 
-    assert_eq!(terminal.backend().size().unwrap(), expected.area);
+    assert_eq!(terminal.backend().size().unwrap(), expected.area.into());
     terminal.backend().assert_buffer(&expected);
   }
 
