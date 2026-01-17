@@ -43,7 +43,7 @@ jobs:
       - name: Build deb package
         run: cargo deb -p taskwarrior-tui -o target/debian/taskwarrior-tui.deb
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: taskwarrior-tui-deb
           path: target/debian/taskwarrior-tui.deb
@@ -73,7 +73,7 @@ jobs:
       - name: Build rpm package
         run: cargo rpm build
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: taskwarrior-tui-rpm
           path: target/release/rpmbuild/RPMS/x86_64/taskwarrior-tui-*.x86_64.rpm

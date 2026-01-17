@@ -81,7 +81,7 @@ jobs:
             shasum -a 256 taskwarrior-tui-${{ matrix.target }}.tar.gz > taskwarrior-tui-${{ matrix.target }}.sha256
           fi
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: taskwarrior-tui-${{ matrix.target }}
           path: target/${{ matrix.target }}/release/taskwarrior-tui-${{ matrix.target }}.tar.gz
