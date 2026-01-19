@@ -7,7 +7,7 @@ jobs:
   grcov:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Install Taskwarrior
         uses: ./.github/actions/install-taskwarrior
         with:
@@ -34,7 +34,7 @@ jobs:
           override: true
           components: llvm-tools-preview
       - name: Checkout testdata
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: kdheepak/taskwarrior-testdata
           path: taskwarrior-testdata    
