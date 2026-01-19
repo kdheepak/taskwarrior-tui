@@ -23,7 +23,7 @@ jobs:
     steps:
       - name: Update Homebrew formula
         if: startsWith(github.ref, 'refs/tags/')
-        uses: dawidd6/action-homebrew-bump-formula@v3
+        uses: dawidd6/action-homebrew-bump-formula@v7
         with:
           token: ${{secrets.HOMEBREW_TOKEN}}
           formula: taskwarrior-tui
