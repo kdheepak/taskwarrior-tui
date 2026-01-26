@@ -6,6 +6,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.26.6](https://github.com/kdheepak/taskwarrior-tui/compare/v0.26.5...v0.26.6) - 2026-01-26
+
+### Fixed
+
+- Apply color.uda.* configuration for all UDAs ([#652](https://github.com/kdheepak/taskwarrior-tui/pull/652))
+
+### Other
+
+- *(deps)* bump clechasseur/rs-cargo from 2 to 4 ([#665](https://github.com/kdheepak/taskwarrior-tui/pull/665))
+- *(deps)* bump unicode-truncate from 2.0.0 to 2.0.1 in the cargo-dependencies group ([#663](https://github.com/kdheepak/taskwarrior-tui/pull/663))
+- *(deps)* bump dawidd6/action-homebrew-bump-formula from 3 to 7 ([#662](https://github.com/kdheepak/taskwarrior-tui/pull/662))
+- *(deps)* bump actions/github-script from 7 to 8 ([#661](https://github.com/kdheepak/taskwarrior-tui/pull/661))
+- *(deps)* bump amannn/action-semantic-pull-request from 5 to 6 ([#660](https://github.com/kdheepak/taskwarrior-tui/pull/660))
+- *(deps)* bump actions/setup-python from 5 to 6 ([#658](https://github.com/kdheepak/taskwarrior-tui/pull/658))
+- *(deps)* bump actions/checkout from 4 to 6 ([#659](https://github.com/kdheepak/taskwarrior-tui/pull/659))
+- *(deps)* bump the cargo-dependencies group across 1 directory with 21 updates ([#657](https://github.com/kdheepak/taskwarrior-tui/pull/657))
+- *(deps)* bump actions/upload-artifact from 4 to 6 ([#576](https://github.com/kdheepak/taskwarrior-tui/pull/576))
+- update ratatui to `0.30.0` ([#655](https://github.com/kdheepak/taskwarrior-tui/pull/655))
+
 ## [0.26.5](https://github.com/kdheepak/taskwarrior-tui/compare/v0.26.4...v0.26.5) - 2025-12-18
 
 ### Added
