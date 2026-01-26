@@ -34,7 +34,7 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v6
-      - uses: clechasseur/rs-cargo@v2
+      - uses: clechasseur/rs-cargo@v4
         with:
           command: build
           args: --release
@@ -62,7 +62,7 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v6
-      - uses: clechasseur/rs-cargo@v2
+      - uses: clechasseur/rs-cargo@v4
         with:
           command: build
           args: --release
@@ -92,7 +92,7 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v6
-      - uses: clechasseur/rs-cargo@v2
+      - uses: clechasseur/rs-cargo@v4
         with:
           command: build
           args: --release

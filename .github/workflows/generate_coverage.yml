@@ -22,7 +22,7 @@ jobs:
           toolchain: stable
           override: true
       - name: Install grcov
-        uses: clechasseur/rs-cargo@v2
+        uses: clechasseur/rs-cargo@v4
         with:
           command: install
           args: grcov
@@ -39,13 +39,13 @@ jobs:
           repository: kdheepak/taskwarrior-testdata
           path: taskwarrior-testdata    
       - name: Build taskwarrior-tui with coverage
-        uses: clechasseur/rs-cargo@v2
+        uses: clechasseur/rs-cargo@v4
         with:
           command: build
         env:
           RUSTFLAGS: "-Cinstrument-coverage"  
       - name: Run taskwarrior-tui tests in coverage environment
-        uses: clechasseur/rs-cargo@v2
+        uses: clechasseur/rs-cargo@v4
         with:
           command: test
           args: --workspace -- --nocapture

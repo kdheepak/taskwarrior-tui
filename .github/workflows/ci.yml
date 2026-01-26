@@ -12,7 +12,7 @@ jobs:
         with:
           toolchain: stable
           override: true
-      - uses: clechasseur/rs-cargo@v2
+      - uses: clechasseur/rs-cargo@v4
         with:
           command: check
 
@@ -37,7 +37,7 @@ jobs:
         with:
           repository: kdheepak/taskwarrior-testdata
           path: taskwarrior-testdata
-      - uses: clechasseur/rs-cargo@v2
+      - uses: clechasseur/rs-cargo@v4
         with:
           command: test
           args: --workspace -- --nocapture
@@ -62,7 +62,7 @@ jobs:
           toolchain: nightly
           override: true
           components: rustfmt
-      - uses: clechasseur/rs-cargo@v2
+      - uses: clechasseur/rs-cargo@v4
         with:
           command: fmt
           args: --all -- --check
@@ -77,7 +77,7 @@ jobs:
           toolchain: stable
           override: true
           components: clippy
-      - uses: clechasseur/rs-cargo@v2
+      - uses: clechasseur/rs-cargo@v4
         with:
           command: clippy
           args: -- -D warnings
