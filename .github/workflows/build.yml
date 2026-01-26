@@ -58,7 +58,7 @@ jobs:
           toolchain: stable
           target: ${{ matrix.target }}
           override: true
-      - uses: clechasseur/rs-cargo@v2
+      - uses: clechasseur/rs-cargo@v4
         with:
           command: build
           args: --release ${{matrix.features}} --target=${{ matrix.target }}
