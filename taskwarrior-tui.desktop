@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Taskwarrior TUI
+GenericName=Taskwarrior Terminal User Interface
+Comment=A Taskwarrior Terminal User Interface
+Icon=utilities-terminal
+Exec=taskwarrior-tui
+Terminal=true
+Categories=Utility;ConsoleOnly;
+Keywords=task;todo;taskwarrior;tui;cli;terminal;
