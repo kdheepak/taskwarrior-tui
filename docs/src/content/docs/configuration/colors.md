@@ -30,6 +30,17 @@ color.tagged
 
 `color.alternate` is applied to every other row in the task report by default. If you want to keep that Taskwarrior color defined but disable it in the TUI, set `uda.taskwarrior-tui.task-report.use-alternate-style=false`.
 
+Similarly, `taskwarrior-tui`-specific styles can also be customized in `taskrc` with the following attributes:
+
+```plaintext
+uda.taskwarrior-tui.style.context.active
+uda.taskwarrior-tui.style.calendar.title
+uda.taskwarrior-tui.style.navbar
+uda.taskwarrior-tui.style.command
+uda.taskwarrior-tui.style.report.scrollbar
+uda.taskwarrior-tui.style.report.scrollbar.area
+```
+
 ## Color Formats
 
 All color formats supported by Taskwarrior are recognized:
