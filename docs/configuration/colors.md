@@ -24,3 +24,14 @@ color.blocking
 color.recurring
 color.tagged
 ```
+
+Similarly, `taskwarrior-tui`'s specific colors can also be customized in `taskrc`, with the following attributes:
+
+```plaintext
+uda.taskwarrior-tui.style.context.active
+uda.taskwarrior-tui.style.calendar.title
+uda.taskwarrior-tui.style.navbar
+uda.taskwarrior-tui.style.command
+uda.taskwarrior-tui.style.report.scrollbar
+uda.taskwarrior-tui.style.report.scrollbar.area
+```
