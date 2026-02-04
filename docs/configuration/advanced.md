@@ -30,11 +30,7 @@ uda.taskwarrior-tui.task-report.prompt-on-undo=false
 uda.taskwarrior-tui.task-report.prompt-on-delete=false
 uda.taskwarrior-tui.task-report.prompt-on-done=false
 uda.taskwarrior-tui.style.report.selection=
-uda.taskwarrior-tui.style.context.active=black on rgb444
-uda.taskwarrior-tui.style.calendar.title=black on rgb444
-uda.taskwarrior-tui.style.report.scrollbar=black
 uda.taskwarrior-tui.scrollbar.indicator=█
-uda.taskwarrior-tui.style.report.scrollbar.area=white
 uda.taskwarrior-tui.scrollbar.area=║
 uda.taskwarrior-tui.task-report.next.filter=$(task show report.next.filter)
 uda.taskwarrior-tui.task-report.auto-insert-double-quotes-on-add=true
@@ -48,6 +44,8 @@ uda.taskwarrior-tui.tabs.change-focus-rotate=false
 The `uda.taskwarrior-tui.task-report.next.filter` variable defines the default view at program
 startup. Set this to any preconfigured report (`task reports`), or create your own report in
 taskwarrior and specify its name here.
+
+See [colors](./colors.md) to see `taskwarrior-tui`'s color configuration options. 
 
 ## commandline options:
 
