@@ -147,10 +147,10 @@ impl KeyConfig {
     let shortcut8 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut8", data);
     let shortcut9 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut9", data);
     let help = Self::get_config("uda.taskwarrior-tui.keyconfig.help", data);
-    let priority_h = Self::get_config("uda.taskwarrior-tui.keyconfig.priority-h", data);
-    let priority_m = Self::get_config("uda.taskwarrior-tui.keyconfig.priority-m", data);
-    let priority_l = Self::get_config("uda.taskwarrior-tui.keyconfig.priority-l", data);
-    let priority_n = Self::get_config("uda.taskwarrior-tui.keyconfig.priority-n", data);
+    let priority_h = Self::get_config("uda.taskwarrior-tui.keyconfig.priority_h", data);
+    let priority_m = Self::get_config("uda.taskwarrior-tui.keyconfig.priority_m", data);
+    let priority_l = Self::get_config("uda.taskwarrior-tui.keyconfig.priority_l", data);
+    let priority_n = Self::get_config("uda.taskwarrior-tui.keyconfig.priority_n", data);
 
     self.quit = quit.unwrap_or(self.quit);
     self.refresh = refresh.unwrap_or(self.refresh);
@@ -292,27 +292,11 @@ mod tests {
   }
 
   #[test]
-  fn test_priority_keys_configurable_hyphenated() {
-    let data = "uda.taskwarrior-tui.keyconfig.priority-h 1\n\
-                uda.taskwarrior-tui.keyconfig.priority-m 2\n\
-                uda.taskwarrior-tui.keyconfig.priority-l 3\n\
-                uda.taskwarrior-tui.keyconfig.priority-n 4\n";
-    let kc = KeyConfig::new(data).unwrap();
-    assert_eq!(kc.priority_h, KeyCode::Char('1'));
-    assert_eq!(kc.priority_m, KeyCode::Char('2'));
-    assert_eq!(kc.priority_l, KeyCode::Char('3'));
-    assert_eq!(kc.priority_n, KeyCode::Char('4'));
-  }
-
-  #[test]
-  fn test_priority_keys_configurable_underscored() {
-    // The fallback path replaces ALL hyphens in the config key with underscores,
-    // including those in "taskwarrior-tui". So the user must use fully underscored
-    // keys for the fallback to match (e.g. "taskwarrior_tui" not "taskwarrior-tui").
-    let data = "uda.taskwarrior_tui.keyconfig.priority_h 1\n\
-                uda.taskwarrior_tui.keyconfig.priority_m 2\n\
-                uda.taskwarrior_tui.keyconfig.priority_l 3\n\
-                uda.taskwarrior_tui.keyconfig.priority_n 4\n";
+  fn test_priority_keys_configurable() {
+    let data = "uda.taskwarrior-tui.keyconfig.priority_h 1\n\
+                uda.taskwarrior-tui.keyconfig.priority_m 2\n\
+                uda.taskwarrior-tui.keyconfig.priority_l 3\n\
+                uda.taskwarrior-tui.keyconfig.priority_n 4\n";
     let kc = KeyConfig::new(data).unwrap();
     assert_eq!(kc.priority_h, KeyCode::Char('1'));
     assert_eq!(kc.priority_m, KeyCode::Char('2'));
