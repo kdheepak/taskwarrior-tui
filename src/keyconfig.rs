@@ -147,10 +147,10 @@ impl KeyConfig {
     let shortcut8 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut8", data);
     let shortcut9 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut9", data);
     let help = Self::get_config("uda.taskwarrior-tui.keyconfig.help", data);
-    let priority_h = Self::get_config("uda.taskwarrior-tui.keyconfig.priority_h", data);
-    let priority_m = Self::get_config("uda.taskwarrior-tui.keyconfig.priority_m", data);
-    let priority_l = Self::get_config("uda.taskwarrior-tui.keyconfig.priority_l", data);
-    let priority_n = Self::get_config("uda.taskwarrior-tui.keyconfig.priority_n", data);
+    let priority_h = Self::get_config("uda.taskwarrior-tui.keyconfig.priority-h", data);
+    let priority_m = Self::get_config("uda.taskwarrior-tui.keyconfig.priority-m", data);
+    let priority_l = Self::get_config("uda.taskwarrior-tui.keyconfig.priority-l", data);
+    let priority_n = Self::get_config("uda.taskwarrior-tui.keyconfig.priority-n", data);
 
     self.quit = quit.unwrap_or(self.quit);
     self.refresh = refresh.unwrap_or(self.refresh);
@@ -293,10 +293,10 @@ mod tests {
 
   #[test]
   fn test_priority_keys_configurable() {
-    let data = "uda.taskwarrior-tui.keyconfig.priority_h 1\n\
-                uda.taskwarrior-tui.keyconfig.priority_m 2\n\
-                uda.taskwarrior-tui.keyconfig.priority_l 3\n\
-                uda.taskwarrior-tui.keyconfig.priority_n 4\n";
+    let data = "uda.taskwarrior-tui.keyconfig.priority-h 1\n\
+                uda.taskwarrior-tui.keyconfig.priority-m 2\n\
+                uda.taskwarrior-tui.keyconfig.priority-l 3\n\
+                uda.taskwarrior-tui.keyconfig.priority-n 4\n";
     let kc = KeyConfig::new(data).unwrap();
     assert_eq!(kc.priority_h, KeyCode::Char('1'));
     assert_eq!(kc.priority_m, KeyCode::Char('2'));
