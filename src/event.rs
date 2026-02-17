@@ -17,7 +17,7 @@ pub enum Event<I> {
   Closed,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, PartialOrd, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, PartialOrd, Eq, Hash)]
 pub enum KeyCode {
   CtrlBackspace,
   CtrlDelete,
@@ -42,6 +42,9 @@ pub enum KeyCode {
   Null,
   Esc,
   Tab,
+  /// No-operation: used to disable a keybinding via `<Nop>` in config.
+  /// This variant is never produced by actual keyboard input.
+  Nop,
 }
 
 pub struct EventLoop {

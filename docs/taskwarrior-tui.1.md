@@ -134,6 +134,9 @@ Ctrl-y
 
 Keybindings for filter / command prompt:
 
+`Ctrl-r`
+: reset filter                      - Reset filter to default
+
 `Ctrl + f | Right`
 : move forward                      - Move forward one character
 

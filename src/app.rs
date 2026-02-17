@@ -2246,6 +2246,46 @@ impl TaskwarriorTui {
     r
   }
 
+  /// Returns the next higher priority value, wrapping around:
+  /// None -> L -> M -> H -> None
+  fn next_priority_up(current: Option<&str>) -> &'static str {
+    match current {
+      None | Some("") => "L",
+      Some("L") => "M",
+      Some("M") => "H",
+      Some("H") | Some(_) => "",
+    }
+  }
+
+  /// Returns the next lower priority value, wrapping around:
+  /// None -> H -> M -> L -> None
+  fn next_priority_down(current: Option<&str>) -> &'static str {
+    match current {
+      None | Some("") => "H",
+      Some("H") => "M",
+      Some("M") => "L",
+      Some("L") | Some(_) => "",
+    }
+  }
+
+  pub fn task_priority_up(&mut self) -> Result<(), String> {
+    if self.tasks.is_empty() {
+      return Ok(());
+    }
+    let current_priority = self.tasks.get(self.current_selection).and_then(|t| t.priority().map(|p| p.to_string()));
+    let next = Self::next_priority_up(current_priority.as_deref());
+    self.task_priority(next)
+  }
+
+  pub fn task_priority_down(&mut self) -> Result<(), String> {
+    if self.tasks.is_empty() {
+      return Ok(());
+    }
+    let current_priority = self.tasks.get(self.current_selection).and_then(|t| t.priority().map(|p| p.to_string()));
+    let next = Self::next_priority_down(current_priority.as_deref());
+    self.task_priority(next)
+  }
+
   pub fn task_undo(&mut self) -> Result<(), String> {
     let output = std::process::Command::new("task").arg("rc.confirmation=off").arg("undo").output();
 
@@ -2542,9 +2582,9 @@ impl TaskwarriorTui {
           self.task_report_previous_page();
         } else if input == KeyCode::PageDown || input == self.keyconfig.page_down {
           self.calendar_year += 10;
-        } else if input == KeyCode::Ctrl('e') {
+        } else if input == self.keyconfig.scroll_down {
           self.task_details_scroll_down();
-        } else if input == KeyCode::Ctrl('y') {
+        } else if input == self.keyconfig.scroll_up {
           self.task_details_scroll_up();
         } else if input == self.keyconfig.done {
           if self.config.uda_task_report_prompt_on_done {
@@ -2599,9 +2639,9 @@ impl TaskwarriorTui {
             self.task_report_next_page();
           } else if input == KeyCode::PageUp || input == self.keyconfig.page_up {
             self.task_report_previous_page();
-          } else if input == KeyCode::Ctrl('e') {
+          } else if input == self.keyconfig.scroll_down {
             self.task_details_scroll_down();
-          } else if input == KeyCode::Ctrl('y') {
+          } else if input == self.keyconfig.scroll_up {
             self.task_details_scroll_up();
           } else if input == self.keyconfig.done {
             if self.config.uda_task_report_prompt_on_done {
@@ -2779,7 +2819,7 @@ impl TaskwarriorTui {
               self.filter_history.history_len()
             ));
             self.update_completion_list();
-          } else if input == KeyCode::Char(':') {
+          } else if input == self.keyconfig.jump {
             self.mode = Mode::Tasks(Action::Jump);
           } else if input == self.keyconfig.shortcut1 {
             match self.task_shortcut(1).await {
@@ -2816,6 +2856,22 @@ impl TaskwarriorTui {
             }
           } else if input == self.keyconfig.priority_n {
             match self.task_priority("") {
+              Ok(_) => self.update(true).await?,
+              Err(e) => {
+                self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
+              }
+            }
+          } else if input == self.keyconfig.priority_up {
+            match self.task_priority_up() {
+              Ok(_) => self.update(true).await?,
+              Err(e) => {
+                self.error = Some(e);
+                self.mode = Mode::Tasks(Action::Error);
+              }
+            }
+          } else if input == self.keyconfig.priority_down {
+            match self.task_priority_down() {
               Ok(_) => self.update(true).await?,
               Err(e) => {
                 self.error = Some(e);
@@ -3524,7 +3580,7 @@ impl TaskwarriorTui {
               self.completion_list.previous();
             }
           }
-          KeyCode::Ctrl('r') => {
+          _ if input == self.keyconfig.reset_filter => {
             self.filter.update("", 0, &mut self.changes);
             for c in self.config.filter.chars() {
               self.filter.insert(c, 1, &mut self.changes);
@@ -3841,11 +3897,115 @@ mod tests {
 
   use super::*;
 
+  // ── Priority increment/decrement unit tests ───────────────────────
+
+  #[test]
+  fn test_next_priority_up_from_none() {
+    assert_eq!(TaskwarriorTui::next_priority_up(None), "L");
+  }
+
+  #[test]
+  fn test_next_priority_up_from_empty() {
+    assert_eq!(TaskwarriorTui::next_priority_up(Some("")), "L");
+  }
+
+  #[test]
+  fn test_next_priority_up_from_low() {
+    assert_eq!(TaskwarriorTui::next_priority_up(Some("L")), "M");
+  }
+
+  #[test]
+  fn test_next_priority_up_from_medium() {
+    assert_eq!(TaskwarriorTui::next_priority_up(Some("M")), "H");
+  }
+
+  #[test]
+  fn test_next_priority_up_from_high() {
+    assert_eq!(TaskwarriorTui::next_priority_up(Some("H")), "");
+  }
+
+  #[test]
+  fn test_next_priority_up_wraps_around() {
+    // Full cycle: None -> L -> M -> H -> None
+    let p1 = TaskwarriorTui::next_priority_up(None);
+    assert_eq!(p1, "L");
+    let p2 = TaskwarriorTui::next_priority_up(Some(p1));
+    assert_eq!(p2, "M");
+    let p3 = TaskwarriorTui::next_priority_up(Some(p2));
+    assert_eq!(p3, "H");
+    let p4 = TaskwarriorTui::next_priority_up(Some(p3));
+    assert_eq!(p4, "");
+    // Back to start: empty means "no priority"
+    let p5 = TaskwarriorTui::next_priority_up(Some(p4));
+    assert_eq!(p5, "L");
+  }
+
+  #[test]
+  fn test_next_priority_down_from_none() {
+    assert_eq!(TaskwarriorTui::next_priority_down(None), "H");
+  }
+
+  #[test]
+  fn test_next_priority_down_from_empty() {
+    assert_eq!(TaskwarriorTui::next_priority_down(Some("")), "H");
+  }
+
+  #[test]
+  fn test_next_priority_down_from_high() {
+    assert_eq!(TaskwarriorTui::next_priority_down(Some("H")), "M");
+  }
+
+  #[test]
+  fn test_next_priority_down_from_medium() {
+    assert_eq!(TaskwarriorTui::next_priority_down(Some("M")), "L");
+  }
+
+  #[test]
+  fn test_next_priority_down_from_low() {
+    assert_eq!(TaskwarriorTui::next_priority_down(Some("L")), "");
+  }
+
+  #[test]
+  fn test_next_priority_down_wraps_around() {
+    // Full cycle: None -> H -> M -> L -> None
+    let p1 = TaskwarriorTui::next_priority_down(None);
+    assert_eq!(p1, "H");
+    let p2 = TaskwarriorTui::next_priority_down(Some(p1));
+    assert_eq!(p2, "M");
+    let p3 = TaskwarriorTui::next_priority_down(Some(p2));
+    assert_eq!(p3, "L");
+    let p4 = TaskwarriorTui::next_priority_down(Some(p3));
+    assert_eq!(p4, "");
+    // Back to start
+    let p5 = TaskwarriorTui::next_priority_down(Some(p4));
+    assert_eq!(p5, "H");
+  }
+
+  #[test]
+  fn test_priority_up_and_down_are_inverses() {
+    // Going up then down should return to original for each level
+    for start in [None, Some("L"), Some("M"), Some("H"), Some("")] {
+      let up = TaskwarriorTui::next_priority_up(start);
+      let back_down = TaskwarriorTui::next_priority_down(Some(up));
+      let expected = start.unwrap_or("");
+      assert_eq!(back_down, expected, "up then down from {:?} should return to {:?}", start, expected);
+    }
+  }
+
   fn get_taskdata_path() -> PathBuf {
     let taskdata_env_var = std::env::var("TASKDATA").expect("TASKDATA environment variable not set.");
     let taskdata_path = Path::new(&taskdata_env_var).to_owned();
 
     taskdata_path
+  }
+
+  /// Ensures that both TASKDATA and TASKRC environment variables point to the
+  /// test fixtures so that integration tests never accidentally read the
+  /// user's personal `~/.taskrc`.
+  fn ensure_test_env() {
+    let taskdata = get_taskdata_path();
+    let taskrc = taskdata.parent().unwrap().join(".taskrc");
+    std::env::set_var("TASKRC", &taskrc);
   }
 
   /// Returns a string representation of the given buffer for debugging purpose.
@@ -3972,6 +4132,7 @@ mod tests {
 
   #[tokio::test]
   async fn test_taskwarrior_tui() {
+    ensure_test_env();
     let app = TaskwarriorTui::new("next", false).await.unwrap();
 
     assert!(
@@ -4741,13 +4902,13 @@ mod tests {
       "│                                      │",
       "│Keybindings:                          │",
       "│                                      │",
-      "│    Esc:                              │",
+      "│    <Esc>            Exit current acti│",
       "│                                      │",
-      "│    ]: Next view                      │",
+      "│    ]                Next view - Go to│",
       "│                                      │",
-      "│    [: Previous view                  │",
+      "│    [                Previous view - G│",
       "╰──────────────────────────────────────╯",
-      "  8% ───────────────────────────────────",
+      "  7% ───────────────────────────────────",
     ]);
 
     for i in 1..=4 {

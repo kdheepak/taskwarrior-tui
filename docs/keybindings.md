@@ -74,7 +74,21 @@ Keybindings for task report:
 
     ?: help                              - Help menu
 
+    H: priority H                        - Set priority to High
+
+    M: priority M                        - Set priority to Medium
+
+    L: priority L                        - Set priority to Low
+
+    N: priority N                        - Remove priority
+
+    +: priority up                       - Increase priority (wraps: None → L → M → H → None)
+
+    -: priority down                     - Decrease priority (wraps: None → H → M → L → None)
+
 Keybindings for filter / command prompt:
+
+    Ctrl-r: reset filter                 - Reset filter to default
 
     Ctrl + f | Right: move forward       - Move forward one character
 
