@@ -1,6 +1,7 @@
 use std::{collections::HashMap, error::Error, str};
 
 use anyhow::{Context, Result};
+use crossterm::terminal::size;
 use ratatui::{
   style::{Color, Modifier, Style},
   symbols::{bar::FULL, line::DOUBLE_VERTICAL},
@@ -94,6 +95,7 @@ pub struct Config {
   pub uda_background_process: String,
   pub uda_background_process_period: usize,
   pub uda_quick_tag_name: String,
+  pub uda_tasklist_vertical: bool,
   pub uda_task_report_prompt_on_undo: bool,
   pub uda_task_report_prompt_on_delete: bool,
   pub uda_task_report_prompt_on_done: bool,
@@ -172,6 +174,7 @@ impl Config {
       uda_style_report_completion_pane.unwrap_or_else(|| Style::default().fg(Color::Black).bg(Color::Rgb(223, 223, 223)));
     let uda_style_report_completion_pane_highlight = uda_style_report_completion_pane_highlight.unwrap_or(uda_style_report_completion_pane);
     let uda_quick_tag_name = Self::get_uda_quick_tag_name(data);
+    let uda_tasklist_vertical = Self::get_uda_tasklist_vertical(data);
     let uda_task_report_prompt_on_undo = Self::get_uda_task_report_prompt_on_undo(data);
     let uda_task_report_prompt_on_delete = Self::get_uda_task_report_prompt_on_delete(data);
     let uda_task_report_prompt_on_done = Self::get_uda_task_report_prompt_on_done(data);
@@ -228,6 +231,7 @@ impl Config {
       uda_background_process,
       uda_background_process_period,
       uda_quick_tag_name,
+      uda_tasklist_vertical,
       uda_task_report_prompt_on_undo,
       uda_task_report_prompt_on_delete,
       uda_task_report_prompt_on_done,
@@ -725,6 +729,15 @@ impl Config {
       None => "next".to_string(),
       Some(tag_name) => tag_name,
     }
+  }
+
+  fn get_uda_tasklist_vertical(data: &str) -> bool {
+    Self::get_config("uda.taskwarrior-tui.tasklist.vertical", data)
+      .unwrap_or_default()
+      .get_bool()
+      // Vertical mode is disabled by default if the option is not set and the terminal is not wide
+      // enough.
+      .unwrap_or(size().unwrap_or((50, 15)).0 <= 160)
   }
 }
 

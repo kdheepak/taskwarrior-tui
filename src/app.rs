@@ -206,6 +206,7 @@ pub struct TaskwarriorTui {
   pub event_loop: crate::event::EventLoop,
   pub requires_redraw: bool,
   pub changes: utils::Changeset,
+  pub tasklist_vertical: bool,
 }
 
 impl TaskwarriorTui {
@@ -271,6 +272,7 @@ impl TaskwarriorTui {
       task_report_height: 0,
       task_details_scroll: 0,
       task_report_show_info: c.uda_task_report_show_info,
+      tasklist_vertical: c.uda_tasklist_vertical,
       config: c,
       task_report_table: TaskReportTable::new(&data, report)?,
       calendar_year: Local::now().year(),
@@ -536,8 +538,12 @@ impl TaskwarriorTui {
 
     // render task report and task details if required
     if self.task_report_show_info {
+      let direction = match self.tasklist_vertical {
+        true => Direction::Vertical,
+        false => Direction::Horizontal,
+      };
       let split_task_layout = Layout::default()
-        .direction(Direction::Vertical)
+        .direction(direction)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
         .split(rects[0]);
 
@@ -2896,6 +2902,8 @@ impl TaskwarriorTui {
             }
           } else if input == self.keyconfig.zoom {
             self.task_report_show_info = !self.task_report_show_info;
+          } else if input == self.keyconfig.transpose {
+            self.tasklist_vertical = !self.tasklist_vertical
           } else if input == self.keyconfig.context_menu {
             self.mode = Mode::Tasks(Action::ContextMenu);
           } else if input == self.keyconfig.previous_tab {

@@ -33,6 +33,7 @@ pub struct KeyConfig {
   pub help: KeyCode,
   pub filter: KeyCode,
   pub zoom: KeyCode,
+  pub transpose: KeyCode,
   pub context_menu: KeyCode,
   pub next_tab: KeyCode,
   pub previous_tab: KeyCode,
@@ -80,6 +81,7 @@ impl Default for KeyConfig {
       help: KeyCode::Char('?'),
       filter: KeyCode::Char('/'),
       zoom: KeyCode::Char('z'),
+      transpose: KeyCode::Ctrl('t'),
       context_menu: KeyCode::Char('c'),
       next_tab: KeyCode::Char(']'),
       previous_tab: KeyCode::Char('['),
@@ -133,6 +135,7 @@ impl KeyConfig {
     let annotate = Self::get_config("uda.taskwarrior-tui.keyconfig.annotate", data);
     let filter = Self::get_config("uda.taskwarrior-tui.keyconfig.filter", data);
     let zoom = Self::get_config("uda.taskwarrior-tui.keyconfig.zoom", data);
+    let transpose = Self::get_config("uda.taskwarrior-tui.keyconfig.transpose", data);
     let context_menu = Self::get_config("uda.taskwarrior-tui.keyconfig.context-menu", data);
     let next_tab = Self::get_config("uda.taskwarrior-tui.keyconfig.next-tab", data);
     let previous_tab = Self::get_config("uda.taskwarrior-tui.keyconfig.previous-tab", data);
@@ -171,6 +174,7 @@ impl KeyConfig {
     self.annotate = annotate.unwrap_or(self.annotate);
     self.filter = filter.unwrap_or(self.filter);
     self.zoom = zoom.unwrap_or(self.zoom);
+    self.transpose = transpose.unwrap_or(self.transpose);
     self.context_menu = context_menu.unwrap_or(self.context_menu);
     self.next_tab = next_tab.unwrap_or(self.next_tab);
     self.previous_tab = previous_tab.unwrap_or(self.previous_tab);
@@ -215,6 +219,7 @@ impl KeyConfig {
       &self.help,
       &self.filter,
       &self.zoom,
+      &self.transpose,
       &self.context_menu,
       &self.next_tab,
       &self.previous_tab,
