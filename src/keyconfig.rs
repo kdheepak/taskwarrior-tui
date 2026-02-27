@@ -81,7 +81,7 @@ impl Default for KeyConfig {
       help: KeyCode::Char('?'),
       filter: KeyCode::Char('/'),
       zoom: KeyCode::Char('z'),
-      transpose: KeyCode::Ctrl('t'),
+      transpose: KeyCode::Char('\\'),
       context_menu: KeyCode::Char('c'),
       next_tab: KeyCode::Char(']'),
       previous_tab: KeyCode::Char('['),
