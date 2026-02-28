@@ -149,6 +149,11 @@ impl KeyConfig {
     let shortcut7 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut7", data);
     let shortcut8 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut8", data);
     let shortcut9 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut9", data);
+    let help = Self::get_config("uda.taskwarrior-tui.keyconfig.help", data);
+    let priority_h = Self::get_config("uda.taskwarrior-tui.keyconfig.priority-h", data);
+    let priority_m = Self::get_config("uda.taskwarrior-tui.keyconfig.priority-m", data);
+    let priority_l = Self::get_config("uda.taskwarrior-tui.keyconfig.priority-l", data);
+    let priority_n = Self::get_config("uda.taskwarrior-tui.keyconfig.priority-n", data);
 
     self.quit = quit.unwrap_or(self.quit);
     self.refresh = refresh.unwrap_or(self.refresh);
@@ -188,6 +193,11 @@ impl KeyConfig {
     self.shortcut7 = shortcut7.unwrap_or(self.shortcut7);
     self.shortcut8 = shortcut8.unwrap_or(self.shortcut8);
     self.shortcut9 = shortcut9.unwrap_or(self.shortcut9);
+    self.help = help.unwrap_or(self.help);
+    self.priority_h = priority_h.unwrap_or(self.priority_h);
+    self.priority_m = priority_m.unwrap_or(self.priority_m);
+    self.priority_l = priority_l.unwrap_or(self.priority_l);
+    self.priority_n = priority_n.unwrap_or(self.priority_n);
 
     self.check()
   }
@@ -223,6 +233,10 @@ impl KeyConfig {
       &self.context_menu,
       &self.next_tab,
       &self.previous_tab,
+      &self.priority_h,
+      &self.priority_m,
+      &self.priority_l,
+      &self.priority_n,
     ];
     let l = elements.len();
     elements.dedup();
@@ -263,4 +277,47 @@ fn has_just_one_char(s: &str) -> bool {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn test_defaults_when_config_absent() {
+    let data = "";
+    let kc = KeyConfig::new(data).unwrap();
+    assert_eq!(kc.help, KeyCode::Char('?'));
+    assert_eq!(kc.priority_h, KeyCode::Char('H'));
+    assert_eq!(kc.priority_m, KeyCode::Char('M'));
+    assert_eq!(kc.priority_l, KeyCode::Char('L'));
+    assert_eq!(kc.priority_n, KeyCode::Char('N'));
+  }
+
+  #[test]
+  fn test_help_key_configurable() {
+    let data = "uda.taskwarrior-tui.keyconfig.help h\n";
+    let kc = KeyConfig::new(data).unwrap();
+    assert_eq!(kc.help, KeyCode::Char('h'));
+  }
+
+  #[test]
+  fn test_priority_keys_configurable() {
+    let data = "uda.taskwarrior-tui.keyconfig.priority-h 1\n\
+                uda.taskwarrior-tui.keyconfig.priority-m 2\n\
+                uda.taskwarrior-tui.keyconfig.priority-l 3\n\
+                uda.taskwarrior-tui.keyconfig.priority-n 4\n";
+    let kc = KeyConfig::new(data).unwrap();
+    assert_eq!(kc.priority_h, KeyCode::Char('1'));
+    assert_eq!(kc.priority_m, KeyCode::Char('2'));
+    assert_eq!(kc.priority_l, KeyCode::Char('3'));
+    assert_eq!(kc.priority_n, KeyCode::Char('4'));
+  }
+
+  #[test]
+  fn test_existing_keys_still_work() {
+    let data = "uda.taskwarrior-tui.keyconfig.quit Q\n\
+                uda.taskwarrior-tui.keyconfig.add n\n";
+    let kc = KeyConfig::new(data).unwrap();
+    assert_eq!(kc.quit, KeyCode::Char('Q'));
+    assert_eq!(kc.add, KeyCode::Char('n'));
+    // unset keys keep defaults
+    assert_eq!(kc.refresh, KeyCode::Char('r'));
+    assert_eq!(kc.down, KeyCode::Char('j'));
+  }
 }
