@@ -4786,7 +4786,7 @@ mod tests {
     terminal.backend().assert_buffer(&expected);
   }
 
-  // #[test]
+  #[tokio::test]
   async fn test_draw_context_menu() {
     let mut expected = Buffer::with_lines(vec![
       "╭Context───────────────────────────────────────────────────────────────────────╮",
