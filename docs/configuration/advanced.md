@@ -43,6 +43,11 @@ uda.taskwarrior-tui.task-report.auto-insert-double-quotes-on-log=true
 uda.taskwarrior-tui.task-report.reset-filter-on-esc=true
 uda.taskwarrior-tui.context-menu.select-on-move=false
 uda.taskwarrior-tui.tabs.change-focus-rotate=false
+# UI chrome styles (support all Taskwarrior color formats)
+uda.taskwarrior-tui.style.title=         # default: LightCyan foreground
+uda.taskwarrior-tui.style.title.border=  # default: White foreground
+uda.taskwarrior-tui.style.help.gauge=    # default: Gray foreground
+uda.taskwarrior-tui.style.command.error= # default: Red foreground
 ```
 
 The `uda.taskwarrior-tui.task-report.next.filter` variable defines the default view at program
