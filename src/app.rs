@@ -908,7 +908,7 @@ impl TaskwarriorTui {
 
     let gauge = LineGauge::default()
       .block(Block::default())
-      .filled_style(Style::default().fg(Color::Gray))
+      .filled_style(self.config.uda_style_help_gauge)
       .ratio(ratio);
 
     f.render_widget(gauge, chunks[1]);
@@ -1034,7 +1034,7 @@ impl TaskwarriorTui {
     // render command title
     let mut style = self.config.uda_style_command;
     if error.is_some() {
-      style = style.fg(Color::Red);
+      style = self.config.uda_style_command_error;
     };
     let title_spans = if let Some(subtitle) = title.1 {
       Line::from(vec![title.0, Span::from(" ["), subtitle, Span::from("]")])
