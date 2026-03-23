@@ -23,6 +23,8 @@ pub struct ReportsState {
   pub table_state: TaskwarriorTuiTableState,
   pub columns: Vec<String>,
   pub rows: Vec<ReportDetails>,
+  /// Current search query typed by the user inside the popup.
+  pub search: String,
 }
 
 impl ReportsState {
@@ -31,6 +33,7 @@ impl ReportsState {
       table_state: TaskwarriorTuiTableState::default(),
       columns: vec![NAME.to_string(), DESCRIPTION.to_string(), ACTIVE.to_string()],
       rows: vec![],
+      search: String::new(),
     }
   }
 
@@ -40,6 +43,20 @@ impl ReportsState {
 
   pub fn is_empty(&self) -> bool {
     self.rows.is_empty()
+  }
+
+  /// Returns the indices into `self.rows` that match the current search query.
+  /// An empty query matches everything (original order is preserved).
+  /// Matching is case-insensitive substring on name or description.
+  pub fn filtered_indices(&self) -> Vec<usize> {
+    let query = self.search.to_lowercase();
+    self
+      .rows
+      .iter()
+      .enumerate()
+      .filter(|(_, r)| query.is_empty() || r.name.to_lowercase().contains(&query) || r.description.to_lowercase().contains(&query))
+      .map(|(i, _)| i)
+      .collect()
   }
 
   /// Parse the `task show` output for all reports that have columns defined

@@ -180,8 +180,8 @@ impl Config {
     let uda_style_calendar_today = uda_style_calendar_today.unwrap_or_else(|| Style::default().add_modifier(Modifier::BOLD));
     let uda_style_navbar = uda_style_navbar.unwrap_or_else(|| Style::default().add_modifier(Modifier::REVERSED));
     let uda_style_command = uda_style_command.unwrap_or_else(|| Style::default().add_modifier(Modifier::REVERSED));
-    let uda_style_context_active = uda_style_context_active.unwrap_or_default();
-    let uda_style_report_menu_active = uda_style_report_menu_active.unwrap_or_default();
+    let uda_style_context_active = uda_style_context_active.unwrap_or_else(|| Style::default().add_modifier(Modifier::BOLD));
+    let uda_style_report_menu_active = uda_style_report_menu_active.unwrap_or_else(|| Style::default().add_modifier(Modifier::BOLD));
     let uda_style_report_completion_pane =
       uda_style_report_completion_pane.unwrap_or_else(|| Style::default().fg(Color::Black).bg(Color::Rgb(223, 223, 223)));
     let uda_style_report_completion_pane_highlight = uda_style_report_completion_pane_highlight.unwrap_or(uda_style_report_completion_pane);
