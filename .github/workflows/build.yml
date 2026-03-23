@@ -63,7 +63,7 @@ jobs:
           command: build
           args: --release ${{matrix.features}} --target=${{ matrix.target }}
       - name: Compress binaries
-        uses: svenstaro/upx-action@v2
+        uses: svenstaro/upx-action@v3
         with:
           files: target/${{ matrix.target }}/release/taskwarrior-tui${{ matrix.binary_postfix }}
           args: ${{ matrix.upx_args }}
