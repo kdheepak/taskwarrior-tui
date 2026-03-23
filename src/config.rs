@@ -83,6 +83,7 @@ pub struct Config {
   pub uda_selection_reverse: bool,
   pub uda_calendar_months_per_row: usize,
   pub uda_style_context_active: Style,
+  pub uda_style_report_menu_active: Style,
   pub uda_style_report_selection: Style,
   pub uda_style_calendar_title: Style,
   pub uda_style_calendar_today: Style,
@@ -105,6 +106,7 @@ pub struct Config {
   pub uda_task_report_prompt_on_done: bool,
   pub uda_task_report_date_time_vague_more_precise: bool,
   pub uda_context_menu_select_on_move: bool,
+  pub uda_report_menu_select_on_move: bool,
   pub uda: Vec<Uda>,
 }
 
@@ -161,6 +163,7 @@ impl Config {
     let uda_style_navbar = Self::get_uda_style("navbar", data);
     let uda_style_command = Self::get_uda_style("command", data);
     let uda_style_context_active = Self::get_uda_style("context.active", data);
+    let uda_style_report_menu_active = Self::get_uda_style("report-menu.active", data);
     let uda_style_report_completion_pane = Self::get_uda_style("report.completion-pane", data);
     let uda_style_report_completion_pane_highlight = Self::get_uda_style("report.completion-pane-highlight", data);
     let uda_style_title = Self::get_uda_style("title", data);
@@ -178,6 +181,7 @@ impl Config {
     let uda_style_navbar = uda_style_navbar.unwrap_or_else(|| Style::default().add_modifier(Modifier::REVERSED));
     let uda_style_command = uda_style_command.unwrap_or_else(|| Style::default().add_modifier(Modifier::REVERSED));
     let uda_style_context_active = uda_style_context_active.unwrap_or_default();
+    let uda_style_report_menu_active = uda_style_report_menu_active.unwrap_or_default();
     let uda_style_report_completion_pane =
       uda_style_report_completion_pane.unwrap_or_else(|| Style::default().fg(Color::Black).bg(Color::Rgb(223, 223, 223)));
     let uda_style_report_completion_pane_highlight = uda_style_report_completion_pane_highlight.unwrap_or(uda_style_report_completion_pane);
@@ -191,6 +195,7 @@ impl Config {
     let uda_task_report_prompt_on_delete = Self::get_uda_task_report_prompt_on_delete(data);
     let uda_task_report_prompt_on_done = Self::get_uda_task_report_prompt_on_done(data);
     let uda_context_menu_select_on_move = Self::get_uda_context_menu_select_on_move(data);
+    let uda_report_menu_select_on_move = Self::get_uda_report_menu_select_on_move(data);
     let uda_task_report_date_time_vague_more_precise = Self::get_uda_task_report_date_time_vague_more_precise(data);
 
     Ok(Self {
@@ -230,19 +235,20 @@ impl Config {
       uda_selection_reverse,
       uda_calendar_months_per_row,
       uda_style_report_selection,
-      uda_style_context_active,
+      uda_style_report_scrollbar,
+      uda_style_report_scrollbar_area,
       uda_style_calendar_title,
       uda_style_calendar_today,
       uda_style_navbar,
       uda_style_command,
+      uda_style_context_active,
+      uda_style_report_menu_active,
       uda_style_report_completion_pane,
       uda_style_report_completion_pane_highlight,
       uda_style_title,
       uda_style_title_border,
       uda_style_help_gauge,
       uda_style_command_error,
-      uda_style_report_scrollbar,
-      uda_style_report_scrollbar_area,
       uda_shortcuts,
       uda_background_process,
       uda_background_process_period,
@@ -251,8 +257,9 @@ impl Config {
       uda_task_report_prompt_on_undo,
       uda_task_report_prompt_on_delete,
       uda_task_report_prompt_on_done,
-      uda_task_report_date_time_vague_more_precise,
       uda_context_menu_select_on_move,
+      uda_report_menu_select_on_move,
+      uda_task_report_date_time_vague_more_precise,
       uda: vec![],
     })
   }
@@ -501,7 +508,7 @@ impl Config {
     data.split(',').map(ToString::to_string).collect::<Vec<_>>()
   }
 
-  fn get_filter(data: &str, report: &str) -> Result<String> {
+  pub fn get_filter(data: &str, report: &str) -> Result<String> {
     if report == "all" {
       Ok("".into())
     } else if let Some(s) = Self::get_config(format!("uda.taskwarrior-tui.task-report.{}.filter", report).as_str(), data) {
@@ -617,6 +624,13 @@ impl Config {
 
   fn get_uda_context_menu_select_on_move(data: &str) -> bool {
     Self::get_config("uda.taskwarrior-tui.context-menu.select-on-move", data)
+      .unwrap_or_default()
+      .get_bool()
+      .unwrap_or(false)
+  }
+
+  fn get_uda_report_menu_select_on_move(data: &str) -> bool {
+    Self::get_config("uda.taskwarrior-tui.report-menu.select-on-move", data)
       .unwrap_or_default()
       .get_bool()
       .unwrap_or(false)

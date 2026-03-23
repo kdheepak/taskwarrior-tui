@@ -51,6 +51,7 @@ use crate::{
   pane::{
     context::{ContextDetails, ContextsState},
     project::ProjectsState,
+    report::ReportsState,
     Pane,
   },
   scrollbar::Scrollbar,
@@ -201,6 +202,7 @@ pub struct TaskwarriorTui {
   pub report: String,
   pub projects: ProjectsState,
   pub contexts: ContextsState,
+  pub reports: ReportsState,
   pub task_version: Versioning,
   pub error: Option<String>,
   pub event_loop: crate::event::EventLoop,
@@ -289,6 +291,7 @@ impl TaskwarriorTui {
       report: report.to_string(),
       projects: ProjectsState::new(),
       contexts: ContextsState::new(),
+      reports: ReportsState::new(),
       task_version,
       error: None,
       event_loop,
@@ -466,6 +469,8 @@ impl TaskwarriorTui {
     };
     let navbar_block = Block::default().style(self.config.uda_style_navbar);
     let context = Line::from(vec![
+      Span::from(&self.report),
+      Span::from(" "),
       Span::from("["),
       Span::from(if self.current_context.is_empty() {
         "none"
@@ -791,6 +796,18 @@ impl TaskwarriorTui {
         );
         self.draw_context_menu(f, 80, 50);
       }
+      Action::ReportMenu => {
+        self.draw_command(
+          f,
+          rects[1],
+          self.filter.as_str(),
+          ("Filter Tasks".into(), None),
+          Self::get_position(&self.filter),
+          false,
+          self.error.clone(),
+        );
+        self.draw_report_menu(f, 80, 50);
+      }
       Action::DonePrompt => {
         let label = if task_ids.len() > 1 {
           format!("Done Tasks {}?", task_ids.join(","))
@@ -930,7 +947,6 @@ impl TaskwarriorTui {
     let maximum_column_width = area.width;
     let widths = self.calculate_widths(&contexts, &headers, maximum_column_width);
 
-    let selected = self.contexts.table_state.current_selection().unwrap_or_default();
     let header = headers.iter();
     let mut rows = vec![];
     let mut highlight_style = Style::default();
@@ -972,6 +988,59 @@ impl TaskwarriorTui {
       .widths(&constraints);
 
     f.render_stateful_widget(t, area, &mut self.contexts.table_state);
+  }
+
+  fn draw_report_menu(&mut self, f: &mut Frame, percent_x: u16, percent_y: u16) {
+    let area = centered_rect(percent_x, percent_y, f.area());
+
+    f.render_widget(Clear, area.inner(Margin { vertical: 0, horizontal: 0 }));
+
+    let (reports, headers) = self.get_all_reports();
+
+    let maximum_column_width = area.width;
+    let widths = self.calculate_widths(&reports, &headers, maximum_column_width);
+
+    let header = headers.iter();
+    let mut rows = vec![];
+    let mut highlight_style = Style::default();
+    for (i, report) in reports.iter().enumerate() {
+      let mut style = Style::default();
+      if &self.reports.rows[i].active == "yes" {
+        style = self.config.uda_style_report_menu_active;
+      }
+      rows.push(Row::StyledData(report.iter(), style));
+      if i == self.reports.table_state.current_selection().unwrap_or_default() {
+        highlight_style = style;
+      }
+    }
+
+    let constraints: Vec<Constraint> = widths
+      .iter()
+      .map(|i| Constraint::Length((*i).try_into().unwrap_or(maximum_column_width)))
+      .collect();
+
+    let highlight_style = highlight_style.add_modifier(Modifier::BOLD);
+    let t = Table::new(header, rows.into_iter())
+      .block(
+        Block::default()
+          .borders(Borders::ALL)
+          .border_type(BorderType::Rounded)
+          .title(Line::from(vec![Span::styled("Report", Style::default().add_modifier(Modifier::BOLD))])),
+      )
+      .header_style(
+        self
+          .config
+          .color
+          .get("color.label")
+          .copied()
+          .unwrap_or_default()
+          .add_modifier(Modifier::UNDERLINED),
+      )
+      .highlight_style(highlight_style)
+      .highlight_symbol(&self.config.uda_selection_indicator)
+      .widths(&constraints);
+
+    f.render_stateful_widget(t, area, &mut self.reports.table_state);
   }
 
   fn draw_completion_pop_up(&mut self, f: &mut Frame, rect: Rect, cursor_position: usize) {
@@ -1294,6 +1363,17 @@ impl TaskwarriorTui {
     (contexts, headers)
   }
 
+  fn get_all_reports(&self) -> (Vec<Vec<String>>, Vec<String>) {
+    let reports = self
+      .reports
+      .rows
+      .iter()
+      .map(|r| vec![r.name.clone(), r.description.clone(), r.active.clone()])
+      .collect();
+    let headers = vec!["Name".to_string(), "Description".to_string(), "Active".to_string()];
+    (reports, headers)
+  }
+
   fn get_task_report(&mut self) -> (Vec<Vec<String>>, Vec<String>) {
     self.task_report_table.generate_table(&self.tasks);
     let (tasks, headers) = self.task_report_table.simplify_table();
@@ -1317,6 +1397,7 @@ impl TaskwarriorTui {
         self.export_all_tasks()?;
       }
       self.contexts.update_data()?;
+      self.reports.update_data(&self.report, &Self::task_show_output()?);
       self.projects.update_data()?;
       self.update_tags();
       self.task_details.clear();
@@ -1491,6 +1572,73 @@ impl TaskwarriorTui {
     command.arg("context").arg(&self.contexts.rows[i].name);
     command.output()?;
     Ok(())
+  }
+
+  pub fn report_next(&mut self) {
+    if self.reports.is_empty() {
+      return;
+    }
+    let i = match self.reports.table_state.current_selection() {
+      Some(i) => {
+        if i >= self.reports.len() - 1 {
+          0
+        } else {
+          i + 1
+        }
+      }
+      None => 0,
+    };
+    self.reports.table_state.select(Some(i));
+  }
+
+  pub fn report_previous(&mut self) {
+    if self.reports.is_empty() {
+      return;
+    }
+    let i = match self.reports.table_state.current_selection() {
+      Some(i) => {
+        if i == 0 {
+          self.reports.len() - 1
+        } else {
+          i - 1
+        }
+      }
+      None => 0,
+    };
+    self.reports.table_state.select(Some(i));
+  }
+
+  pub fn report_select(&mut self, data: &str) -> Result<()> {
+    let i = self.reports.table_state.current_selection().unwrap_or_default();
+    let report = self.reports.rows.get(i).map(|r| r.name.clone()).unwrap_or_default();
+    if report.is_empty() {
+      return Ok(());
+    }
+
+    self.report = report;
+    self.config.filter = Config::get_filter(data, &self.report)?;
+    if !self.config.filter.trim().is_empty() {
+      self.config.filter = format!("{} ", self.config.filter.trim());
+    }
+
+    self.filter = LineBuffer::with_capacity(MAX_LINE);
+    for c in self.config.filter.chars() {
+      self.filter.insert(c, 1, &mut self.changes);
+    }
+
+    self.task_report_table.export_headers(Some(data), &self.report)?;
+    Ok(())
+  }
+
+  fn task_show_output() -> Result<String> {
+    let output = std::process::Command::new("task")
+      .arg("rc.color=off")
+      .arg("rc._forcecolor=off")
+      .arg("rc.defaultwidth=0")
+      .arg("show")
+      .output()
+      .context("Unable to run `task show`.")?;
+    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
   }
 
   pub fn task_report_top(&mut self) {
@@ -2906,6 +3054,8 @@ impl TaskwarriorTui {
             self.tasklist_vertical = !self.tasklist_vertical
           } else if input == self.keyconfig.context_menu {
             self.mode = Mode::Tasks(Action::ContextMenu);
+          } else if input == self.keyconfig.report_menu {
+            self.mode = Mode::Tasks(Action::ReportMenu);
           } else if input == self.keyconfig.previous_tab {
             if self.config.uda_change_focus_rotate {
               self.mode = Mode::Calendar;
@@ -2955,6 +3105,59 @@ impl TaskwarriorTui {
               self.mode = Mode::Tasks(Action::Report);
             } else {
               match self.context_select() {
+                Ok(_) => self.update(true).await?,
+                Err(e) => {
+                  self.error = Some(e.to_string());
+                  self.mode = Mode::Tasks(Action::Error);
+                }
+              }
+            }
+          }
+        }
+        Action::ReportMenu => {
+          if input == self.keyconfig.quit || input == KeyCode::Esc {
+            self.mode = Mode::Tasks(Action::Report);
+          } else if input == KeyCode::Down || input == self.keyconfig.down {
+            self.report_next();
+            if self.config.uda_report_menu_select_on_move {
+              if self.error.is_some() {
+                self.previous_mode = Some(self.mode.clone());
+                self.mode = Mode::Tasks(Action::Error);
+              } else {
+                let data = Self::task_show_output()?;
+                match self.report_select(&data) {
+                  Ok(_) => self.update(true).await?,
+                  Err(e) => {
+                    self.error = Some(e.to_string());
+                  }
+                }
+              }
+            }
+          } else if input == KeyCode::Up || input == self.keyconfig.up {
+            self.report_previous();
+            if self.config.uda_report_menu_select_on_move {
+              if self.error.is_some() {
+                self.previous_mode = Some(self.mode.clone());
+                self.mode = Mode::Tasks(Action::Error);
+              } else {
+                let data = Self::task_show_output()?;
+                match self.report_select(&data) {
+                  Ok(_) => self.update(true).await?,
+                  Err(e) => {
+                    self.error = Some(e.to_string());
+                  }
+                }
+              }
+            }
+          } else if input == KeyCode::Char('\n') {
+            if self.error.is_some() {
+              self.previous_mode = Some(self.mode.clone());
+              self.mode = Mode::Tasks(Action::Error);
+            } else if self.config.uda_report_menu_select_on_move {
+              self.mode = Mode::Tasks(Action::Report);
+            } else {
+              let data = Self::task_show_output()?;
+              match self.report_select(&data) {
                 Ok(_) => self.update(true).await?,
                 Err(e) => {
                   self.error = Some(e.to_string());
@@ -4314,7 +4517,7 @@ mod tests {
 
   async fn test_draw_empty_task_report() {
     let mut expected = Buffer::with_lines(vec![
-      " Tasks   Projects   Calendar                [none]",
+      " Tasks   Projects   Calendar           next [none]",
       "                                                  ",
       "                                                  ",
       "                                                  ",
@@ -4672,7 +4875,7 @@ mod tests {
 
   async fn test_draw_calendar() {
     let mut expected = Buffer::with_lines(vec![
-      " Tasks   Projects   Calendar                [none]",
+      " Tasks   Projects   Calendar           next [none]",
       "                                                  ",
       "                       2020                       ",
       "                                                  ",

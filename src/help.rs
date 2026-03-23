@@ -58,6 +58,7 @@ fn keycode_for(name: &str, kc: &KeyConfig) -> KeyCode {
     "shortcut7" => kc.shortcut7,
     "shortcut8" => kc.shortcut8,
     "context_menu" => kc.context_menu,
+    "report_menu" => kc.report_menu,
     "help" => kc.help,
     _ => KeyCode::Null,
   }

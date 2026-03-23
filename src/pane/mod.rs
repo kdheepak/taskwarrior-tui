@@ -10,6 +10,7 @@ use crate::{
 
 pub mod context;
 pub mod project;
+pub mod report;
 
 pub trait Pane {
   fn handle_input(app: &mut TaskwarriorTui, input: KeyCode) -> Result<()>;

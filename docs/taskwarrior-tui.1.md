@@ -128,6 +128,9 @@ Ctrl-y
 `c`
 : context switcher menu             - Open context switcher menu
 
+`R`
+: report switcher menu              - Open report switcher menu
+
 `?`
 : help                              - Help menu
 
@@ -193,6 +196,15 @@ Keybindings for context switcher:
 
 `k`
 : {selected-=1}                     - Move back a context
+
+
+Keybindings for report switcher:
+
+`j`
+: {selected+=1}                     - Move forward a report
+
+`k`
+: {selected-=1}                     - Move back a report
 
 
 Keybindings for calendar:

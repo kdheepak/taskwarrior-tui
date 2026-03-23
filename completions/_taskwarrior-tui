@@ -15,14 +15,14 @@ _taskwarrior-tui() {
 
     local context curcontext="$curcontext" state line
     _arguments "${_arguments_options[@]}" : \
-'-d+[Sets the data folder for taskwarrior-tui]:FOLDER: ' \
-'--data=[Sets the data folder for taskwarrior-tui]:FOLDER: ' \
-'-c+[Sets the config folder for taskwarrior-tui (currently not used)]:FOLDER: ' \
-'--config=[Sets the config folder for taskwarrior-tui (currently not used)]:FOLDER: ' \
-'--taskdata=[Sets the .task folder using the TASKDATA environment variable for taskwarrior]:FOLDER: ' \
-'--taskrc=[Sets the .taskrc file using the TASKRC environment variable for taskwarrior]:FILE: ' \
-'-r+[Sets default report]:STRING: ' \
-'--report=[Sets default report]:STRING: ' \
+'-d+[Sets the data folder for taskwarrior-tui]:FOLDER:_default' \
+'--data=[Sets the data folder for taskwarrior-tui]:FOLDER:_default' \
+'-c+[Sets the config folder for taskwarrior-tui (currently not used)]:FOLDER:_default' \
+'--config=[Sets the config folder for taskwarrior-tui (currently not used)]:FOLDER:_default' \
+'--taskdata=[Sets the .task folder using the TASKDATA environment variable for taskwarrior]:FOLDER:_default' \
+'--taskrc=[Sets the .taskrc file using the TASKRC environment variable for taskwarrior]:FILE:_default' \
+'-r+[Sets default report]:STRING:_default' \
+'--report=[Sets default report]:STRING:_default' \
 '-h[Print help]' \
 '--help[Print help]' \
 '-V[Print version]' \

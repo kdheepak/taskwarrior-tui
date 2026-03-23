@@ -72,6 +72,8 @@ Keybindings for task report:
 
     c: context switcher menu             - Open context switcher menu
 
+    R: report switcher menu              - Open report switcher menu
+
     ?: help                              - Help menu
 
 Keybindings for filter / command prompt:
@@ -117,6 +119,14 @@ Keybindings for context switcher:
     k: {selected-=1}                     - Move back a context
 
     Enter: task context {selected}       - Select highlighted context
+
+Keybindings for report switcher:
+
+    j: {selected+=1}                     - Move forward a report
+
+    k: {selected-=1}                     - Move back a report
+
+    Enter: task report {selected}        - Select highlighted report
 
 Keybindings for calendar:
 
