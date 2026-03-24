@@ -51,6 +51,7 @@ use crate::{
   pane::{
     context::{ContextDetails, ContextsState},
     project::ProjectsState,
+    report::ReportsState,
     Pane,
   },
   scrollbar::Scrollbar,
@@ -201,6 +202,7 @@ pub struct TaskwarriorTui {
   pub report: String,
   pub projects: ProjectsState,
   pub contexts: ContextsState,
+  pub reports: ReportsState,
   pub task_version: Versioning,
   pub error: Option<String>,
   pub event_loop: crate::event::EventLoop,
@@ -289,6 +291,7 @@ impl TaskwarriorTui {
       report: report.to_string(),
       projects: ProjectsState::new(),
       contexts: ContextsState::new(),
+      reports: ReportsState::new(),
       task_version,
       error: None,
       event_loop,
@@ -466,6 +469,8 @@ impl TaskwarriorTui {
     };
     let navbar_block = Block::default().style(self.config.uda_style_navbar);
     let context = Line::from(vec![
+      Span::from(&self.report),
+      Span::from(" "),
       Span::from("["),
       Span::from(if self.current_context.is_empty() {
         "none"
@@ -791,6 +796,18 @@ impl TaskwarriorTui {
         );
         self.draw_context_menu(f, 80, 50);
       }
+      Action::ReportMenu => {
+        self.draw_command(
+          f,
+          rects[1],
+          self.filter.as_str(),
+          ("Filter Tasks".into(), None),
+          Self::get_position(&self.filter),
+          false,
+          self.error.clone(),
+        );
+        self.draw_report_menu(f, 80, 50);
+      }
       Action::DonePrompt => {
         let label = if task_ids.len() > 1 {
           format!("Done Tasks {}?", task_ids.join(","))
@@ -916,48 +933,77 @@ impl TaskwarriorTui {
   }
 
   fn draw_context_menu(&mut self, f: &mut Frame, percent_x: u16, percent_y: u16) {
-    let rects = Layout::default()
-      .direction(Direction::Vertical)
-      .constraints([Constraint::Min(0)].as_ref())
-      .split(f.area());
-
     let area = centered_rect(percent_x, percent_y, f.area());
-
     f.render_widget(Clear, area.inner(Margin { vertical: 0, horizontal: 0 }));
 
-    let (contexts, headers) = self.get_all_contexts();
+    // Split the popup: 1 row for search bar, remainder for the table.
+    let chunks = Layout::default()
+      .direction(Direction::Vertical)
+      .constraints([Constraint::Length(3), Constraint::Min(0)])
+      .split(area);
 
-    let maximum_column_width = area.width;
-    let widths = self.calculate_widths(&contexts, &headers, maximum_column_width);
-
-    let selected = self.contexts.table_state.current_selection().unwrap_or_default();
-    let header = headers.iter();
-    let mut rows = vec![];
-    let mut highlight_style = Style::default();
-    for (i, context) in contexts.iter().enumerate() {
-      let mut style = Style::default();
-      if &self.contexts.rows[i].active == "yes" {
-        style = self.config.uda_style_context_active;
-      }
-      rows.push(Row::StyledData(context.iter(), style));
-      if i == self.contexts.table_state.current_selection().unwrap_or_default() {
-        highlight_style = style;
-      }
-    }
-
-    let constraints: Vec<Constraint> = widths
-      .iter()
-      .map(|i| Constraint::Length((*i).try_into().unwrap_or(maximum_column_width)))
-      .collect();
-
-    let highlight_style = highlight_style.add_modifier(Modifier::BOLD);
-    let t = Table::new(header, rows.into_iter())
-      .block(
+    // --- Search bar ---
+    let search_text = format!(" {}", self.contexts.search);
+    let cursor_x = chunks[0].x + 2 + self.contexts.search.len() as u16;
+    let cursor_y = chunks[0].y + 1;
+    f.render_widget(
+      Paragraph::new(search_text).block(
         Block::default()
           .borders(Borders::ALL)
           .border_type(BorderType::Rounded)
-          .title(Line::from(vec![Span::styled("Context", Style::default().add_modifier(Modifier::BOLD))])),
-      )
+          .title(Span::styled("Context  (type to filter)", Style::default().add_modifier(Modifier::BOLD))),
+      ),
+      chunks[0],
+    );
+    f.set_cursor_position(Position {
+      x: cursor_x.min(chunks[0].x + chunks[0].width.saturating_sub(2)),
+      y: cursor_y,
+    });
+
+    // --- Filtered table ---
+    let indices = self.contexts.filtered_indices();
+    let selected_filtered = self.contexts.table_state.current_selection().unwrap_or(0);
+
+    let headers = ["Name", "Definition", "Active"];
+    let filtered_rows: Vec<Vec<String>> = indices
+      .iter()
+      .map(|&ri| {
+        let r = &self.contexts.rows[ri];
+        vec![r.name.clone(), r.definition.clone(), r.active.clone()]
+      })
+      .collect();
+
+    let maximum_column_width = chunks[1].width;
+    let widths = self.calculate_widths(
+      &filtered_rows,
+      &headers.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
+      maximum_column_width,
+    );
+    let constraints: Vec<Constraint> = widths
+      .iter()
+      .map(|w| Constraint::Length((*w).try_into().unwrap_or(maximum_column_width)))
+      .collect();
+
+    let mut highlight_style = Style::default();
+    let rows: Vec<Row<std::slice::Iter<String>>> = filtered_rows
+      .iter()
+      .enumerate()
+      .map(|(fi, row)| {
+        let ri = indices[fi];
+        let mut style = Style::default();
+        if self.contexts.rows[ri].active == "yes" {
+          style = self.config.uda_style_context_active;
+        }
+        if fi == selected_filtered {
+          highlight_style = style;
+        }
+        Row::StyledData(row.iter(), style)
+      })
+      .collect();
+
+    let highlight_style = highlight_style.add_modifier(Modifier::BOLD);
+    let t = Table::new(headers.iter(), rows.into_iter())
+      .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded))
       .header_style(
         self
           .config
@@ -971,7 +1017,95 @@ impl TaskwarriorTui {
       .highlight_symbol(&self.config.uda_selection_indicator)
       .widths(&constraints);
 
-    f.render_stateful_widget(t, area, &mut self.contexts.table_state);
+    f.render_stateful_widget(t, chunks[1], &mut self.contexts.table_state);
+  }
+
+  fn draw_report_menu(&mut self, f: &mut Frame, percent_x: u16, percent_y: u16) {
+    let area = centered_rect(percent_x, percent_y, f.area());
+    f.render_widget(Clear, area.inner(Margin { vertical: 0, horizontal: 0 }));
+
+    // Split the popup: 1 row for search bar, remainder for the table.
+    let chunks = Layout::default()
+      .direction(Direction::Vertical)
+      .constraints([Constraint::Length(3), Constraint::Min(0)])
+      .split(area);
+
+    // --- Search bar ---
+    let search_text = format!(" {}", self.reports.search);
+    let cursor_x = chunks[0].x + 2 + self.reports.search.len() as u16;
+    let cursor_y = chunks[0].y + 1;
+    f.render_widget(
+      Paragraph::new(search_text).block(
+        Block::default()
+          .borders(Borders::ALL)
+          .border_type(BorderType::Rounded)
+          .title(Span::styled("Report  (type to filter)", Style::default().add_modifier(Modifier::BOLD))),
+      ),
+      chunks[0],
+    );
+    f.set_cursor_position(Position {
+      x: cursor_x.min(chunks[0].x + chunks[0].width.saturating_sub(2)),
+      y: cursor_y,
+    });
+
+    // --- Filtered table ---
+    let indices = self.reports.filtered_indices();
+    let selected_filtered = self.reports.table_state.current_selection().unwrap_or(0);
+
+    let headers = ["Name", "Description", "Active"];
+    let filtered_rows: Vec<Vec<String>> = indices
+      .iter()
+      .map(|&ri| {
+        let r = &self.reports.rows[ri];
+        vec![r.name.clone(), r.description.clone(), r.active.clone()]
+      })
+      .collect();
+
+    let maximum_column_width = chunks[1].width;
+    let widths = self.calculate_widths(
+      &filtered_rows,
+      &headers.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
+      maximum_column_width,
+    );
+    let constraints: Vec<Constraint> = widths
+      .iter()
+      .map(|w| Constraint::Length((*w).try_into().unwrap_or(maximum_column_width)))
+      .collect();
+
+    let mut highlight_style = Style::default();
+    let rows: Vec<Row<std::slice::Iter<String>>> = filtered_rows
+      .iter()
+      .enumerate()
+      .map(|(fi, row)| {
+        let ri = indices[fi];
+        let mut style = Style::default();
+        if self.reports.rows[ri].active == "yes" {
+          style = self.config.uda_style_report_menu_active;
+        }
+        if fi == selected_filtered {
+          highlight_style = style;
+        }
+        Row::StyledData(row.iter(), style)
+      })
+      .collect();
+
+    let highlight_style = highlight_style.add_modifier(Modifier::BOLD);
+    let t = Table::new(headers.iter(), rows.into_iter())
+      .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded))
+      .header_style(
+        self
+          .config
+          .color
+          .get("color.label")
+          .copied()
+          .unwrap_or_default()
+          .add_modifier(Modifier::UNDERLINED),
+      )
+      .highlight_style(highlight_style)
+      .highlight_symbol(&self.config.uda_selection_indicator)
+      .widths(&constraints);
+
+    f.render_stateful_widget(t, chunks[1], &mut self.reports.table_state);
   }
 
   fn draw_completion_pop_up(&mut self, f: &mut Frame, rect: Rect, cursor_position: usize) {
@@ -1282,18 +1416,6 @@ impl TaskwarriorTui {
     }
   }
 
-  fn get_all_contexts(&self) -> (Vec<Vec<String>>, Vec<String>) {
-    let contexts = self
-      .contexts
-      .rows
-      .iter()
-      .filter(|c| &c.type_ == "read")
-      .map(|c| vec![c.name.clone(), c.definition.clone(), c.active.clone()])
-      .collect();
-    let headers = vec!["Name".to_string(), "Definition".to_string(), "Active".to_string()];
-    (contexts, headers)
-  }
-
   fn get_task_report(&mut self) -> (Vec<Vec<String>>, Vec<String>) {
     self.task_report_table.generate_table(&self.tasks);
     let (tasks, headers) = self.task_report_table.simplify_table();
@@ -1317,6 +1439,7 @@ impl TaskwarriorTui {
         self.export_all_tasks()?;
       }
       self.contexts.update_data()?;
+      self.reports.update_data(&self.report, &Self::task_show_output()?);
       self.projects.update_data()?;
       self.update_tags();
       self.task_details.clear();
@@ -1458,9 +1581,13 @@ impl TaskwarriorTui {
   }
 
   pub fn context_next(&mut self) {
+    let n = self.contexts.filtered_indices().len();
+    if n == 0 {
+      return;
+    }
     let i = match self.contexts.table_state.current_selection() {
       Some(i) => {
-        if i >= self.contexts.len() - 1 {
+        if i >= n - 1 {
           0
         } else {
           i + 1
@@ -1472,10 +1599,14 @@ impl TaskwarriorTui {
   }
 
   pub fn context_previous(&mut self) {
+    let n = self.contexts.filtered_indices().len();
+    if n == 0 {
+      return;
+    }
     let i = match self.contexts.table_state.current_selection() {
       Some(i) => {
         if i == 0 {
-          self.contexts.len() - 1
+          n - 1
         } else {
           i - 1
         }
@@ -1486,11 +1617,84 @@ impl TaskwarriorTui {
   }
 
   pub fn context_select(&mut self) -> Result<()> {
-    let i = self.contexts.table_state.current_selection().unwrap_or_default();
+    let fi = self.contexts.table_state.current_selection().unwrap_or_default();
+    let indices = self.contexts.filtered_indices();
+    let ri = indices.get(fi).copied().unwrap_or(fi);
     let mut command = std::process::Command::new("task");
-    command.arg("context").arg(&self.contexts.rows[i].name);
+    command.arg("context").arg(&self.contexts.rows[ri].name);
     command.output()?;
     Ok(())
+  }
+
+  pub fn report_next(&mut self) {
+    let n = self.reports.filtered_indices().len();
+    if n == 0 {
+      return;
+    }
+    let i = match self.reports.table_state.current_selection() {
+      Some(i) => {
+        if i >= n - 1 {
+          0
+        } else {
+          i + 1
+        }
+      }
+      None => 0,
+    };
+    self.reports.table_state.select(Some(i));
+  }
+
+  pub fn report_previous(&mut self) {
+    let n = self.reports.filtered_indices().len();
+    if n == 0 {
+      return;
+    }
+    let i = match self.reports.table_state.current_selection() {
+      Some(i) => {
+        if i == 0 {
+          n - 1
+        } else {
+          i - 1
+        }
+      }
+      None => 0,
+    };
+    self.reports.table_state.select(Some(i));
+  }
+
+  pub fn report_select(&mut self, data: &str) -> Result<()> {
+    let fi = self.reports.table_state.current_selection().unwrap_or_default();
+    let indices = self.reports.filtered_indices();
+    let ri = indices.get(fi).copied().unwrap_or(fi);
+    let report = self.reports.rows.get(ri).map(|r| r.name.clone()).unwrap_or_default();
+    if report.is_empty() {
+      return Ok(());
+    }
+
+    self.report = report;
+    self.config.filter = Config::get_filter(data, &self.report)?;
+    if !self.config.filter.trim().is_empty() {
+      self.config.filter = format!("{} ", self.config.filter.trim());
+    }
+
+    self.filter = LineBuffer::with_capacity(MAX_LINE);
+    for c in self.config.filter.chars() {
+      self.filter.insert(c, 1, &mut self.changes);
+    }
+
+    self.task_report_table.export_headers(Some(data), &self.report)?;
+    Ok(())
+  }
+
+  fn task_show_output() -> Result<String> {
+    let output = std::process::Command::new("task")
+      .arg("rc.color=off")
+      .arg("rc._forcecolor=off")
+      .arg("rc.defaultwidth=0")
+      .arg("show")
+      .output()
+      .context("Unable to run `task show`.")?;
+    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
   }
 
   pub fn task_report_top(&mut self) {
@@ -2905,7 +3109,27 @@ impl TaskwarriorTui {
           } else if input == self.keyconfig.transpose {
             self.tasklist_vertical = !self.tasklist_vertical
           } else if input == self.keyconfig.context_menu {
+            self.contexts.search.clear();
+            // Pre-select the active context.
+            let active_pos = self
+              .contexts
+              .filtered_indices()
+              .iter()
+              .position(|&ri| self.contexts.rows[ri].active == "yes")
+              .unwrap_or(0);
+            self.contexts.table_state.select(Some(active_pos));
             self.mode = Mode::Tasks(Action::ContextMenu);
+          } else if input == self.keyconfig.report_menu {
+            self.reports.search.clear();
+            // Pre-select the active report.
+            let active_pos = self
+              .reports
+              .filtered_indices()
+              .iter()
+              .position(|&ri| self.reports.rows[ri].active == "yes")
+              .unwrap_or(0);
+            self.reports.table_state.select(Some(active_pos));
+            self.mode = Mode::Tasks(Action::ReportMenu);
           } else if input == self.keyconfig.previous_tab {
             if self.config.uda_change_focus_rotate {
               self.mode = Mode::Calendar;
@@ -2915,53 +3139,158 @@ impl TaskwarriorTui {
           }
         }
         Action::ContextMenu => {
-          if input == self.keyconfig.quit || input == KeyCode::Esc {
-            self.mode = Mode::Tasks(Action::Report);
-          } else if input == KeyCode::Down || input == self.keyconfig.down {
-            self.context_next();
-            if self.config.uda_context_menu_select_on_move {
+          match input {
+            // Esc: clear search first; if already empty, close the menu.
+            KeyCode::Esc => {
+              if !self.contexts.search.is_empty() {
+                self.contexts.search.clear();
+                self.contexts.table_state.select(Some(0));
+              } else {
+                self.mode = Mode::Tasks(Action::Report);
+              }
+            }
+            // Backspace removes the last search character.
+            KeyCode::Backspace | KeyCode::Ctrl('h') => {
+              self.contexts.search.pop();
+              self.contexts.table_state.select(Some(0));
+            }
+            KeyCode::Char('\n') => {
               if self.error.is_some() {
                 self.previous_mode = Some(self.mode.clone());
                 self.mode = Mode::Tasks(Action::Error);
+              } else if self.config.uda_context_menu_select_on_move {
+                self.mode = Mode::Tasks(Action::Report);
               } else {
                 match self.context_select() {
                   Ok(_) => self.update(true).await?,
                   Err(e) => {
                     self.error = Some(e.to_string());
+                    self.mode = Mode::Tasks(Action::Error);
                   }
                 }
               }
             }
-          } else if input == KeyCode::Up || input == self.keyconfig.up {
-            self.context_previous();
-            if self.config.uda_context_menu_select_on_move {
-              if self.error.is_some() {
-                self.previous_mode = Some(self.mode.clone());
-                self.mode = Mode::Tasks(Action::Error);
+            // Printable characters feed the search bar (except quit when search is empty).
+            KeyCode::Char(c) => {
+              if self.contexts.search.is_empty() && input == self.keyconfig.quit {
+                self.mode = Mode::Tasks(Action::Report);
               } else {
-                match self.context_select() {
-                  Ok(_) => self.update(true).await?,
-                  Err(e) => {
-                    self.error = Some(e.to_string());
-                  }
-                }
+                self.contexts.search.push(c);
+                self.contexts.table_state.select(Some(0));
               }
             }
-          } else if input == KeyCode::Char('\n') {
-            if self.error.is_some() {
-              self.previous_mode = Some(self.mode.clone());
-              self.mode = Mode::Tasks(Action::Error);
-            } else if self.config.uda_context_menu_select_on_move {
-              self.mode = Mode::Tasks(Action::Report);
-            } else {
-              match self.context_select() {
-                Ok(_) => self.update(true).await?,
-                Err(e) => {
-                  self.error = Some(e.to_string());
+            _ if input == KeyCode::Down || input == self.keyconfig.down => {
+              self.context_next();
+              if self.config.uda_context_menu_select_on_move {
+                if self.error.is_some() {
+                  self.previous_mode = Some(self.mode.clone());
                   self.mode = Mode::Tasks(Action::Error);
+                } else {
+                  match self.context_select() {
+                    Ok(_) => self.update(true).await?,
+                    Err(e) => {
+                      self.error = Some(e.to_string());
+                    }
+                  }
                 }
               }
             }
+            _ if input == KeyCode::Up || input == self.keyconfig.up => {
+              self.context_previous();
+              if self.config.uda_context_menu_select_on_move {
+                if self.error.is_some() {
+                  self.previous_mode = Some(self.mode.clone());
+                  self.mode = Mode::Tasks(Action::Error);
+                } else {
+                  match self.context_select() {
+                    Ok(_) => self.update(true).await?,
+                    Err(e) => {
+                      self.error = Some(e.to_string());
+                    }
+                  }
+                }
+              }
+            }
+            _ => {}
+          }
+        }
+        Action::ReportMenu => {
+          match input {
+            // Esc: clear search first; if already empty, close the menu.
+            KeyCode::Esc => {
+              if !self.reports.search.is_empty() {
+                self.reports.search.clear();
+                self.reports.table_state.select(Some(0));
+              } else {
+                self.mode = Mode::Tasks(Action::Report);
+              }
+            }
+            // Backspace removes the last search character.
+            KeyCode::Backspace | KeyCode::Ctrl('h') => {
+              self.reports.search.pop();
+              self.reports.table_state.select(Some(0));
+            }
+            KeyCode::Char('\n') => {
+              if self.error.is_some() {
+                self.previous_mode = Some(self.mode.clone());
+                self.mode = Mode::Tasks(Action::Error);
+              } else if self.config.uda_report_menu_select_on_move {
+                self.mode = Mode::Tasks(Action::Report);
+              } else {
+                let data = Self::task_show_output()?;
+                match self.report_select(&data) {
+                  Ok(_) => self.update(true).await?,
+                  Err(e) => {
+                    self.error = Some(e.to_string());
+                    self.mode = Mode::Tasks(Action::Error);
+                  }
+                }
+              }
+            }
+            // Printable characters feed the search bar (except quit when search is empty).
+            KeyCode::Char(c) => {
+              if self.reports.search.is_empty() && input == self.keyconfig.quit {
+                self.mode = Mode::Tasks(Action::Report);
+              } else {
+                self.reports.search.push(c);
+                self.reports.table_state.select(Some(0));
+              }
+            }
+            _ if input == KeyCode::Down || input == self.keyconfig.down => {
+              self.report_next();
+              if self.config.uda_report_menu_select_on_move {
+                if self.error.is_some() {
+                  self.previous_mode = Some(self.mode.clone());
+                  self.mode = Mode::Tasks(Action::Error);
+                } else {
+                  let data = Self::task_show_output()?;
+                  match self.report_select(&data) {
+                    Ok(_) => self.update(true).await?,
+                    Err(e) => {
+                      self.error = Some(e.to_string());
+                    }
+                  }
+                }
+              }
+            }
+            _ if input == KeyCode::Up || input == self.keyconfig.up => {
+              self.report_previous();
+              if self.config.uda_report_menu_select_on_move {
+                if self.error.is_some() {
+                  self.previous_mode = Some(self.mode.clone());
+                  self.mode = Mode::Tasks(Action::Error);
+                } else {
+                  let data = Self::task_show_output()?;
+                  match self.report_select(&data) {
+                    Ok(_) => self.update(true).await?,
+                    Err(e) => {
+                      self.error = Some(e.to_string());
+                    }
+                  }
+                }
+              }
+            }
+            _ => {}
           }
         }
         Action::HelpPopup => {
@@ -4314,7 +4643,7 @@ mod tests {
 
   async fn test_draw_empty_task_report() {
     let mut expected = Buffer::with_lines(vec![
-      " Tasks   Projects   Calendar                [none]",
+      " Tasks   Projects   Calendar           next [none]",
       "                                                  ",
       "                                                  ",
       "                                                  ",
@@ -4345,6 +4674,7 @@ mod tests {
     }
 
     let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    app.tasklist_vertical = true;
 
     app.task_report_next();
     app.context_next();
@@ -4585,6 +4915,7 @@ mod tests {
     }
 
     let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    app.tasklist_vertical = true;
 
     app.task_report_next();
     app.context_next();
@@ -4672,7 +5003,7 @@ mod tests {
 
   async fn test_draw_calendar() {
     let mut expected = Buffer::with_lines(vec![
-      " Tasks   Projects   Calendar                [none]",
+      " Tasks   Projects   Calendar           next [none]",
       "                                                  ",
       "                       2020                       ",
       "                                                  ",
@@ -4755,7 +5086,7 @@ mod tests {
       "│                                      │",
       "│    [: Previous view                  │",
       "╰──────────────────────────────────────╯",
-      "  8% ───────────────────────────────────",
+      "  7% ───────────────────────────────────",
     ]);
 
     for i in 1..=4 {

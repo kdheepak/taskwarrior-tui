@@ -28,6 +28,7 @@ uda.taskwarrior-tui.keyconfig.annotate=A
 uda.taskwarrior-tui.keyconfig.filter=/
 uda.taskwarrior-tui.keyconfig.zoom=z
 uda.taskwarrior-tui.keyconfig.context-menu=c
+uda.taskwarrior-tui.keyconfig.report-menu=R
 uda.taskwarrior-tui.keyconfig.next-tab=]
 uda.taskwarrior-tui.keyconfig.previous-tab=[
 ```

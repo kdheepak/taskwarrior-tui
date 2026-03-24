@@ -35,6 +35,7 @@ pub struct KeyConfig {
   pub zoom: KeyCode,
   pub transpose: KeyCode,
   pub context_menu: KeyCode,
+  pub report_menu: KeyCode,
   pub next_tab: KeyCode,
   pub previous_tab: KeyCode,
   pub priority_h: KeyCode,
@@ -83,6 +84,7 @@ impl Default for KeyConfig {
       zoom: KeyCode::Char('z'),
       transpose: KeyCode::Char('\\'),
       context_menu: KeyCode::Char('c'),
+      report_menu: KeyCode::Char('R'),
       next_tab: KeyCode::Char(']'),
       previous_tab: KeyCode::Char('['),
       priority_h: KeyCode::Char('H'),
@@ -137,6 +139,7 @@ impl KeyConfig {
     let zoom = Self::get_config("uda.taskwarrior-tui.keyconfig.zoom", data);
     let transpose = Self::get_config("uda.taskwarrior-tui.keyconfig.transpose", data);
     let context_menu = Self::get_config("uda.taskwarrior-tui.keyconfig.context-menu", data);
+    let report_menu = Self::get_config("uda.taskwarrior-tui.keyconfig.report-menu", data);
     let next_tab = Self::get_config("uda.taskwarrior-tui.keyconfig.next-tab", data);
     let previous_tab = Self::get_config("uda.taskwarrior-tui.keyconfig.previous-tab", data);
     let shortcut0 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut0", data);
@@ -176,6 +179,7 @@ impl KeyConfig {
     self.zoom = zoom.unwrap_or(self.zoom);
     self.transpose = transpose.unwrap_or(self.transpose);
     self.context_menu = context_menu.unwrap_or(self.context_menu);
+    self.report_menu = report_menu.unwrap_or(self.report_menu);
     self.next_tab = next_tab.unwrap_or(self.next_tab);
     self.previous_tab = previous_tab.unwrap_or(self.previous_tab);
     self.shortcut0 = shortcut0.unwrap_or(self.shortcut0);
@@ -221,6 +225,7 @@ impl KeyConfig {
       &self.zoom,
       &self.transpose,
       &self.context_menu,
+      &self.report_menu,
       &self.next_tab,
       &self.previous_tab,
     ];

@@ -31,6 +31,7 @@ uda.taskwarrior-tui.task-report.prompt-on-delete=false
 uda.taskwarrior-tui.task-report.prompt-on-done=false
 uda.taskwarrior-tui.style.report.selection=
 uda.taskwarrior-tui.style.context.active=black on rgb444
+uda.taskwarrior-tui.style.report-menu.active=black on rgb444
 uda.taskwarrior-tui.style.calendar.title=black on rgb444
 uda.taskwarrior-tui.style.report.scrollbar=black
 uda.taskwarrior-tui.scrollbar.indicator=█
@@ -42,6 +43,7 @@ uda.taskwarrior-tui.task-report.auto-insert-double-quotes-on-annotate=true
 uda.taskwarrior-tui.task-report.auto-insert-double-quotes-on-log=true
 uda.taskwarrior-tui.task-report.reset-filter-on-esc=true
 uda.taskwarrior-tui.context-menu.select-on-move=false
+uda.taskwarrior-tui.report-menu.select-on-move=false
 uda.taskwarrior-tui.tabs.change-focus-rotate=false
 # UI chrome styles (support all Taskwarrior color formats)
 uda.taskwarrior-tui.style.title=         # default: LightCyan foreground
