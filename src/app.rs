@@ -594,6 +594,7 @@ impl TaskwarriorTui {
           0,
           false,
           self.error.clone(),
+          None,
         );
         let text = self.error.clone().unwrap_or_else(|| "Unknown error.".to_string());
         let title = vec![Span::styled("Error", Style::default().add_modifier(Modifier::BOLD))];
@@ -622,6 +623,7 @@ impl TaskwarriorTui {
           Self::get_position(&self.filter),
           false,
           self.error.clone(),
+          None,
         );
       }
       Action::Jump => {
@@ -634,6 +636,7 @@ impl TaskwarriorTui {
           position,
           true,
           self.error.clone(),
+          None,
         );
       }
       Action::Filter => {
@@ -641,6 +644,11 @@ impl TaskwarriorTui {
         if self.show_completion_pane {
           self.draw_completion_pop_up(f, rects[1], position);
         }
+        let ghost = if !self.show_completion_pane {
+          self.completion_list.ghost_text()
+        } else {
+          None
+        };
         self.draw_command(
           f,
           rects[1],
@@ -655,6 +663,7 @@ impl TaskwarriorTui {
           position,
           true,
           self.error.clone(),
+          ghost.as_deref(),
         );
       }
       Action::Log => {
@@ -665,6 +674,11 @@ impl TaskwarriorTui {
         if self.show_completion_pane {
           self.draw_completion_pop_up(f, rects[1], position);
         }
+        let ghost = if !self.show_completion_pane {
+          self.completion_list.ghost_text()
+        } else {
+          None
+        };
         self.draw_command(
           f,
           rects[1],
@@ -679,6 +693,7 @@ impl TaskwarriorTui {
           position,
           true,
           self.error.clone(),
+          ghost.as_deref(),
         );
       }
       Action::Subprocess => {
@@ -691,6 +706,7 @@ impl TaskwarriorTui {
           position,
           true,
           self.error.clone(),
+          None,
         );
       }
       Action::Modify => {
@@ -698,6 +714,11 @@ impl TaskwarriorTui {
         if self.show_completion_pane {
           self.draw_completion_pop_up(f, rects[1], position);
         }
+        let ghost = if !self.show_completion_pane {
+          self.completion_list.ghost_text()
+        } else {
+          None
+        };
         let label = if task_ids.len() > 1 {
           format!("Modify Tasks {}", task_ids.join(","))
         } else {
@@ -717,6 +738,7 @@ impl TaskwarriorTui {
           position,
           true,
           self.error.clone(),
+          ghost.as_deref(),
         );
       }
       Action::Annotate => {
@@ -727,6 +749,11 @@ impl TaskwarriorTui {
         if self.show_completion_pane {
           self.draw_completion_pop_up(f, rects[1], position);
         }
+        let ghost = if !self.show_completion_pane {
+          self.completion_list.ghost_text()
+        } else {
+          None
+        };
         let label = if task_ids.len() > 1 {
           format!("Annotate Tasks {}", task_ids.join(","))
         } else {
@@ -746,6 +773,7 @@ impl TaskwarriorTui {
           position,
           true,
           self.error.clone(),
+          ghost.as_deref(),
         );
       }
       Action::Add => {
@@ -756,6 +784,11 @@ impl TaskwarriorTui {
         if self.show_completion_pane {
           self.draw_completion_pop_up(f, rects[1], position);
         }
+        let ghost = if !self.show_completion_pane {
+          self.completion_list.ghost_text()
+        } else {
+          None
+        };
         self.draw_command(
           f,
           rects[1],
@@ -770,6 +803,7 @@ impl TaskwarriorTui {
           position,
           true,
           self.error.clone(),
+          ghost.as_deref(),
         );
       }
       Action::HelpPopup => {
@@ -781,6 +815,7 @@ impl TaskwarriorTui {
           Self::get_position(&self.filter),
           false,
           self.error.clone(),
+          None,
         );
         self.draw_help_popup(f, 80, 90);
       }
@@ -793,6 +828,7 @@ impl TaskwarriorTui {
           Self::get_position(&self.filter),
           false,
           self.error.clone(),
+          None,
         );
         self.draw_context_menu(f, 80, 50);
       }
@@ -805,6 +841,7 @@ impl TaskwarriorTui {
           Self::get_position(&self.filter),
           false,
           self.error.clone(),
+          None,
         );
         self.draw_report_menu(f, 80, 50);
       }
@@ -830,6 +867,7 @@ impl TaskwarriorTui {
           0,
           false,
           self.error.clone(),
+          None,
         );
       }
       Action::DeletePrompt => {
@@ -854,6 +892,7 @@ impl TaskwarriorTui {
           0,
           false,
           self.error.clone(),
+          None,
         );
       }
       Action::UndoPrompt => {
@@ -874,6 +913,7 @@ impl TaskwarriorTui {
           0,
           false,
           self.error.clone(),
+          None,
         );
       }
     }
@@ -1154,7 +1194,17 @@ impl TaskwarriorTui {
     f.render_stateful_widget(items, rect, &mut self.completion_list.state);
   }
 
-  fn draw_command(&self, f: &mut Frame, rect: Rect, text: &str, title: (Span, Option<Span>), position: usize, cursor: bool, error: Option<String>) {
+  fn draw_command(
+    &self,
+    f: &mut Frame,
+    rect: Rect,
+    text: &str,
+    title: (Span, Option<Span>),
+    position: usize,
+    cursor: bool,
+    error: Option<String>,
+    ghost_text: Option<&str>,
+  ) {
     // f.render_widget(Clear, rect);
     if cursor {
       let position = Position::new(std::cmp::min(rect.x + position as u16, rect.x + rect.width.saturating_sub(2)), rect.y + 1);
@@ -1178,8 +1228,14 @@ impl TaskwarriorTui {
     let title = Paragraph::new(Text::from(title_spans)).style(style);
     f.render_widget(title, rects[0]);
 
-    // render command
-    let p = Paragraph::new(Text::from(text)).scroll((0, ((position + 2) as u16).saturating_sub(rects[1].width)));
+    // render command with optional ghost text suffix
+    let scroll = (0, ((position + 2) as u16).saturating_sub(rects[1].width));
+    let p = if let Some(ghost) = ghost_text {
+      let line = Line::from(vec![Span::raw(text), Span::styled(ghost, Style::default().fg(Color::DarkGray))]);
+      Paragraph::new(Text::from(line)).scroll(scroll)
+    } else {
+      Paragraph::new(Text::from(text)).scroll(scroll)
+    };
     f.render_widget(p, rects[1]);
   }
 
@@ -3319,10 +3375,8 @@ impl TaskwarriorTui {
           KeyCode::Char('\n') => {
             if self.show_completion_pane {
               self.show_completion_pane = false;
-              if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
-                let (before, after) = self.modify.as_str().split_at(self.modify.pos());
-                let fs = format!("{}{}{}", before.trim_end_matches(&o), r, after);
-                self.modify.update(&fs, self.modify.pos() + r.len() - o.len(), &mut self.changes);
+              if let Some((_, (r, _, o, _, _))) = self.completion_list.selected() {
+                Self::apply_completion_to_buffer(&mut self.modify, &r, &o, &mut self.changes);
               }
               self.completion_list.unselect();
             } else if self.error.is_some() {
@@ -3346,10 +3400,19 @@ impl TaskwarriorTui {
           KeyCode::Tab | KeyCode::Ctrl('n') => {
             if !self.completion_list.is_empty() {
               self.update_input_for_completion();
-              if !self.show_completion_pane {
-                self.show_completion_pane = true;
+              let candidates = self.completion_list.candidates();
+              if candidates.len() == 1 {
+                let (r, _, o, _, _) = candidates.into_iter().next().unwrap();
+                Self::apply_completion_to_buffer(&mut self.modify, &r, &o, &mut self.changes);
+                self.show_completion_pane = false;
+                self.completion_list.unselect();
+                self.update_input_for_completion();
+              } else {
+                if !self.show_completion_pane {
+                  self.show_completion_pane = true;
+                }
+                self.completion_list.next();
               }
-              self.completion_list.next();
             }
           }
           KeyCode::BackTab | KeyCode::Ctrl('p') => {
@@ -3445,10 +3508,8 @@ impl TaskwarriorTui {
           KeyCode::Char('\n') => {
             if self.show_completion_pane {
               self.show_completion_pane = false;
-              if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
-                let (before, after) = self.command.as_str().split_at(self.command.pos());
-                let fs = format!("{}{}{}", before.trim_end_matches(&o), r, after);
-                self.command.update(&fs, self.command.pos() + r.len() - o.len(), &mut self.changes);
+              if let Some((_, (r, _, o, _, _))) = self.completion_list.selected() {
+                Self::apply_completion_to_buffer(&mut self.command, &r, &o, &mut self.changes);
               }
               self.completion_list.unselect();
             } else if self.error.is_some() {
@@ -3473,10 +3534,19 @@ impl TaskwarriorTui {
           KeyCode::Tab | KeyCode::Ctrl('n') => {
             if !self.completion_list.is_empty() {
               self.update_input_for_completion();
-              if !self.show_completion_pane {
-                self.show_completion_pane = true;
+              let candidates = self.completion_list.candidates();
+              if candidates.len() == 1 {
+                let (r, _, o, _, _) = candidates.into_iter().next().unwrap();
+                Self::apply_completion_to_buffer(&mut self.command, &r, &o, &mut self.changes);
+                self.show_completion_pane = false;
+                self.completion_list.unselect();
+                self.update_input_for_completion();
+              } else {
+                if !self.show_completion_pane {
+                  self.show_completion_pane = true;
+                }
+                self.completion_list.next();
               }
-              self.completion_list.next();
             }
           }
           KeyCode::BackTab | KeyCode::Ctrl('p') => {
@@ -3547,10 +3617,8 @@ impl TaskwarriorTui {
           KeyCode::Char('\n') => {
             if self.show_completion_pane {
               self.show_completion_pane = false;
-              if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
-                let (before, after) = self.command.as_str().split_at(self.command.pos());
-                let fs = format!("{}{}{}", before.trim_end_matches(&o), r, after);
-                self.command.update(&fs, self.command.pos() + r.len() - o.len(), &mut self.changes);
+              if let Some((_, (r, _, o, _, _))) = self.completion_list.selected() {
+                Self::apply_completion_to_buffer(&mut self.command, &r, &o, &mut self.changes);
               }
               self.completion_list.unselect();
             } else if self.error.is_some() {
@@ -3575,10 +3643,19 @@ impl TaskwarriorTui {
           KeyCode::Tab | KeyCode::Ctrl('n') => {
             if !self.completion_list.is_empty() {
               self.update_input_for_completion();
-              if !self.show_completion_pane {
-                self.show_completion_pane = true;
+              let candidates = self.completion_list.candidates();
+              if candidates.len() == 1 {
+                let (r, _, o, _, _) = candidates.into_iter().next().unwrap();
+                Self::apply_completion_to_buffer(&mut self.command, &r, &o, &mut self.changes);
+                self.show_completion_pane = false;
+                self.completion_list.unselect();
+                self.update_input_for_completion();
+              } else {
+                if !self.show_completion_pane {
+                  self.show_completion_pane = true;
+                }
+                self.completion_list.next();
               }
-              self.completion_list.next();
             }
           }
           KeyCode::BackTab | KeyCode::Ctrl('p') => {
@@ -3675,10 +3752,8 @@ impl TaskwarriorTui {
           KeyCode::Char('\n') => {
             if self.show_completion_pane {
               self.show_completion_pane = false;
-              if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
-                let (before, after) = self.command.as_str().split_at(self.command.pos());
-                let fs = format!("{}{}{}", before.trim_end_matches(&o), r, after);
-                self.command.update(&fs, self.command.pos() + r.len() - o.len(), &mut self.changes);
+              if let Some((_, (r, _, o, _, _))) = self.completion_list.selected() {
+                Self::apply_completion_to_buffer(&mut self.command, &r, &o, &mut self.changes);
               }
               self.completion_list.unselect();
             } else if self.error.is_some() {
@@ -3703,10 +3778,19 @@ impl TaskwarriorTui {
           KeyCode::Tab | KeyCode::Ctrl('n') => {
             if !self.completion_list.is_empty() {
               self.update_input_for_completion();
-              if !self.show_completion_pane {
-                self.show_completion_pane = true;
+              let candidates = self.completion_list.candidates();
+              if candidates.len() == 1 {
+                let (r, _, o, _, _) = candidates.into_iter().next().unwrap();
+                Self::apply_completion_to_buffer(&mut self.command, &r, &o, &mut self.changes);
+                self.show_completion_pane = false;
+                self.completion_list.unselect();
+                self.update_input_for_completion();
+              } else {
+                if !self.show_completion_pane {
+                  self.show_completion_pane = true;
+                }
+                self.completion_list.next();
               }
-              self.completion_list.next();
             }
           }
           KeyCode::BackTab | KeyCode::Ctrl('p') => {
@@ -3786,10 +3870,8 @@ impl TaskwarriorTui {
           KeyCode::Char('\n') => {
             if self.show_completion_pane {
               self.show_completion_pane = false;
-              if let Some((i, (r, m, o, _, _))) = self.completion_list.selected() {
-                let (before, after) = self.filter.as_str().split_at(self.filter.pos());
-                let fs = format!("{}{}{}", before.trim_end_matches(&o), r, after);
-                self.filter.update(&fs, self.filter.pos() + r.len() - o.len(), &mut self.changes);
+              if let Some((_, (r, _, o, _, _))) = self.completion_list.selected() {
+                Self::apply_completion_to_buffer(&mut self.filter, &r, &o, &mut self.changes);
               }
               self.completion_list.unselect();
               self.dirty = true;
@@ -3850,10 +3932,20 @@ impl TaskwarriorTui {
           KeyCode::Tab | KeyCode::Ctrl('n') => {
             if !self.completion_list.is_empty() {
               self.update_input_for_completion();
-              if !self.show_completion_pane {
-                self.show_completion_pane = true;
+              let candidates = self.completion_list.candidates();
+              if candidates.len() == 1 {
+                let (r, _, o, _, _) = candidates.into_iter().next().unwrap();
+                Self::apply_completion_to_buffer(&mut self.filter, &r, &o, &mut self.changes);
+                self.show_completion_pane = false;
+                self.completion_list.unselect();
+                self.update_input_for_completion();
+                self.dirty = true;
+              } else {
+                if !self.show_completion_pane {
+                  self.show_completion_pane = true;
+                }
+                self.completion_list.next();
               }
-              self.completion_list.next();
             }
           }
           KeyCode::BackTab | KeyCode::Ctrl('p') => {
@@ -4097,6 +4189,14 @@ impl TaskwarriorTui {
       }
       _ => {}
     }
+  }
+
+  /// Apply a completion candidate to the given line buffer.
+  /// `replacement` is the full candidate string, `original` is the already-typed prefix.
+  fn apply_completion_to_buffer(buffer: &mut LineBuffer, replacement: &str, original: &str, changes: &mut utils::Changeset) {
+    let (before, after) = buffer.as_str().split_at(buffer.pos());
+    let fs = format!("{}{}{}", before.trim_end_matches(original), replacement, after);
+    buffer.update(&fs, buffer.pos() + replacement.len() - original.len(), changes);
   }
 }
 
@@ -4800,6 +4900,7 @@ mod tests {
           taskwarrior_position,
           true,
           app.error.clone(),
+          None,
         );
       })
       .unwrap();
@@ -4855,6 +4956,7 @@ mod tests {
           taskwarrior_position,
           true,
           app.error.clone(),
+          None,
         );
       })
       .unwrap();
