@@ -1,0 +1,59 @@
+[settings]
+env_shell_expand = true
+lockfile = true
+
+[env]
+RUST_TEST_THREADS = "1"
+
+[tools]
+rust = { version = "latest", profile = "minimal", components = "cargo,rustfmt,clippy" }
+# Convert markdown to word, pdf etc
+"github:jgm/pandoc" = "latest"
+"cargo:cross" = "latest"
+
+[tasks.test]
+description = "Run tests with uv and pytest"
+run = "uv run --with pytest pytest"
+
+[tasks.clean]
+description = "Clean build artifacts"
+run = "cargo clean"
+
+[tasks.build]
+description = "Build the CLI"
+run = "cargo build"
+alias = "b"
+depends = ["clean"]
+sources = ['Cargo.toml', 'src/**/*.rs']
+outputs = ['target/debug/taskwarrior-tui']
+
+[tasks.build-release]
+description = "Build the CLI in release mode"
+run = "cargo build --release"
+
+[tasks.format]
+alias = "fmt"
+description = "Format the code"
+run = "cargo fmt"
+
+[tasks.ci]
+description = "CI - format, check, test, clippy"
+run = """
+cargo check
+cargo test
+cargo clippy -- -D warnings
+"""
+
+[tasks.lint]
+description = 'Lint with clippy'
+env = { RUST_BACKTRACE = '1' }
+run = '''
+#!/usr/bin/env bash
+cargo clippy
+'''
+
+# Builds Taskwarrior into target/taskwarrior-install/stable/bin/task by default.
+# Set TASKWARRIOR_BRANCH=develop to build the upstream development branch instead.
+[tasks.build-taskwarrior]
+description = "Clone/update upstream Taskwarrior and build the task binary from source"
+run = "uv run scripts/build_taskwarrior.py"
