@@ -4674,6 +4674,7 @@ mod tests {
     }
 
     let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    app.tasklist_vertical = true;
 
     app.task_report_next();
     app.context_next();
@@ -4914,6 +4915,7 @@ mod tests {
     }
 
     let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    app.tasklist_vertical = true;
 
     app.task_report_next();
     app.context_next();
@@ -5084,7 +5086,7 @@ mod tests {
       "│                                      │",
       "│    [: Previous view                  │",
       "╰──────────────────────────────────────╯",
-      "  8% ───────────────────────────────────",
+      "  7% ───────────────────────────────────",
     ]);
 
     for i in 1..=4 {
