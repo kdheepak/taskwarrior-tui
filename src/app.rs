@@ -381,7 +381,7 @@ impl TaskwarriorTui {
   pub async fn run(&mut self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> {
     loop {
       if self.requires_redraw {
-        terminal.autoresize()?;
+        terminal.clear()?;
         self.requires_redraw = false;
       }
       terminal.draw(|f| self.draw(f))?;
