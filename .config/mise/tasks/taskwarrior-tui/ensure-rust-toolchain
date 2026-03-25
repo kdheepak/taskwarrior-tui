@@ -25,10 +25,9 @@ def run(cmd: list[str]) -> None:
 
 
 def resolve_toolchain() -> str:
-    for env_name in ("MISE_TOOL_VERSION", "RUSTUP_TOOLCHAIN"):
-        value = os.environ.get(env_name, "").strip()
-        if value:
-            return value
+    value = os.environ.get("RUSTUP_TOOLCHAIN", "").strip()
+    if value:
+        return value
 
     result = subprocess.run(
         ["rustup", "show", "active-toolchain"],
