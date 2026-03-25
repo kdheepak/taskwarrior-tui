@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Build the Debian package"
+#USAGE about "Build the Debian package"
 set -euo pipefail
 
 cargo deb -p taskwarrior-tui -o target/debian/taskwarrior-tui.deb

@@ -1,5 +1,7 @@
 #!/usr/bin/env -S uv run --script
 # [MISE] description="Build the MkDocs site"
+# [USAGE] about "Build the MkDocs site"
+# [USAGE] arg "[mkdocs_args]" var=#true help="Additional arguments to pass to mkdocs build"
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
@@ -16,6 +18,8 @@
 
 from __future__ import annotations
 
+import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -24,9 +28,11 @@ from pathlib import Path
 
 def main() -> None:
     root = Path(__file__).resolve().parents[3]
+    mkdocs_args = os.getenv("usage_mkdocs_args")
+    args = shlex.split(mkdocs_args) if mkdocs_args is not None else sys.argv[1:]
     shutil.copyfile(root / "README.md", root / "docs" / "index.md")
     subprocess.run(
-        [sys.executable, "-m", "mkdocs", "build", *sys.argv[1:]],
+        [sys.executable, "-m", "mkdocs", "build", *args],
         cwd=root,
         check=True,
     )

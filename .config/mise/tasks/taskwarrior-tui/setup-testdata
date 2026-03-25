@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Fetch pinned test fixtures used by cargo test"
+#USAGE about "Fetch pinned test fixtures used by cargo test"
 #MISE depends=["taskwarrior-tui:clean-tests"]
 set -euo pipefail
 

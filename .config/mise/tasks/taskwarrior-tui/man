@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Generate the roff man page from Markdown"
+#USAGE about "Generate the roff man page from Markdown"
 set -euo pipefail
 
 pandoc --standalone --to=man docs/taskwarrior-tui.1.md -o docs/taskwarrior-tui.1

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Generate lcov output with grcov"
+#USAGE about "Generate lcov output with grcov"
 #MISE depends=["taskwarrior-tui:ensure-rust-toolchain"]
 set -euo pipefail
 
