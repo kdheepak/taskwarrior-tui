@@ -8,7 +8,6 @@ from __future__ import annotations
 import os
 import shlex
 import subprocess
-import sys
 
 DEFAULT_PROFILE = "default"
 DEFAULT_COMPONENTS = ("clippy", "rustfmt", "llvm-tools")
