@@ -19,3 +19,5 @@ Makefile
 justfile
 .justfile
 tmp
+docs/index.md
+site/
