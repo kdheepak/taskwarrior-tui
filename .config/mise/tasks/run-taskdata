@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+#MISE description="Import local fixture data, run the TUI, and clean tests/data/.task on exit"
+#MISE depends=["import-taskdata"]
+set -euo pipefail
+
+if [ "$#" -gt 1 ]; then
+  echo "usage: run-taskdata [--release]" >&2
+  exit 2
+fi
+
+if [ "$#" -eq 1 ] && [ "$1" != "--release" ]; then
+  echo "usage: run-taskdata [--release]" >&2
+  exit 2
+fi
+
+cleanup() {
+  local status=$?
+  set +e
+  rm -rf "$TASKDATA"
+  exit "$status"
+}
+
+trap cleanup EXIT
+
+exec cargo run "$@"

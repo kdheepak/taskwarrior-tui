@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#MISE description="Clean build artifacts"
+set -euo pipefail
+
+exec cargo clean

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#MISE description="Remove tests/data/.task"
+set -euo pipefail
+
+rm -rf "$TASKDATA"

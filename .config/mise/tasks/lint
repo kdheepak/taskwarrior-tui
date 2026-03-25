@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+#MISE description="Lint with clippy"
+#MISE env={RUST_BACKTRACE = "1"}
+#MISE depends=["ensure-rust-toolchain"]
+set -euo pipefail
+
+exec cargo clippy

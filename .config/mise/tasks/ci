@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+#MISE description="CI - format, check, test, clippy"
+#MISE depends=["ensure-rust-toolchain", "setup-testdata"]
+set -euo pipefail
+
+cargo fmt --all -- --check
+cargo check
+cargo test --workspace -- --nocapture
+exec cargo clippy -- -D warnings

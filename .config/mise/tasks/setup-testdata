@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+#MISE description="Fetch pinned test fixtures used by cargo test"
+#MISE depends=["clean-tests"]
+set -euo pipefail
+
+repo_url="${TASKWARRIOR_TESTDATA_REPO_URL:?TASKWARRIOR_TESTDATA_REPO_URL is required; run via mise or export it first.}"
+ref="${TASKWARRIOR_TESTDATA_REF:?TASKWARRIOR_TESTDATA_REF is required; run via mise or export it first.}"
+testdata_dir="${TASKWARRIOR_TESTDATA_DIR:?TASKWARRIOR_TESTDATA_DIR is required; run via mise or export it first.}"
+
+rm -rf "$testdata_dir"
+mkdir -p "$(dirname "$testdata_dir")"
+
+git init -q "$testdata_dir"
+git -C "$testdata_dir" remote add origin "$repo_url"
+git -C "$testdata_dir" fetch --depth 1 origin "$ref"
+git -C "$testdata_dir" checkout --detach FETCH_HEAD
+
+echo "Prepared taskwarrior-testdata at $testdata_dir pinned to $ref"

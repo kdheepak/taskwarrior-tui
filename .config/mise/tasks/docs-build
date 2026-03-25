@@ -1,4 +1,5 @@
 #!/usr/bin/env -S uv run --script
+#MISE description="Build the MkDocs site"
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
@@ -22,9 +23,13 @@ from pathlib import Path
 
 
 def main() -> None:
-    root = Path(__file__).resolve().parents[1]
+    root = Path(__file__).resolve().parents[3]
     shutil.copyfile(root / "README.md", root / "docs" / "index.md")
-    subprocess.run([sys.executable, "-m", "mkdocs", "build", *sys.argv[1:]], cwd=root, check=True)
+    subprocess.run(
+        [sys.executable, "-m", "mkdocs", "build", *sys.argv[1:]],
+        cwd=root,
+        check=True,
+    )
 
 
 if __name__ == "__main__":

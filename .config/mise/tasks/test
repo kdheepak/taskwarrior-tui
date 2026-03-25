@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+#MISE alias="test-rust"
+#MISE description="Run cargo test against pinned test fixtures"
+#MISE depends=["setup-testdata"]
+set -euo pipefail
+
+exec cargo test --workspace -- --nocapture

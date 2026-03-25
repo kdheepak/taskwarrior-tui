@@ -1,4 +1,5 @@
 #!/usr/bin/env -S uv run --script
+#MISE description="Clone/update upstream Taskwarrior and build the task binary from source"
 # /// script
 # requires-python = ">=3.11"
 # dependencies = []
@@ -14,10 +15,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-
-DEFAULT_REPO_URL = "https://github.com/GothenburgBitFactory/taskwarrior.git"
-DEFAULT_TAG = "v3.3.0"
-DEFAULT_SOURCE = DEFAULT_TAG
 BRANCH_CHOICES = ("stable", "develop")
 
 
@@ -52,8 +49,15 @@ def capture(args: list[str], *, cwd: Path | None = None) -> str:
     return completed.stdout.strip()
 
 
-def env_or(value: str | None, env_var: str, default: str) -> str:
-    return value if value is not None else os.getenv(env_var, default)
+def env_or(value: str | None, env_var: str) -> str | None:
+    return value if value is not None else os.getenv(env_var)
+
+
+def env_or_fail(value: str | None, env_var: str, option: str) -> str:
+    resolved = env_or(value, env_var)
+    if resolved:
+        return resolved
+    fail(f"Missing required configuration: set {env_var} or pass {option}.")
 
 
 def resolve_path(value: str) -> Path:
@@ -64,11 +68,13 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Clone/update upstream Taskwarrior and build the task binary from source."
     )
+    source_group = parser.add_mutually_exclusive_group()
+    source_group.add_argument("--source", help="Taskwarrior tag or ref to build.")
     parser.add_argument("--repo-url")
-    parser.add_argument(
+    source_group.add_argument(
         "--branch",
         choices=BRANCH_CHOICES,
-        help=f"Build a moving branch for testing instead of the pinned default tag ({DEFAULT_TAG}).",
+        help="Build a moving branch for testing instead of the pinned source configured for this repo.",
     )
     parser.add_argument("--source-dir")
     parser.add_argument("--build-dir")
@@ -81,6 +87,9 @@ def resolve_source(args: argparse.Namespace) -> str:
     if args.branch is not None:
         return args.branch
 
+    if args.source is not None:
+        return args.source
+
     source = os.getenv("TASKWARRIOR_SOURCE")
     if source:
         return source
@@ -89,34 +98,43 @@ def resolve_source(args: argparse.Namespace) -> str:
     if legacy_branch:
         return legacy_branch
 
-    return DEFAULT_SOURCE
+    fail("Missing required configuration: set TASKWARRIOR_SOURCE or pass --source/--branch.")
+
+
+def derive_source_scoped_dir(env_var: str, fallback_prefix: str, source: str) -> str:
+    env_value = os.getenv(env_var)
+    if env_value:
+        return os.fspath(resolve_path(env_value).parent / source)
+    return f"{fallback_prefix}/{source}"
 
 
 def main() -> None:
     args = parse_args()
 
-    repo_url = env_or(args.repo_url, "TASKWARRIOR_REPO_URL", DEFAULT_REPO_URL)
+    repo_url = env_or_fail(args.repo_url, "TASKWARRIOR_REPO_URL", "--repo-url")
     source = resolve_source(args)
     source_dir = resolve_path(
-        env_or(args.source_dir, "TASKWARRIOR_SOURCE_DIR", "target/taskwarrior-src")
+        env_or_fail(args.source_dir, "TASKWARRIOR_SOURCE_DIR", "--source-dir")
     )
 
     if args.build_dir is not None:
         build_dir_value = args.build_dir
-    elif args.branch is not None:
-        build_dir_value = f"target/taskwarrior-build/{source}"
-    else:
-        build_dir_value = os.getenv(
-            "TASKWARRIOR_BUILD_DIR", f"target/taskwarrior-build/{source}"
+    elif args.branch is not None or args.source is not None:
+        build_dir_value = derive_source_scoped_dir(
+            "TASKWARRIOR_BUILD_DIR", "target/taskwarrior-build", source
         )
+    else:
+        build_dir_value = env_or_fail(None, "TASKWARRIOR_BUILD_DIR", "--build-dir")
 
     if args.install_dir is not None:
         install_dir_value = args.install_dir
-    elif args.branch is not None:
-        install_dir_value = f"target/taskwarrior-install/{source}"
+    elif args.branch is not None or args.source is not None:
+        install_dir_value = derive_source_scoped_dir(
+            "TASKWARRIOR_INSTALL_DIR", "target/taskwarrior-install", source
+        )
     else:
-        install_dir_value = os.getenv(
-            "TASKWARRIOR_INSTALL_DIR", f"target/taskwarrior-install/{source}"
+        install_dir_value = env_or_fail(
+            None, "TASKWARRIOR_INSTALL_DIR", "--install-dir"
         )
 
     build_dir = resolve_path(build_dir_value)
@@ -125,8 +143,8 @@ def main() -> None:
     if args.build_type is not None:
         build_type = args.build_type
     else:
-        build_type = os.getenv(
-            "TASKWARRIOR_BUILD_TYPE", "Debug" if source == "develop" else "Release"
+        build_type = env_or(None, "TASKWARRIOR_BUILD_TYPE") or (
+            "Debug" if source == "develop" else "Release"
         )
 
     ensure_command("git")
