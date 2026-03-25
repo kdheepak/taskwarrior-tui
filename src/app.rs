@@ -3978,6 +3978,7 @@ impl TaskwarriorTui {
         "scheduled:".to_string(),
         "wait:".to_string(),
         "depends:".to_string(),
+        "tag:".to_string(),
         "recur:".to_string(),
       ] {
         self.completion_list.insert(("attribute".to_string(), s));
@@ -4023,7 +4024,7 @@ impl TaskwarriorTui {
         if let Some(tags) = task.tags() {
           for tag in tags {
             if !virtual_tags.contains(tag) {
-              self.completion_list.insert(("tag".to_string(), format!("tag:{}", &tag)));
+              self.completion_list.insert(("tag".to_string(), tag.to_string()));
             }
           }
         }
