@@ -26,8 +26,16 @@ import sys
 from pathlib import Path
 
 
+def resolve_repo_root() -> Path:
+    for candidate in Path(__file__).resolve().parents:
+        if (candidate / "mkdocs.yml").is_file() and (candidate / "README.md").is_file():
+            return candidate
+
+    raise RuntimeError("unable to locate repository root from docs-build task path")
+
+
 def main() -> None:
-    root = Path(__file__).resolve().parents[3]
+    root = resolve_repo_root()
     mkdocs_args = os.getenv("usage_mkdocs_args")
     args = shlex.split(mkdocs_args) if mkdocs_args is not None else sys.argv[1:]
     shutil.copyfile(root / "README.md", root / "docs" / "index.md")
