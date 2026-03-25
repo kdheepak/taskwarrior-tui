@@ -1,5 +1,5 @@
 #!/usr/bin/env -S uv run --script
-#MISE description="Build the MkDocs site"
+# [MISE] description="Build the MkDocs site"
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
