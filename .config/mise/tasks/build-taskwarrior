@@ -1,5 +1,5 @@
 #!/usr/bin/env -S uv run --script
-#MISE description="Clone/update upstream Taskwarrior and build the task binary from source"
+# [MISE] description="Clone/update upstream Taskwarrior and build the task binary from source"
 # /// script
 # requires-python = ">=3.11"
 # dependencies = []
@@ -98,7 +98,9 @@ def resolve_source(args: argparse.Namespace) -> str:
     if legacy_branch:
         return legacy_branch
 
-    fail("Missing required configuration: set TASKWARRIOR_SOURCE or pass --source/--branch.")
+    fail(
+        "Missing required configuration: set TASKWARRIOR_SOURCE or pass --source/--branch."
+    )
 
 
 def derive_source_scoped_dir(env_var: str, fallback_prefix: str, source: str) -> str:
