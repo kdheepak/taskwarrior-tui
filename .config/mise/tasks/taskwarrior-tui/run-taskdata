@@ -3,6 +3,7 @@
 #USAGE about "Import local fixture data, run the TUI, and clean tests/data/.task on exit"
 #USAGE flag "--release" help="Run the TUI with cargo's release profile"
 #MISE depends=["taskwarrior-tui:import-taskdata"]
+#MISE depends_post=["taskwarrior-tui:clean-taskdata"]
 #MISE interactive=true
 set -euo pipefail
 
