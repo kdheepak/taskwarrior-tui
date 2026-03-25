@@ -4,8 +4,6 @@ lockfile = true
 
 [env]
 RUST_TEST_THREADS = "1"
-RUST_TOOLCHAIN_PROFILE = "default"
-RUST_TOOLCHAIN_COMPONENTS = "clippy,rustfmt,llvm-tools"
 TASKWARRIOR_BRANCH = "stable"
 TASKWARRIOR_INSTALL_DIR = "{{config_root}}/target/taskwarrior-install/{{env.TASKWARRIOR_BRANCH}}"
 TASKWARRIOR_TESTDATA_DIR = "{{config_root}}/tests/data"
@@ -17,7 +15,7 @@ TASKWARRIOR_TUI_LOG_LEVEL = "debug"
 _.path = "{{env.TASKWARRIOR_INSTALL_DIR}}/bin"
 
 [tools]
-rust = "latest"
+rust = { version = "latest", postinstall = "mise run ensure-rust-toolchain" }
 uv = "latest"
 "aqua:Kitware/CMake" = "latest"
 "github:jgm/pandoc" = "latest"
@@ -27,9 +25,9 @@ uv = "latest"
 "cargo:cargo-rpm" = "latest"
 "cargo:cargo-aur" = "latest"
 
-[tasks.setup-rust-toolchain]
-description = "Install the active Rust toolchain, components, and targets via rustup"
-run = "uv run scripts/ensure_rust_toolchain.py"
+[tasks.ensure-rust-toolchain]
+description = "Install Rust toolchain components and optional targets via rustup"
+file = "scripts/ensure_rust_toolchain.py"
 
 [tasks.clean-tests]
 description = "Delete cloned test fixtures"
@@ -50,7 +48,7 @@ run = "./scripts/setup_testdata.sh"
 [tasks.test]
 alias = "test-rust"
 description = "Run cargo test against pinned test fixtures"
-depends = ["setup-rust-toolchain", "setup-tests"]
+depends = ["setup-tests"]
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
@@ -66,39 +64,34 @@ run = "cargo clean"
 description = "Build the CLI"
 run = "cargo build"
 alias = "b"
-depends = ["clean", "setup-rust-toolchain"]
+depends = ["clean"]
 sources = ['Cargo.toml', 'src/**/*.rs']
 outputs = ['target/debug/taskwarrior-tui']
 
 [tasks.build-release]
 description = "Build the CLI in release mode"
-depends = ["setup-rust-toolchain"]
 run = "cargo build --release"
 
 [tasks.format]
 alias = "fmt"
 description = "Format the code"
-depends = ["setup-rust-toolchain"]
 run = "cargo fmt"
 
 [tasks.check-rust]
 description = "Run cargo check"
-depends = ["setup-rust-toolchain"]
 run = "cargo check"
 
 [tasks.fmt-check]
 description = "Check Rust formatting"
-depends = ["setup-rust-toolchain"]
 run = "cargo fmt --all -- --check"
 
 [tasks.clippy-strict]
 description = "Run clippy with warnings denied"
-depends = ["setup-rust-toolchain"]
 run = "cargo clippy -- -D warnings"
 
 [tasks.ci]
 description = "CI - format, check, test, clippy"
-depends = ["setup-rust-toolchain", "setup-tests"]
+depends = ["setup-tests"]
 run = """
 cargo fmt --all -- --check
 cargo check
@@ -109,7 +102,6 @@ cargo clippy -- -D warnings
 [tasks.lint]
 description = 'Lint with clippy'
 env = { RUST_BACKTRACE = '1' }
-depends = ["setup-rust-toolchain"]
 run = '''
 #!/usr/bin/env bash
 cargo clippy
