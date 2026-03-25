@@ -42,11 +42,17 @@ mise run test
 
 `mise run test` fetches `taskwarrior-testdata` at a pinned commit for deterministic runs.
 
-## Running debug build
+## Building the CLI
 
 ```bash
 mise run build
-./target/debug/taskwarrior-tui
+mise run build --release
+```
+
+## Running debug build
+
+```bash
+mise run run
 ```
 
 ## Running the TUI with local fixture data
@@ -63,6 +69,12 @@ Run the TUI against that imported data and remove `tests/data/.task` when the TU
 mise run run-taskdata
 ```
 
+Use a release build instead:
+
+```bash
+mise run run-taskdata --release
+```
+
 Remove `tests/data/.task` without starting the TUI:
 
 ```bash
@@ -72,8 +84,7 @@ mise run clean-taskdata
 ## Running release build
 
 ```bash
-mise run build-release
-./target/release/taskwarrior-tui
+mise run run --release
 ```
 
 ## Testing individual function
