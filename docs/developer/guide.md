@@ -29,7 +29,7 @@ mise install
 
 See the official mise install docs for other install methods such as Homebrew, apt, dnf, pacman, Scoop, and winget.
 
-The rest of this guide assumes `mise` is activated in your shell, so the toolchain and project environment from [`.mise.toml`](../../.mise.toml) are available automatically.
+The rest of this guide assumes `mise` is activated in your shell, so the toolchain and project environment from [`.config/mise.toml`](../../.config/mise.toml) are available automatically.
 
 ## Running tests
 
@@ -47,6 +47,26 @@ mise run test
 ```bash
 mise run build
 ./target/debug/taskwarrior-tui
+```
+
+## Running the TUI with local fixture data
+
+Import `tests/data/export.json` into `tests/data/.task`:
+
+```bash
+mise run import-taskdata
+```
+
+Run the TUI against that imported data and remove `tests/data/.task` when the TUI exits:
+
+```bash
+mise run run-taskdata
+```
+
+Remove `tests/data/.task` without starting the TUI:
+
+```bash
+mise run clean-taskdata
 ```
 
 ## Running release build
