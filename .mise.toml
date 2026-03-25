@@ -11,9 +11,32 @@ rust = { version = "latest", profile = "minimal", components = "cargo,rustfmt,cl
 "github:jgm/pandoc" = "latest"
 "cargo:cross" = "latest"
 
+[tasks.clean-tests]
+description = "Delete cloned test fixtures"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ -d tests/data ]; then
+  rm -rf tests/data
+fi
+'''
+
+[tasks.setup-tests]
+description = "Clone the test fixtures used by cargo test"
+depends = ["clean-tests"]
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+mkdir -p tests
+git clone https://github.com/kdheepak/taskwarrior-testdata tests/data
+'''
+
 [tasks.test]
-description = "Run tests with uv and pytest"
-run = "uv run --with pytest pytest"
+description = "Clone fresh test fixtures and run cargo test"
+depends = ["setup-tests"]
+run = "cargo test"
 
 [tasks.clean]
 description = "Clean build artifacts"
@@ -71,6 +94,10 @@ cargo clippy
 [tasks.docs-build]
 description = "Build the MkDocs site"
 run = "uv run scripts/build_docs.py"
+
+[tasks.man]
+description = "Generate the roff man page from Markdown"
+run = "pandoc --standalone --to=man docs/taskwarrior-tui.1.md -o docs/taskwarrior-tui.1"
 
 [tasks.coverage-lcov]
 description = "Generate lcov output with grcov"
