@@ -3,30 +3,31 @@
 #USAGE about "Import local fixture data, run the TUI, and clean tests/data/.task on exit"
 #USAGE flag "--release" help="Run the TUI with cargo's release profile"
 #MISE depends=["taskwarrior-tui:import-taskdata"]
+#MISE interactive=true
 set -euo pipefail
 
 if [ -n "${usage_release:-}" ]; then
-  set --
-  if [ "$usage_release" = "true" ]; then
-    set -- --release
-  fi
+    set --
+    if [ "$usage_release" = "true" ]; then
+        set -- --release
+    fi
 else
-  if [ "$#" -gt 1 ]; then
-    echo "usage: run-taskdata [--release]" >&2
-    exit 2
-  fi
+    if [ "$#" -gt 1 ]; then
+        echo "usage: run-taskdata [--release]" >&2
+        exit 2
+    fi
 
-  if [ "$#" -eq 1 ] && [ "$1" != "--release" ]; then
-    echo "usage: run-taskdata [--release]" >&2
-    exit 2
-  fi
+    if [ "$#" -eq 1 ] && [ "$1" != "--release" ]; then
+        echo "usage: run-taskdata [--release]" >&2
+        exit 2
+    fi
 fi
 
 cleanup() {
-  local status=$?
-  set +e
-  rm -rf "$TASKDATA"
-  exit "$status"
+    local status=$?
+    set +e
+    rm -rf "$TASKDATA"
+    exit "$status"
 }
 
 trap cleanup EXIT
