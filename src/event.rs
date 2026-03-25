@@ -1,9 +1,9 @@
 use crossterm::event::{
-  KeyCode::{BackTab, Backspace, Char, Delete, Down, End, Enter, Esc, Home, Insert, Left, Null, PageDown, PageUp, Right, Tab, Up, F},
+  KeyCode::{BackTab, Backspace, Char, Delete, Down, End, Enter, Esc, F, Home, Insert, Left, Null, PageDown, PageUp, Right, Tab, Up},
   KeyEvent, KeyModifiers,
 };
 use futures::StreamExt;
-use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
+use log::{Level, LevelFilter, debug, error, info, log_enabled, trace, warn};
 use serde::{Deserialize, Serialize};
 use tokio::{
   sync::{mpsc, oneshot},

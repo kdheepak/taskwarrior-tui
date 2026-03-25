@@ -243,7 +243,13 @@ impl TaskReportTable {
     }
     let num_labels = self.labels.len();
     let num_columns = self.columns.len();
-    assert!(num_labels == num_columns, "Must have the same number of labels (currently {}) and columns (currently {}). Compare their values as shown by \"task show report.{}.\" and fix your taskwarrior config.", num_labels, num_columns, report);
+    assert!(
+      num_labels == num_columns,
+      "Must have the same number of labels (currently {}) and columns (currently {}). Compare their values as shown by \"task show report.{}.\" and fix your taskwarrior config.",
+      num_labels,
+      num_columns,
+      report
+    );
 
     Ok(())
   }
@@ -420,11 +426,7 @@ impl TaskReportTable {
       "tags.count" => match task.tags() {
         Some(v) => {
           let t = v.iter().filter(|t| !self.virtual_tags.contains(t)).count();
-          if t == 0 {
-            "".to_string()
-          } else {
-            t.to_string()
-          }
+          if t == 0 { "".to_string() } else { t.to_string() }
         }
         None => "".to_string(),
       },

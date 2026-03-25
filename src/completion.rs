@@ -1,20 +1,20 @@
 use std::{error::Error, io};
 
-use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
+use log::{Level, LevelFilter, debug, error, info, log_enabled, trace, warn};
 use ratatui::{
+  Terminal,
   layout::{Constraint, Direction, Layout},
   style::{Color, Modifier, Style},
   text::{Line, Span},
   widgets::{Block, Borders, List, ListItem, ListState},
-  Terminal,
 };
 use rustyline::{
+  Context,
   error::ReadlineError,
   highlight::{Highlighter, MatchingBracketHighlighter},
   hint::Hinter,
   history::FileHistory,
   line_buffer::LineBuffer,
-  Context,
 };
 use unicode_segmentation::{Graphemes, UnicodeSegmentation};
 use unicode_width::UnicodeWidthStr;
@@ -157,11 +157,7 @@ impl CompletionList {
 
   pub fn get(&self, i: usize) -> Option<Completion> {
     let candidates = self.candidates();
-    if i < candidates.len() {
-      Some(candidates[i].clone())
-    } else {
-      None
-    }
+    if i < candidates.len() { Some(candidates[i].clone()) } else { None }
   }
 
   pub fn selected(&self) -> Option<(usize, Completion)> {
@@ -183,11 +179,7 @@ impl CompletionList {
     if candidates.len() == 1 {
       let c = &candidates[0];
       let suffix = &c.4;
-      if suffix.is_empty() {
-        None
-      } else {
-        Some(suffix.clone())
-      }
+      if suffix.is_empty() { None } else { Some(suffix.clone()) }
     } else {
       None
     }

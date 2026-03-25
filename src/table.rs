@@ -5,9 +5,9 @@ use std::{
 };
 
 use cassowary::{
-  strength::{MEDIUM, REQUIRED, WEAK},
   Expression, Solver,
   WeightedRelation::{EQ, GE, LE},
+  strength::{MEDIUM, REQUIRED, WEAK},
 };
 use ratatui::{
   buffer::Buffer,
@@ -80,10 +80,10 @@ impl TaskwarriorTuiTableState {
   }
 
   pub fn toggle_mark(&mut self, index: Option<usize>) {
-    if let Some(i) = index {
-      if !self.marked.insert(i) {
-        self.marked.remove(&i);
-      }
+    if let Some(i) = index
+      && !self.marked.insert(i)
+    {
+      self.marked.remove(&i);
     }
   }
 

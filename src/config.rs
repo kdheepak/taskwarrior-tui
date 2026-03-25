@@ -431,10 +431,8 @@ impl Config {
   /// For indexed/gray/rgb colors the bright prefix is ignored (no bright variant exists).
   fn parse_color_bg(s: &str, is_bright: bool) -> Option<Color> {
     // For named colors with bright prefix, map to high-intensity variant (8-15)
-    if is_bright {
-      if let Some(idx) = Self::named_color_index(s) {
-        return Some(Color::Indexed(idx + 8));
-      }
+    if is_bright && let Some(idx) = Self::named_color_index(s) {
+      return Some(Color::Indexed(idx + 8));
       // For colorN/gray/rgb with "bright" prefix, fall through to normal parsing
       // (no bright variant for indexed colors — just use the index as-is)
     }

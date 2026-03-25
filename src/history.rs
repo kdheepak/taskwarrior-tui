@@ -3,7 +3,7 @@ use std::{
   path::{Path, PathBuf},
 };
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use rustyline::{
   error::ReadlineError,
   history::{DefaultHistory, History, SearchDirection},
@@ -120,10 +120,10 @@ impl HistoryContext {
   }
 
   pub fn add(&mut self, buf: &str) {
-    if let Ok(x) = self.history.add(buf) {
-      if x {
-        self.reset();
-      }
+    if let Ok(x) = self.history.add(buf)
+      && x
+    {
+      self.reset();
     }
   }
 

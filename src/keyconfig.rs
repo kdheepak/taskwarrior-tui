@@ -1,6 +1,6 @@
 use std::{collections::HashSet, error::Error, hash::Hash};
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 

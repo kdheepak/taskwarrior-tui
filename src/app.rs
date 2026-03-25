@@ -6,32 +6,32 @@ use std::{
   fs, io,
   io::{Read, Write},
   path::Path,
-  sync::{mpsc, Arc, Mutex},
+  sync::{Arc, Mutex, mpsc},
   time::{Duration, Instant, SystemTime},
 };
 
-use anyhow::{anyhow, Context as AnyhowContext, Result};
+use anyhow::{Context as AnyhowContext, Result, anyhow};
 use chrono::{DateTime, Datelike, FixedOffset, Local, NaiveDate, NaiveDateTime, TimeZone, Timelike};
 use crossterm::{
   event::{DisableMouseCapture, EnableMouseCapture},
   execute,
   style::style,
-  terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+  terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use futures::SinkExt;
 use lazy_static::lazy_static;
-use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
+use log::{Level, LevelFilter, debug, error, info, log_enabled, trace, warn};
 use ratatui::{
+  Frame, Terminal,
   backend::{Backend, CrosstermBackend},
   layout::{Alignment, Constraint, Direction, Layout, Margin, Position, Rect},
   style::{Color, Modifier, Style},
   symbols::bar::FULL,
   text::{Line, Span, Text},
   widgets::{Block, BorderType, Borders, Clear, Gauge, LineGauge, List, ListItem, Paragraph, Tabs, Wrap},
-  Frame, Terminal,
 };
 use regex::Regex;
-use rustyline::{history::SearchDirection as HistoryDirection, line_buffer::LineBuffer, At, Editor, Word};
+use rustyline::{At, Editor, Word, history::SearchDirection as HistoryDirection, line_buffer::LineBuffer};
 use task_hookrs::{date::Date, import::import, project::Project, status::TaskStatus, task::Task, uda::UDAValue};
 use unicode_segmentation::{Graphemes, UnicodeSegmentation};
 use unicode_width::UnicodeWidthStr;
@@ -41,7 +41,7 @@ use versions::Versioning;
 use crate::{
   action::Action,
   calendar::Calendar,
-  completion::{get_start_word_under_cursor, CompletionList},
+  completion::{CompletionList, get_start_word_under_cursor},
   config,
   config::Config,
   event::{Event, KeyCode},
@@ -49,10 +49,10 @@ use crate::{
   history::HistoryContext,
   keyconfig::KeyConfig,
   pane::{
+    Pane,
     context::{ContextDetails, ContextsState},
     project::ProjectsState,
     report::ReportsState,
-    Pane,
   },
   scrollbar::Scrollbar,
   table::{Row, Table, TableMode, TaskwarriorTuiTableState},
@@ -1273,11 +1273,7 @@ impl TaskwarriorTui {
 
   fn task_by_index(&self, i: usize) -> Option<Task> {
     let tasks = &self.tasks;
-    if i >= tasks.len() {
-      None
-    } else {
-      Some(tasks[i].clone())
-    }
+    if i >= tasks.len() { None } else { Some(tasks[i].clone()) }
   }
 
   fn task_by_uuid(&self, uuid: Uuid) -> Option<Task> {
@@ -1294,14 +1290,12 @@ impl TaskwarriorTui {
 
   fn task_index_by_id(&self, id: u64) -> Option<usize> {
     let tasks = &self.tasks;
-    let m = tasks.iter().position(|t| t.id() == Some(id));
-    m
+    tasks.iter().position(|t| t.id() == Some(id))
   }
 
   fn task_index_by_uuid(&self, uuid: Uuid) -> Option<usize> {
     let tasks = &self.tasks;
-    let m = tasks.iter().position(|t| *t.uuid() == uuid);
-    m
+    tasks.iter().position(|t| *t.uuid() == uuid)
   }
 
   fn style_for_task(&self, task: &Task) -> Style {
@@ -1483,10 +1477,11 @@ impl TaskwarriorTui {
     if force || self.dirty || self.tasks_changed_since(self.last_export).unwrap_or(true) {
       self.get_context()?;
       let task_uuids = self.selected_task_uuids();
-      if self.current_selection_uuid.is_none() && self.current_selection_id.is_none() && task_uuids.len() == 1 {
-        if let Some(uuid) = task_uuids.first() {
-          self.current_selection_uuid = Some(*uuid);
-        }
+      if self.current_selection_uuid.is_none()
+        && self.current_selection_id.is_none()
+        && let [uuid] = task_uuids.as_slice()
+      {
+        self.current_selection_uuid = Some(*uuid);
       }
 
       self.task_report_table.export_headers(None, &self.report)?;
@@ -1517,22 +1512,20 @@ impl TaskwarriorTui {
   }
 
   pub fn selection_fix(&mut self) {
-    if let (Some(t), Some(id)) = (self.task_current(), self.current_selection_id) {
-      if t.id() != Some(id) {
-        if let Some(i) = self.task_index_by_id(id) {
-          self.current_selection = i;
-          self.current_selection_id = None;
-        }
-      }
+    if let (Some(t), Some(id)) = (self.task_current(), self.current_selection_id)
+      && t.id() != Some(id)
+      && let Some(i) = self.task_index_by_id(id)
+    {
+      self.current_selection = i;
+      self.current_selection_id = None;
     }
 
-    if let (Some(t), Some(uuid)) = (self.task_current(), self.current_selection_uuid) {
-      if t.uuid() != &uuid {
-        if let Some(i) = self.task_index_by_uuid(uuid) {
-          self.current_selection = i;
-          self.current_selection_uuid = None;
-        }
-      }
+    if let (Some(t), Some(uuid)) = (self.task_current(), self.current_selection_uuid)
+      && t.uuid() != &uuid
+      && let Some(i) = self.task_index_by_uuid(uuid)
+    {
+      self.current_selection = i;
+      self.current_selection_uuid = None;
     }
   }
 
@@ -1797,11 +1790,7 @@ impl TaskwarriorTui {
     }
     let i = {
       if self.current_selection == 0 {
-        if self.config.uda_task_report_looping {
-          self.tasks.len() - 1
-        } else {
-          0
-        }
+        if self.config.uda_task_report_looping { self.tasks.len() - 1 } else { 0 }
       } else {
         self.current_selection - 1
       }
@@ -1817,11 +1806,7 @@ impl TaskwarriorTui {
     }
     let i = {
       if self.current_selection == self.tasks.len() - 1 {
-        if self.config.uda_task_report_looping {
-          0
-        } else {
-          self.tasks.len() - 1
-        }
+        if self.config.uda_task_report_looping { 0 } else { self.tasks.len() - 1 }
       } else {
         std::cmp::min(
           self
@@ -1843,11 +1828,7 @@ impl TaskwarriorTui {
     }
     let i = {
       if self.current_selection == 0 {
-        if self.config.uda_task_report_looping {
-          self.tasks.len() - 1
-        } else {
-          0
-        }
+        if self.config.uda_task_report_looping { self.tasks.len() - 1 } else { 0 }
       } else {
         self.current_selection.saturating_sub(self.task_report_height as usize)
       }
@@ -2072,10 +2053,8 @@ impl TaskwarriorTui {
       None => Err(format!("Cannot run subprocess. Unable to shlex split `{}`", shell)),
     };
 
-    if task_uuids.len() == 1 {
-      if let Some(uuid) = task_uuids.first() {
-        self.current_selection_uuid = Some(*uuid);
-      }
+    if let [uuid] = task_uuids.as_slice() {
+      self.current_selection_uuid = Some(*uuid);
     }
 
     r
@@ -2110,24 +2089,26 @@ impl TaskwarriorTui {
     }
     let shell = shellexpand::tilde(&shell).into_owned();
     let period = self.config.uda_background_process_period;
-    std::thread::spawn(move || loop {
-      std::thread::sleep(Duration::from_secs(period as u64));
-      match shlex::split(&shell) {
-        Some(cmd) => {
-          let mut command = std::process::Command::new(&cmd[0]);
-          for s in cmd.iter().skip(1) {
-            command.arg(s);
-          }
-          if let Ok(output) = command.output() {
-            if !output.status.success() {
+    std::thread::spawn(move || {
+      loop {
+        std::thread::sleep(Duration::from_secs(period as u64));
+        match shlex::split(&shell) {
+          Some(cmd) => {
+            let mut command = std::process::Command::new(&cmd[0]);
+            for s in cmd.iter().skip(1) {
+              command.arg(s);
+            }
+            if let Ok(output) = command.output() {
+              if !output.status.success() {
+                break;
+              }
+            } else {
               break;
             }
-          } else {
-            break;
           }
-        }
-        None => break,
-      };
+          None => break,
+        };
+      }
     });
   }
 
@@ -2182,10 +2163,8 @@ impl TaskwarriorTui {
       None => Err(format!("Unable to run shortcut number {}: shlex::split(`{}`) failed.", s, shell)),
     };
 
-    if task_uuids.len() == 1 {
-      if let Some(uuid) = task_uuids.first() {
-        self.current_selection_uuid = Some(*uuid);
-      }
+    if let [uuid] = task_uuids.as_slice() {
+      self.current_selection_uuid = Some(*uuid);
     }
 
     self.resume_tui().await.unwrap();
@@ -2235,10 +2214,8 @@ impl TaskwarriorTui {
       None => Err(format!("Cannot shlex split `{}`", shell)),
     };
 
-    if task_uuids.len() == 1 {
-      if let Some(uuid) = task_uuids.first() {
-        self.current_selection_uuid = Some(*uuid);
-      }
+    if let [uuid] = task_uuids.as_slice() {
+      self.current_selection_uuid = Some(*uuid);
     }
 
     r
@@ -2287,10 +2264,8 @@ impl TaskwarriorTui {
       None => Err(format!("Cannot shlex split `{}`", shell)),
     };
 
-    if task_uuids.len() == 1 {
-      if let Some(uuid) = task_uuids.first() {
-        self.current_selection_uuid = Some(*uuid);
-      }
+    if let [uuid] = task_uuids.as_slice() {
+      self.current_selection_uuid = Some(*uuid);
     }
     r
   }
@@ -2312,10 +2287,10 @@ impl TaskwarriorTui {
             if output.status.code() == Some(0) {
               let data = String::from_utf8_lossy(&output.stdout);
               let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
-              if self.config.uda_task_report_jump_to_task_on_add {
-                if let Some(caps) = re.captures(&data) {
-                  self.current_selection_id = Some(caps["task_id"].parse::<u64>().unwrap_or_default());
-                }
+              if self.config.uda_task_report_jump_to_task_on_add
+                && let Some(caps) = re.captures(&data)
+              {
+                self.current_selection_id = Some(caps["task_id"].parse::<u64>().unwrap_or_default());
               }
               Ok(())
             } else {
@@ -2374,10 +2349,8 @@ impl TaskwarriorTui {
       }
     }
 
-    if task_uuids.len() == 1 {
-      if let Some(uuid) = task_uuids.first() {
-        self.current_selection_uuid = Some(*uuid);
-      }
+    if let [uuid] = task_uuids.as_slice() {
+      self.current_selection_uuid = Some(*uuid);
     }
 
     Ok(())
@@ -2414,10 +2387,8 @@ impl TaskwarriorTui {
       }
     }
 
-    if task_uuids.len() == 1 {
-      if let Some(uuid) = task_uuids.first() {
-        self.current_selection_uuid = Some(*uuid);
-      }
+    if let [uuid] = task_uuids.as_slice() {
+      self.current_selection_uuid = Some(*uuid);
     }
 
     Ok(())
@@ -2519,10 +2490,10 @@ impl TaskwarriorTui {
       Ok(output) => {
         let data = String::from_utf8_lossy(&output.stdout);
         let re = Regex::new(r"(?P<task_uuid>[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})").unwrap();
-        if let Some(caps) = re.captures(&data) {
-          if let Ok(uuid) = Uuid::parse_str(&caps["task_uuid"]) {
-            self.current_selection_uuid = Some(uuid);
-          }
+        if let Some(caps) = re.captures(&data)
+          && let Ok(uuid) = Uuid::parse_str(&caps["task_uuid"])
+        {
+          self.current_selection_uuid = Some(uuid);
         }
         Ok(())
       }
@@ -2562,10 +2533,8 @@ impl TaskwarriorTui {
       )),
     };
 
-    if task_uuids.len() == 1 {
-      if let Some(uuid) = task_uuids.first() {
-        self.current_selection_uuid = Some(*uuid);
-      }
+    if let [uuid] = task_uuids.as_slice() {
+      self.current_selection_uuid = Some(*uuid);
     }
 
     r
@@ -4256,10 +4225,10 @@ pub fn add_tag(task: &mut Task, tag: String) {
 }
 
 pub fn remove_tag(task: &mut Task, tag: &str) {
-  if let Some(t) = task.tags_mut() {
-    if let Some(index) = t.iter().position(|x| *x == tag) {
-      t.remove(index);
-    }
+  if let Some(t) = task.tags_mut()
+    && let Some(index) = t.iter().position(|x| *x == tag)
+  {
+    t.remove(index);
   }
 }
 
@@ -4421,9 +4390,11 @@ mod tests {
     );
 
     let app = TaskwarriorTui::new("next", false).await.unwrap();
-    assert!(app
-      .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
-      .is_none());
+    assert!(
+      app
+        .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
+        .is_none()
+    );
 
     test_draw_empty_task_report().await;
 
@@ -4436,9 +4407,11 @@ mod tests {
     assert!(app.task_by_index(0).is_some());
 
     let app = TaskwarriorTui::new("next", false).await.unwrap();
-    assert!(app
-      .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
-      .is_some());
+    assert!(
+      app
+        .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
+        .is_some()
+    );
 
     test_draw_task_report_with_extended_modify_command().await;
     // test_draw_task_report();

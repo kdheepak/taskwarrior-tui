@@ -1,11 +1,11 @@
 use ratatui::{
+  Frame,
   backend::Backend,
   buffer::Buffer,
   layout::{Margin, Rect},
   style::{Color, Style},
   symbols::{block::FULL, line::DOUBLE_VERTICAL},
   widgets::Widget,
-  Frame,
 };
 
 pub struct Scrollbar {
