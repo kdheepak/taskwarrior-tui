@@ -13,6 +13,12 @@ jobs:
             target: x86_64-apple-darwin
             rust_flags: ""
             features: ""
+            binary_postfix: ""
+          - os: macOS-latest
+            target: aarch64-apple-darwin
+            rust_flags: ""
+            features: ""
+            binary_postfix: ""
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             rust_flags: ""
@@ -24,7 +30,7 @@ jobs:
             target: x86_64-unknown-linux-musl
             rust_flags: ""
             features: ""
-            binary: "taskwarrior-tui-x86_64-unknown-linux-musl"
+            binary_postfix: ""
             upx_args: --best --lzma
             strip: true
           - os: windows-latest
