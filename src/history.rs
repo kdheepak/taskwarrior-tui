@@ -120,10 +120,10 @@ impl HistoryContext {
   }
 
   pub fn add(&mut self, buf: &str) {
-    if let Ok(x) = self.history.add(buf) {
-      if x {
-        self.reset();
-      }
+    if let Ok(x) = self.history.add(buf)
+      && x
+    {
+      self.reset();
     }
   }
 
