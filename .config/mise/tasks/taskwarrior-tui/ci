@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 #MISE description="CI - format, check, test, clippy"
-#MISE depends=["fmt-check", "check-rust", "test", "clippy-strict"]
+#MISE depends=["taskwarrior-tui:fmt-check", "taskwarrior-tui:check-rust", "taskwarrior-tui:test", "taskwarrior-tui:clippy-strict"]

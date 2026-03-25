@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Import local fixture data, run the TUI, and clean tests/data/.task on exit"
-#MISE depends=["import-taskdata"]
+#MISE depends=["taskwarrior-tui:import-taskdata"]
 set -euo pipefail
 
 if [ "$#" -gt 1 ]; then

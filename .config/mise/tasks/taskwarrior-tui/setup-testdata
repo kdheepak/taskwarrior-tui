@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Fetch pinned test fixtures used by cargo test"
-#MISE depends=["clean-tests"]
+#MISE depends=["taskwarrior-tui:clean-tests"]
 set -euo pipefail
 
 repo_url="${TASKWARRIOR_TESTDATA_REPO_URL:?TASKWARRIOR_TESTDATA_REPO_URL is required; run via mise or export it first.}"

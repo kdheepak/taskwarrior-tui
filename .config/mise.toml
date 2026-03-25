@@ -20,7 +20,7 @@ TASKWARRIOR_TUI_LOG_LEVEL = "debug"
 _.path = "{{env.TASKWARRIOR_INSTALL_DIR}}/bin"
 
 [tools]
-rust = { version = "latest", postinstall = "mise run ensure-rust-toolchain" }
+rust = { version = "latest", postinstall = "mise run taskwarrior-tui:ensure-rust-toolchain" }
 uv = "latest"
 "aqua:Kitware/CMake" = "latest"
 "github:jgm/pandoc" = "latest"
