@@ -172,6 +172,27 @@ impl CompletionList {
     self.candidates().is_empty()
   }
 
+  /// Returns the ghost text suffix when there is exactly one completion candidate
+  /// and the suffix is non-empty (i.e., there is something left to complete).
+  /// The returned tuple is `(replacement, original, suffix)` where:
+  /// - `replacement` is the full candidate string
+  /// - `original` is the already-typed prefix
+  /// - `suffix` is the remaining text to show as ghost text
+  pub fn ghost_text(&self) -> Option<String> {
+    let candidates = self.candidates();
+    if candidates.len() == 1 {
+      let c = &candidates[0];
+      let suffix = &c.4;
+      if suffix.is_empty() {
+        None
+      } else {
+        Some(suffix.clone())
+      }
+    } else {
+      None
+    }
+  }
+
   pub fn candidates(&self) -> Vec<Completion> {
     let hist = FileHistory::new();
     let ctx = rustyline::Context::new(&hist);
