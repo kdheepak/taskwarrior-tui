@@ -29,3 +29,12 @@ uv = "latest"
 "cargo:cargo-deb" = "latest"
 "cargo:cargo-rpm" = "latest"
 "cargo:cargo-aur" = "latest"
+
+[tasks."taskwarrior-tui:ci"]
+description = "CI - format, check, test, clippy"
+run = [
+  { task = "taskwarrior-tui:fmt-check" },
+  { task = "taskwarrior-tui:check-rust" },
+  { task = "taskwarrior-tui:test" },
+  { task = "taskwarrior-tui:clippy-strict" },
+]
