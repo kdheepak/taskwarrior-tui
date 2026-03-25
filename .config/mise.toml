@@ -1,6 +1,5 @@
 [settings]
 env_shell_expand = true
-lockfile = true
 
 [env]
 RUST_TEST_THREADS = "1"
