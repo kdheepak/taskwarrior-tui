@@ -21,11 +21,9 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y uuid-dev uuid-runtime
       - name: Build Taskwarrior from source
         run: mise run build-taskwarrior
-      - name: Add Taskwarrior to PATH
-        run: echo "$GITHUB_WORKSPACE/target/taskwarrior-install/stable/bin" >> "$GITHUB_PATH"
       - run: |
           # prepare taskwarrior, initial setup
-          task rc.confirmation=off || echo 0
+          mise exec -- task rc.confirmation=off || echo 0
       - run: mise run test
         env:
           RUST_BACKTRACE: full
