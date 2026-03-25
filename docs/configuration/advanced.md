@@ -118,3 +118,21 @@ This will run `task sync` every 60 seconds. If the `background_process` is an em
 `background_process` runs successfully, it'll be run every `background_process_period` number of
 seconds (default: 60 seconds). However, if it fails even once it won't be run again till
 `taskwarrior-tui` is restarted.
+
+## Environment variables
+
+`TASKWARRIOR_TUI_TASKWARRIOR_CLI`
+: Overrides the path to the Taskwarrior executable. Defaults to `task`, resolved via `PATH`.
+
+  Use this if Taskwarrior is installed in a non-standard location, or if you want to wrap the
+  `task` binary with a script:
+
+  ```bash
+  TASKWARRIOR_TUI_TASKWARRIOR_CLI=/usr/local/bin/task taskwarrior-tui
+  ```
+
+  You can also set it permanently in your shell profile:
+
+  ```bash
+  export TASKWARRIOR_TUI_TASKWARRIOR_CLI=/usr/local/bin/task
+  ```
