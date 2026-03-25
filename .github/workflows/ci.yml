@@ -8,42 +8,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-      - uses: clechasseur/rs-cargo@v4
-        with:
-          command: check
+      - uses: jdx/mise-action@v3
+      - run: mise run check-rust
 
   test:
     name: Test Suite
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - name: Install Taskwarrior
-        uses: ./.github/actions/install-taskwarrior
-        with:
-          secret_gh_token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: jdx/mise-action@v3
+      - name: Install Taskwarrior build dependencies
+        run: sudo apt-get update && sudo apt-get install -y uuid-dev uuid-runtime
+      - name: Build Taskwarrior from source
+        run: mise run build-taskwarrior
       - run: |
           # prepare taskwarrior, initial setup
-          task rc.confirmation=off || echo 0
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-      - name: Install testdata
-        uses: actions/checkout@v6
-        with:
-          repository: kdheepak/taskwarrior-testdata
-          path: taskwarrior-testdata
-      - uses: clechasseur/rs-cargo@v4
-        with:
-          command: test
-          args: --workspace -- --nocapture
+          mise exec -- task rc.confirmation=off || echo 0
+      - run: mise run test
         env:
-          TASKRC: taskwarrior-testdata/.taskrc
-          TASKDATA: taskwarrior-testdata/.task
           RUST_BACKTRACE: full
 
 
@@ -57,27 +39,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: nightly
-          override: true
-          components: rustfmt
-      - uses: clechasseur/rs-cargo@v4
-        with:
-          command: fmt
-          args: --all -- --check
+      - uses: jdx/mise-action@v3
+      - run: mise run fmt-check
 
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-          components: clippy
-      - uses: clechasseur/rs-cargo@v4
-        with:
-          command: clippy
-          args: -- -D warnings
+      - uses: jdx/mise-action@v3
+      - run: mise run clippy-strict

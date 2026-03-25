@@ -8,59 +8,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - name: Install Taskwarrior
-        uses: ./.github/actions/install-taskwarrior
-        with:
-          secret_gh_token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: jdx/mise-action@v3
+      - name: Install Taskwarrior build dependencies
+        run: sudo apt-get update && sudo apt-get install -y uuid-dev uuid-runtime
+      - name: Build Taskwarrior from source
+        run: mise run build-taskwarrior
       - run: |
           # prepare taskwarrior, initial setup
-          task rc.confirmation=off || echo 0
+          mise exec -- task rc.confirmation=off || echo 0
 
-      - name: Install Rust toolchain for grcov compilation
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-      - name: Install grcov
-        uses: clechasseur/rs-cargo@v4
-        with:
-          command: install
-          args: grcov
-
-      - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: nightly
-          override: true
-          components: llvm-tools-preview
-      - name: Checkout testdata
-        uses: actions/checkout@v6
-        with:
-          repository: kdheepak/taskwarrior-testdata
-          path: taskwarrior-testdata    
       - name: Build taskwarrior-tui with coverage
-        uses: clechasseur/rs-cargo@v4
-        with:
-          command: build
+        run: cargo build
         env:
-          RUSTFLAGS: "-Cinstrument-coverage"  
+          RUSTFLAGS: "-Cinstrument-coverage"
       - name: Run taskwarrior-tui tests in coverage environment
-        uses: clechasseur/rs-cargo@v4
-        with:
-          command: test
-          args: --workspace -- --nocapture
+        run: mise run test
         env:
-          TASKRC: taskwarrior-testdata/.taskrc
-          TASKDATA: taskwarrior-testdata/.task
           RUST_BACKTRACE: full
           RUSTFLAGS: "-Cinstrument-coverage"
           LLVM_PROFILE_FILE: "your_name-%p-%m.profraw"
 
       - name: Gather coverage data
-        run: |
-          mkdir ./target/debug/coverage/
-          grcov . -s . --binary-path ./target/debug/ -t lcov --branch --ignore-not-existing -o ./target/debug/coverage/
-        shell: bash
+        run: mise run coverage-lcov
       - name: Coveralls upload
         uses: coverallsapp/github-action@v2
         with:

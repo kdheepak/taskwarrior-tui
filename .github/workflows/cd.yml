@@ -6,7 +6,7 @@ on:
   push:
     tags:
       - v*
-      
+
 permissions:
   contents: write
 
@@ -35,14 +35,10 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v6
-      - uses: clechasseur/rs-cargo@v4
-        with:
-          command: build
-          args: --release
-      - name: Install cargo-deb
-        run: cargo install cargo-deb
+      - uses: jdx/mise-action@v3
+      - run: mise run build-release
       - name: Build deb package
-        run: cargo deb -p taskwarrior-tui -o target/debian/taskwarrior-tui.deb
+        run: mise run package-deb
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -63,16 +59,12 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v6
-      - uses: clechasseur/rs-cargo@v4
-        with:
-          command: build
-          args: --release
+      - uses: jdx/mise-action@v3
+      - run: mise run build-release
       - name: Install rpm
-        run: sudo apt-get install rpm
-      - name: Install cargo-rpm
-        run: cargo install cargo-rpm
+        run: sudo apt-get update && sudo apt-get install -y rpm
       - name: Build rpm package
-        run: cargo rpm build
+        run: mise run package-rpm
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -93,11 +85,7 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v6
-      - uses: clechasseur/rs-cargo@v4
-        with:
-          command: build
-          args: --release
-      - name: Install cargo-aur
-        run: cargo install cargo-aur
+      - uses: jdx/mise-action@v3
+      - run: mise run build-release
       - name: Build aur package
-        run: cargo aur
+        run: mise run package-aur

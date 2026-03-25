@@ -1,0 +1,61 @@
+#!/usr/bin/env -S uv run
+# /// script
+# requires-python = ">=3.11"
+# ///
+
+from __future__ import annotations
+
+import os
+import shlex
+import subprocess
+
+DEFAULT_PROFILE = "default"
+DEFAULT_COMPONENTS = ("clippy", "rustfmt", "llvm-tools")
+
+
+def split_csv(value: str) -> list[str]:
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def run(cmd: list[str]) -> None:
+    print("+", " ".join(shlex.quote(part) for part in cmd), flush=True)
+    subprocess.run(cmd, check=True)
+
+
+def resolve_toolchain() -> str:
+    for env_name in ("MISE_TOOL_VERSION", "RUSTUP_TOOLCHAIN"):
+        value = os.environ.get(env_name, "").strip()
+        if value:
+            return value
+
+    result = subprocess.run(
+        ["rustup", "show", "active-toolchain"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    toolchain = result.stdout.strip().split()[0]
+    if toolchain:
+        return toolchain
+    raise RuntimeError("unable to determine active Rust toolchain")
+
+
+def main() -> int:
+    toolchain = resolve_toolchain()
+    profile = DEFAULT_PROFILE
+    components = list(DEFAULT_COMPONENTS)
+    targets = split_csv(os.environ.get("RUST_TOOLCHAIN_TARGETS", ""))
+
+    run(["rustup", "toolchain", "install", toolchain, "--profile", profile])
+
+    if components:
+        run(["rustup", "component", "add", f"--toolchain={toolchain}", *components])
+
+    if targets:
+        run(["rustup", "target", "add", f"--toolchain={toolchain}", *targets])
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

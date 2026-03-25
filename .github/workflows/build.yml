@@ -1,5 +1,5 @@
 name: Build
-on: 
+on:
   pull_request:
   workflow_call:
 jobs:
@@ -11,64 +11,68 @@ jobs:
         include:
           - os: macOS-latest
             target: x86_64-apple-darwin
-            rust_flags: ''
-            features: ''
+            rust_flags: ""
+            features: ""
+            binary_postfix: ""
+          - os: macOS-latest
+            target: aarch64-apple-darwin
+            rust_flags: ""
+            features: ""
+            binary_postfix: ""
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            rust_flags: ''
-            features: ''
-            binary_postfix: ''
+            rust_flags: ""
+            features: ""
+            binary_postfix: ""
             upx_args: --best --lzma
             strip: true
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-            rust_flags: ''
-            features: ''
-            binary: 'taskwarrior-tui-x86_64-unknown-linux-musl'
+            rust_flags: ""
+            features: ""
+            binary_postfix: ""
             upx_args: --best --lzma
             strip: true
           - os: windows-latest
             target: x86_64-pc-windows-gnu
             rust_flags: -C target-feature=+crt-static
-            features: ''
-            binary_postfix: '.exe'
+            features: ""
+            binary_postfix: ".exe"
             upx_args: -9
             strip: false
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             rust_flags: -C target-feature=+crt-static
-            features: ''
-            binary_postfix: '.exe'
+            features: ""
+            binary_postfix: ".exe"
             upx_args: -9
             strip: false
           - os: windows-latest
             target: i686-pc-windows-msvc
             rust_flags: -C target-feature=+crt-static
-            features: ''
-            binary_postfix: '.exe'
+            features: ""
+            binary_postfix: ".exe"
             upx_args: -9
             strip: false
     env:
       RUSTFLAGS: ${{ matrix.rust_flags }}
       MACOSX_DEPLOYMENT_TARGET: 10.7
     steps:
-      - uses: actions/checkout@master
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: stable
-          target: ${{ matrix.target }}
-          override: true
-      - uses: clechasseur/rs-cargo@v4
-        with:
-          command: build
-          args: --release ${{matrix.features}} --target=${{ matrix.target }}
+      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v3
+      - name: Install Rust target
+        run: mise run ensure-rust-toolchain
+        env:
+          RUST_TOOLCHAIN_TARGETS: ${{ matrix.target }}
+      - name: Build release binary
+        run: cargo build --release ${{ matrix.features }} --target=${{ matrix.target }}
       - name: Compress binaries
         uses: svenstaro/upx-action@v3
         with:
           files: target/${{ matrix.target }}/release/taskwarrior-tui${{ matrix.binary_postfix }}
           args: ${{ matrix.upx_args }}
           strip: ${{ matrix.strip }}
-        # MacOS Compression disabled due to bug https://github.com/upx/upx/blob/44e4bd0b5454ff8aee1ff3376974dfe6014300d9/NEWS#L31  
+        # MacOS Compression disabled due to bug https://github.com/upx/upx/blob/44e4bd0b5454ff8aee1ff3376974dfe6014300d9/NEWS#L31
         if: ${{ matrix.os  != 'macOS-latest' }}
       - name: Packaging binary
         shell: bash

@@ -1,7 +1,7 @@
 % taskwarrior-tui(1)
 
 <!-- This is the taskwarrior-tui(1) man page, written in Markdown. -->
-<!-- To generate the roff version, run `just man`, -->
+<!-- To generate the roff version, run `mise run man`, -->
 <!-- and the man page will appear in the ‘target’ directory. -->
 
 
