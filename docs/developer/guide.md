@@ -29,7 +29,7 @@ mise install
 
 See the official mise install docs for other install methods such as Homebrew, apt, dnf, pacman, Scoop, and winget.
 
-The rest of this guide assumes `mise` is activated in your shell, so the toolchain and project environment from [`.config/mise.toml`](../../.config/mise.toml) are available automatically.
+The rest of this guide assumes `mise` is activated in your shell, so the toolchain and project environment from [`.config/mise.toml`](../../.config/mise.toml) are available automatically. Pinned values like the Taskwarrior source tag and testdata ref live there, while the task entrypoints themselves live in [`.config/mise/tasks/`](../../.config/mise/tasks/).
 
 ## Running tests
 
@@ -45,14 +45,14 @@ mise run test
 ## Building the CLI
 
 ```bash
-mise run build
-mise run build --release
+cargo build
+cargo build --release
 ```
 
 ## Running debug build
 
 ```bash
-mise run run
+cargo run
 ```
 
 ## Running the TUI with local fixture data
@@ -84,7 +84,7 @@ mise run clean-taskdata
 ## Running release build
 
 ```bash
-mise run run --release
+cargo run --release
 ```
 
 ## Testing individual function
@@ -92,7 +92,7 @@ mise run run --release
 If you want to test the `test_taskwarrior_timing` function in `src/app.rs`:
 
 ```bash
-mise run setup-tests
+mise run setup-testdata
 cargo test -- app::tests::test_taskwarrior_timing --nocapture
 ```
 
