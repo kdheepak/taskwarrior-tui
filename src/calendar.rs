@@ -7,7 +7,7 @@ const COL_WIDTH: usize = 21;
 
 use std::cmp::min;
 
-use chrono::{format::Fixed, DateTime, Datelike, Duration, FixedOffset, Local, Month, NaiveDate, NaiveDateTime, TimeZone};
+use chrono::{DateTime, Datelike, Duration, FixedOffset, Local, Month, NaiveDate, NaiveDateTime, TimeZone, format::Fixed};
 use ratatui::{
   buffer::Buffer,
   layout::Rect,

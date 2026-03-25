@@ -35,17 +35,17 @@ use crossterm::{
   cursor,
   event::{DisableMouseCapture, EnableMouseCapture, EventStream},
   execute,
-  terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
+  terminal::{Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use futures::stream::{FuturesUnordered, StreamExt};
-use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
+use log::{Level, LevelFilter, debug, error, info, log_enabled, trace, warn};
 use log4rs::{
   append::file::FileAppender,
   config::{Appender, Config, Logger, Root},
   encode::pattern::PatternEncoder,
 };
 use path_clean::PathClean;
-use ratatui::{backend::CrosstermBackend, Terminal};
+use ratatui::{Terminal, backend::CrosstermBackend};
 
 use crate::{action::Action, event::Event, keyconfig::KeyConfig};
 
@@ -186,7 +186,10 @@ fn main() -> Result<()> {
     .build()?
     .block_on(async { tui_main(report).await });
   if let Err(err) = r {
-    eprintln!("\x1b[0;31m[taskwarrior-tui error]\x1b[0m: {}\n\nIf you need additional help, please report as a github issue on https://github.com/kdheepak/taskwarrior-tui", err);
+    eprintln!(
+      "\x1b[0;31m[taskwarrior-tui error]\x1b[0m: {}\n\nIf you need additional help, please report as a github issue on https://github.com/kdheepak/taskwarrior-tui",
+      err
+    );
     std::process::exit(1);
   }
   Ok(())

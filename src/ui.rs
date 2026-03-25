@@ -1,11 +1,11 @@
 use ratatui::{
+  Frame,
   backend::Backend,
   layout::{Alignment, Constraint, Direction, Layout, Rect},
   style::Style,
   symbols,
   text::{Line, Span},
   widgets::{Block, BorderType, Borders, Cell, LineGauge, Paragraph, Row, Table},
-  Frame,
 };
 
 use crate::app::TaskwarriorTui;

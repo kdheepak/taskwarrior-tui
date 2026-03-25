@@ -5,9 +5,9 @@ use std::{
 };
 
 use cassowary::{
-  strength::{MEDIUM, REQUIRED, WEAK},
   Expression, Solver,
   WeightedRelation::{EQ, GE, LE},
+  strength::{MEDIUM, REQUIRED, WEAK},
 };
 use ratatui::{
   buffer::Buffer,

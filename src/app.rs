@@ -6,32 +6,32 @@ use std::{
   fs, io,
   io::{Read, Write},
   path::Path,
-  sync::{mpsc, Arc, Mutex},
+  sync::{Arc, Mutex, mpsc},
   time::{Duration, Instant, SystemTime},
 };
 
-use anyhow::{anyhow, Context as AnyhowContext, Result};
+use anyhow::{Context as AnyhowContext, Result, anyhow};
 use chrono::{DateTime, Datelike, FixedOffset, Local, NaiveDate, NaiveDateTime, TimeZone, Timelike};
 use crossterm::{
   event::{DisableMouseCapture, EnableMouseCapture},
   execute,
   style::style,
-  terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+  terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use futures::SinkExt;
 use lazy_static::lazy_static;
-use log::{debug, error, info, log_enabled, trace, warn, Level, LevelFilter};
+use log::{Level, LevelFilter, debug, error, info, log_enabled, trace, warn};
 use ratatui::{
+  Frame, Terminal,
   backend::{Backend, CrosstermBackend},
   layout::{Alignment, Constraint, Direction, Layout, Margin, Position, Rect},
   style::{Color, Modifier, Style},
   symbols::bar::FULL,
   text::{Line, Span, Text},
   widgets::{Block, BorderType, Borders, Clear, Gauge, LineGauge, List, ListItem, Paragraph, Tabs, Wrap},
-  Frame, Terminal,
 };
 use regex::Regex;
-use rustyline::{history::SearchDirection as HistoryDirection, line_buffer::LineBuffer, At, Editor, Word};
+use rustyline::{At, Editor, Word, history::SearchDirection as HistoryDirection, line_buffer::LineBuffer};
 use task_hookrs::{date::Date, import::import, project::Project, status::TaskStatus, task::Task, uda::UDAValue};
 use unicode_segmentation::{Graphemes, UnicodeSegmentation};
 use unicode_width::UnicodeWidthStr;
@@ -41,7 +41,7 @@ use versions::Versioning;
 use crate::{
   action::Action,
   calendar::Calendar,
-  completion::{get_start_word_under_cursor, CompletionList},
+  completion::{CompletionList, get_start_word_under_cursor},
   config,
   config::Config,
   event::{Event, KeyCode},
@@ -49,10 +49,10 @@ use crate::{
   history::HistoryContext,
   keyconfig::KeyConfig,
   pane::{
+    Pane,
     context::{ContextDetails, ContextsState},
     project::ProjectsState,
     report::ReportsState,
-    Pane,
   },
   scrollbar::Scrollbar,
   table::{Row, Table, TableMode, TaskwarriorTuiTableState},
@@ -1273,11 +1273,7 @@ impl TaskwarriorTui {
 
   fn task_by_index(&self, i: usize) -> Option<Task> {
     let tasks = &self.tasks;
-    if i >= tasks.len() {
-      None
-    } else {
-      Some(tasks[i].clone())
-    }
+    if i >= tasks.len() { None } else { Some(tasks[i].clone()) }
   }
 
   fn task_by_uuid(&self, uuid: Uuid) -> Option<Task> {
@@ -1797,11 +1793,7 @@ impl TaskwarriorTui {
     }
     let i = {
       if self.current_selection == 0 {
-        if self.config.uda_task_report_looping {
-          self.tasks.len() - 1
-        } else {
-          0
-        }
+        if self.config.uda_task_report_looping { self.tasks.len() - 1 } else { 0 }
       } else {
         self.current_selection - 1
       }
@@ -1817,11 +1809,7 @@ impl TaskwarriorTui {
     }
     let i = {
       if self.current_selection == self.tasks.len() - 1 {
-        if self.config.uda_task_report_looping {
-          0
-        } else {
-          self.tasks.len() - 1
-        }
+        if self.config.uda_task_report_looping { 0 } else { self.tasks.len() - 1 }
       } else {
         std::cmp::min(
           self
@@ -1843,11 +1831,7 @@ impl TaskwarriorTui {
     }
     let i = {
       if self.current_selection == 0 {
-        if self.config.uda_task_report_looping {
-          self.tasks.len() - 1
-        } else {
-          0
-        }
+        if self.config.uda_task_report_looping { self.tasks.len() - 1 } else { 0 }
       } else {
         self.current_selection.saturating_sub(self.task_report_height as usize)
       }
@@ -2110,24 +2094,26 @@ impl TaskwarriorTui {
     }
     let shell = shellexpand::tilde(&shell).into_owned();
     let period = self.config.uda_background_process_period;
-    std::thread::spawn(move || loop {
-      std::thread::sleep(Duration::from_secs(period as u64));
-      match shlex::split(&shell) {
-        Some(cmd) => {
-          let mut command = std::process::Command::new(&cmd[0]);
-          for s in cmd.iter().skip(1) {
-            command.arg(s);
-          }
-          if let Ok(output) = command.output() {
-            if !output.status.success() {
+    std::thread::spawn(move || {
+      loop {
+        std::thread::sleep(Duration::from_secs(period as u64));
+        match shlex::split(&shell) {
+          Some(cmd) => {
+            let mut command = std::process::Command::new(&cmd[0]);
+            for s in cmd.iter().skip(1) {
+              command.arg(s);
+            }
+            if let Ok(output) = command.output() {
+              if !output.status.success() {
+                break;
+              }
+            } else {
               break;
             }
-          } else {
-            break;
           }
-        }
-        None => break,
-      };
+          None => break,
+        };
+      }
     });
   }
 
@@ -4421,9 +4407,11 @@ mod tests {
     );
 
     let app = TaskwarriorTui::new("next", false).await.unwrap();
-    assert!(app
-      .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
-      .is_none());
+    assert!(
+      app
+        .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
+        .is_none()
+    );
 
     test_draw_empty_task_report().await;
 
@@ -4436,9 +4424,11 @@ mod tests {
     assert!(app.task_by_index(0).is_some());
 
     let app = TaskwarriorTui::new("next", false).await.unwrap();
-    assert!(app
-      .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
-      .is_some());
+    assert!(
+      app
+        .task_by_uuid(Uuid::parse_str("3f43831b-88dc-45e2-bf0d-4aea6db634cc").unwrap())
+        .is_some()
+    );
 
     test_draw_task_report_with_extended_modify_command().await;
     // test_draw_task_report();
