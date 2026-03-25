@@ -75,6 +75,7 @@ run = "cargo build --release"
 [tasks.format]
 alias = "fmt"
 description = "Format the code"
+depends = ["ensure-rust-toolchain"]
 run = "cargo fmt"
 
 [tasks.check-rust]
@@ -83,15 +84,17 @@ run = "cargo check"
 
 [tasks.fmt-check]
 description = "Check Rust formatting"
+depends = ["ensure-rust-toolchain"]
 run = "cargo fmt --all -- --check"
 
 [tasks.clippy-strict]
 description = "Run clippy with warnings denied"
+depends = ["ensure-rust-toolchain"]
 run = "cargo clippy -- -D warnings"
 
 [tasks.ci]
 description = "CI - format, check, test, clippy"
-depends = ["setup-tests"]
+depends = ["ensure-rust-toolchain", "setup-tests"]
 run = """
 cargo fmt --all -- --check
 cargo check
@@ -102,6 +105,7 @@ cargo clippy -- -D warnings
 [tasks.lint]
 description = 'Lint with clippy'
 env = { RUST_BACKTRACE = '1' }
+depends = ["ensure-rust-toolchain"]
 run = '''
 #!/usr/bin/env bash
 cargo clippy
@@ -117,6 +121,7 @@ run = "pandoc --standalone --to=man docs/taskwarrior-tui.1.md -o docs/taskwarrio
 
 [tasks.coverage-lcov]
 description = "Generate lcov output with grcov"
+depends = ["ensure-rust-toolchain"]
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
