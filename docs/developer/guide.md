@@ -29,7 +29,7 @@ mise install
 
 See the official mise install docs for other install methods such as Homebrew, apt, dnf, pacman, Scoop, and winget.
 
-The rest of this guide assumes `mise` is activated in your shell, so the toolchain and project environment from [`.config/mise.toml`](../../.config/mise.toml) are available automatically. Pinned values like the Taskwarrior source tag and testdata ref live there, while the task entrypoints themselves live in [`.config/mise/tasks/taskwarrior-tui/`](../../.config/mise/tasks/taskwarrior-tui/).
+The rest of this guide assumes `mise` is activated in your shell, so the toolchain and project environment from [`.config/mise.toml`](https://github.com/kdheepak/taskwarrior-tui/blob/main/.config/mise.toml) are available automatically. Pinned values like the Taskwarrior source tag and testdata ref live there, while the task entrypoints themselves live in [`.config/mise/tasks/taskwarrior-tui/`](https://github.com/kdheepak/taskwarrior-tui/tree/main/.config/mise/tasks/taskwarrior-tui/).
 
 ## Running tests
 

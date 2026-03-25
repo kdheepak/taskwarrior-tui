@@ -6,7 +6,7 @@
 > taskwarrior-tui [v0.25.4](https://github.com/kdheepak/taskwarrior-tui/releases/tag/v0.25.4) is the last version supporting taskwarrior v2.x as backend.
 
 [![CI](https://github.com/kdheepak/taskwarrior-tui/workflows/CI/badge.svg)](https://github.com/kdheepak/taskwarrior-tui/actions?query=workflow%3ACI)
-[![](https://img.shields.io/github/license/kdheepak/taskwarrior-tui)](./LICENSE)
+[![](https://img.shields.io/github/license/kdheepak/taskwarrior-tui)](https://github.com/kdheepak/taskwarrior-tui/blob/main/LICENSE)
 [![](https://img.shields.io/github/v/release/kdheepak/taskwarrior-tui)](https://github.com/kdheepak/taskwarrior-tui/releases/latest)
 [![](https://img.shields.io/static/v1?label=platform&message=linux-64%20|%20osx-64%20|%20win-32%20|%20win-64&color=lightgrey)](https://github.com/kdheepak/taskwarrior-tui/releases/latest)
 [![](https://img.shields.io/github/languages/top/kdheepak/taskwarrior-tui)](https://github.com/kdheepak/taskwarrior-tui)
