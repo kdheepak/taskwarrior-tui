@@ -6,10 +6,7 @@
 git clone https://github.com/kdheepak/taskwarrior-tui
 cd taskwarrior-tui
 
-git clone https://github.com/kdheepak/taskwarrior-testdata tests/data
-source .envrc
-
-cargo test
+mise run test
 ```
 
 ## Running debug build
