@@ -35,12 +35,13 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v6
-      - uses: clechasseur/rs-cargo@v4
+      - uses: jdx/mise-action@v3
         with:
-          command: build
-          args: --release
-      - name: Install cargo-deb
-        run: cargo install cargo-deb
+          mise_toml: |
+            [tools]
+            rust = { version = "latest", profile = "minimal", components = "cargo" }
+            "cargo:cargo-deb" = "latest"
+      - run: cargo build --release
       - name: Build deb package
         run: cargo deb -p taskwarrior-tui -o target/debian/taskwarrior-tui.deb
       - name: Upload artifacts
@@ -63,14 +64,15 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v6
-      - uses: clechasseur/rs-cargo@v4
+      - uses: jdx/mise-action@v3
         with:
-          command: build
-          args: --release
+          mise_toml: |
+            [tools]
+            rust = { version = "latest", profile = "minimal", components = "cargo" }
+            "cargo:cargo-rpm" = "latest"
+      - run: cargo build --release
       - name: Install rpm
-        run: sudo apt-get install rpm
-      - name: Install cargo-rpm
-        run: cargo install cargo-rpm
+        run: sudo apt-get update && sudo apt-get install -y rpm
       - name: Build rpm package
         run: cargo rpm build
       - name: Upload artifacts
@@ -93,11 +95,12 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v6
-      - uses: clechasseur/rs-cargo@v4
+      - uses: jdx/mise-action@v3
         with:
-          command: build
-          args: --release
-      - name: Install cargo-aur
-        run: cargo install cargo-aur
+          mise_toml: |
+            [tools]
+            rust = { version = "latest", profile = "minimal", components = "cargo" }
+            "cargo:cargo-aur" = "latest"
+      - run: cargo build --release
       - name: Build aur package
         run: cargo aur

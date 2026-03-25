@@ -8,39 +8,36 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-      - uses: clechasseur/rs-cargo@v4
-        with:
-          command: check
+      - uses: jdx/mise-action@v3
+      - run: cargo check
 
   test:
     name: Test Suite
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - name: Install Taskwarrior
-        uses: ./.github/actions/install-taskwarrior
+      - uses: jdx/mise-action@v3
         with:
-          secret_gh_token: ${{ secrets.GITHUB_TOKEN }}
+          mise_toml: |
+            [tools]
+            rust = { version = "latest", profile = "minimal", components = "cargo" }
+            uv = "latest"
+            cmake = "latest"
+      - name: Install Taskwarrior build dependencies
+        run: sudo apt-get update && sudo apt-get install -y uuid-dev uuid-runtime
+      - name: Build Taskwarrior from source
+        run: uv run scripts/build_taskwarrior.py
+      - name: Add Taskwarrior to PATH
+        run: echo "$GITHUB_WORKSPACE/target/taskwarrior-install/stable/bin" >> "$GITHUB_PATH"
       - run: |
           # prepare taskwarrior, initial setup
           task rc.confirmation=off || echo 0
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: stable
-          override: true
       - name: Install testdata
         uses: actions/checkout@v6
         with:
           repository: kdheepak/taskwarrior-testdata
           path: taskwarrior-testdata
-      - uses: clechasseur/rs-cargo@v4
-        with:
-          command: test
-          args: --workspace -- --nocapture
+      - run: cargo test --workspace -- --nocapture
         env:
           TASKRC: taskwarrior-testdata/.taskrc
           TASKDATA: taskwarrior-testdata/.task
@@ -57,27 +54,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: jdx/mise-action@v3
         with:
-          toolchain: nightly
-          override: true
-          components: rustfmt
-      - uses: clechasseur/rs-cargo@v4
-        with:
-          command: fmt
-          args: --all -- --check
+          mise_toml: |
+            [tools]
+            rust = { version = "nightly", profile = "minimal", components = "rustfmt" }
+      - run: cargo fmt --all -- --check
 
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-          components: clippy
-      - uses: clechasseur/rs-cargo@v4
-        with:
-          command: clippy
-          args: -- -D warnings
+      - uses: jdx/mise-action@v3
+      - run: cargo clippy -- -D warnings

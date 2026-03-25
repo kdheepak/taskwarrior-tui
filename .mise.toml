@@ -36,6 +36,22 @@ alias = "fmt"
 description = "Format the code"
 run = "cargo fmt"
 
+[tasks.check-rust]
+description = "Run cargo check"
+run = "cargo check"
+
+[tasks.test-rust]
+description = "Run the Rust test suite"
+run = "cargo test --workspace -- --nocapture"
+
+[tasks.fmt-check]
+description = "Check Rust formatting"
+run = "cargo fmt --all -- --check"
+
+[tasks.clippy-strict]
+description = "Run clippy with warnings denied"
+run = "cargo clippy -- -D warnings"
+
 [tasks.ci]
 description = "CI - format, check, test, clippy"
 run = """
@@ -51,6 +67,32 @@ run = '''
 #!/usr/bin/env bash
 cargo clippy
 '''
+
+[tasks.docs-build]
+description = "Build the MkDocs site"
+run = "uv run scripts/build_docs.py"
+
+[tasks.coverage-lcov]
+description = "Generate lcov output with grcov"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+mkdir -p ./target/debug/coverage/
+grcov . -s . --binary-path ./target/debug/ -t lcov --branch --ignore-not-existing -o ./target/debug/coverage/
+'''
+
+[tasks.package-deb]
+description = "Build the Debian package"
+run = "cargo deb -p taskwarrior-tui -o target/debian/taskwarrior-tui.deb"
+
+[tasks.package-rpm]
+description = "Build the RPM package"
+run = "cargo rpm build"
+
+[tasks.package-aur]
+description = "Build the AUR package metadata"
+run = "cargo aur"
 
 # Builds Taskwarrior into target/taskwarrior-install/stable/bin/task by default.
 # Set TASKWARRIOR_BRANCH=develop to build the upstream development branch instead.

@@ -8,47 +8,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - name: Install Taskwarrior
-        uses: ./.github/actions/install-taskwarrior
+      - uses: jdx/mise-action@v3
         with:
-          secret_gh_token: ${{ secrets.GITHUB_TOKEN }}
+          mise_toml: |
+            [tools]
+            rust = { version = "nightly", profile = "minimal", components = "cargo,llvm-tools-preview" }
+            uv = "latest"
+            cmake = "latest"
+            "cargo:grcov" = "latest"
+      - name: Install Taskwarrior build dependencies
+        run: sudo apt-get update && sudo apt-get install -y uuid-dev uuid-runtime
+      - name: Build Taskwarrior from source
+        run: uv run scripts/build_taskwarrior.py
+      - name: Add Taskwarrior to PATH
+        run: echo "$GITHUB_WORKSPACE/target/taskwarrior-install/stable/bin" >> "$GITHUB_PATH"
       - run: |
           # prepare taskwarrior, initial setup
           task rc.confirmation=off || echo 0
 
-      - name: Install Rust toolchain for grcov compilation
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-      - name: Install grcov
-        uses: clechasseur/rs-cargo@v4
-        with:
-          command: install
-          args: grcov
-
-      - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: nightly
-          override: true
-          components: llvm-tools-preview
       - name: Checkout testdata
         uses: actions/checkout@v6
         with:
           repository: kdheepak/taskwarrior-testdata
           path: taskwarrior-testdata    
       - name: Build taskwarrior-tui with coverage
-        uses: clechasseur/rs-cargo@v4
-        with:
-          command: build
+        run: cargo build
         env:
           RUSTFLAGS: "-Cinstrument-coverage"  
       - name: Run taskwarrior-tui tests in coverage environment
-        uses: clechasseur/rs-cargo@v4
-        with:
-          command: test
-          args: --workspace -- --nocapture
+        run: cargo test --workspace -- --nocapture
         env:
           TASKRC: taskwarrior-testdata/.taskrc
           TASKDATA: taskwarrior-testdata/.task
@@ -58,9 +46,8 @@ jobs:
 
       - name: Gather coverage data
         run: |
-          mkdir ./target/debug/coverage/
+          mkdir -p ./target/debug/coverage/
           grcov . -s . --binary-path ./target/debug/ -t lcov --branch --ignore-not-existing -o ./target/debug/coverage/
-        shell: bash
       - name: Coveralls upload
         uses: coverallsapp/github-action@v2
         with:

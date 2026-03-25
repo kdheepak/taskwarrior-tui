@@ -52,16 +52,14 @@ jobs:
       RUSTFLAGS: ${{ matrix.rust_flags }}
       MACOSX_DEPLOYMENT_TARGET: 10.7
     steps:
-      - uses: actions/checkout@master
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v3
         with:
-          toolchain: stable
-          target: ${{ matrix.target }}
-          override: true
-      - uses: clechasseur/rs-cargo@v4
-        with:
-          command: build
-          args: --release ${{matrix.features}} --target=${{ matrix.target }}
+          mise_toml: |
+            [tools]
+            rust = { version = "latest", profile = "minimal", components = "cargo", targets = "${{ matrix.target }}" }
+      - name: Build release binary
+        run: cargo build --release ${{ matrix.features }} --target=${{ matrix.target }}
       - name: Compress binaries
         uses: svenstaro/upx-action@v3
         with:
