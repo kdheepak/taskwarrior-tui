@@ -20,6 +20,7 @@ jobs:
   homebrew:
     name: Bump Homebrew formula
     runs-on: macos-latest
+    continue-on-error: true
     steps:
       - name: Update Homebrew formula
         if: startsWith(github.ref, 'refs/tags/')
