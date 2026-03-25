@@ -10,6 +10,9 @@ import shlex
 import subprocess
 import sys
 
+DEFAULT_PROFILE = "default"
+DEFAULT_COMPONENTS = ("clippy", "rustfmt", "llvm-tools")
+
 
 def split_csv(value: str) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
@@ -20,14 +23,28 @@ def run(cmd: list[str]) -> None:
     subprocess.run(cmd, check=True)
 
 
-def main() -> int:
-    toolchain = os.environ.get("RUSTUP_TOOLCHAIN")
-    if not toolchain:
-        print("RUSTUP_TOOLCHAIN is not set", file=sys.stderr)
-        return 1
+def resolve_toolchain() -> str:
+    for env_name in ("MISE_TOOL_VERSION", "RUSTUP_TOOLCHAIN"):
+        value = os.environ.get(env_name, "").strip()
+        if value:
+            return value
 
-    profile = os.environ.get("RUST_TOOLCHAIN_PROFILE", "default")
-    components = split_csv(os.environ.get("RUST_TOOLCHAIN_COMPONENTS", ""))
+    result = subprocess.run(
+        ["rustup", "show", "active-toolchain"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    toolchain = result.stdout.strip().split()[0]
+    if toolchain:
+        return toolchain
+    raise RuntimeError("unable to determine active Rust toolchain")
+
+
+def main() -> int:
+    toolchain = resolve_toolchain()
+    profile = DEFAULT_PROFILE
+    components = list(DEFAULT_COMPONENTS)
     targets = split_csv(os.environ.get("RUST_TOOLCHAIN_TARGETS", ""))
 
     run(["rustup", "toolchain", "install", toolchain, "--profile", profile])
