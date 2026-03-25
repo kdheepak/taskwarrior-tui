@@ -26,7 +26,7 @@ fi
 cleanup() {
     local status=$?
     set +e
-    rm -rf "$TASKDATA"
+    mise run taskwarrior-tui:clean-taskdata
     exit "$status"
 }
 
