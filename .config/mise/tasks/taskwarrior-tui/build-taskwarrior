@@ -1,5 +1,15 @@
 #!/usr/bin/env -S uv run --script
 # [MISE] description="Clone/update upstream Taskwarrior and build the task binary from source"
+# [USAGE] about "Clone/update upstream Taskwarrior and build the task binary from source"
+# [USAGE] flag "--source <source>" help="Taskwarrior tag or ref to build"
+# [USAGE] flag "--repo-url <repo_url>" help="Taskwarrior repository URL"
+# [USAGE] flag "--branch <branch>" help="Build a moving branch instead of the pinned source" {
+# [USAGE]   choices "stable" "develop"
+# [USAGE] }
+# [USAGE] flag "--source-dir <source_dir>" help="Path to the Taskwarrior source checkout"
+# [USAGE] flag "--build-dir <build_dir>" help="Path to the CMake build directory"
+# [USAGE] flag "--install-dir <install_dir>" help="Path to the installation directory"
+# [USAGE] flag "--build-type <build_type>" help="CMake build type"
 # /// script
 # requires-python = ">=3.11"
 # dependencies = []
@@ -83,6 +93,26 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def parse_usage_args() -> argparse.Namespace | None:
+    fields = (
+        "source",
+        "repo_url",
+        "branch",
+        "source_dir",
+        "build_dir",
+        "install_dir",
+        "build_type",
+    )
+    values = {field: os.getenv(f"usage_{field}") for field in fields}
+    if not any(value is not None for value in values.values()):
+        return None
+
+    if values["source"] and values["branch"]:
+        fail("Only one of --source or --branch may be provided.")
+
+    return argparse.Namespace(**values)
+
+
 def resolve_source(args: argparse.Namespace) -> str:
     if args.branch is not None:
         return args.branch
@@ -111,7 +141,7 @@ def derive_source_scoped_dir(env_var: str, fallback_prefix: str, source: str) ->
 
 
 def main() -> None:
-    args = parse_args()
+    args = parse_usage_args() or parse_args()
 
     repo_url = env_or_fail(args.repo_url, "TASKWARRIOR_REPO_URL", "--repo-url")
     source = resolve_source(args)
