@@ -29,7 +29,7 @@ jobs:
       - name: Build taskwarrior-tui with coverage
         run: cargo build
         env:
-          RUSTFLAGS: "-Cinstrument-coverage"  
+          RUSTFLAGS: "-Cinstrument-coverage"
       - name: Run taskwarrior-tui tests in coverage environment
         run: mise run test
         env:
