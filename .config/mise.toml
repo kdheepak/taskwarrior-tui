@@ -4,7 +4,7 @@ env_shell_expand = true
 [env]
 RUST_TEST_THREADS = "1"
 TASKWARRIOR_SOURCE = "v3.3.0"
-TASKWARRIOR_INSTALL_DIR = "{{config_root}}/target/taskwarrior-install/{{env.TASKWARRIOR_SOURCE}}"
+TASKWARRIOR_INSTALL_DIR = "{{config_root}}/tmp/taskwarrior-install/{{env.TASKWARRIOR_SOURCE}}"
 TASKWARRIOR_TESTDATA_DIR = "{{config_root}}/tests/data"
 TASKRC = "{{config_root}}/tests/data/.taskrc"
 TASKDATA = "{{config_root}}/tests/data/.task"
@@ -39,7 +39,7 @@ if [ -d "$TASKWARRIOR_TESTDATA_DIR" ]; then
 fi
 '''
 
-[tasks.setup-tests]
+[tasks.setup-testdata]
 description = "Fetch pinned test fixtures used by cargo test"
 depends = ["clean-tests"]
 run = "./scripts/setup_testdata.sh"
@@ -55,7 +55,7 @@ rm -rf "$TASKDATA"
 
 [tasks.import-taskdata]
 description = "Import tests/data/export.json into tests/data/.task"
-depends = ["clean-taskdata"]
+depends = ["clean-taskdata", "setup-testdata"]
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
@@ -64,11 +64,21 @@ task import rc.hooks=0 tests/data/export.json
 '''
 
 [tasks.run-taskdata]
-description = "Import local fixture data, run the TUI, and clean tests/data/.task on exit"
+description = "Import local fixture data, build and run the TUI, and clean tests/data/.task on exit"
 depends = ["import-taskdata"]
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
+
+if [ "$#" -gt 1 ]; then
+  echo "usage: mise run run-taskdata [--release]" >&2
+  exit 2
+fi
+
+if [ "$#" -eq 1 ] && [ "$1" != "--release" ]; then
+  echo "usage: mise run run-taskdata [--release]" >&2
+  exit 2
+fi
 
 cleanup() {
   local status=$?
@@ -79,13 +89,13 @@ cleanup() {
 
 trap cleanup EXIT
 
-cargo run
+mise run run "$@"
 '''
 
 [tasks.test]
 alias = "test-rust"
 description = "Run cargo test against pinned test fixtures"
-depends = ["setup-tests"]
+depends = ["setup-testdata"]
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
@@ -99,15 +109,44 @@ run = "cargo clean"
 
 [tasks.build]
 description = "Build the CLI"
-run = "cargo build"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "$#" -gt 1 ]; then
+  echo "usage: mise run build [--release]" >&2
+  exit 2
+fi
+
+if [ "$#" -eq 1 ] && [ "$1" != "--release" ]; then
+  echo "usage: mise run build [--release]" >&2
+  exit 2
+fi
+
+cargo build "$@"
+'''
 alias = "b"
 depends = ["clean"]
-sources = ['Cargo.toml', 'src/**/*.rs']
-outputs = ['target/debug/taskwarrior-tui']
 
-[tasks.build-release]
-description = "Build the CLI in release mode"
-run = "cargo build --release"
+[tasks.run]
+description = "Build and run the CLI"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "$#" -gt 1 ]; then
+  echo "usage: mise run run [--release]" >&2
+  exit 2
+fi
+
+if [ "$#" -eq 1 ] && [ "$1" != "--release" ]; then
+  echo "usage: mise run run [--release]" >&2
+  exit 2
+fi
+
+mise run build "$@"
+exec cargo run "$@"
+'''
 
 [tasks.format]
 alias = "fmt"
@@ -131,7 +170,7 @@ run = "cargo clippy -- -D warnings"
 
 [tasks.ci]
 description = "CI - format, check, test, clippy"
-depends = ["ensure-rust-toolchain", "setup-tests"]
+depends = ["ensure-rust-toolchain", "setup-testdata"]
 run = """
 cargo fmt --all -- --check
 cargo check
