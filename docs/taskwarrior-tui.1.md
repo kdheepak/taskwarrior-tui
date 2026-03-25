@@ -2,7 +2,7 @@
 
 <!-- This is the taskwarrior-tui(1) man page, written in Markdown. -->
 <!-- To generate the roff version, run `mise run taskwarrior-tui:man`, -->
-<!-- and the man page will appear in the ‘target’ directory. -->
+<!-- and the man page will be written to `docs/taskwarrior-tui.1`. -->
 
 
 NAME
