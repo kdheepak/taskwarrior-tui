@@ -4,12 +4,15 @@ lockfile = true
 
 [env]
 RUST_TEST_THREADS = "1"
+TASKWARRIOR_BRANCH = "stable"
+TASKWARRIOR_INSTALL_DIR = "{{config_root}}/target/taskwarrior-install/{{env.TASKWARRIOR_BRANCH}}"
 TASKWARRIOR_TESTDATA_DIR = "{{config_root}}/tests/data"
 TASKRC = "{{config_root}}/tests/data/.taskrc"
 TASKDATA = "{{config_root}}/tests/data/.task"
 TASKWARRIOR_TUI_CONFIG = "{{config_root}}/tests/data/.config"
 TASKWARRIOR_TUI_DATA = "{{config_root}}/tests/data/.data"
 TASKWARRIOR_TUI_LOG_LEVEL = "debug"
+_.path = "{{env.TASKWARRIOR_INSTALL_DIR}}/bin"
 
 [tools]
 rust = { version = "latest", profile = "minimal", components = "cargo,rustfmt,clippy,llvm-tools-preview", targets = "x86_64-apple-darwin,x86_64-unknown-linux-gnu,x86_64-unknown-linux-musl,x86_64-pc-windows-gnu,x86_64-pc-windows-msvc,i686-pc-windows-msvc" }
