@@ -200,3 +200,32 @@ impl CompletionList {
     self.pos = self.current.len();
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::CompletionList;
+
+  #[test]
+  fn attribute_context_completion_includes_tag_prefix() {
+    let mut completion_list = CompletionList::with_items(vec![("attribute".to_string(), "tag:".to_string())]);
+    completion_list.input("ta".to_string(), String::new());
+    completion_list.next();
+
+    let (_, (replacement, _, original, _, _)) = completion_list.selected().unwrap();
+    let completed = format!("{}{}{}", "ta".trim_end_matches(&original), replacement, "");
+
+    assert_eq!(completed, "tag:");
+  }
+
+  #[test]
+  fn tag_context_completion_keeps_existing_prefix() {
+    let mut completion_list = CompletionList::with_items(vec![("tag".to_string(), "home".to_string())]);
+    completion_list.input("tag:".to_string(), String::new());
+    completion_list.next();
+
+    let (_, (replacement, _, original, _, _)) = completion_list.selected().unwrap();
+    let completed = format!("{}{}{}", "tag:".trim_end_matches(&original), replacement, "");
+
+    assert_eq!(completed, "tag:home");
+  }
+}
