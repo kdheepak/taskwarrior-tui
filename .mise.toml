@@ -4,6 +4,12 @@ lockfile = true
 
 [env]
 RUST_TEST_THREADS = "1"
+TASKWARRIOR_TESTDATA_DIR = "{{config_root}}/tests/data"
+TASKRC = "{{config_root}}/tests/data/.taskrc"
+TASKDATA = "{{config_root}}/tests/data/.task"
+TASKWARRIOR_TUI_CONFIG = "{{config_root}}/tests/data/.config"
+TASKWARRIOR_TUI_DATA = "{{config_root}}/tests/data/.data"
+TASKWARRIOR_TUI_LOG_LEVEL = "debug"
 
 [tools]
 rust = { version = "latest", profile = "minimal", components = "cargo,rustfmt,clippy" }
@@ -17,26 +23,26 @@ run = '''
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ -d tests/data ]; then
-  rm -rf tests/data
+if [ -d "$TASKWARRIOR_TESTDATA_DIR" ]; then
+  rm -rf "$TASKWARRIOR_TESTDATA_DIR"
 fi
 '''
 
 [tasks.setup-tests]
-description = "Clone the test fixtures used by cargo test"
+description = "Fetch pinned test fixtures used by cargo test"
 depends = ["clean-tests"]
+run = "./scripts/setup_testdata.sh"
+
+[tasks.test]
+alias = "test-rust"
+description = "Run cargo test against pinned test fixtures"
+depends = ["setup-tests"]
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
 
-mkdir -p tests
-git clone https://github.com/kdheepak/taskwarrior-testdata tests/data
+cargo test --workspace -- --nocapture
 '''
-
-[tasks.test]
-description = "Clone fresh test fixtures and run cargo test"
-depends = ["setup-tests"]
-run = "cargo test"
 
 [tasks.clean]
 description = "Clean build artifacts"
@@ -62,10 +68,6 @@ run = "cargo fmt"
 [tasks.check-rust]
 description = "Run cargo check"
 run = "cargo check"
-
-[tasks.test-rust]
-description = "Run the Rust test suite"
-run = "cargo test --workspace -- --nocapture"
 
 [tasks.fmt-check]
 description = "Check Rust formatting"
