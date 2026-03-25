@@ -3,4 +3,4 @@
 #MISE depends=["clean-taskdata", "setup-testdata"]
 set -euo pipefail
 
-exec task import rc.hooks=0 tests/data/export.json
+task import rc.hooks=0 tests/data/export.json

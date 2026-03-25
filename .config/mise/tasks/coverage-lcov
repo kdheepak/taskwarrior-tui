@@ -4,4 +4,4 @@
 set -euo pipefail
 
 mkdir -p ./target/debug/coverage/
-exec grcov . -s . --binary-path ./target/debug/ -t lcov --branch --ignore-not-existing -o ./target/debug/coverage/
+grcov . -s . --binary-path ./target/debug/ -t lcov --branch --ignore-not-existing -o ./target/debug/coverage/

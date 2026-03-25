@@ -4,4 +4,4 @@
 #MISE depends=["ensure-rust-toolchain"]
 set -euo pipefail
 
-exec cargo fmt
+cargo fmt

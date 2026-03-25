@@ -2,4 +2,4 @@
 #MISE description="Build the Debian package"
 set -euo pipefail
 
-exec cargo deb -p taskwarrior-tui -o target/debian/taskwarrior-tui.deb
+cargo deb -p taskwarrior-tui -o target/debian/taskwarrior-tui.deb

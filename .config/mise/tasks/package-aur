@@ -2,4 +2,4 @@
 #MISE description="Build the AUR package metadata"
 set -euo pipefail
 
-exec cargo aur
+cargo aur

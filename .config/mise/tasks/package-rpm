@@ -2,4 +2,4 @@
 #MISE description="Build the RPM package"
 set -euo pipefail
 
-exec cargo rpm build
+cargo rpm build

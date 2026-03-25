@@ -4,4 +4,4 @@
 #MISE depends=["setup-testdata"]
 set -euo pipefail
 
-exec cargo test --workspace -- --nocapture
+cargo test --workspace -- --nocapture

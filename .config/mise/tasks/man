@@ -2,4 +2,4 @@
 #MISE description="Generate the roff man page from Markdown"
 set -euo pipefail
 
-exec pandoc --standalone --to=man docs/taskwarrior-tui.1.md -o docs/taskwarrior-tui.1
+pandoc --standalone --to=man docs/taskwarrior-tui.1.md -o docs/taskwarrior-tui.1

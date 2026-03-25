@@ -22,4 +22,4 @@ cleanup() {
 
 trap cleanup EXIT
 
-exec cargo run "$@"
+cargo run "$@"
