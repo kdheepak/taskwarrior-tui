@@ -19,7 +19,7 @@ _.path = "{{env.TASKWARRIOR_INSTALL_DIR}}/bin"
 [tools]
 rust = "latest"
 uv = "latest"
-cmake = "latest"
+"aqua:Kitware/CMake" = "latest"
 "github:jgm/pandoc" = "latest"
 "cargo:cross" = "latest"
 "cargo:grcov" = "latest"
