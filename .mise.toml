@@ -12,10 +12,16 @@ TASKWARRIOR_TUI_DATA = "{{config_root}}/tests/data/.data"
 TASKWARRIOR_TUI_LOG_LEVEL = "debug"
 
 [tools]
-rust = { version = "latest", profile = "minimal", components = "cargo,rustfmt,clippy" }
+rust = { version = "latest", profile = "minimal", components = "cargo,rustfmt,clippy,llvm-tools-preview", targets = "x86_64-apple-darwin,x86_64-unknown-linux-gnu,x86_64-unknown-linux-musl,x86_64-pc-windows-gnu,x86_64-pc-windows-msvc,i686-pc-windows-msvc" }
+uv = "latest"
+cmake = "latest"
 # Convert markdown to word, pdf etc
 "github:jgm/pandoc" = "latest"
 "cargo:cross" = "latest"
+"cargo:grcov" = "latest"
+"cargo:cargo-deb" = "latest"
+"cargo:cargo-rpm" = "latest"
+"cargo:cargo-aur" = "latest"
 
 [tasks.clean-tests]
 description = "Delete cloned test fixtures"

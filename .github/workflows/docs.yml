@@ -12,12 +12,8 @@ jobs:
           submodules: "recursive"
           fetch-depth: 0
       - uses: jdx/mise-action@v3
-        with:
-          mise_toml: |
-            [tools]
-            uv = "latest"
       - name: Build site
-        run: uv run scripts/build_docs.py
+        run: mise run docs-build
       - name: Github Pages Deploy
         if: github.ref == 'refs/heads/main'
         uses: peaceiris/actions-gh-pages@v4

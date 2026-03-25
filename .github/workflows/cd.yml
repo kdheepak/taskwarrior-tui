@@ -36,14 +36,9 @@ jobs:
       - name: Check out Git repository
         uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
-        with:
-          mise_toml: |
-            [tools]
-            rust = { version = "latest", profile = "minimal", components = "cargo" }
-            "cargo:cargo-deb" = "latest"
-      - run: cargo build --release
+      - run: mise run build-release
       - name: Build deb package
-        run: cargo deb -p taskwarrior-tui -o target/debian/taskwarrior-tui.deb
+        run: mise run package-deb
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -65,16 +60,11 @@ jobs:
       - name: Check out Git repository
         uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
-        with:
-          mise_toml: |
-            [tools]
-            rust = { version = "latest", profile = "minimal", components = "cargo" }
-            "cargo:cargo-rpm" = "latest"
-      - run: cargo build --release
+      - run: mise run build-release
       - name: Install rpm
         run: sudo apt-get update && sudo apt-get install -y rpm
       - name: Build rpm package
-        run: cargo rpm build
+        run: mise run package-rpm
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -96,11 +86,6 @@ jobs:
       - name: Check out Git repository
         uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
-        with:
-          mise_toml: |
-            [tools]
-            rust = { version = "latest", profile = "minimal", components = "cargo" }
-            "cargo:cargo-aur" = "latest"
-      - run: cargo build --release
+      - run: mise run build-release
       - name: Build aur package
-        run: cargo aur
+        run: mise run package-aur

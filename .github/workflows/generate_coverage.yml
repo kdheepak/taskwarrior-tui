@@ -9,17 +9,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
-        with:
-          mise_toml: |
-            [tools]
-            rust = { version = "nightly", profile = "minimal", components = "cargo,llvm-tools-preview" }
-            uv = "latest"
-            cmake = "latest"
-            "cargo:grcov" = "latest"
       - name: Install Taskwarrior build dependencies
         run: sudo apt-get update && sudo apt-get install -y uuid-dev uuid-runtime
       - name: Build Taskwarrior from source
-        run: uv run scripts/build_taskwarrior.py
+        run: mise run build-taskwarrior
       - name: Add Taskwarrior to PATH
         run: echo "$GITHUB_WORKSPACE/target/taskwarrior-install/stable/bin" >> "$GITHUB_PATH"
       - run: |
@@ -38,9 +31,7 @@ jobs:
           LLVM_PROFILE_FILE: "your_name-%p-%m.profraw"
 
       - name: Gather coverage data
-        run: |
-          mkdir -p ./target/debug/coverage/
-          grcov . -s . --binary-path ./target/debug/ -t lcov --branch --ignore-not-existing -o ./target/debug/coverage/
+        run: mise run coverage-lcov
       - name: Coveralls upload
         uses: coverallsapp/github-action@v2
         with:

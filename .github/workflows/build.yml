@@ -54,10 +54,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
-        with:
-          mise_toml: |
-            [tools]
-            rust = { version = "latest", profile = "minimal", components = "cargo", targets = "${{ matrix.target }}" }
       - name: Build release binary
         run: cargo build --release ${{ matrix.features }} --target=${{ matrix.target }}
       - name: Compress binaries
