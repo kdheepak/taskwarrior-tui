@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+#MISE description="Build the AUR package metadata"
+#USAGE about "Build the AUR package metadata"
+set -euo pipefail
+
+cargo aur

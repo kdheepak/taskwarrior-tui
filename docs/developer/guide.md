@@ -29,7 +29,7 @@ mise install
 
 See the official mise install docs for other install methods such as Homebrew, apt, dnf, pacman, Scoop, and winget.
 
-The rest of this guide assumes `mise` is activated in your shell, so the toolchain and project environment from [`.config/mise.toml`](../../.config/mise.toml) are available automatically.
+The rest of this guide assumes `mise` is activated in your shell, so the toolchain and project environment from [`.config/mise.toml`](https://github.com/kdheepak/taskwarrior-tui/blob/main/.config/mise.toml) are available automatically. Pinned values like the Taskwarrior source tag and testdata ref live there, while the task entrypoints themselves live in [`.config/mise/tasks/taskwarrior-tui/`](https://github.com/kdheepak/taskwarrior-tui/tree/main/.config/mise/tasks/taskwarrior-tui/).
 
 ## Running tests
 
@@ -37,16 +37,22 @@ The rest of this guide assumes `mise` is activated in your shell, so the toolcha
 git clone https://github.com/kdheepak/taskwarrior-tui
 cd taskwarrior-tui
 
-mise run test
+mise run taskwarrior-tui:test
 ```
 
-`mise run test` fetches `taskwarrior-testdata` at a pinned commit for deterministic runs.
+`mise run taskwarrior-tui:test` fetches `taskwarrior-testdata` at a pinned commit for deterministic runs.
+
+## Building the CLI
+
+```bash
+cargo build
+cargo build --release
+```
 
 ## Running debug build
 
 ```bash
-mise run build
-./target/debug/taskwarrior-tui
+cargo run
 ```
 
 ## Running the TUI with local fixture data
@@ -54,26 +60,31 @@ mise run build
 Import `tests/data/export.json` into `tests/data/.task`:
 
 ```bash
-mise run import-taskdata
+mise run taskwarrior-tui:import-taskdata
 ```
 
 Run the TUI against that imported data and remove `tests/data/.task` when the TUI exits:
 
 ```bash
-mise run run-taskdata
+mise run taskwarrior-tui:run-taskdata
+```
+
+Use a release build instead:
+
+```bash
+mise run taskwarrior-tui:run-taskdata --release
 ```
 
 Remove `tests/data/.task` without starting the TUI:
 
 ```bash
-mise run clean-taskdata
+mise run taskwarrior-tui:clean-taskdata
 ```
 
 ## Running release build
 
 ```bash
-mise run build-release
-./target/release/taskwarrior-tui
+cargo run --release
 ```
 
 ## Testing individual function
@@ -81,7 +92,7 @@ mise run build-release
 If you want to test the `test_taskwarrior_timing` function in `src/app.rs`:
 
 ```bash
-mise run setup-tests
+mise run taskwarrior-tui:setup-testdata
 cargo test -- app::tests::test_taskwarrior_timing --nocapture
 ```
 
@@ -104,13 +115,13 @@ See `docs/` folder in the repository: <https://github.com/kdheepak/taskwarrior-t
 Build the docs locally with:
 
 ```bash
-mise run docs-build
+mise run taskwarrior-tui:docs-build
 ```
 
 Regenerate the man page with:
 
 ```bash
-mise run man
+mise run taskwarrior-tui:man
 ```
 
 When you make a PR to the repository, a preview of the documentation is rendered and a link is posted to the PR.

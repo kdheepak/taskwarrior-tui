@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+#MISE description="Check Rust formatting"
+#USAGE about "Check Rust formatting"
+#MISE depends=["taskwarrior-tui:ensure-rust-toolchain"]
+set -euo pipefail
+
+cargo fmt --all -- --check

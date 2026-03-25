@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#MISE alias="fmt"
+#MISE description="Format the code"
+#USAGE about "Format the code"
+#MISE depends=["taskwarrior-tui:ensure-rust-toolchain"]
+set -euo pipefail
+
+cargo fmt

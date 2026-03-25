@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#MISE description="Generate lcov output with grcov"
+#USAGE about "Generate lcov output with grcov"
+#MISE depends=["taskwarrior-tui:ensure-rust-toolchain"]
+set -euo pipefail
+
+mkdir -p ./target/debug/coverage/
+grcov . -s . --binary-path ./target/debug/ -t lcov --branch --ignore-not-existing -o ./target/debug/coverage/

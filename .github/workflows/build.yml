@@ -54,7 +54,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
       - name: Install Rust target
-        run: mise run ensure-rust-toolchain
+        run: mise run taskwarrior-tui:ensure-rust-toolchain
         env:
           RUST_TOOLCHAIN_TARGETS: ${{ matrix.target }}
       - name: Build release binary

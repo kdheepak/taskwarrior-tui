@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+#MISE description="Run clippy with warnings denied"
+#USAGE about "Run clippy with warnings denied"
+#MISE depends=["taskwarrior-tui:ensure-rust-toolchain"]
+set -euo pipefail
+
+cargo clippy -- -D warnings

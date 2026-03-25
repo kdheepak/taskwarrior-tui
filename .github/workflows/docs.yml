@@ -13,7 +13,7 @@ jobs:
           fetch-depth: 0
       - uses: jdx/mise-action@v3
       - name: Build site
-        run: mise run docs-build
+        run: mise run taskwarrior-tui:docs-build
       - name: Github Pages Deploy
         if: github.ref == 'refs/heads/main'
         uses: peaceiris/actions-gh-pages@v4
