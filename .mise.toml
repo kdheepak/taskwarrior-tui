@@ -4,8 +4,8 @@ lockfile = true
 
 [env]
 RUST_TEST_THREADS = "1"
-TASKWARRIOR_BRANCH = "stable"
-TASKWARRIOR_INSTALL_DIR = "{{config_root}}/target/taskwarrior-install/{{env.TASKWARRIOR_BRANCH}}"
+TASKWARRIOR_SOURCE = "v3.3.0"
+TASKWARRIOR_INSTALL_DIR = "{{config_root}}/target/taskwarrior-install/{{env.TASKWARRIOR_SOURCE}}"
 TASKWARRIOR_TESTDATA_DIR = "{{config_root}}/tests/data"
 TASKRC = "{{config_root}}/tests/data/.taskrc"
 TASKDATA = "{{config_root}}/tests/data/.task"
@@ -137,8 +137,6 @@ run = "cargo rpm build"
 description = "Build the AUR package metadata"
 run = "cargo aur"
 
-# Builds Taskwarrior into target/taskwarrior-install/stable/bin/task by default.
-# Set TASKWARRIOR_BRANCH=develop to build the upstream development branch instead.
 [tasks.build-taskwarrior]
 description = "Clone/update upstream Taskwarrior and build the task binary from source"
 run = "uv run scripts/build_taskwarrior.py"
