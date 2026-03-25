@@ -9,7 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
-      - run: cargo check
+      - run: mise run check-rust
 
   test:
     name: Test Suite

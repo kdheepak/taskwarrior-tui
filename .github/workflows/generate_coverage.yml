@@ -9,6 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
+      - run: mise run setup-rust-toolchain
       - name: Install Taskwarrior build dependencies
         run: sudo apt-get update && sudo apt-get install -y uuid-dev uuid-runtime
       - name: Build Taskwarrior from source
