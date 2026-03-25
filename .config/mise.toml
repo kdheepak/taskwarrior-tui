@@ -44,6 +44,44 @@ description = "Fetch pinned test fixtures used by cargo test"
 depends = ["clean-tests"]
 run = "./scripts/setup_testdata.sh"
 
+[tasks.clean-taskdata]
+description = "Remove tests/data/.task"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+rm -rf "$TASKDATA"
+'''
+
+[tasks.import-taskdata]
+description = "Import tests/data/export.json into tests/data/.task"
+depends = ["clean-taskdata"]
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+task import rc.hooks=0 tests/data/export.json
+'''
+
+[tasks.run-taskdata]
+description = "Import local fixture data, run the TUI, and clean tests/data/.task on exit"
+depends = ["import-taskdata"]
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+cleanup() {
+  local status=$?
+  set +e
+  mise run clean-taskdata >/dev/null
+  exit "$status"
+}
+
+trap cleanup EXIT
+
+cargo run
+'''
+
 [tasks.test]
 alias = "test-rust"
 description = "Run cargo test against pinned test fixtures"
