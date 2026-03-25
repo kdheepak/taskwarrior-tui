@@ -36,9 +36,9 @@ jobs:
       - name: Check out Git repository
         uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
-      - run: mise run build-release
+      - run: cargo build --release
       - name: Build deb package
-        run: mise run package-deb
+        run: mise run taskwarrior-tui:package-deb
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -60,11 +60,11 @@ jobs:
       - name: Check out Git repository
         uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
-      - run: mise run build-release
+      - run: cargo build --release
       - name: Install rpm
         run: sudo apt-get update && sudo apt-get install -y rpm
       - name: Build rpm package
-        run: mise run package-rpm
+        run: mise run taskwarrior-tui:package-rpm
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -86,6 +86,6 @@ jobs:
       - name: Check out Git repository
         uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
-      - run: mise run build-release
+      - run: cargo build --release
       - name: Build aur package
-        run: mise run package-aur
+        run: mise run taskwarrior-tui:package-aur
