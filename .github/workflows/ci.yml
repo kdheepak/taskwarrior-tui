@@ -9,7 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
-      - run: mise run taskwarrior-tui:check-rust
+      - run: mise run taskwarrior-tui:cargo-check
 
   test:
     name: Test Suite
@@ -24,7 +24,7 @@ jobs:
       - run: |
           # prepare taskwarrior, initial setup
           mise exec -- task rc.confirmation=off || echo 0
-      - run: mise run taskwarrior-tui:test
+      - run: mise run taskwarrior-tui:cargo-test
         env:
           RUST_BACKTRACE: full
 
@@ -40,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
-      - run: mise run taskwarrior-tui:fmt-check
+      - run: mise run taskwarrior-tui:cargo-fmt
 
   clippy:
     name: Clippy
@@ -48,4 +48,4 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
-      - run: mise run taskwarrior-tui:clippy-strict
+      - run: mise run taskwarrior-tui:cargo-clippy
