@@ -34,7 +34,7 @@ jobs:
         id: taskwarrior-cache
         uses: actions/cache@v4
         with:
-          path: .config/tmp/taskwarrior-install
+          path: tmp/taskwarrior-install
           key: ${{ runner.os }}-taskwarrior-${{ hashFiles('.config/mise.toml', '.config/mise/tasks/taskwarrior-tui/build-taskwarrior') }}
       - name: Install Taskwarrior build dependencies
         run: sudo apt-get update && sudo apt-get install -y uuid-dev uuid-runtime
