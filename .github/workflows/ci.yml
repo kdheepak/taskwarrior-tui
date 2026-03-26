@@ -31,7 +31,6 @@ jobs:
 
   generate_coverage:
     uses: ./.github/workflows/generate_coverage.yml
-    # Avoid double-compiling taskwarrior if not cached, or wasting CI time if tests fail
     needs: test
 
   fmt:
