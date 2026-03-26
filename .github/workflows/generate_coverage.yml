@@ -22,7 +22,7 @@ jobs:
         env:
           RUSTFLAGS: "-Cinstrument-coverage"
       - name: Run taskwarrior-tui tests in coverage environment
-        run: mise run taskwarrior-tui:test
+        run: mise run taskwarrior-tui:cargo-test
         env:
           RUST_BACKTRACE: full
           RUSTFLAGS: "-Cinstrument-coverage"
