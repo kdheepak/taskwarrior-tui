@@ -2,6 +2,14 @@ name: Build
 on:
   pull_request:
   workflow_call:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -60,6 +68,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: cargo-${{ runner.os }}-${{ matrix.target }}
       - name: Install Rust target
         run: mise run taskwarrior-tui:ensure-rust-toolchain
         env:
