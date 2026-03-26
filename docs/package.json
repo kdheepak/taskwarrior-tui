@@ -1,0 +1,20 @@
+{
+  "name": "taskwarrior-tui-docs",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.11.0"
+  },
+  "scripts": {
+    "dev": "astro dev --host",
+    "start": "astro dev --host",
+    "build": "astro build",
+    "preview": "astro preview --host",
+    "check": "astro check"
+  },
+  "devDependencies": {
+    "@astrojs/starlight": "^0.38.2",
+    "astro": "^6.1.0",
+    "zod": "^3.25.76"
+  }
+}

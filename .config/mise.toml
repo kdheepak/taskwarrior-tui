@@ -21,6 +21,7 @@ _.path = "{{env.TASKWARRIOR_INSTALL_DIR}}/bin"
 
 [tools]
 rust = { version = "latest", postinstall = "mise run taskwarrior-tui:ensure-rust-toolchain" }
+node = "25.8.2"
 uv = "latest"
 "aqua:Kitware/CMake" = "latest"
 "github:jgm/pandoc" = "latest"
@@ -70,7 +71,7 @@ run = "task import rc.hooks=0 tests/data/export.json"
 
 [tasks."taskwarrior-tui:man"]
 description = "Generate the roff man page from Markdown"
-run = "pandoc --standalone --to=man docs/taskwarrior-tui.1.md -o docs/taskwarrior-tui.1"
+run = "pandoc --standalone --to=man packaging/man/taskwarrior-tui.1.md -o packaging/man/taskwarrior-tui.1"
 
 [tasks."taskwarrior-tui:package-aur"]
 description = "Build the AUR package metadata"
@@ -101,3 +102,15 @@ run = [
   { task = "taskwarrior-tui:cargo-test" },
   { task = "taskwarrior-tui:cargo-clippy" },
 ]
+
+[tasks."taskwarrior-tui:docs-build"]
+description = "Build the documentation"
+run = """
+cd {{config_root}}/docs && npm install && npm run build
+"""
+
+[tasks."taskwarrior-tui:docs-preview"]
+description = "Preview the documentation"
+run = """
+cd {{config_root}}/docs && npm install && npm run dev
+"""
