@@ -1,10 +1,11 @@
-# Default Keybindings
+---
+title: Default Keybindings
+description: Reference the default keyboard controls for reports, prompts, menus, and the calendar view.
+---
 
-> [!NOTE]
-> If any bindings are changed in the `.taskrc`, the built-in help menu will show
-> them instead of the defaults. Please see
-> [configuration/keys](./configuration/keys.md) for details on custom
-> keybindings.
+:::note
+If any bindings are changed in `.taskrc`, the built-in help menu will show them instead of the defaults. See [key configuration](./configuration/keys.md) for details on custom keybindings.
+:::
 
 Keybindings:
 

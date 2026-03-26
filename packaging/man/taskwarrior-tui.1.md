@@ -2,7 +2,7 @@
 
 <!-- This is the taskwarrior-tui(1) man page, written in Markdown. -->
 <!-- To generate the roff version, run `mise run taskwarrior-tui:man`, -->
-<!-- and the man page will be written to `docs/taskwarrior-tui.1`. -->
+<!-- and the man page will be written to `packaging/man/taskwarrior-tui.1`. -->
 
 
 NAME
@@ -239,7 +239,7 @@ EXIT STATUSES
 AUTHOR
 ======
 
-`taskwarrior-tui` is maintained by Dheepak ‘kdheepak’ Krishnamurthy and other contributors.
+`taskwarrior-tui` is maintained by Dheepak 'kdheepak' Krishnamurthy and other contributors.
 
 **Source code:** `https://github.com/kdheepak/taskwarrior-tui/` \
 **Contributors:** `https://github.com/kdheepak/taskwarrior-tui/graphs/contributors`

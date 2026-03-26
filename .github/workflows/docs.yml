@@ -15,9 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-        with:
-          submodules: "recursive"
-          fetch-depth: 0
       - uses: jdx/mise-action@v3
       - name: Build site
         run: mise run taskwarrior-tui:docs-build

@@ -1,8 +1,11 @@
-# Key configuration
+---
+title: Key Configuration
+description: Customize taskwarrior-tui keybindings through your Taskwarrior configuration file.
+---
 
 Configure `taskwarrior-tui` using `~/.taskrc`:
 
-`taskwarrior-tui` reads values from your `taskwarrior`'s `taskrc` file (default: `~/.taskrc`).
+`taskwarrior-tui` reads values from your Taskwarrior `taskrc` file (default: `~/.taskrc`).
 
 ```plaintext
 uda.taskwarrior-tui.keyconfig.quit=q

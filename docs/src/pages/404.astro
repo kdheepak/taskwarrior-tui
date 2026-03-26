@@ -1,0 +1,166 @@
+---
+const homeHref = new URL('./', Astro.url).pathname;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>404 | taskwarrior-tui</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0e141d;
+        --panel: #141d29;
+        --panel-2: #1e2a39;
+        --line: #304054;
+        --text: #f6efe4;
+        --muted: #9aa7b7;
+        --accent: #f26b3a;
+        --accent-soft: rgba(242, 107, 58, 0.16);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 2rem;
+        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top right, rgba(242, 107, 58, 0.18), transparent 24rem),
+          radial-gradient(circle at bottom left, rgba(45, 140, 255, 0.12), transparent 22rem),
+          var(--bg);
+      }
+
+      main {
+        width: min(44rem, 100%);
+        border: 1px solid var(--line);
+        border-radius: 1.5rem;
+        overflow: hidden;
+        background: linear-gradient(180deg, rgba(20, 29, 41, 0.96), rgba(14, 20, 29, 0.96));
+        box-shadow: 0 24px 72px rgba(0, 0, 0, 0.36);
+      }
+
+      .chrome {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--line);
+        background: var(--panel-2);
+      }
+
+      .dot {
+        width: 0.72rem;
+        height: 0.72rem;
+        border-radius: 999px;
+        background: var(--accent);
+        box-shadow: 1.1rem 0 0 #f2b134, 2.2rem 0 0 #2fb67a;
+        margin-right: 2.2rem;
+      }
+
+      .label {
+        font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+        font-size: 0.92rem;
+        color: var(--muted);
+      }
+
+      .content {
+        padding: 2rem;
+      }
+
+      .eyebrow {
+        display: inline-block;
+        margin-bottom: 1rem;
+        padding: 0.35rem 0.65rem;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: #ffd3c0;
+        font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+        font-size: 0.82rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0 0 0.8rem;
+        font-size: clamp(2.5rem, 7vw, 4.4rem);
+        line-height: 0.95;
+      }
+
+      p {
+        margin: 0;
+        max-width: 34rem;
+        color: var(--muted);
+        font-size: 1.05rem;
+        line-height: 1.7;
+      }
+
+      .actions {
+        display: flex;
+        gap: 0.8rem;
+        margin-top: 1.6rem;
+      }
+
+      a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 2.8rem;
+        padding: 0.75rem 1rem;
+        border-radius: 0.85rem;
+        color: inherit;
+        text-decoration: none;
+        border: 1px solid var(--line);
+      }
+
+      a.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #111722;
+        font-weight: 700;
+      }
+
+      a.secondary {
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      @media (max-width: 40rem) {
+        .content {
+          padding: 1.4rem;
+        }
+
+        .actions {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="chrome">
+        <span class="dot"></span>
+        <span class="label">taskwarrior-tui / docs / 404</span>
+      </div>
+      <div class="content">
+        <span class="eyebrow">Route Not Found</span>
+        <h1>404</h1>
+        <p>
+          The documentation page you requested does not exist at this path. The docs site has
+          moved to Starlight, so older links may no longer match the current structure exactly.
+        </p>
+        <div class="actions">
+          <a class="primary" href={homeHref}>Back to Docs</a>
+          <a class="secondary" href="https://github.com/kdheepak/taskwarrior-tui">Open Repository</a>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

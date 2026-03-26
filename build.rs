@@ -10,7 +10,9 @@ include!("src/cli.rs");
 
 fn run_pandoc() -> Result<Output, std::io::Error> {
   let mut cmd = Command::new("pandoc");
-  if let Some(args) = shlex::split("--standalone --to=man docs/taskwarrior-tui.1.md -o docs/taskwarrior-tui.1") {
+  if let Some(args) = shlex::split(
+    "--standalone --to=man packaging/man/taskwarrior-tui.1.md -o packaging/man/taskwarrior-tui.1",
+  ) {
     for arg in args {
       cmd.arg(arg);
     }
