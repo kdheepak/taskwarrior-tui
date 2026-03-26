@@ -123,7 +123,7 @@ pub struct TaskReportTable {
 }
 
 impl TaskReportTable {
-  pub fn new(data: &str, report: &str) -> Result<Self> {
+  pub fn new(data: &str, report: &str, task_exe: &str) -> Result<Self> {
     let virtual_tags = vec![
       "PROJECT",
       "BLOCKED",
@@ -169,18 +169,18 @@ impl TaskReportTable {
       date_time_vague_precise: false,
       date_format: "%Y-%m-%d".to_string(),
     };
-    task_report_table.export_headers(Some(data), report)?;
+    task_report_table.export_headers(Some(data), report, task_exe)?;
     Ok(task_report_table)
   }
 
-  pub fn export_headers(&mut self, data: Option<&str>, report: &str) -> Result<()> {
+  pub fn export_headers(&mut self, data: Option<&str>, report: &str, task_exe: &str) -> Result<()> {
     self.columns = vec![];
     self.labels = vec![];
 
     let data = if let Some(s) = data {
       s.to_string()
     } else {
-      let output = Command::new("task")
+      let output = Command::new(task_exe)
         .arg("show")
         .arg("rc.defaultwidth=0")
         .arg(format!("report.{}.columns", report))
@@ -197,7 +197,7 @@ impl TaskReportTable {
       }
     }
 
-    let output = Command::new("task")
+    let output = Command::new(task_exe)
       .arg("show")
       .arg("rc.defaultwidth=0")
       .arg(format!("report.{}.labels", report))
@@ -213,7 +213,7 @@ impl TaskReportTable {
       }
     }
 
-    let output = Command::new("task")
+    let output = Command::new(task_exe)
       .arg("show")
       .arg("rc.defaultwidth=0")
       .arg(format!("report.{}.dateformat", report))

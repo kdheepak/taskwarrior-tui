@@ -221,6 +221,14 @@ Keybindings for calendar:
 `K`
 : {selected-=10}                    - Move back a decade in calendar
 
+ENVIRONMENT
+===========
+
+`TASKWARRIOR_TUI_TASKWARRIOR_CLI`
+: Path to the `task` executable. Defaults to `task` (resolved via `PATH`).
+  Set this to use a non-standard installation of Taskwarrior, e.g.
+  `TASKWARRIOR_TUI_TASKWARRIOR_CLI=/usr/local/bin/task taskwarrior-tui`.
+
 EXIT STATUSES
 =============
 

@@ -105,8 +105,8 @@ impl ContextsState {
       .collect()
   }
 
-  pub fn update_data(&mut self) -> Result<()> {
-    let output = Command::new("task").arg("context").output()?;
+  pub fn update_data(&mut self, task_exe: &str) -> Result<()> {
+    let output = Command::new(task_exe).arg("context").output()?;
     let data = String::from_utf8_lossy(&output.stdout);
 
     self.rows = vec![];
