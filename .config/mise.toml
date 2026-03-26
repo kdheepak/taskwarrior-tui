@@ -30,12 +30,74 @@ uv = "latest"
 "cargo:cargo-rpm" = "latest"
 "cargo:cargo-aur" = "latest"
 
+[tasks."taskwarrior-tui:cargo-fmt"]
+depends=["taskwarrior-tui:ensure-rust-toolchain"]
+description = "Check Rust formatting"
+run = "cargo fmt --all -- --check"
+
+[tasks."taskwarrior-tui:cargo-check"]
+depends=["taskwarrior-tui:ensure-rust-toolchain"]
+description = "Run cargo check"
+run = "cargo check"
+
+[tasks."taskwarrior-tui:cargo-test"]
+description = "Run cargo test against pinned test fixtures"
+depends=["taskwarrior-tui:ensure-rust-toolchain", "taskwarrior-tui:setup-testdata"]
+run = "cargo test --workspace -- --nocapture"
+
+[tasks."taskwarrior-tui:cargo-clippy"]
+depends=["taskwarrior-tui:ensure-rust-toolchain"]
+description = "Run clippy with warnings denied"
+run = "cargo clippy -- -D warnings"
+
+[tasks."taskwarrior-tui:cargo-clean"]
+depends=["taskwarrior-tui:ensure-rust-toolchain"]
+description = "Clean the cargo build artifacts"
+run = "cargo clean"
+
+[tasks."taskwarrior-tui:clean-taskdata"]
+description = "Remove tests/data/.task"
+run = "rm -rf \"$TASKDATA\""
+
+[tasks."taskwarrior-tui:clean-tests"]
+description = "Delete cloned test fixtures"
+run = "rm -rf \"$TASKWARRIOR_TESTDATA_DIR\""
+
+[tasks."taskwarrior-tui:import-taskdata"]
+description = "Import tests/data/export.json into tests/data/.task"
+depends=["taskwarrior-tui:setup-testdata"]
+run = "task import rc.hooks=0 tests/data/export.json"
+
+[tasks."taskwarrior-tui:man"]
+description = "Generate the roff man page from Markdown"
+run = "pandoc --standalone --to=man docs/taskwarrior-tui.1.md -o docs/taskwarrior-tui.1"
+
+[tasks."taskwarrior-tui:package-aur"]
+description = "Build the AUR package metadata"
+run = "cargo aur"
+
+[tasks."taskwarrior-tui:package-deb"]
+description = "Build the Debian package"
+run = "cargo deb -p taskwarrior-tui -o target/debian/taskwarrior-tui.deb"
+
+[tasks."taskwarrior-tui:package-rpm"]
+description = "Build the RPM package"
+run = "cargo rpm build"
+
+[tasks."taskwarrior-tui:coverage"]
+depends=["taskwarrior-tui:ensure-rust-toolchain"]
+description = "Generate lcov output with grcov"
+run = [
+  "mkdir -p ./target/debug/coverage/",
+  "grcov . -s . --binary-path ./target/debug/ -t lcov --branch --ignore-not-existing -o ./target/debug/coverage/",
+]
+
 [tasks."taskwarrior-tui:ci"]
 description = "CI - format, check, test, clippy"
 depends=["taskwarrior-tui:ensure-rust-toolchain"]
 run = [
-  { task = "taskwarrior-tui:fmt-check" },
-  { task = "taskwarrior-tui:check-rust" },
-  { task = "taskwarrior-tui:test" },
-  { task = "taskwarrior-tui:clippy-strict" },
+  { task = "taskwarrior-tui:cargo-fmt" },
+  { task = "taskwarrior-tui:cargo-check" },
+  { task = "taskwarrior-tui:cargo-test" },
+  { task = "taskwarrior-tui:cargo-clippy" },
 ]

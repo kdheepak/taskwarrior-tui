@@ -29,7 +29,7 @@ jobs:
           LLVM_PROFILE_FILE: "your_name-%p-%m.profraw"
 
       - name: Gather coverage data
-        run: mise run taskwarrior-tui:coverage-lcov
+        run: mise run taskwarrior-tui:coverage
       - name: Coveralls upload
         uses: coverallsapp/github-action@v2
         with:

@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-#MISE description="Run clippy with warnings denied"
-#USAGE about "Run clippy with warnings denied"
-set -euo pipefail
-
-cargo clippy -- -D warnings

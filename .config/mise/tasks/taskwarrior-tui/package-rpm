@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-#MISE description="Build the RPM package"
-#USAGE about "Build the RPM package"
-set -euo pipefail
-
-cargo rpm build

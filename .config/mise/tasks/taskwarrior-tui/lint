@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-#MISE description="Lint with clippy"
-#USAGE about "Lint with clippy"
-#MISE env={RUST_BACKTRACE = "1"}
-#MISE depends=["taskwarrior-tui:ensure-rust-toolchain"]
-set -euo pipefail
-
-cargo clippy
