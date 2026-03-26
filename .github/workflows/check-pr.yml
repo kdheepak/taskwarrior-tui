@@ -11,7 +11,12 @@ on:
   merge_group:
 
 permissions:
+  issues: write
   pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check-title:
@@ -45,6 +50,7 @@ jobs:
           delete: true
 
   check-breaking-change-label:
+    if: github.event_name == 'pull_request_target'
     runs-on: ubuntu-latest
     env:
       # use an environment variable to pass untrusted input to the script
@@ -61,18 +67,39 @@ jobs:
         else
           echo "breaking_change=false" >> $GITHUB_OUTPUT
         fi
-    - name: Add label
-      if: steps.check_breaking_change.outputs.breaking_change == 'true'
+    - name: Sync breaking-change label
       uses: actions/github-script@v8
+      env:
+        BREAKING_CHANGE: ${{ steps.check_breaking_change.outputs.breaking_change }}
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
-          github.rest.issues.addLabels({
+          const label = 'Type: Breaking Change';
+          const shouldHaveLabel = process.env.BREAKING_CHANGE === 'true';
+          const params = {
             issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
-            labels: ['Type: Breaking Change']
-          })
+          };
+
+          if (shouldHaveLabel) {
+            await github.rest.issues.addLabels({
+              ...params,
+              labels: [label],
+            });
+            return;
+          }
+
+          try {
+            await github.rest.issues.removeLabel({
+              ...params,
+              name: label,
+            });
+          } catch (error) {
+            if (error.status !== 404) {
+              throw error;
+            }
+          }
 
   do-not-merge:
     if: ${{ contains(github.event.*.labels.*.name, 'do not merge') }}

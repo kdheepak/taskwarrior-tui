@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-#MISE description="Import tests/data/export.json into tests/data/.task"
-#USAGE about "Import tests/data/export.json into tests/data/.task"
-#MISE depends=["taskwarrior-tui:setup-testdata"]
-set -euo pipefail
-
-task import rc.hooks=0 tests/data/export.json

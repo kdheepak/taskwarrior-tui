@@ -2,6 +2,13 @@ on: [pull_request]
 
 name: CI
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     name: Check
@@ -9,7 +16,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
-      - run: mise run taskwarrior-tui:check-rust
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: cargo-${{ runner.os }}
+      - run: mise run taskwarrior-tui:cargo-check
 
   test:
     name: Test Suite
@@ -17,21 +27,30 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: cargo-${{ runner.os }}
+      - name: Restore cached Taskwarrior build
+        id: taskwarrior-cache
+        uses: actions/cache@v4
+        with:
+          path: tmp/taskwarrior-install
+          key: ${{ runner.os }}-taskwarrior-${{ hashFiles('.config/mise.toml', '.config/mise/tasks/taskwarrior-tui/build-taskwarrior') }}
       - name: Install Taskwarrior build dependencies
         run: sudo apt-get update && sudo apt-get install -y uuid-dev uuid-runtime
       - name: Build Taskwarrior from source
+        if: steps.taskwarrior-cache.outputs.cache-hit != 'true'
         run: mise run taskwarrior-tui:build-taskwarrior
       - run: |
           # prepare taskwarrior, initial setup
           mise exec -- task rc.confirmation=off || echo 0
-      - run: mise run taskwarrior-tui:test
+      - run: mise run taskwarrior-tui:cargo-test
         env:
           RUST_BACKTRACE: full
 
 
   generate_coverage:
     uses: ./.github/workflows/generate_coverage.yml
-    # Avoid double-compiling taskwarrior if not cached, or wasting CI time if tests fail
     needs: test
 
   fmt:
@@ -40,7 +59,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
-      - run: mise run taskwarrior-tui:fmt-check
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: cargo-${{ runner.os }}
+      - run: mise run taskwarrior-tui:cargo-fmt
 
   clippy:
     name: Clippy
@@ -48,4 +70,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
-      - run: mise run taskwarrior-tui:clippy-strict
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: cargo-${{ runner.os }}
+      - run: mise run taskwarrior-tui:cargo-clippy

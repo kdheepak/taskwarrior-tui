@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-#MISE description="Delete cloned test fixtures"
-#USAGE about "Delete cloned test fixtures"
-set -euo pipefail
-
-if [ -d "$TASKWARRIOR_TESTDATA_DIR" ]; then
-  rm -rf "$TASKWARRIOR_TESTDATA_DIR"
-fi

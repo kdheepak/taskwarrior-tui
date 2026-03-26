@@ -3,9 +3,6 @@ name: CD
 on:
   release:
     types: [published]
-  push:
-    tags:
-      - v*
 
 permissions:
   contents: write
@@ -36,6 +33,9 @@ jobs:
       - name: Check out Git repository
         uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: cargo-${{ runner.os }}
       - run: cargo build --release
       - name: Build deb package
         run: mise run taskwarrior-tui:package-deb
@@ -60,6 +60,9 @@ jobs:
       - name: Check out Git repository
         uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: cargo-${{ runner.os }}
       - run: cargo build --release
       - name: Install rpm
         run: sudo apt-get update && sudo apt-get install -y rpm
@@ -86,6 +89,9 @@ jobs:
       - name: Check out Git repository
         uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: cargo-${{ runner.os }}
       - run: cargo build --release
       - name: Build aur package
         run: mise run taskwarrior-tui:package-aur

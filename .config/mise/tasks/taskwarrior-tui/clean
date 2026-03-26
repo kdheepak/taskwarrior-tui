@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-#MISE description="Clean build artifacts"
-#USAGE about "Clean build artifacts"
-set -euo pipefail
-
-cargo clean

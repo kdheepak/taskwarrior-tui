@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-#MISE description="Run cargo check"
-#USAGE about "Run cargo check"
-set -euo pipefail
-
-cargo check
