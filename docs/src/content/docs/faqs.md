@@ -26,3 +26,7 @@ task rc.confirmation=off context define test project:work
 ```
 
 If you do not add `rc.confirmation=off` in the shell command, `taskwarrior-tui` will run the command but it will fail because it cannot respond to the interactive prompt.
+
+### How do I debug startup failures, crashes, or performance issues?
+
+See [Troubleshooting](./troubleshooting/) for a step-by-step guide to collecting logs, comparing `taskwarrior` command timings, isolating path-specific issues, and filing a useful GitHub issue.

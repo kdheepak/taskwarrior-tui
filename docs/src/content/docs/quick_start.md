@@ -21,3 +21,5 @@ alias tt="taskwarrior-tui"
 ```
 
 ![](https://user-images.githubusercontent.com/1813121/89620056-4ed64200-d84c-11ea-9153-9e08bc26d3b4.gif)
+
+If startup fails or the UI feels slow, continue to [Troubleshooting](./troubleshooting/).

@@ -65,6 +65,9 @@ installation instructions for your platform.</p>
 <p>See <a href="https://kdheepak.com/taskwarrior-tui/quick_start/"
 class="uri">https://kdheepak.com/taskwarrior-tui/quick_start/</a> to get
 started.</p>
+<p>See <a href="https://kdheepak.com/taskwarrior-tui/troubleshooting/"
+class="uri">https://kdheepak.com/taskwarrior-tui/troubleshooting/</a> for
+logs, timing checks, and debugging steps.</p>
 <p>See <a href="https://kdheepak.com/taskwarrior-tui/configuration/keys"
 class="uri">https://kdheepak.com/taskwarrior-tui/configuration/keys</a>
 or <a href="https://kdheepak.com/taskwarrior-tui/configuration/colors/"
