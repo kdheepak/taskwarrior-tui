@@ -108,6 +108,31 @@ This runs `task sync` every 60 seconds. If `background_process` is an empty stri
 
 ## Environment Variables
 
+### `TASKWARRIOR_TUI_DATA`
+
+Overrides the `taskwarrior-tui` data directory used for logs and history files.
+
+By default this uses your platform's local data directory, typically `~/.local/share/taskwarrior-tui/` on Linux.
+
+This is useful when debugging because it lets you collect `taskwarrior-tui.log` in a temporary or project-local folder:
+
+```bash
+TASKWARRIOR_TUI_DATA=/tmp/taskwarrior-tui-debug taskwarrior-tui
+```
+
+### `TASKWARRIOR_TUI_LOG_LEVEL`
+
+Controls how much information is written to `taskwarrior-tui.log`.
+
+Supported values are `off`, `warn`, `info`, `debug`, and `trace`.
+
+Examples:
+
+```bash
+TASKWARRIOR_TUI_LOG_LEVEL=debug taskwarrior-tui
+TASKWARRIOR_TUI_LOG_LEVEL=trace taskwarrior-tui
+```
+
 ### `TASKWARRIOR_TUI_TASKWARRIOR_CLI`
 
 Overrides the path to the Taskwarrior executable. Defaults to `task`, resolved via `PATH`.
