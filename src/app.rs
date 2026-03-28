@@ -1413,7 +1413,13 @@ impl TaskwarriorTui {
     let mut highlight_style = Style::default();
     let mut pos = 0;
     for (i, task) in tasks.iter().enumerate() {
-      let style = self.style_for_task(&self.tasks[i]);
+      // Apply alternating row color as base style for odd rows
+      let base_style = if i % 2 == 1 {
+        self.config.color.get("color.alternate").copied().unwrap_or_default()
+      } else {
+        Style::default()
+      };
+      let style = base_style.patch(self.style_for_task(&self.tasks[i]));
       if i == selected {
         pos = i;
         highlight_style = style.patch(self.config.uda_style_report_selection);
