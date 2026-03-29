@@ -4242,6 +4242,20 @@ mod tests {
     std::env::var("TASKWARRIOR_TUI_TASKWARRIOR_CLI").unwrap_or_else(|_| "task".to_string())
   }
 
+  fn assert_task_has_tags(task: &Task, expected_tags: &[&str]) {
+    let task_tags = task
+      .tags()
+      .unwrap_or_else(|| panic!("task {} should have tags", task.id().unwrap_or_default()));
+
+    for expected_tag in expected_tags {
+      assert!(
+        task_tags.contains(&expected_tag.to_string()),
+        "expected tag `{expected_tag}` in {:?}",
+        task_tags
+      );
+    }
+  }
+
   /// Returns a string representation of the given buffer for debugging purpose.
   fn buffer_view(buffer: &Buffer) -> String {
     let mut view = String::with_capacity(buffer.content.len() + buffer.area.height as usize * 3);
@@ -4568,12 +4582,7 @@ mod tests {
     assert_eq!(app.current_context_filter, "");
 
     let task = app.task_by_id(task_id).unwrap();
-
-    for s in &["DUE", "MONTH", "PENDING", "QUARTER", "TOMORROW", "UDA", "UNBLOCKED", "YEAR"] {
-      if !(task.tags().unwrap().contains(&s.to_string())) {
-        println!("Expected {} to be in tags", s);
-      }
-    }
+    assert_task_has_tags(&task, &["DUE", "MONTH", "PENDING", "QUARTER", "TOMORROW", "UDA", "UNBLOCKED", "YEAR"]);
 
     let output = std::process::Command::new(&task_exe())
       .arg("rc.confirmation=off")
@@ -4619,20 +4628,21 @@ mod tests {
     assert_eq!(app.current_context_filter, "");
 
     let task = app.task_by_id(task_id).unwrap();
-    for s in &[
-      "DUE",
-      "DUETODAY",
-      "MONTH",
-      "OVERDUE",
-      "PENDING",
-      "QUARTER",
-      "TODAY",
-      "UDA",
-      "UNBLOCKED",
-      "YEAR",
-    ] {
-      assert!(task.tags().unwrap().contains(&s.to_string()));
-    }
+    assert_task_has_tags(
+      &task,
+      &[
+        "DUE",
+        "DUETODAY",
+        "MONTH",
+        "OVERDUE",
+        "PENDING",
+        "QUARTER",
+        "TODAY",
+        "UDA",
+        "UNBLOCKED",
+        "YEAR",
+      ],
+    );
 
     let output = std::process::Command::new(&task_exe())
       .arg("rc.confirmation=off")
@@ -4659,14 +4669,20 @@ mod tests {
 
     let mut command = std::process::Command::new(&task_exe());
     command.arg("add");
+    let later_today = now
+      .with_hour(23)
+      .and_then(|dt| dt.with_minute(59))
+      .and_then(|dt| dt.with_second(59))
+      .unwrap();
+    assert!(later_today > now, "cannot exercise the later-today path at the end of the local day");
     let message = format!(
       "'new task for testing later today' due:'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}'",
-      now.year(),
-      now.month(),
-      now.day(),
-      now.hour(),
-      now.minute() + 1,
-      now.second(),
+      later_today.year(),
+      later_today.month(),
+      later_today.day(),
+      later_today.hour(),
+      later_today.minute(),
+      later_today.second(),
     );
 
     let shell = message.as_str().replace("'", "\\'");
@@ -4686,9 +4702,10 @@ mod tests {
     assert_eq!(app.current_context_filter, "");
 
     let task = app.task_by_id(task_id).unwrap();
-    for s in &["DUE", "DUETODAY", "MONTH", "PENDING", "QUARTER", "TODAY", "UDA", "UNBLOCKED", "YEAR"] {
-      assert!(task.tags().unwrap().contains(&s.to_string()));
-    }
+    assert_task_has_tags(
+      &task,
+      &["DUE", "DUETODAY", "MONTH", "PENDING", "QUARTER", "TODAY", "UDA", "UNBLOCKED", "YEAR"],
+    );
 
     let output = std::process::Command::new(&task_exe())
       .arg("rc.confirmation=off")
