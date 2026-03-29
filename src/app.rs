@@ -44,6 +44,7 @@ use crate::{
   completion::{CompletionList, get_start_word_under_cursor},
   config,
   config::Config,
+  datetime,
   event::{Event, KeyCode},
   help::Help,
   history::HistoryContext,
@@ -78,7 +79,7 @@ pub enum DateState {
 
 pub fn get_date_state(reference: &Date, due: usize) -> DateState {
   let now = Local::now();
-  let reference = Local.from_utc_datetime(reference);
+  let reference = datetime::local_from_utc(reference);
 
   if reference.date_naive() < now.date_naive() {
     return DateState::BeforeToday;
@@ -99,33 +100,8 @@ pub fn get_date_state(reference: &Date, due: usize) -> DateState {
   }
 }
 
-fn get_offset_hour_minute(off: i32) -> (&'static str, i32, i32) {
-  let sym = if off >= 0 { "+" } else { "-" };
-  let off = off.abs();
-  let h = if off > 60 * 60 { off / 60 / 60 } else { 0 };
-  let m = if (off - ((off / 60 / 60) * 60 * 60)) > 60 {
-    (off - ((off / 60 / 60) * 60 * 60)) / 60
-  } else {
-    0
-  };
-  (sym, h, m)
-}
-
 fn get_formatted_datetime(date: &Date) -> String {
-  let date = Local.from_utc_datetime(date);
-  let (sym, h, m) = get_offset_hour_minute(date.offset().local_minus_utc());
-  format!(
-    "'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}{}{:02}:{:02}'",
-    date.year(),
-    date.month(),
-    date.day(),
-    date.hour(),
-    date.minute(),
-    date.second(),
-    sym,
-    h,
-    m,
-  )
+  datetime::format_taskwarrior_datetime_literal(date)
 }
 
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
@@ -926,7 +902,7 @@ impl TaskwarriorTui {
       tasks
         .iter()
         .filter_map(|t| t.due().map(|d| (d.clone(), self.style_for_task(t))))
-        .map(|(d, t)| (Local.from_utc_datetime(&d).date_naive(), t))
+        .map(|(d, t)| (datetime::local_from_utc(&d).date_naive(), t))
         .collect()
     } else {
       vec![]
@@ -2679,7 +2655,7 @@ impl TaskwarriorTui {
         // due today
         if status != &TaskStatus::Completed && status != &TaskStatus::Deleted {
           let now = Local::now();
-          let reference = Local.from_utc_datetime(d);
+          let reference = datetime::local_from_utc(d);
           let d = d.clone();
           if (reference - chrono::Duration::nanoseconds(1)).month() == now.month() {
             add_tag(task, "MONTH".to_string());
