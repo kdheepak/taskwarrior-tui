@@ -44,6 +44,7 @@ use crate::{
   completion::{CompletionList, get_start_word_under_cursor},
   config,
   config::Config,
+  datetime,
   event::{Event, KeyCode},
   help::Help,
   history::HistoryContext,
@@ -78,7 +79,7 @@ pub enum DateState {
 
 pub fn get_date_state(reference: &Date, due: usize) -> DateState {
   let now = Local::now();
-  let reference = Local.from_utc_datetime(reference);
+  let reference = datetime::local_from_utc(reference);
 
   if reference.date_naive() < now.date_naive() {
     return DateState::BeforeToday;
@@ -99,33 +100,8 @@ pub fn get_date_state(reference: &Date, due: usize) -> DateState {
   }
 }
 
-fn get_offset_hour_minute(off: i32) -> (&'static str, i32, i32) {
-  let sym = if off >= 0 { "+" } else { "-" };
-  let off = off.abs();
-  let h = if off > 60 * 60 { off / 60 / 60 } else { 0 };
-  let m = if (off - ((off / 60 / 60) * 60 * 60)) > 60 {
-    (off - ((off / 60 / 60) * 60 * 60)) / 60
-  } else {
-    0
-  };
-  (sym, h, m)
-}
-
 fn get_formatted_datetime(date: &Date) -> String {
-  let date = Local.from_utc_datetime(date);
-  let (sym, h, m) = get_offset_hour_minute(date.offset().local_minus_utc());
-  format!(
-    "'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}{}{:02}:{:02}'",
-    date.year(),
-    date.month(),
-    date.day(),
-    date.hour(),
-    date.minute(),
-    date.second(),
-    sym,
-    h,
-    m,
-  )
+  datetime::format_taskwarrior_datetime_literal(date)
 }
 
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
@@ -926,7 +902,7 @@ impl TaskwarriorTui {
       tasks
         .iter()
         .filter_map(|t| t.due().map(|d| (d.clone(), self.style_for_task(t))))
-        .map(|(d, t)| (Local.from_utc_datetime(&d).date_naive(), t))
+        .map(|(d, t)| (datetime::local_from_utc(&d).date_naive(), t))
         .collect()
     } else {
       vec![]
@@ -2679,7 +2655,7 @@ impl TaskwarriorTui {
         // due today
         if status != &TaskStatus::Completed && status != &TaskStatus::Deleted {
           let now = Local::now();
-          let reference = Local.from_utc_datetime(d);
+          let reference = datetime::local_from_utc(d);
           let d = d.clone();
           if (reference - chrono::Duration::nanoseconds(1)).month() == now.month() {
             add_tag(task, "MONTH".to_string());
@@ -4266,6 +4242,20 @@ mod tests {
     std::env::var("TASKWARRIOR_TUI_TASKWARRIOR_CLI").unwrap_or_else(|_| "task".to_string())
   }
 
+  fn assert_task_has_tags(task: &Task, expected_tags: &[&str]) {
+    let task_tags = task
+      .tags()
+      .unwrap_or_else(|| panic!("task {} should have tags", task.id().unwrap_or_default()));
+
+    for expected_tag in expected_tags {
+      assert!(
+        task_tags.contains(&expected_tag.to_string()),
+        "expected tag `{expected_tag}` in {:?}",
+        task_tags
+      );
+    }
+  }
+
   /// Returns a string representation of the given buffer for debugging purpose.
   fn buffer_view(buffer: &Buffer) -> String {
     let mut view = String::with_capacity(buffer.content.len() + buffer.area.height as usize * 3);
@@ -4592,12 +4582,7 @@ mod tests {
     assert_eq!(app.current_context_filter, "");
 
     let task = app.task_by_id(task_id).unwrap();
-
-    for s in &["DUE", "MONTH", "PENDING", "QUARTER", "TOMORROW", "UDA", "UNBLOCKED", "YEAR"] {
-      if !(task.tags().unwrap().contains(&s.to_string())) {
-        println!("Expected {} to be in tags", s);
-      }
-    }
+    assert_task_has_tags(&task, &["DUE", "MONTH", "PENDING", "QUARTER", "TOMORROW", "UDA", "UNBLOCKED", "YEAR"]);
 
     let output = std::process::Command::new(&task_exe())
       .arg("rc.confirmation=off")
@@ -4643,20 +4628,21 @@ mod tests {
     assert_eq!(app.current_context_filter, "");
 
     let task = app.task_by_id(task_id).unwrap();
-    for s in &[
-      "DUE",
-      "DUETODAY",
-      "MONTH",
-      "OVERDUE",
-      "PENDING",
-      "QUARTER",
-      "TODAY",
-      "UDA",
-      "UNBLOCKED",
-      "YEAR",
-    ] {
-      assert!(task.tags().unwrap().contains(&s.to_string()));
-    }
+    assert_task_has_tags(
+      &task,
+      &[
+        "DUE",
+        "DUETODAY",
+        "MONTH",
+        "OVERDUE",
+        "PENDING",
+        "QUARTER",
+        "TODAY",
+        "UDA",
+        "UNBLOCKED",
+        "YEAR",
+      ],
+    );
 
     let output = std::process::Command::new(&task_exe())
       .arg("rc.confirmation=off")
@@ -4683,14 +4669,20 @@ mod tests {
 
     let mut command = std::process::Command::new(&task_exe());
     command.arg("add");
+    let later_today = now
+      .with_hour(23)
+      .and_then(|dt| dt.with_minute(59))
+      .and_then(|dt| dt.with_second(59))
+      .unwrap();
+    assert!(later_today > now, "cannot exercise the later-today path at the end of the local day");
     let message = format!(
       "'new task for testing later today' due:'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}'",
-      now.year(),
-      now.month(),
-      now.day(),
-      now.hour(),
-      now.minute() + 1,
-      now.second(),
+      later_today.year(),
+      later_today.month(),
+      later_today.day(),
+      later_today.hour(),
+      later_today.minute(),
+      later_today.second(),
     );
 
     let shell = message.as_str().replace("'", "\\'");
@@ -4710,9 +4702,10 @@ mod tests {
     assert_eq!(app.current_context_filter, "");
 
     let task = app.task_by_id(task_id).unwrap();
-    for s in &["DUE", "DUETODAY", "MONTH", "PENDING", "QUARTER", "TODAY", "UDA", "UNBLOCKED", "YEAR"] {
-      assert!(task.tags().unwrap().contains(&s.to_string()));
-    }
+    assert_task_has_tags(
+      &task,
+      &["DUE", "DUETODAY", "MONTH", "PENDING", "QUARTER", "TODAY", "UDA", "UNBLOCKED", "YEAR"],
+    );
 
     let output = std::process::Command::new(&task_exe())
       .arg("rc.confirmation=off")

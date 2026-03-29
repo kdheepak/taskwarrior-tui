@@ -1,19 +1,21 @@
 use std::{error::Error, process::Command};
 
 use anyhow::Result;
-use chrono::{Datelike, Local, NaiveDateTime, TimeZone};
+use chrono::{Datelike, Local, NaiveDateTime};
 use itertools::join;
 use task_hookrs::{task::Task, uda::UDAValue};
 use unicode_truncate::UnicodeTruncateStr;
 use unicode_width::UnicodeWidthStr;
 
+use crate::datetime;
+
 pub fn format_date_time(dt: NaiveDateTime) -> String {
-  Local.from_utc_datetime(&dt).format("%Y-%m-%d %H:%M:%S").to_string()
+  datetime::format_local_date_time(&dt)
 }
 
 pub fn format_date(dt: NaiveDateTime, format: Option<String>) -> String {
   let format_str = format.unwrap_or("%Y-%m-%d".to_string());
-  Local.from_utc_datetime(&dt).format(&format_str).to_string()
+  datetime::format_local_date(&dt, &format_str)
 }
 
 pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime, with_remainder: bool) -> String {

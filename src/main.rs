@@ -9,6 +9,7 @@ mod calendar;
 mod cli;
 mod completion;
 mod config;
+mod datetime;
 mod event;
 mod help;
 mod history;
