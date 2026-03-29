@@ -1,27 +1,22 @@
 use std::{error::Error, process::Command};
 
 use anyhow::Result;
-use chrono::{DateTime, Datelike, Local, NaiveDate, NaiveDateTime, TimeZone};
+use chrono::{Datelike, Local, NaiveDateTime, TimeZone};
 use itertools::join;
 use task_hookrs::{task::Task, uda::UDAValue};
 use unicode_truncate::UnicodeTruncateStr;
 use unicode_width::UnicodeWidthStr;
 
 pub fn format_date_time(dt: NaiveDateTime) -> String {
-  let dt = Local.from_local_datetime(&dt).unwrap();
-  dt.format("%Y-%m-%d %H:%M:%S").to_string()
+  Local.from_utc_datetime(&dt).format("%Y-%m-%d %H:%M:%S").to_string()
 }
 
 pub fn format_date(dt: NaiveDateTime, format: Option<String>) -> String {
-  let offset = Local.offset_from_utc_datetime(&dt);
-  let dt = DateTime::<Local>::from_naive_utc_and_offset(dt, offset);
   let format_str = format.unwrap_or("%Y-%m-%d".to_string());
-  dt.format(&format_str).to_string()
+  Local.from_utc_datetime(&dt).format(&format_str).to_string()
 }
 
 pub fn vague_format_date_time(from_dt: NaiveDateTime, to_dt: NaiveDateTime, with_remainder: bool) -> String {
-  let to_dt = Local.from_local_datetime(&to_dt).unwrap();
-  let from_dt = Local.from_local_datetime(&from_dt).unwrap();
   let mut seconds = (to_dt - from_dt).num_seconds();
   let minus = if seconds < 0 {
     seconds *= -1;

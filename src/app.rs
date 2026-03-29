@@ -78,8 +78,7 @@ pub enum DateState {
 
 pub fn get_date_state(reference: &Date, due: usize) -> DateState {
   let now = Local::now();
-  let reference = TimeZone::from_utc_datetime(now.offset(), reference);
-  let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
+  let reference = Local.from_utc_datetime(reference);
 
   if reference.date_naive() < now.date_naive() {
     return DateState::BeforeToday;
@@ -100,8 +99,7 @@ pub fn get_date_state(reference: &Date, due: usize) -> DateState {
   }
 }
 
-fn get_offset_hour_minute() -> (&'static str, i32, i32) {
-  let off = Local::now().offset().local_minus_utc();
+fn get_offset_hour_minute(off: i32) -> (&'static str, i32, i32) {
   let sym = if off >= 0 { "+" } else { "-" };
   let off = off.abs();
   let h = if off > 60 * 60 { off / 60 / 60 } else { 0 };
@@ -114,9 +112,8 @@ fn get_offset_hour_minute() -> (&'static str, i32, i32) {
 }
 
 fn get_formatted_datetime(date: &Date) -> String {
-  let now = Local::now();
-  let date = TimeZone::from_utc_datetime(now.offset(), date);
-  let (sym, h, m) = get_offset_hour_minute();
+  let date = Local.from_utc_datetime(date);
+  let (sym, h, m) = get_offset_hour_minute(date.offset().local_minus_utc());
   format!(
     "'{:04}-{:02}-{:02}T{:02}:{:02}:{:02}{}{:02}:{:02}'",
     date.year(),
@@ -929,11 +926,7 @@ impl TaskwarriorTui {
       tasks
         .iter()
         .filter_map(|t| t.due().map(|d| (d.clone(), self.style_for_task(t))))
-        .map(|(d, t)| {
-          let now = Local::now();
-          let reference = TimeZone::from_utc_datetime(now.offset(), &d);
-          (reference.date_naive(), t)
-        })
+        .map(|(d, t)| (Local.from_utc_datetime(&d).date_naive(), t))
         .collect()
     } else {
       vec![]
@@ -2686,8 +2679,7 @@ impl TaskwarriorTui {
         // due today
         if status != &TaskStatus::Completed && status != &TaskStatus::Deleted {
           let now = Local::now();
-          let reference = TimeZone::from_utc_datetime(now.offset(), d);
-          let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
+          let reference = Local.from_utc_datetime(d);
           let d = d.clone();
           if (reference - chrono::Duration::nanoseconds(1)).month() == now.month() {
             add_tag(task, "MONTH".to_string());
