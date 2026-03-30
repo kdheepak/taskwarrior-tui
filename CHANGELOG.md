@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.26.9](https://github.com/kdheepak/taskwarrior-tui/compare/v0.26.8...v0.26.9) - 2026-03-30
+
+### Added
+
+- add caching for task details based on modified date and width ([#707](https://github.com/kdheepak/taskwarrior-tui/pull/707))
+
+### Fixed
+
+- color rendering bugs with modifiers ([#709](https://github.com/kdheepak/taskwarrior-tui/pull/709))
+
 ## [0.26.8](https://github.com/kdheepak/taskwarrior-tui/compare/v0.26.7...v0.26.8) - 2026-03-30
 
 ### Added
