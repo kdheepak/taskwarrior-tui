@@ -6,6 +6,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.26.8](https://github.com/kdheepak/taskwarrior-tui/compare/v0.26.7...v0.26.8) - 2026-03-30
+
+### Added
+
+- add close-on-select options for context and report menus ([#706](https://github.com/kdheepak/taskwarrior-tui/pull/706))
+- implement alternating line colors a la taskwarrior ([#702](https://github.com/kdheepak/taskwarrior-tui/pull/702))
+- set custom `task` executable location using an environment variable ([#696](https://github.com/kdheepak/taskwarrior-tui/pull/696))
+- *(ui)* add ghost text for unique completion result. ([#685](https://github.com/kdheepak/taskwarrior-tui/pull/685))
+- show `tag:` as a completion option for the filter ([#690](https://github.com/kdheepak/taskwarrior-tui/pull/690))
+
+### Fixed
+
+- *(date)* correct local datetime conversion and formatting logic ([#704](https://github.com/kdheepak/taskwarrior-tui/pull/704))
+
+### Other
+
+- *(datetime)* extract and centralize datetime formatting functions ([#705](https://github.com/kdheepak/taskwarrior-tui/pull/705))
+- add troubleshooting guide  ([#701](https://github.com/kdheepak/taskwarrior-tui/pull/701))
+- *(ci)* update concurrency group in docs workflow
+- *(docs)* migrate docs to Astro Starlight ([#699](https://github.com/kdheepak/taskwarrior-tui/pull/699))
+- migrate taskwarrior-tui tasks to toml config ([#698](https://github.com/kdheepak/taskwarrior-tui/pull/698))
+- update to rust 2024 edition ([#695](https://github.com/kdheepak/taskwarrior-tui/pull/695))
+- *(ci)* add i686-pc-windows-msvc target to build matrix ([#694](https://github.com/kdheepak/taskwarrior-tui/pull/694))
+- better locally reproducible mise tasks for testing and development ([#693](https://github.com/kdheepak/taskwarrior-tui/pull/693))
+- add tasks for managing and running test fixture data ([#691](https://github.com/kdheepak/taskwarrior-tui/pull/691))
+- *(ci)* update release-plz workflow to use rust-toolchain action instead of mise ([#689](https://github.com/kdheepak/taskwarrior-tui/pull/689))
+- common tooling for ci and local development using mise ([#687](https://github.com/kdheepak/taskwarrior-tui/pull/687))
+- Add continue-on-error to Homebrew bump step ([#686](https://github.com/kdheepak/taskwarrior-tui/pull/686))
+
 ## [0.26.7](https://github.com/kdheepak/taskwarrior-tui/compare/v0.26.6...v0.26.7) - 2026-03-24
 
 ### Fixed
