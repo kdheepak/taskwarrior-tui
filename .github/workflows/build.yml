@@ -69,7 +69,7 @@ jobs:
       MACOSX_DEPLOYMENT_TARGET: 10.7
     steps:
       - uses: actions/checkout@v6
-      - uses: jdx/mise-action@v3
+      - uses: jdx/mise-action@v4
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: cargo-${{ runner.os }}-${{ matrix.target }}
