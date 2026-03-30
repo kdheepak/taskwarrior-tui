@@ -23,6 +23,7 @@ uda.taskwarrior-tui.unmark-selection.indicator=⦾
 uda.taskwarrior-tui.calendar.months-per-row=4
 uda.taskwarrior-tui.task-report.show-info=true
 uda.taskwarrior-tui.task-report.looping=true
+uda.taskwarrior-tui.task-report.use-alternate-style=true
 uda.taskwarrior-tui.task-report.jump-on-task-add=true
 uda.taskwarrior-tui.task-report.prompt-on-undo=false
 uda.taskwarrior-tui.task-report.prompt-on-delete=false
@@ -51,6 +52,8 @@ uda.taskwarrior-tui.style.command.error= # default: Red foreground
 ```
 
 The `uda.taskwarrior-tui.task-report.next.filter` variable defines the default view at program startup. Set this to any preconfigured report from `task reports`, or create your own report in Taskwarrior and specify its name here.
+
+Set `uda.taskwarrior-tui.task-report.use-alternate-style=false` to stop the TUI from applying `color.alternate` to every other task row while leaving Taskwarrior's own color settings unchanged.
 
 ## Command-Line Options
 
