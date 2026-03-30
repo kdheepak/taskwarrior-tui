@@ -358,13 +358,14 @@ impl Config {
       modifiers |= Modifier::CROSSED_OUT;
     }
 
-    // Strip all modifier keywords from the foreground color name
+    // Strip all modifier keywords from the foreground color name.
+    // We split on whitespace and filter out recognized modifiers
+    let modifier_words: &[&str] = &["bold", "underline", "inverse", "italic", "strikethrough"];
     let fg_color = fg_raw
-      .replace("bold ", "")
-      .replace("underline ", "")
-      .replace("inverse ", "")
-      .replace("italic ", "")
-      .replace("strikethrough ", "");
+      .split_whitespace()
+      .filter(|word| !modifier_words.contains(&word.to_lowercase().as_str()))
+      .collect::<Vec<_>>()
+      .join(" ");
     let fg_color = fg_color.trim();
 
     // Strip leading "bright " from background (taskwarrior uses "on bright red")
@@ -802,7 +803,7 @@ mod tests {
   use super::*;
 
   #[test]
-  fn test_colors() {
+  fn test_named_colors_and_backgrounds() {
     // --- Basic named colors ---
     let c = Config::get_tcolor("red");
     assert_eq!(c.fg.unwrap(), Color::Indexed(1));
@@ -902,40 +903,10 @@ mod tests {
     let c = Config::get_tcolor("white on bright black");
     assert_eq!(c.fg.unwrap(), Color::Indexed(7));
     assert_eq!(c.bg.unwrap(), Color::Indexed(8));
+  }
 
-    // --- bold modifier: sets BOLD, keeps regular color index (not high-intensity) ---
-    // This is the corrected behavior: "bold red" = regular red + BOLD attribute.
-    // Previously the buggy code mapped "bold red" to Indexed(9) (bright red).
-    let c = Config::get_tcolor("bold red");
-    assert_eq!(c.fg.unwrap(), Color::Indexed(1));
-    assert!(c.bg.is_none());
-    assert_eq!(c.add_modifier & Modifier::BOLD, Modifier::BOLD);
-
-    let c = Config::get_tcolor("bold white");
-    assert_eq!(c.fg.unwrap(), Color::Indexed(7));
-    assert!(c.bg.is_none());
-    assert_eq!(c.add_modifier & Modifier::BOLD, Modifier::BOLD);
-
-    let c = Config::get_tcolor("bold yellow");
-    assert_eq!(c.fg.unwrap(), Color::Indexed(3));
-    assert!(c.bg.is_none());
-    assert_eq!(c.add_modifier & Modifier::BOLD, Modifier::BOLD);
-
-    let c = Config::get_tcolor("bold blue");
-    assert_eq!(c.fg.unwrap(), Color::Indexed(4));
-    assert!(c.bg.is_none());
-    assert_eq!(c.add_modifier & Modifier::BOLD, Modifier::BOLD);
-
-    let c = Config::get_tcolor("bold white on red");
-    assert_eq!(c.fg.unwrap(), Color::Indexed(7));
-    assert_eq!(c.bg.unwrap(), Color::Indexed(1));
-    assert_eq!(c.add_modifier & Modifier::BOLD, Modifier::BOLD);
-
-    let c = Config::get_tcolor("bold white on bright blue");
-    assert_eq!(c.fg.unwrap(), Color::Indexed(7));
-    assert_eq!(c.bg.unwrap(), Color::Indexed(12));
-    assert_eq!(c.add_modifier & Modifier::BOLD, Modifier::BOLD);
-
+  #[test]
+  fn test_modifiers() {
     // --- underline modifier ---
     let c = Config::get_tcolor("underline red");
     assert_eq!(c.fg.unwrap(), Color::Indexed(1));
@@ -974,7 +945,10 @@ mod tests {
     assert_eq!(c.add_modifier & Modifier::BOLD, Modifier::BOLD);
     assert_eq!(c.add_modifier & Modifier::UNDERLINED, Modifier::UNDERLINED);
     assert_eq!(c.add_modifier & Modifier::ITALIC, Modifier::ITALIC);
+  }
 
+  #[test]
+  fn test_256_grayscale_rgb() {
     // --- 256-color indexed ---
     let c = Config::get_tcolor("color0");
     assert_eq!(c.fg.unwrap(), Color::Indexed(0));
@@ -1052,6 +1026,106 @@ mod tests {
     // color203 (overdue/error red)
     let c = Config::get_tcolor("color203");
     assert_eq!(c.fg.unwrap(), Color::Indexed(203));
+  }
+
+  /// Regression test: "bold red" must produce Indexed(1) + BOLD, not Indexed(9).
+  #[test]
+  fn test_bold_not_bright_regression() {
+    let c = Config::get_tcolor("bold red");
+    assert_eq!(c.fg.unwrap(), Color::Indexed(1));
+    assert!(c.bg.is_none());
+    assert_eq!(c.add_modifier & Modifier::BOLD, Modifier::BOLD);
+
+    let c = Config::get_tcolor("bold white");
+    assert_eq!(c.fg.unwrap(), Color::Indexed(7));
+    assert!(c.bg.is_none());
+    assert_eq!(c.add_modifier & Modifier::BOLD, Modifier::BOLD);
+
+    let c = Config::get_tcolor("bold yellow");
+    assert_eq!(c.fg.unwrap(), Color::Indexed(3));
+    assert!(c.bg.is_none());
+    assert_eq!(c.add_modifier & Modifier::BOLD, Modifier::BOLD);
+
+    let c = Config::get_tcolor("bold blue");
+    assert_eq!(c.fg.unwrap(), Color::Indexed(4));
+    assert!(c.bg.is_none());
+    assert_eq!(c.add_modifier & Modifier::BOLD, Modifier::BOLD);
+
+    let c = Config::get_tcolor("bold white on red");
+    assert_eq!(c.fg.unwrap(), Color::Indexed(7));
+    assert_eq!(c.bg.unwrap(), Color::Indexed(1));
+    assert_eq!(c.add_modifier & Modifier::BOLD, Modifier::BOLD);
+
+    let c = Config::get_tcolor("bold white on bright blue");
+    assert_eq!(c.fg.unwrap(), Color::Indexed(7));
+    assert_eq!(c.bg.unwrap(), Color::Indexed(12));
+    assert_eq!(c.add_modifier & Modifier::BOLD, Modifier::BOLD);
+  }
+
+  /// Regression test: trailing modifiers must not
+  /// cause the foreground color to be silently dropped.
+  #[test]
+  fn test_trailing_modifier_regression() {
+    // Single trailing modifier
+    let c = Config::get_tcolor("color209 bold");
+    assert_eq!(c.fg.unwrap(), Color::Indexed(209));
+    assert_eq!(c.add_modifier & Modifier::BOLD, Modifier::BOLD);
+
+    let c = Config::get_tcolor("color117 bold");
+    assert_eq!(c.fg.unwrap(), Color::Indexed(117));
+    assert_eq!(c.add_modifier & Modifier::BOLD, Modifier::BOLD);
+
+    let c = Config::get_tcolor("color111 bold");
+    assert_eq!(c.fg.unwrap(), Color::Indexed(111));
+    assert_eq!(c.add_modifier & Modifier::BOLD, Modifier::BOLD);
+
+    let c = Config::get_tcolor("color61 underline");
+    assert_eq!(c.fg.unwrap(), Color::Indexed(61));
+    assert_eq!(c.add_modifier & Modifier::UNDERLINED, Modifier::UNDERLINED);
+
+    let c = Config::get_tcolor("color210 underline");
+    assert_eq!(c.fg.unwrap(), Color::Indexed(210));
+    assert_eq!(c.add_modifier & Modifier::UNDERLINED, Modifier::UNDERLINED);
+
+    let c = Config::get_tcolor("red italic");
+    assert_eq!(c.fg.unwrap(), Color::Indexed(1));
+    assert_eq!(c.add_modifier & Modifier::ITALIC, Modifier::ITALIC);
+
+    let c = Config::get_tcolor("blue inverse");
+    assert_eq!(c.fg.unwrap(), Color::Indexed(4));
+    assert_eq!(c.add_modifier & Modifier::REVERSED, Modifier::REVERSED);
+
+    let c = Config::get_tcolor("green strikethrough");
+    assert_eq!(c.fg.unwrap(), Color::Indexed(2));
+    assert_eq!(c.add_modifier & Modifier::CROSSED_OUT, Modifier::CROSSED_OUT);
+
+    // Two trailing modifiers
+    let c = Config::get_tcolor("color150 bold underline");
+    assert_eq!(c.fg.unwrap(), Color::Indexed(150));
+    assert_eq!(c.add_modifier & Modifier::BOLD, Modifier::BOLD);
+    assert_eq!(c.add_modifier & Modifier::UNDERLINED, Modifier::UNDERLINED);
+
+    let c = Config::get_tcolor("color210 bold underline");
+    assert_eq!(c.fg.unwrap(), Color::Indexed(210));
+    assert_eq!(c.add_modifier & Modifier::BOLD, Modifier::BOLD);
+    assert_eq!(c.add_modifier & Modifier::UNDERLINED, Modifier::UNDERLINED);
+
+    // Trailing modifier with background
+    let c = Config::get_tcolor("color150 bold on color236");
+    assert_eq!(c.fg.unwrap(), Color::Indexed(150));
+    assert_eq!(c.bg.unwrap(), Color::Indexed(236));
+    assert_eq!(c.add_modifier & Modifier::BOLD, Modifier::BOLD);
+
+    let c = Config::get_tcolor("color210 underline on color234");
+    assert_eq!(c.fg.unwrap(), Color::Indexed(210));
+    assert_eq!(c.bg.unwrap(), Color::Indexed(234));
+    assert_eq!(c.add_modifier & Modifier::UNDERLINED, Modifier::UNDERLINED);
+
+    // Mixed: leading + trailing modifiers
+    let c = Config::get_tcolor("bold color150 underline");
+    assert_eq!(c.fg.unwrap(), Color::Indexed(150));
+    assert_eq!(c.add_modifier & Modifier::BOLD, Modifier::BOLD);
+    assert_eq!(c.add_modifier & Modifier::UNDERLINED, Modifier::UNDERLINED);
   }
 
   #[test]
