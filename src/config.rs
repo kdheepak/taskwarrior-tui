@@ -107,7 +107,9 @@ pub struct Config {
   pub uda_task_report_prompt_on_done: bool,
   pub uda_task_report_date_time_vague_more_precise: bool,
   pub uda_context_menu_select_on_move: bool,
+  pub uda_context_menu_close_on_select: bool,
   pub uda_report_menu_select_on_move: bool,
+  pub uda_report_menu_close_on_select: bool,
   pub uda: Vec<Uda>,
 }
 
@@ -197,7 +199,9 @@ impl Config {
     let uda_task_report_prompt_on_delete = Self::get_uda_task_report_prompt_on_delete(data);
     let uda_task_report_prompt_on_done = Self::get_uda_task_report_prompt_on_done(data);
     let uda_context_menu_select_on_move = Self::get_uda_context_menu_select_on_move(data);
+    let uda_context_menu_close_on_select = Self::get_uda_context_menu_close_on_select(data);
     let uda_report_menu_select_on_move = Self::get_uda_report_menu_select_on_move(data);
+    let uda_report_menu_close_on_select = Self::get_uda_report_menu_close_on_select(data);
     let uda_task_report_date_time_vague_more_precise = Self::get_uda_task_report_date_time_vague_more_precise(data);
 
     Ok(Self {
@@ -261,7 +265,9 @@ impl Config {
       uda_task_report_prompt_on_delete,
       uda_task_report_prompt_on_done,
       uda_context_menu_select_on_move,
+      uda_context_menu_close_on_select,
       uda_report_menu_select_on_move,
+      uda_report_menu_close_on_select,
       uda_task_report_date_time_vague_more_precise,
       uda: vec![],
     })
@@ -637,11 +643,25 @@ impl Config {
       .unwrap_or(false)
   }
 
+  fn get_uda_context_menu_close_on_select(data: &str) -> bool {
+    Self::get_config("uda.taskwarrior-tui.context-menu.close-on-select", data)
+      .unwrap_or_default()
+      .get_bool()
+      .unwrap_or(true)
+  }
+
   fn get_uda_report_menu_select_on_move(data: &str) -> bool {
     Self::get_config("uda.taskwarrior-tui.report-menu.select-on-move", data)
       .unwrap_or_default()
       .get_bool()
       .unwrap_or(false)
+  }
+
+  fn get_uda_report_menu_close_on_select(data: &str) -> bool {
+    Self::get_config("uda.taskwarrior-tui.report-menu.close-on-select", data)
+      .unwrap_or_default()
+      .get_bool()
+      .unwrap_or(true)
   }
 
   fn get_uda_task_report_prompt_on_undo(data: &str) -> bool {
@@ -1070,5 +1090,27 @@ mod tests {
   fn test_get_uda_task_report_use_alternate_style_can_be_disabled() {
     let data = "uda.taskwarrior-tui.task-report.use-alternate-style false";
     assert!(!Config::get_uda_task_report_use_alternate_style(data));
+  }
+
+  #[test]
+  fn test_get_uda_report_menu_close_on_select_defaults_to_true() {
+    assert!(Config::get_uda_report_menu_close_on_select(""));
+  }
+
+  #[test]
+  fn test_get_uda_report_menu_close_on_select_can_be_disabled() {
+    let data = "uda.taskwarrior-tui.report-menu.close-on-select false";
+    assert!(!Config::get_uda_report_menu_close_on_select(data));
+  }
+
+  #[test]
+  fn test_get_uda_context_menu_close_on_select_defaults_to_true() {
+    assert!(Config::get_uda_context_menu_close_on_select(""));
+  }
+
+  #[test]
+  fn test_get_uda_context_menu_close_on_select_can_be_disabled() {
+    let data = "uda.taskwarrior-tui.context-menu.close-on-select false";
+    assert!(!Config::get_uda_context_menu_close_on_select(data));
   }
 }

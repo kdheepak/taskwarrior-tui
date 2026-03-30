@@ -1650,14 +1650,20 @@ impl TaskwarriorTui {
     self.contexts.table_state.select(Some(i));
   }
 
-  pub fn context_select(&mut self) -> Result<()> {
+  pub fn context_select(&mut self) -> Result<bool> {
     let fi = self.contexts.table_state.current_selection().unwrap_or_default();
     let indices = self.contexts.filtered_indices();
-    let ri = indices.get(fi).copied().unwrap_or(fi);
+    let Some(ri) = indices.get(fi).copied() else {
+      return Ok(false);
+    };
+    let context = self.contexts.rows.get(ri).map(|r| r.name.clone()).unwrap_or_default();
+    if context.is_empty() {
+      return Ok(false);
+    }
     let mut command = std::process::Command::new(&self.task_exe);
-    command.arg("context").arg(&self.contexts.rows[ri].name);
+    command.arg("context").arg(context);
     command.output()?;
-    Ok(())
+    Ok(true)
   }
 
   pub fn report_next(&mut self) {
@@ -1696,13 +1702,15 @@ impl TaskwarriorTui {
     self.reports.table_state.select(Some(i));
   }
 
-  pub fn report_select(&mut self, data: &str) -> Result<()> {
+  pub fn report_select(&mut self, data: &str) -> Result<bool> {
     let fi = self.reports.table_state.current_selection().unwrap_or_default();
     let indices = self.reports.filtered_indices();
-    let ri = indices.get(fi).copied().unwrap_or(fi);
+    let Some(ri) = indices.get(fi).copied() else {
+      return Ok(false);
+    };
     let report = self.reports.rows.get(ri).map(|r| r.name.clone()).unwrap_or_default();
     if report.is_empty() {
-      return Ok(());
+      return Ok(false);
     }
 
     self.report = report;
@@ -1717,7 +1725,7 @@ impl TaskwarriorTui {
     }
 
     self.task_report_table.export_headers(Some(data), &self.report, &self.task_exe)?;
-    Ok(())
+    Ok(true)
   }
 
   fn task_show_output(task_exe: &str) -> Result<String> {
@@ -3177,10 +3185,18 @@ impl TaskwarriorTui {
                 self.previous_mode = Some(self.mode.clone());
                 self.mode = Mode::Tasks(Action::Error);
               } else if self.config.uda_context_menu_select_on_move {
-                self.mode = Mode::Tasks(Action::Report);
+                if self.config.uda_context_menu_close_on_select {
+                  self.mode = Mode::Tasks(Action::Report);
+                }
               } else {
                 match self.context_select() {
-                  Ok(_) => self.update(true).await?,
+                  Ok(true) => {
+                    self.update(true).await?;
+                    if self.config.uda_context_menu_close_on_select {
+                      self.mode = Mode::Tasks(Action::Report);
+                    }
+                  }
+                  Ok(false) => {}
                   Err(e) => {
                     self.error = Some(e.to_string());
                     self.mode = Mode::Tasks(Action::Error);
@@ -3205,7 +3221,8 @@ impl TaskwarriorTui {
                   self.mode = Mode::Tasks(Action::Error);
                 } else {
                   match self.context_select() {
-                    Ok(_) => self.update(true).await?,
+                    Ok(true) => self.update(true).await?,
+                    Ok(false) => {}
                     Err(e) => {
                       self.error = Some(e.to_string());
                     }
@@ -3221,7 +3238,8 @@ impl TaskwarriorTui {
                   self.mode = Mode::Tasks(Action::Error);
                 } else {
                   match self.context_select() {
-                    Ok(_) => self.update(true).await?,
+                    Ok(true) => self.update(true).await?,
+                    Ok(false) => {}
                     Err(e) => {
                       self.error = Some(e.to_string());
                     }
@@ -3253,11 +3271,19 @@ impl TaskwarriorTui {
                 self.previous_mode = Some(self.mode.clone());
                 self.mode = Mode::Tasks(Action::Error);
               } else if self.config.uda_report_menu_select_on_move {
-                self.mode = Mode::Tasks(Action::Report);
+                if self.config.uda_report_menu_close_on_select {
+                  self.mode = Mode::Tasks(Action::Report);
+                }
               } else {
                 let data = Self::task_show_output(&self.task_exe)?;
                 match self.report_select(&data) {
-                  Ok(_) => self.update(true).await?,
+                  Ok(true) => {
+                    self.update(true).await?;
+                    if self.config.uda_report_menu_close_on_select {
+                      self.mode = Mode::Tasks(Action::Report);
+                    }
+                  }
+                  Ok(false) => {}
                   Err(e) => {
                     self.error = Some(e.to_string());
                     self.mode = Mode::Tasks(Action::Error);
@@ -3283,7 +3309,8 @@ impl TaskwarriorTui {
                 } else {
                   let data = Self::task_show_output(&self.task_exe)?;
                   match self.report_select(&data) {
-                    Ok(_) => self.update(true).await?,
+                    Ok(true) => self.update(true).await?,
+                    Ok(false) => {}
                     Err(e) => {
                       self.error = Some(e.to_string());
                     }
@@ -3300,7 +3327,8 @@ impl TaskwarriorTui {
                 } else {
                   let data = Self::task_show_output(&self.task_exe)?;
                   match self.report_select(&data) {
-                    Ok(_) => self.update(true).await?,
+                    Ok(true) => self.update(true).await?,
+                    Ok(false) => {}
                     Err(e) => {
                       self.error = Some(e.to_string());
                     }
@@ -4309,7 +4337,18 @@ mod tests {
 
   fn teardown() {
     let cd = get_taskdata_path();
-    std::fs::remove_dir_all(cd).unwrap();
+    if cd.exists() {
+      std::fs::remove_dir_all(cd).unwrap();
+    }
+  }
+
+  fn reset_test_taskdata() {
+    teardown();
+    std::process::Command::new(task_exe()).arg("context").arg("none").output().unwrap();
+  }
+
+  fn reset_test_context() {
+    std::process::Command::new(task_exe()).arg("context").arg("none").output().unwrap();
   }
 
   async fn test_taskwarrior_tui_history() {
@@ -4390,6 +4429,8 @@ mod tests {
 
   #[tokio::test]
   async fn test_taskwarrior_tui() {
+    reset_test_taskdata();
+
     let app = TaskwarriorTui::new("next", false).await.unwrap();
 
     assert!(
@@ -4429,6 +4470,12 @@ mod tests {
     test_task_tags().await;
     test_task_style().await;
     test_task_report_alternate_style().await;
+    test_context_menu_enter_closes_menu().await;
+    test_context_menu_enter_can_stay_open().await;
+    test_context_menu_enter_with_no_matches_does_not_select().await;
+    test_report_menu_enter_closes_menu().await;
+    test_report_menu_enter_can_stay_open().await;
+    test_report_menu_enter_with_no_matches_does_not_select().await;
     test_task_context().await;
     test_task_tomorrow().await;
     test_task_earlier_today().await;
@@ -4544,7 +4591,132 @@ mod tests {
     assert_eq!(disabled_style, Style::default());
   }
 
+  async fn test_context_menu_enter_closes_menu() {
+    reset_test_context();
+
+    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    assert!(app.update(true).await.is_ok());
+
+    app.handle_input(app.keyconfig.context_menu).await.unwrap();
+    assert_eq!(app.mode, Mode::Tasks(Action::ContextMenu));
+
+    let finance_index = app
+      .contexts
+      .filtered_indices()
+      .iter()
+      .position(|&ri| app.contexts.rows[ri].name == "finance")
+      .unwrap();
+    app.contexts.table_state.select(Some(finance_index));
+
+    app.handle_input(KeyCode::Char('\n')).await.unwrap();
+
+    assert_eq!(app.mode, Mode::Tasks(Action::Report));
+    assert_eq!(app.current_context_filter, "+finance -private");
+  }
+
+  async fn test_context_menu_enter_can_stay_open() {
+    reset_test_context();
+
+    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    assert!(app.update(true).await.is_ok());
+    app.config.uda_context_menu_close_on_select = false;
+
+    app.handle_input(app.keyconfig.context_menu).await.unwrap();
+    assert_eq!(app.mode, Mode::Tasks(Action::ContextMenu));
+
+    let finance_index = app
+      .contexts
+      .filtered_indices()
+      .iter()
+      .position(|&ri| app.contexts.rows[ri].name == "finance")
+      .unwrap();
+    app.contexts.table_state.select(Some(finance_index));
+
+    app.handle_input(KeyCode::Char('\n')).await.unwrap();
+
+    assert_eq!(app.mode, Mode::Tasks(Action::ContextMenu));
+    assert_eq!(app.current_context_filter, "+finance -private");
+  }
+
+  async fn test_context_menu_enter_with_no_matches_does_not_select() {
+    reset_test_context();
+
+    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    assert!(app.update(true).await.is_ok());
+
+    app.handle_input(app.keyconfig.context_menu).await.unwrap();
+    assert_eq!(app.mode, Mode::Tasks(Action::ContextMenu));
+
+    for c in "zzz-no-match".chars() {
+      app.handle_input(KeyCode::Char(c)).await.unwrap();
+    }
+
+    assert!(app.contexts.filtered_indices().is_empty());
+
+    app.handle_input(KeyCode::Char('\n')).await.unwrap();
+
+    assert_eq!(app.mode, Mode::Tasks(Action::ContextMenu));
+    assert_eq!(app.current_context_filter, "");
+  }
+
+  async fn test_report_menu_enter_closes_menu() {
+    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    assert!(app.update(true).await.is_ok());
+
+    app.handle_input(app.keyconfig.report_menu).await.unwrap();
+    assert_eq!(app.mode, Mode::Tasks(Action::ReportMenu));
+
+    let day_index = app.reports.rows.iter().position(|row| row.name == "day").unwrap();
+    app.reports.table_state.select(Some(day_index));
+
+    app.handle_input(KeyCode::Char('\n')).await.unwrap();
+
+    assert_eq!(app.mode, Mode::Tasks(Action::Report));
+    assert_eq!(app.report, "day");
+    assert_eq!(app.config.filter.trim(), "status:pending");
+  }
+
+  async fn test_report_menu_enter_can_stay_open() {
+    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    assert!(app.update(true).await.is_ok());
+    app.config.uda_report_menu_close_on_select = false;
+
+    app.handle_input(app.keyconfig.report_menu).await.unwrap();
+    assert_eq!(app.mode, Mode::Tasks(Action::ReportMenu));
+
+    let day_index = app.reports.rows.iter().position(|row| row.name == "day").unwrap();
+    app.reports.table_state.select(Some(day_index));
+
+    app.handle_input(KeyCode::Char('\n')).await.unwrap();
+
+    assert_eq!(app.mode, Mode::Tasks(Action::ReportMenu));
+    assert_eq!(app.report, "day");
+    assert_eq!(app.config.filter.trim(), "status:pending");
+  }
+
+  async fn test_report_menu_enter_with_no_matches_does_not_select() {
+    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    assert!(app.update(true).await.is_ok());
+
+    app.handle_input(app.keyconfig.report_menu).await.unwrap();
+    assert_eq!(app.mode, Mode::Tasks(Action::ReportMenu));
+
+    for c in "zzz-no-match".chars() {
+      app.handle_input(KeyCode::Char(c)).await.unwrap();
+    }
+
+    assert!(app.reports.filtered_indices().is_empty());
+
+    app.handle_input(KeyCode::Char('\n')).await.unwrap();
+
+    assert_eq!(app.mode, Mode::Tasks(Action::ReportMenu));
+    assert_eq!(app.report, "next");
+    assert_eq!(app.config.filter.trim(), "(status:pending or status:waiting)");
+  }
+
   async fn test_task_context() {
+    reset_test_context();
+
     let mut app = TaskwarriorTui::new("next", false).await.unwrap();
 
     assert!(app.update(true).await.is_ok());
