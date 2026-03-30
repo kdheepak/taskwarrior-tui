@@ -124,6 +124,7 @@ report.next.filter=(status:pending or status:waiting) page:limit
 
 uda.taskwarrior-tui.keyconfig.done=x
 uda.taskwarrior-tui.keyconfig.delete=d
+uda.taskwarrior-tui.task-report.use-alternate-style=false
 uda.taskwarrior-tui.shortcuts.1=~/local/bin/task-sync.sh
 uda.taskwarrior-tui.report.next.filter=(status:pending or status:waiting)
 ```

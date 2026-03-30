@@ -1351,6 +1351,16 @@ impl TaskwarriorTui {
     style
   }
 
+  fn task_report_row_style(&self, row_index: usize, task: &Task) -> Style {
+    let base_style = if row_index % 2 == 1 && self.config.uda_task_report_use_alternate_style {
+      self.config.color.get("color.alternate").copied().unwrap_or_default()
+    } else {
+      Style::default()
+    };
+
+    base_style.patch(self.style_for_task(task))
+  }
+
   pub fn calculate_widths(&self, tasks: &[Vec<String>], headers: &[String], maximum_column_width: u16) -> Vec<usize> {
     // naive implementation of calculate widths
     let mut widths = headers.iter().map(String::len).collect::<Vec<usize>>();
@@ -1413,13 +1423,7 @@ impl TaskwarriorTui {
     let mut highlight_style = Style::default();
     let mut pos = 0;
     for (i, task) in tasks.iter().enumerate() {
-      // Apply alternating row color as base style for odd rows
-      let base_style = if i % 2 == 1 {
-        self.config.color.get("color.alternate").copied().unwrap_or_default()
-      } else {
-        Style::default()
-      };
-      let style = base_style.patch(self.style_for_task(&self.tasks[i]));
+      let style = self.task_report_row_style(i, &self.tasks[i]);
       if i == selected {
         pos = i;
         highlight_style = style.patch(self.config.uda_style_report_selection);
@@ -4442,6 +4446,7 @@ mod tests {
     // test_draw_task_report();
     test_task_tags().await;
     test_task_style().await;
+    test_task_report_alternate_style().await;
     test_task_context().await;
     test_task_tomorrow().await;
     test_task_earlier_today().await;
@@ -4532,6 +4537,29 @@ mod tests {
 
     let task = app.task_by_id(11).unwrap();
     let style = app.style_for_task(&task);
+  }
+
+  async fn test_task_report_alternate_style() {
+    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    assert!(app.update(true).await.is_ok());
+
+    let alternate_style = Style::default()
+      .fg(Color::Indexed(5))
+      .bg(Color::Indexed(2))
+      .add_modifier(Modifier::ITALIC);
+    app.config.color.insert("color.alternate".to_string(), alternate_style);
+    let task = app.task_by_id(1).unwrap();
+
+    let default_style = app.task_report_row_style(0, &task);
+    let odd_row_style = app.task_report_row_style(1, &task);
+
+    assert_eq!(default_style, Style::default());
+    assert_eq!(odd_row_style, alternate_style);
+
+    app.config.uda_task_report_use_alternate_style = false;
+    let disabled_style = app.task_report_row_style(1, &task);
+
+    assert_eq!(disabled_style, Style::default());
   }
 
   async fn test_task_context() {

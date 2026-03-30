@@ -17,6 +17,7 @@ The following color attributes are supported:
 color.deleted
 color.completed
 color.active
+color.alternate
 color.overdue
 color.scheduled
 color.due.today
@@ -26,6 +27,8 @@ color.blocking
 color.recurring
 color.tagged
 ```
+
+`color.alternate` is applied to every other row in the task report by default. If you want to keep that Taskwarrior color defined but disable it in the TUI, set `uda.taskwarrior-tui.task-report.use-alternate-style=false`.
 
 ## Color Formats
 
