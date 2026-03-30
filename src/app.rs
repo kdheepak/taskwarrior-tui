@@ -4344,19 +4344,11 @@ mod tests {
 
   fn reset_test_taskdata() {
     teardown();
-    std::process::Command::new(task_exe())
-      .arg("context")
-      .arg("none")
-      .output()
-      .unwrap();
+    std::process::Command::new(task_exe()).arg("context").arg("none").output().unwrap();
   }
 
   fn reset_test_context() {
-    std::process::Command::new(task_exe())
-      .arg("context")
-      .arg("none")
-      .output()
-      .unwrap();
+    std::process::Command::new(task_exe()).arg("context").arg("none").output().unwrap();
   }
 
   async fn test_taskwarrior_tui_history() {
