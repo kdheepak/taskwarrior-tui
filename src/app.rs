@@ -149,6 +149,7 @@ pub struct TaskwarriorTui {
   pub tasks: Vec<Task>,
   pub all_tasks: Vec<Task>,
   pub task_details: HashMap<Uuid, String>,
+  pub task_details_modified: HashMap<Uuid, Option<Date>>,
   pub marked: HashSet<Uuid>,
   // stores index of current task that is highlighted
   pub current_selection: usize,
@@ -162,6 +163,7 @@ pub struct TaskwarriorTui {
   pub task_report_show_info: bool,
   pub task_report_height: u16,
   pub task_details_scroll: u16,
+  pub task_details_defaultwidth: u16,
   pub help_popup: Help,
   pub last_export: Option<SystemTime>,
   pub keyconfig: KeyConfig,
@@ -236,6 +238,7 @@ impl TaskwarriorTui {
       tasks: vec![],
       all_tasks: vec![],
       task_details: HashMap::new(),
+      task_details_modified: HashMap::new(),
       marked: HashSet::new(),
       current_selection: 0,
       current_selection_uuid: None,
@@ -249,6 +252,7 @@ impl TaskwarriorTui {
       previous_mode: None,
       task_report_height: 0,
       task_details_scroll: 0,
+      task_details_defaultwidth: 0,
       task_report_show_info: c.uda_task_report_show_info,
       tasklist_vertical: c.uda_tasklist_vertical,
       config: c,
@@ -1477,6 +1481,7 @@ impl TaskwarriorTui {
       self.projects.update_data(&self.task_exe)?;
       self.update_tags();
       self.task_details.clear();
+      self.task_details_modified.clear();
       self.dirty = false;
       self.save_history()?;
 
@@ -1529,6 +1534,13 @@ impl TaskwarriorTui {
       return Ok(());
     }
 
+    let defaultwidth = self.terminal_width.saturating_sub(2);
+    if self.task_details_defaultwidth != defaultwidth {
+      self.task_details.clear();
+      self.task_details_modified.clear();
+      self.task_details_defaultwidth = defaultwidth;
+    }
+
     // remove task_details of tasks not in task report
     let mut to_delete = vec![];
     for k in self.task_details.keys() {
@@ -1538,13 +1550,13 @@ impl TaskwarriorTui {
     }
     for k in to_delete {
       self.task_details.remove(&k);
+      self.task_details_modified.remove(&k);
     }
 
     let selected = self.current_selection;
     if selected >= self.tasks.len() {
       return Ok(());
     }
-    let current_task_uuid = *self.tasks[selected].uuid();
 
     let mut l = vec![selected];
 
@@ -1557,7 +1569,6 @@ impl TaskwarriorTui {
 
     let (tx, mut rx) = tokio::sync::mpsc::channel(100);
     let tasks = self.tasks.clone();
-    let defaultwidth = self.terminal_width.saturating_sub(2);
     let task_exe = self.task_exe.clone();
     for s in &l {
       if tasks.is_empty() {
@@ -1567,7 +1578,9 @@ impl TaskwarriorTui {
         break;
       }
       let task_uuid = *tasks[*s].uuid();
-      if !self.task_details.contains_key(&task_uuid) || task_uuid == current_task_uuid {
+      let task_modified = tasks[*s].modified().cloned();
+      let cached_modified = self.task_details_modified.get(&task_uuid).cloned();
+      if !self.task_details.contains_key(&task_uuid) || cached_modified != Some(task_modified.clone()) {
         debug!("Running task details for {}", task_uuid);
         let _tx = tx.clone();
         let task_exe = task_exe.clone();
@@ -1581,14 +1594,15 @@ impl TaskwarriorTui {
             .await;
           if let Ok(output) = output {
             let data = String::from_utf8_lossy(&output.stdout).to_string();
-            _tx.send(Some((task_uuid, data))).await.unwrap();
+            _tx.send(Some((task_uuid, task_modified, data))).await.unwrap();
           }
         });
       }
     }
     drop(tx);
-    while let Some(Some((task_uuid, data))) = rx.recv().await {
+    while let Some(Some((task_uuid, task_modified, data))) = rx.recv().await {
       self.task_details.insert(task_uuid, data);
+      self.task_details_modified.insert(task_uuid, task_modified);
     }
     Ok(())
   }
@@ -4480,6 +4494,7 @@ mod tests {
     test_task_tomorrow().await;
     test_task_earlier_today().await;
     test_task_later_today().await;
+    test_task_details_are_cached_for_selected_task().await;
     test_taskwarrior_tui_history().await;
 
     teardown();
@@ -4589,6 +4604,39 @@ mod tests {
     let disabled_style = app.task_report_row_style(1, &task);
 
     assert_eq!(disabled_style, Style::default());
+  }
+
+  async fn test_task_details_are_cached_for_selected_task() {
+    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    assert!(app.update(true).await.is_ok());
+    assert!(app.update_task_details().await.is_ok());
+
+    let task_uuid = *app.tasks[app.current_selection].uuid();
+    let task_modified = app.tasks[app.current_selection].modified().cloned();
+    assert!(app.task_details.contains_key(&task_uuid));
+
+    app.task_details.insert(task_uuid, "sentinel".to_string());
+    app.task_details_modified.insert(task_uuid, task_modified.clone());
+    assert!(app.update_task_details().await.is_ok());
+    assert_eq!(app.task_details.get(&task_uuid).map(String::as_str), Some("sentinel"));
+
+    app.task_details_modified.insert(
+      task_uuid,
+      match task_modified {
+        Some(_) => None,
+        None => Some(Local::now().naive_utc().into()),
+      },
+    );
+    assert!(app.update_task_details().await.is_ok());
+    assert_ne!(app.task_details.get(&task_uuid).map(String::as_str), Some("sentinel"));
+
+    app.task_details.insert(task_uuid, "sentinel".to_string());
+    app
+      .task_details_modified
+      .insert(task_uuid, app.tasks[app.current_selection].modified().cloned());
+    app.terminal_width = app.terminal_width.saturating_add(10);
+    assert!(app.update_task_details().await.is_ok());
+    assert_ne!(app.task_details.get(&task_uuid).map(String::as_str), Some("sentinel"));
   }
 
   async fn test_context_menu_enter_closes_menu() {
