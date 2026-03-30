@@ -17,7 +17,7 @@ jobs:
           shared-key: coverage-${{ runner.os }}
       - name: Restore cached Taskwarrior build
         id: taskwarrior-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: tmp/taskwarrior-install
           key: ${{ runner.os }}-taskwarrior-${{ hashFiles('.config/mise.toml', '.config/mise/tasks/taskwarrior-tui/build-taskwarrior') }}
