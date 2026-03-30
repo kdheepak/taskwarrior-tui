@@ -19,7 +19,6 @@ use crossterm::{
   terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use futures::SinkExt;
-use lazy_static::lazy_static;
 use log::{Level, LevelFilter, debug, error, info, log_enabled, trace, warn};
 use ratatui::{
   Frame, Terminal,
@@ -32,6 +31,7 @@ use ratatui::{
 };
 use regex::Regex;
 use rustyline::{At, Editor, Word, history::SearchDirection as HistoryDirection, line_buffer::LineBuffer};
+use std::sync::LazyLock;
 use task_hookrs::{date::Date, import::import, project::Project, status::TaskStatus, task::Task, uda::UDAValue};
 use unicode_segmentation::{Graphemes, UnicodeSegmentation};
 use unicode_width::UnicodeWidthStr;
@@ -62,10 +62,8 @@ use crate::{
 
 const MAX_LINE: usize = 4096;
 
-lazy_static! {
-  static ref START_TIME: Instant = Instant::now();
-  static ref TASKWARRIOR_VERSION_SUPPORTED: Versioning = Versioning::new("3.0.0").unwrap();
-}
+static START_TIME: LazyLock<Instant> = LazyLock::new(Instant::now);
+static TASKWARRIOR_VERSION_SUPPORTED: LazyLock<Versioning> = LazyLock::new(|| Versioning::new("3.0.0").unwrap());
 
 #[derive(Debug)]
 pub enum DateState {

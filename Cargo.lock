@@ -2018,7 +2018,6 @@ dependencies = [
  "dirs",
  "futures",
  "itertools",
- "lazy_static",
  "log",
  "log4rs",
  "path-clean",
