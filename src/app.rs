@@ -396,19 +396,6 @@ impl TaskwarriorTui {
     self.command.update("", 0, &mut self.changes)
   }
 
-  fn normalize_pasted_text(text: &str) -> String {
-    if !text.contains('\n') && !text.contains('\r') {
-      return text.to_string();
-    }
-
-    text
-      .lines()
-      .map(|line| line.trim_matches(|c| matches!(c, ' ' | '\t' | '\r')))
-      .filter(|line| !line.is_empty())
-      .collect::<Vec<_>>()
-      .join(" ")
-  }
-
   fn insert_text(linebuffer: &mut LineBuffer, text: &str, changes: &mut utils::Changeset) {
     for c in text.chars() {
       linebuffer.insert(c, 1, changes);
@@ -416,37 +403,35 @@ impl TaskwarriorTui {
   }
 
   fn handle_paste(&mut self, text: &str) {
-    let pasted = Self::normalize_pasted_text(text);
-
-    if pasted.is_empty() {
+    if text.is_empty() {
       return;
     }
 
     match self.mode {
       Mode::Tasks(Action::Add | Action::Annotate | Action::Log) => {
         self.command_history.reset();
-        Self::insert_text(&mut self.command, &pasted, &mut self.changes);
+        Self::insert_text(&mut self.command, text, &mut self.changes);
         self.update_input_for_completion();
       }
       Mode::Tasks(Action::Modify) => {
         self.command_history.reset();
-        Self::insert_text(&mut self.modify, &pasted, &mut self.changes);
+        Self::insert_text(&mut self.modify, text, &mut self.changes);
         self.update_input_for_completion();
       }
       Mode::Tasks(Action::Filter) => {
         self.filter_history.reset();
-        Self::insert_text(&mut self.filter, &pasted, &mut self.changes);
+        Self::insert_text(&mut self.filter, text, &mut self.changes);
         self.update_input_for_completion();
       }
       Mode::Tasks(Action::Subprocess | Action::Jump) => {
-        Self::insert_text(&mut self.command, &pasted, &mut self.changes);
+        Self::insert_text(&mut self.command, text, &mut self.changes);
       }
       Mode::Tasks(Action::ContextMenu) => {
-        self.contexts.search.push_str(&pasted);
+        self.contexts.search.push_str(text);
         self.contexts.table_state.select(Some(0));
       }
       Mode::Tasks(Action::ReportMenu) => {
-        self.reports.search.push_str(&pasted);
+        self.reports.search.push_str(text);
         self.reports.table_state.select(Some(0));
       }
       _ => {}
@@ -973,14 +958,7 @@ impl TaskwarriorTui {
   }
 
   pub fn get_position(lb: &LineBuffer) -> usize {
-    let mut position = 0;
-    for (i, (j, g)) in lb.as_str().grapheme_indices(true).enumerate() {
-      if j == lb.pos() {
-        break;
-      }
-      position += g.width();
-    }
-    position
+    utils::display_width(&lb.as_str()[..lb.pos()])
   }
 
   fn draw_help_popup(&mut self, f: &mut Frame, percent_x: u16, percent_y: u16) {
@@ -1241,6 +1219,9 @@ impl TaskwarriorTui {
     error: Option<String>,
     ghost_text: Option<&str>,
   ) {
+    let rendered_text = utils::display_control_chars(text);
+    let rendered_ghost_text = ghost_text.map(utils::display_control_chars);
+
     // f.render_widget(Clear, rect);
     if cursor {
       let position = Position::new(std::cmp::min(rect.x + position as u16, rect.x + rect.width.saturating_sub(2)), rect.y + 1);
@@ -1266,11 +1247,11 @@ impl TaskwarriorTui {
 
     // render command with optional ghost text suffix
     let scroll = (0, ((position + 2) as u16).saturating_sub(rects[1].width));
-    let p = if let Some(ghost) = ghost_text {
-      let line = Line::from(vec![Span::raw(text), Span::styled(ghost, Style::default().fg(Color::DarkGray))]);
+    let p = if let Some(ghost) = rendered_ghost_text {
+      let line = Line::from(vec![Span::raw(rendered_text), Span::styled(ghost, Style::default().fg(Color::DarkGray))]);
       Paragraph::new(Text::from(line)).scroll(scroll)
     } else {
-      Paragraph::new(Text::from(text)).scroll(scroll)
+      Paragraph::new(Text::from(rendered_text)).scroll(scroll)
     };
     f.render_widget(p, rects[1]);
   }
@@ -4508,7 +4489,30 @@ mod tests {
     app.handle_paste("hello \n world");
 
     assert_eq!(Mode::Tasks(Action::Add), app.mode);
-    assert_eq!("hello world", app.command.as_str());
+    assert_eq!("hello \n world", app.command.as_str());
+  }
+
+  async fn test_draw_command_shows_control_characters() {
+    let app = TaskwarriorTui::new("next", false).await.unwrap();
+
+    let backend = TestBackend::new(20, 3);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal
+      .draw(|f| {
+        app.draw_command(
+          f,
+          f.area(),
+          "hello \n world",
+          (Span::styled("Add Task", Style::default().add_modifier(Modifier::BOLD)), None),
+          utils::display_width("hello \n world"),
+          false,
+          None,
+          None,
+        );
+      })
+      .unwrap();
+
+    assert!(buffer_view(terminal.backend().buffer()).contains("\"hello ^J world      \""));
   }
 
   #[tokio::test]
@@ -4567,6 +4571,7 @@ mod tests {
     test_task_details_are_cached_for_selected_task().await;
     test_taskwarrior_tui_history().await;
     test_multiline_paste_in_add_prompt_does_not_submit().await;
+    test_draw_command_shows_control_characters().await;
 
     teardown();
   }

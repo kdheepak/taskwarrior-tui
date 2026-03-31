@@ -7,7 +7,7 @@ use task_hookrs::{task::Task, uda::UDAValue};
 use unicode_truncate::UnicodeTruncateStr;
 use unicode_width::UnicodeWidthStr;
 
-use crate::datetime;
+use crate::{datetime, utils};
 
 pub fn format_date_time(dt: NaiveDateTime) -> String {
   datetime::format_local_date_time(&dt)
@@ -308,7 +308,9 @@ impl TaskReportTable {
   }
 
   pub fn get_string_attribute(&self, attribute: &str, task: &Task, tasks: &[Task]) -> String {
-    match attribute {
+    let description = utils::display_control_chars(task.description());
+
+    let value = match attribute {
       "id" => task.id().unwrap_or_default().to_string(),
       "scheduled.relative" => match task.scheduled() {
         Some(v) => vague_format_date_time(
@@ -457,7 +459,7 @@ impl TaskReportTable {
         } else {
           Default::default()
         };
-        format!("{} {}", task.description(), c)
+        format!("{} {}", description.clone(), c)
       }
       "description.truncated_count" => {
         let c = if let Some(a) = task.annotations() {
@@ -465,29 +467,29 @@ impl TaskReportTable {
         } else {
           Default::default()
         };
-        let d = task.description().to_string();
+        let d = description.to_string();
         let mut available_width = self.description_width;
         if self.description_width >= c.len() {
           available_width = self.description_width - c.len();
         }
         let (d, _) = d.unicode_truncate(available_width);
         let mut d = d.to_string();
-        if d != *task.description() {
+        if d != description {
           d = format!("{}\u{2026}", d);
         }
         format!("{}{}", d, c)
       }
       "description.truncated" => {
-        let d = task.description().to_string();
+        let d = description.to_string();
         let available_width = self.description_width;
         let (d, _) = d.unicode_truncate(available_width);
         let mut d = d.to_string();
-        if d != *task.description() {
+        if d != description {
           d = format!("{}\u{2026}", d);
         }
         d
       }
-      "description.desc" | "description" => task.description().to_string(),
+      "description.desc" | "description" => description.clone(),
       "urgency" => match &task.urgency() {
         Some(f) => format!("{:.2}", *f),
         None => "0.00".to_string(),
@@ -504,6 +506,8 @@ impl TaskReportTable {
           UDAValue::U64(u) => u.to_string(),
         }
       }
-    }
+    };
+
+    utils::display_control_chars(&value)
   }
 }
