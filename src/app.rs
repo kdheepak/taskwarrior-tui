@@ -13,7 +13,7 @@ use std::{
 use anyhow::{Context as AnyhowContext, Result, anyhow};
 use chrono::{DateTime, Datelike, FixedOffset, Local, NaiveDate, NaiveDateTime, TimeZone, Timelike};
 use crossterm::{
-  event::{DisableMouseCapture, EnableMouseCapture},
+  event::{DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture},
   execute,
   style::style,
   terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
@@ -305,7 +305,7 @@ impl TaskwarriorTui {
   pub fn start_tui(&mut self) -> Result<Terminal<CrosstermBackend<std::io::Stdout>>> {
     enable_raw_mode()?;
     let mut stdout = std::io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture, EnableBracketedPaste)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
     terminal.hide_cursor()?;
@@ -316,7 +316,7 @@ impl TaskwarriorTui {
     self.resume_event_loop().await?;
     let backend = CrosstermBackend::new(io::stdout());
     let mut terminal = Terminal::new(backend)?;
-    execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture)?;
+    execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture, EnableBracketedPaste)?;
     enable_raw_mode()?;
     self.requires_redraw = true;
     terminal.hide_cursor()?;
@@ -348,7 +348,7 @@ impl TaskwarriorTui {
     let backend = CrosstermBackend::new(io::stdout());
     let mut terminal = Terminal::new(backend)?;
     disable_raw_mode()?;
-    execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
+    execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture, DisableBracketedPaste)?;
     terminal.show_cursor()?;
     Ok(())
   }
@@ -371,6 +371,10 @@ impl TaskwarriorTui {
             debug!("Received input = {:?}", input);
             self.handle_input(input).await?;
           }
+          Event::Paste(paste) => {
+            debug!("Received paste of {} bytes", paste.len());
+            self.handle_paste(&paste);
+          }
           Event::Tick => {
             debug!("Tick event");
             self.update(false).await?;
@@ -390,6 +394,63 @@ impl TaskwarriorTui {
 
   pub fn reset_command(&mut self) {
     self.command.update("", 0, &mut self.changes)
+  }
+
+  fn normalize_pasted_text(text: &str) -> String {
+    if !text.contains('\n') && !text.contains('\r') {
+      return text.to_string();
+    }
+
+    text
+      .lines()
+      .map(|line| line.trim_matches(|c| matches!(c, ' ' | '\t' | '\r')))
+      .filter(|line| !line.is_empty())
+      .collect::<Vec<_>>()
+      .join(" ")
+  }
+
+  fn insert_text(linebuffer: &mut LineBuffer, text: &str, changes: &mut utils::Changeset) {
+    for c in text.chars() {
+      linebuffer.insert(c, 1, changes);
+    }
+  }
+
+  fn handle_paste(&mut self, text: &str) {
+    let pasted = Self::normalize_pasted_text(text);
+
+    if pasted.is_empty() {
+      return;
+    }
+
+    match self.mode {
+      Mode::Tasks(Action::Add | Action::Annotate | Action::Log) => {
+        self.command_history.reset();
+        Self::insert_text(&mut self.command, &pasted, &mut self.changes);
+        self.update_input_for_completion();
+      }
+      Mode::Tasks(Action::Modify) => {
+        self.command_history.reset();
+        Self::insert_text(&mut self.modify, &pasted, &mut self.changes);
+        self.update_input_for_completion();
+      }
+      Mode::Tasks(Action::Filter) => {
+        self.filter_history.reset();
+        Self::insert_text(&mut self.filter, &pasted, &mut self.changes);
+        self.update_input_for_completion();
+      }
+      Mode::Tasks(Action::Subprocess | Action::Jump) => {
+        Self::insert_text(&mut self.command, &pasted, &mut self.changes);
+      }
+      Mode::Tasks(Action::ContextMenu) => {
+        self.contexts.search.push_str(&pasted);
+        self.contexts.table_state.select(Some(0));
+      }
+      Mode::Tasks(Action::ReportMenu) => {
+        self.reports.search.push_str(&pasted);
+        self.reports.table_state.select(Some(0));
+      }
+      _ => {}
+    }
   }
 
   pub fn get_context(&mut self) -> Result<()> {
@@ -4439,6 +4500,17 @@ mod tests {
     // teardown();
   }
 
+  async fn test_multiline_paste_in_add_prompt_does_not_submit() {
+    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    app.mode = Mode::Tasks(Action::Add);
+    app.update_completion_list();
+
+    app.handle_paste("hello \n world");
+
+    assert_eq!(Mode::Tasks(Action::Add), app.mode);
+    assert_eq!("hello world", app.command.as_str());
+  }
+
   #[tokio::test]
   async fn test_taskwarrior_tui() {
     reset_test_taskdata();
@@ -4494,6 +4566,7 @@ mod tests {
     test_task_later_today().await;
     test_task_details_are_cached_for_selected_task().await;
     test_taskwarrior_tui_history().await;
+    test_multiline_paste_in_add_prompt_does_not_submit().await;
 
     teardown();
   }

@@ -10,9 +10,10 @@ use tokio::{
   task::JoinHandle,
 };
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum Event<I> {
   Input(I),
+  Paste(String),
   Tick,
   Closed,
 }
@@ -78,46 +79,54 @@ impl EventLoop {
               },
               _ = _tx.closed() => break,
               maybe_event = event => {
-                  if let Some(Ok(crossterm::event::Event::Key(key))) = maybe_event {
-                      let key = match key.code {
-                          Backspace => {
-                              match key.modifiers {
-                                  KeyModifiers::CONTROL => KeyCode::CtrlBackspace,
-                                  KeyModifiers::ALT => KeyCode::AltBackspace,
-                                  _ => KeyCode::Backspace,
-                              }
-                          },
-                          Delete => {
-                              match key.modifiers {
-                                  KeyModifiers::CONTROL => KeyCode::CtrlDelete,
-                                  KeyModifiers::ALT => KeyCode::AltDelete,
-                                  _ => KeyCode::Delete,
-                              }
-                          },
-                          Enter => KeyCode::Char('\n'),
-                          Left => KeyCode::Left,
-                          Right => KeyCode::Right,
-                          Up => KeyCode::Up,
-                          Down => KeyCode::Down,
-                          Home => KeyCode::Home,
-                          End => KeyCode::End,
-                          PageUp => KeyCode::PageUp,
-                          PageDown => KeyCode::PageDown,
-                          Tab => KeyCode::Tab,
-                          BackTab => KeyCode::BackTab,
-                          Insert => KeyCode::Insert,
-                          F(k) => KeyCode::F(k),
-                          Null => KeyCode::Null,
-                          Esc => KeyCode::Esc,
-                          Char(c) => match key.modifiers {
-                              KeyModifiers::NONE | KeyModifiers::SHIFT => KeyCode::Char(c),
-                              KeyModifiers::CONTROL => KeyCode::Ctrl(c),
-                              KeyModifiers::ALT => KeyCode::Alt(c),
-                              _ => KeyCode::Null,
-                          },
-                          _ => KeyCode::Null,
-                      };
-                      _tx.send(Event::Input(key)).unwrap_or_else(|_| warn!("Unable to send {:?} event", key));
+                  if let Some(Ok(event)) = maybe_event {
+                      match event {
+                          crossterm::event::Event::Key(key) => {
+                              let key = match key.code {
+                                  Backspace => {
+                                      match key.modifiers {
+                                          KeyModifiers::CONTROL => KeyCode::CtrlBackspace,
+                                          KeyModifiers::ALT => KeyCode::AltBackspace,
+                                          _ => KeyCode::Backspace,
+                                      }
+                                  },
+                                  Delete => {
+                                      match key.modifiers {
+                                          KeyModifiers::CONTROL => KeyCode::CtrlDelete,
+                                          KeyModifiers::ALT => KeyCode::AltDelete,
+                                          _ => KeyCode::Delete,
+                                      }
+                                  },
+                                  Enter => KeyCode::Char('\n'),
+                                  Left => KeyCode::Left,
+                                  Right => KeyCode::Right,
+                                  Up => KeyCode::Up,
+                                  Down => KeyCode::Down,
+                                  Home => KeyCode::Home,
+                                  End => KeyCode::End,
+                                  PageUp => KeyCode::PageUp,
+                                  PageDown => KeyCode::PageDown,
+                                  Tab => KeyCode::Tab,
+                                  BackTab => KeyCode::BackTab,
+                                  Insert => KeyCode::Insert,
+                                  F(k) => KeyCode::F(k),
+                                  Null => KeyCode::Null,
+                                  Esc => KeyCode::Esc,
+                                  Char(c) => match key.modifiers {
+                                      KeyModifiers::NONE | KeyModifiers::SHIFT => KeyCode::Char(c),
+                                      KeyModifiers::CONTROL => KeyCode::Ctrl(c),
+                                      KeyModifiers::ALT => KeyCode::Alt(c),
+                                      _ => KeyCode::Null,
+                                  },
+                                  _ => KeyCode::Null,
+                              };
+                              _tx.send(Event::Input(key)).unwrap_or_else(|_| warn!("Unable to send {:?} event", key));
+                          }
+                          crossterm::event::Event::Paste(paste) => {
+                              _tx.send(Event::Paste(paste)).unwrap_or_else(|_| warn!("Unable to send paste event"));
+                          }
+                          _ => {}
+                      }
                   }
               }
           }

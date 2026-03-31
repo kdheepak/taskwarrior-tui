@@ -34,7 +34,7 @@ use anyhow::Result;
 use app::{Mode, TaskwarriorTui};
 use crossterm::{
   cursor,
-  event::{DisableMouseCapture, EnableMouseCapture, EventStream},
+  event::{DisableBracketedPaste, DisableMouseCapture, EnableMouseCapture, EventStream},
   execute,
   terminal::{Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
@@ -54,7 +54,7 @@ const LOG_PATTERN: &str = "{d(%Y-%m-%d %H:%M:%S)} | {l} | {f}:{L} | {m}{n}";
 
 pub fn destruct_terminal() {
   disable_raw_mode().unwrap();
-  execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture).unwrap();
+  execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture, DisableBracketedPaste).unwrap();
   execute!(io::stdout(), cursor::Show).unwrap();
 }
 
