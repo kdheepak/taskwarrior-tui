@@ -13,7 +13,7 @@ use std::{
 use anyhow::{Context as AnyhowContext, Result, anyhow};
 use chrono::{DateTime, Datelike, FixedOffset, Local, NaiveDate, NaiveDateTime, TimeZone, Timelike};
 use crossterm::{
-  event::{DisableMouseCapture, EnableMouseCapture},
+  event::{DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture},
   execute,
   style::style,
   terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
@@ -305,7 +305,7 @@ impl TaskwarriorTui {
   pub fn start_tui(&mut self) -> Result<Terminal<CrosstermBackend<std::io::Stdout>>> {
     enable_raw_mode()?;
     let mut stdout = std::io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture, EnableBracketedPaste)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
     terminal.hide_cursor()?;
@@ -316,7 +316,7 @@ impl TaskwarriorTui {
     self.resume_event_loop().await?;
     let backend = CrosstermBackend::new(io::stdout());
     let mut terminal = Terminal::new(backend)?;
-    execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture)?;
+    execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture, EnableBracketedPaste)?;
     enable_raw_mode()?;
     self.requires_redraw = true;
     terminal.hide_cursor()?;
@@ -348,7 +348,7 @@ impl TaskwarriorTui {
     let backend = CrosstermBackend::new(io::stdout());
     let mut terminal = Terminal::new(backend)?;
     disable_raw_mode()?;
-    execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
+    execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture, DisableBracketedPaste)?;
     terminal.show_cursor()?;
     Ok(())
   }
@@ -371,6 +371,10 @@ impl TaskwarriorTui {
             debug!("Received input = {:?}", input);
             self.handle_input(input).await?;
           }
+          Event::Paste(paste) => {
+            debug!("Received paste of {} bytes", paste.len());
+            self.handle_paste(&paste);
+          }
           Event::Tick => {
             debug!("Tick event");
             self.update(false).await?;
@@ -390,6 +394,48 @@ impl TaskwarriorTui {
 
   pub fn reset_command(&mut self) {
     self.command.update("", 0, &mut self.changes)
+  }
+
+  fn insert_text(linebuffer: &mut LineBuffer, text: &str, changes: &mut utils::Changeset) {
+    for c in text.chars() {
+      linebuffer.insert(c, 1, changes);
+    }
+  }
+
+  fn handle_paste(&mut self, text: &str) {
+    if text.is_empty() {
+      return;
+    }
+
+    match self.mode {
+      Mode::Tasks(Action::Add | Action::Annotate | Action::Log) => {
+        self.command_history.reset();
+        Self::insert_text(&mut self.command, text, &mut self.changes);
+        self.update_input_for_completion();
+      }
+      Mode::Tasks(Action::Modify) => {
+        self.command_history.reset();
+        Self::insert_text(&mut self.modify, text, &mut self.changes);
+        self.update_input_for_completion();
+      }
+      Mode::Tasks(Action::Filter) => {
+        self.filter_history.reset();
+        Self::insert_text(&mut self.filter, text, &mut self.changes);
+        self.update_input_for_completion();
+      }
+      Mode::Tasks(Action::Subprocess | Action::Jump) => {
+        Self::insert_text(&mut self.command, text, &mut self.changes);
+      }
+      Mode::Tasks(Action::ContextMenu) => {
+        self.contexts.search.push_str(text);
+        self.contexts.table_state.select(Some(0));
+      }
+      Mode::Tasks(Action::ReportMenu) => {
+        self.reports.search.push_str(text);
+        self.reports.table_state.select(Some(0));
+      }
+      _ => {}
+    }
   }
 
   pub fn get_context(&mut self) -> Result<()> {
@@ -912,14 +958,7 @@ impl TaskwarriorTui {
   }
 
   pub fn get_position(lb: &LineBuffer) -> usize {
-    let mut position = 0;
-    for (i, (j, g)) in lb.as_str().grapheme_indices(true).enumerate() {
-      if j == lb.pos() {
-        break;
-      }
-      position += g.width();
-    }
-    position
+    utils::display_width(&lb.as_str()[..lb.pos()])
   }
 
   fn draw_help_popup(&mut self, f: &mut Frame, percent_x: u16, percent_y: u16) {
@@ -1180,6 +1219,9 @@ impl TaskwarriorTui {
     error: Option<String>,
     ghost_text: Option<&str>,
   ) {
+    let rendered_text = utils::display_control_chars(text);
+    let rendered_ghost_text = ghost_text.map(utils::display_control_chars);
+
     // f.render_widget(Clear, rect);
     if cursor {
       let position = Position::new(std::cmp::min(rect.x + position as u16, rect.x + rect.width.saturating_sub(2)), rect.y + 1);
@@ -1205,11 +1247,11 @@ impl TaskwarriorTui {
 
     // render command with optional ghost text suffix
     let scroll = (0, ((position + 2) as u16).saturating_sub(rects[1].width));
-    let p = if let Some(ghost) = ghost_text {
-      let line = Line::from(vec![Span::raw(text), Span::styled(ghost, Style::default().fg(Color::DarkGray))]);
+    let p = if let Some(ghost) = rendered_ghost_text {
+      let line = Line::from(vec![Span::raw(rendered_text), Span::styled(ghost, Style::default().fg(Color::DarkGray))]);
       Paragraph::new(Text::from(line)).scroll(scroll)
     } else {
-      Paragraph::new(Text::from(text)).scroll(scroll)
+      Paragraph::new(Text::from(rendered_text)).scroll(scroll)
     };
     f.render_widget(p, rects[1]);
   }
@@ -4439,6 +4481,40 @@ mod tests {
     // teardown();
   }
 
+  async fn test_multiline_paste_in_add_prompt_does_not_submit() {
+    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    app.mode = Mode::Tasks(Action::Add);
+    app.update_completion_list();
+
+    app.handle_paste("hello \n world");
+
+    assert_eq!(Mode::Tasks(Action::Add), app.mode);
+    assert_eq!("hello \n world", app.command.as_str());
+  }
+
+  async fn test_draw_command_shows_control_characters() {
+    let app = TaskwarriorTui::new("next", false).await.unwrap();
+
+    let backend = TestBackend::new(20, 3);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal
+      .draw(|f| {
+        app.draw_command(
+          f,
+          f.area(),
+          "hello \n world",
+          (Span::styled("Add Task", Style::default().add_modifier(Modifier::BOLD)), None),
+          utils::display_width("hello \n world"),
+          false,
+          None,
+          None,
+        );
+      })
+      .unwrap();
+
+    assert!(buffer_view(terminal.backend().buffer()).contains("\"hello ^J world      \""));
+  }
+
   #[tokio::test]
   async fn test_taskwarrior_tui() {
     reset_test_taskdata();
@@ -4494,6 +4570,8 @@ mod tests {
     test_task_later_today().await;
     test_task_details_are_cached_for_selected_task().await;
     test_taskwarrior_tui_history().await;
+    test_multiline_paste_in_add_prompt_does_not_submit().await;
+    test_draw_command_shows_control_characters().await;
 
     teardown();
   }
