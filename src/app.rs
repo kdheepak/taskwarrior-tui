@@ -1350,6 +1350,13 @@ impl TaskwarriorTui {
           let s = self.config.color.get(&format!("color.project.{}", p)).copied().unwrap_or_default();
           style = style.patch(s);
         }
+      } else if tag_name == "keyword." {
+        let desc = task.description();
+        for (keyword, kw_style) in &self.config.color_keywords {
+          if desc.contains(keyword.as_str()) {
+            style = style.patch(*kw_style);
+          }
+        }
       } else if task
         .tags()
         .unwrap_or(&vec![])

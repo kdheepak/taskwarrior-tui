@@ -48,6 +48,7 @@ pub struct Uda {
 pub struct Config {
   pub enabled: bool,
   pub color: HashMap<String, Style>,
+  pub color_keywords: Vec<(String, Style)>,
   pub filter: String,
   pub data_location: String,
   pub obfuscate: bool,
@@ -122,6 +123,12 @@ impl Config {
     let print_empty_columns = bool_collection.get("print_empty_columns").copied().unwrap_or(false);
 
     let color = Self::get_color_collection(data);
+    let color_keywords: Vec<(String, Style)> = color
+      .iter()
+      .filter_map(|(key, style)| {
+        key.strip_prefix("color.keyword.").map(|kw| (kw.to_string(), *style))
+      })
+      .collect();
     let filter = Self::get_filter(data, report)?;
     let filter = if filter.trim_start().trim_end().is_empty() {
       filter
@@ -207,6 +214,7 @@ impl Config {
     Ok(Self {
       enabled,
       color,
+      color_keywords,
       filter,
       data_location,
       obfuscate,
