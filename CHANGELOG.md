@@ -6,6 +6,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.26.9](https://github.com/kdheepak/taskwarrior-tui/compare/v0.26.8...v0.26.9) - 2026-04-01
+
+### Added
+
+- add support for `color.keyword` attribute ([#719](https://github.com/kdheepak/taskwarrior-tui/pull/719))
+- add support for bracketed paste and handle paste events ([#716](https://github.com/kdheepak/taskwarrior-tui/pull/716))
+- add caching for task details based on modified date and width ([#707](https://github.com/kdheepak/taskwarrior-tui/pull/707))
+
+### Fixed
+
+- use `due` from config rather than hardcoded 7 days ([#718](https://github.com/kdheepak/taskwarrior-tui/pull/718))
+- color rendering bugs with modifiers ([#709](https://github.com/kdheepak/taskwarrior-tui/pull/709))
+
+### Other
+
+- include taskwarrior-tui specific colors in the docs ([#667](https://github.com/kdheepak/taskwarrior-tui/pull/667))
+- *(deps)* remove `lazy_static` ([#710](https://github.com/kdheepak/taskwarrior-tui/pull/710))
+- *(deps)* bump the cargo-dependencies group with 2 updates ([#714](https://github.com/kdheepak/taskwarrior-tui/pull/714))
+- *(deps)* bump actions/cache from 4 to 5 ([#712](https://github.com/kdheepak/taskwarrior-tui/pull/712))
+- *(deps)* bump actions/download-artifact from 4 to 8 ([#713](https://github.com/kdheepak/taskwarrior-tui/pull/713))
+- *(deps)* bump jdx/mise-action from 3 to 4 ([#711](https://github.com/kdheepak/taskwarrior-tui/pull/711))
+
 ## [0.26.8](https://github.com/kdheepak/taskwarrior-tui/compare/v0.26.7...v0.26.8) - 2026-03-30
 
 ### Added
