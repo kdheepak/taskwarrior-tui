@@ -53,6 +53,8 @@ uda.taskwarrior-tui.style.help.gauge=    # default: Gray foreground
 uda.taskwarrior-tui.style.command.error= # default: Red foreground
 ```
 
+See [color configuration](./colors.md) for supported color formats and additional TUI style keys such as `uda.taskwarrior-tui.style.navbar` and `uda.taskwarrior-tui.style.command`.
+
 The `uda.taskwarrior-tui.task-report.next.filter` variable defines the default view at program startup. Set this to any preconfigured report from `task reports`, or create your own report in Taskwarrior and specify its name here.
 
 ## Command-Line Options
