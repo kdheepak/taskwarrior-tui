@@ -125,9 +125,7 @@ impl Config {
     let color = Self::get_color_collection(data);
     let color_keywords: Vec<(String, Style)> = color
       .iter()
-      .filter_map(|(key, style)| {
-        key.strip_prefix("color.keyword.").map(|kw| (kw.to_string(), *style))
-      })
+      .filter_map(|(key, style)| key.strip_prefix("color.keyword.").map(|kw| (kw.to_string(), *style)))
       .collect();
     let filter = Self::get_filter(data, report)?;
     let filter = if filter.trim_start().trim_end().is_empty() {
@@ -809,6 +807,30 @@ impl Config {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn test_config_collects_keyword_colors() {
+    let data = [
+      "data.location /tmp/taskwarrior-tui-tests",
+      "rule.precedence.color keyword.,tag.,project.",
+      "uda.priority.values H,M,L,",
+      "report.next.filter status:pending",
+      "color.keyword.fixme red on blue",
+      "color.keyword.todo underline yellow",
+      "color.active green",
+    ]
+    .join("\n");
+
+    let config = Config::new(&data, "next").unwrap();
+
+    assert_eq!(config.color_keywords.len(), 2);
+    assert!(config.color_keywords.contains(&("fixme".to_string(), Config::get_tcolor("red on blue"))));
+    assert!(
+      config
+        .color_keywords
+        .contains(&("todo".to_string(), Config::get_tcolor("underline yellow")))
+    );
+  }
 
   #[test]
   fn test_named_colors_and_backgrounds() {
