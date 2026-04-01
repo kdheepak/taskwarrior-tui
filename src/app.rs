@@ -1350,6 +1350,13 @@ impl TaskwarriorTui {
           let s = self.config.color.get(&format!("color.project.{}", p)).copied().unwrap_or_default();
           style = style.patch(s);
         }
+      } else if tag_name == "keyword." {
+        let desc = task.description();
+        for (keyword, kw_style) in &self.config.color_keywords {
+          if desc.contains(keyword.as_str()) {
+            style = style.patch(*kw_style);
+          }
+        }
       } else if task
         .tags()
         .unwrap_or(&vec![])
@@ -4557,6 +4564,7 @@ mod tests {
     // test_draw_task_report();
     test_task_tags().await;
     test_task_style().await;
+    test_task_style_keyword_color().await;
     test_task_report_alternate_style().await;
     test_context_menu_enter_closes_menu().await;
     test_context_menu_enter_can_stay_open().await;
@@ -4657,6 +4665,22 @@ mod tests {
 
     let task = app.task_by_id(11).unwrap();
     let style = app.style_for_task(&task);
+  }
+
+  async fn test_task_style_keyword_color() {
+    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    let keyword_style = Style::default()
+      .fg(Color::Indexed(4))
+      .bg(Color::Indexed(3))
+      .add_modifier(Modifier::ITALIC);
+    app.config.color_keywords = vec![("urgent".to_string(), keyword_style)];
+
+    let mut task = app.task_by_id(1).unwrap();
+    *task.description_mut() = "urgent task".to_string();
+    assert_eq!(app.style_for_task(&task), keyword_style);
+
+    *task.description_mut() = "ordinary task".to_string();
+    assert_eq!(app.style_for_task(&task), Style::default());
   }
 
   async fn test_task_report_alternate_style() {
