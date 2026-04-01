@@ -91,7 +91,7 @@ pub fn get_date_state(reference: &Date, due: usize) -> DateState {
     };
   }
 
-  if reference <= now + chrono::Duration::days(7) {
+  if reference <= now + chrono::Duration::days(due as i64) {
     DateState::AfterToday
   } else {
     DateState::NotDue
