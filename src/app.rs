@@ -1727,6 +1727,19 @@ impl TaskwarriorTui {
     Ok(true)
   }
 
+  fn context_selected_row_index(&self) -> Option<usize> {
+    let fi = self.contexts.table_state.current_selection()?;
+    self.contexts.filtered_indices().get(fi).copied()
+  }
+
+  fn restore_context_selection(&mut self, previous_row_index: Option<usize>) {
+    let indices = self.contexts.filtered_indices();
+    let selection = previous_row_index
+      .and_then(|ri| indices.iter().position(|&filtered_ri| filtered_ri == ri))
+      .or_else(|| (!indices.is_empty()).then_some(0));
+    self.contexts.table_state.select(selection);
+  }
+
   async fn maybe_autoselect_context_menu(&mut self) -> Result<()> {
     if !self.config.uda_context_menu_select_on_move {
       return Ok(());
@@ -1809,6 +1822,19 @@ impl TaskwarriorTui {
 
     self.task_report_table.export_headers(Some(data), &self.report, &self.task_exe)?;
     Ok(true)
+  }
+
+  fn report_selected_row_index(&self) -> Option<usize> {
+    let fi = self.reports.table_state.current_selection()?;
+    self.reports.filtered_indices().get(fi).copied()
+  }
+
+  fn restore_report_selection(&mut self, previous_row_index: Option<usize>) {
+    let indices = self.reports.filtered_indices();
+    let selection = previous_row_index
+      .and_then(|ri| indices.iter().position(|&filtered_ri| filtered_ri == ri))
+      .or_else(|| (!indices.is_empty()).then_some(0));
+    self.reports.table_state.select(selection);
   }
 
   async fn maybe_autoselect_report_menu(&mut self) -> Result<()> {
@@ -3275,8 +3301,9 @@ impl TaskwarriorTui {
             // Esc: clear search first; if already empty, close the menu.
             KeyCode::Esc => {
               if !self.contexts.search.is_empty() {
+                let previous_row_index = self.context_selected_row_index();
                 self.contexts.search.clear();
-                self.contexts.table_state.select(Some(0));
+                self.restore_context_selection(previous_row_index);
                 self.maybe_autoselect_context_menu().await?;
               } else {
                 self.mode = Mode::Tasks(Action::Report);
@@ -3284,8 +3311,9 @@ impl TaskwarriorTui {
             }
             // Backspace removes the last search character.
             KeyCode::Backspace | KeyCode::Ctrl('h') => {
+              let previous_row_index = self.context_selected_row_index();
               self.contexts.search.pop();
-              self.contexts.table_state.select(Some(0));
+              self.restore_context_selection(previous_row_index);
               self.maybe_autoselect_context_menu().await?;
             }
             KeyCode::Char('\n') => {
@@ -3313,8 +3341,9 @@ impl TaskwarriorTui {
               if self.contexts.search.is_empty() && input == self.keyconfig.quit {
                 self.mode = Mode::Tasks(Action::Report);
               } else {
+                let previous_row_index = self.context_selected_row_index();
                 self.contexts.search.push(c);
-                self.contexts.table_state.select(Some(0));
+                self.restore_context_selection(previous_row_index);
                 self.maybe_autoselect_context_menu().await?;
               }
             }
@@ -3334,8 +3363,9 @@ impl TaskwarriorTui {
             // Esc: clear search first; if already empty, close the menu.
             KeyCode::Esc => {
               if !self.reports.search.is_empty() {
+                let previous_row_index = self.report_selected_row_index();
                 self.reports.search.clear();
-                self.reports.table_state.select(Some(0));
+                self.restore_report_selection(previous_row_index);
                 self.maybe_autoselect_report_menu().await?;
               } else {
                 self.mode = Mode::Tasks(Action::Report);
@@ -3343,8 +3373,9 @@ impl TaskwarriorTui {
             }
             // Backspace removes the last search character.
             KeyCode::Backspace | KeyCode::Ctrl('h') => {
+              let previous_row_index = self.report_selected_row_index();
               self.reports.search.pop();
-              self.reports.table_state.select(Some(0));
+              self.restore_report_selection(previous_row_index);
               self.maybe_autoselect_report_menu().await?;
             }
             KeyCode::Char('\n') => {
@@ -3373,8 +3404,9 @@ impl TaskwarriorTui {
               if self.reports.search.is_empty() && input == self.keyconfig.quit {
                 self.mode = Mode::Tasks(Action::Report);
               } else {
+                let previous_row_index = self.report_selected_row_index();
                 self.reports.search.push(c);
-                self.reports.table_state.select(Some(0));
+                self.restore_report_selection(previous_row_index);
                 self.maybe_autoselect_report_menu().await?;
               }
             }
@@ -4590,6 +4622,8 @@ mod tests {
     test_context_menu_enter_with_no_matches_does_not_select().await;
     test_context_menu_selection_config_combinations_select_filtered_match_on_enter().await;
     test_context_menu_selection_config_combinations_keep_menu_open_with_no_matches().await;
+    test_context_menu_selection_config_combinations_preserve_selection_while_filtering().await;
+    test_context_menu_selection_config_combinations_move_to_top_when_selection_is_filtered_out().await;
     test_context_menu_enter_selects_filtered_match_when_select_on_move_is_enabled().await;
     test_context_menu_type_to_filter_selects_top_match_when_select_on_move_is_enabled().await;
     test_context_menu_backspace_selects_top_match_and_stays_open_when_select_on_move_is_enabled().await;
@@ -4600,6 +4634,8 @@ mod tests {
     test_report_menu_enter_with_no_matches_does_not_select().await;
     test_report_menu_selection_config_combinations_select_filtered_match_on_enter().await;
     test_report_menu_selection_config_combinations_keep_menu_open_with_no_matches().await;
+    test_report_menu_selection_config_combinations_preserve_selection_while_filtering().await;
+    test_report_menu_selection_config_combinations_move_to_top_when_selection_is_filtered_out().await;
     test_report_menu_enter_selects_filtered_match_when_select_on_move_is_enabled().await;
     test_report_menu_type_to_filter_selects_top_match_when_select_on_move_is_enabled().await;
     test_report_menu_backspace_selects_top_match_and_stays_open_when_select_on_move_is_enabled().await;
@@ -4924,6 +4960,92 @@ mod tests {
     }
   }
 
+  async fn test_context_menu_selection_config_combinations_preserve_selection_while_filtering() {
+    for (select_on_move, close_on_select) in [(false, false), (false, true), (true, false), (true, true)] {
+      reset_test_context();
+
+      let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+      assert!(app.update(true).await.is_ok());
+      configure_context_menu_selection(&mut app, select_on_move, close_on_select);
+
+      app.handle_input(app.keyconfig.context_menu).await.unwrap();
+      assert_eq!(app.mode, Mode::Tasks(Action::ContextMenu));
+
+      let work_index = app
+        .contexts
+        .filtered_indices()
+        .iter()
+        .position(|&ri| app.contexts.rows[ri].name == "work")
+        .unwrap();
+      app.contexts.table_state.select(Some(work_index));
+
+      let initial_context_filter = app.current_context_filter.clone();
+      let expected_selected_context_filter = selected_context_filter(&app).unwrap();
+
+      app.handle_input(KeyCode::Char('o')).await.unwrap();
+
+      assert_eq!(
+        selected_context_filter(&app).as_deref(),
+        Some(expected_selected_context_filter.as_str()),
+        "context combo select_on_move={select_on_move} close_on_select={close_on_select}"
+      );
+
+      let expected_active_context_filter = if select_on_move {
+        expected_selected_context_filter.as_str()
+      } else {
+        initial_context_filter.as_str()
+      };
+      assert_eq!(
+        app.current_context_filter.as_str(),
+        expected_active_context_filter,
+        "context combo select_on_move={select_on_move} close_on_select={close_on_select}"
+      );
+    }
+  }
+
+  async fn test_context_menu_selection_config_combinations_move_to_top_when_selection_is_filtered_out() {
+    for (select_on_move, close_on_select) in [(false, false), (false, true), (true, false), (true, true)] {
+      reset_test_context();
+
+      let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+      assert!(app.update(true).await.is_ok());
+      configure_context_menu_selection(&mut app, select_on_move, close_on_select);
+
+      app.handle_input(app.keyconfig.context_menu).await.unwrap();
+      assert_eq!(app.mode, Mode::Tasks(Action::ContextMenu));
+
+      let finance_index = app
+        .contexts
+        .filtered_indices()
+        .iter()
+        .position(|&ri| app.contexts.rows[ri].name == "finance")
+        .unwrap();
+      app.contexts.table_state.select(Some(finance_index));
+
+      let initial_context_filter = app.current_context_filter.clone();
+      for c in "work".chars() {
+        app.handle_input(KeyCode::Char(c)).await.unwrap();
+      }
+
+      assert_eq!(
+        selected_context_filter(&app).as_deref(),
+        Some("-personal -private"),
+        "context combo select_on_move={select_on_move} close_on_select={close_on_select}"
+      );
+
+      let expected_active_context_filter = if select_on_move {
+        "-personal -private"
+      } else {
+        initial_context_filter.as_str()
+      };
+      assert_eq!(
+        app.current_context_filter.as_str(),
+        expected_active_context_filter,
+        "context combo select_on_move={select_on_move} close_on_select={close_on_select}"
+      );
+    }
+  }
+
   async fn test_context_menu_type_to_filter_selects_top_match_when_select_on_move_is_enabled() {
     reset_test_context();
 
@@ -5156,6 +5278,74 @@ mod tests {
       );
       assert_eq!(
         app.report, initial_report,
+        "report combo select_on_move={select_on_move} close_on_select={close_on_select}"
+      );
+    }
+  }
+
+  async fn test_report_menu_selection_config_combinations_preserve_selection_while_filtering() {
+    for (select_on_move, close_on_select) in [(false, false), (false, true), (true, false), (true, true)] {
+      let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+      assert!(app.update(true).await.is_ok());
+      configure_report_menu_selection(&mut app, select_on_move, close_on_select);
+
+      app.handle_input(app.keyconfig.report_menu).await.unwrap();
+      assert_eq!(app.mode, Mode::Tasks(Action::ReportMenu));
+
+      let recurring_index = app.reports.rows.iter().position(|row| row.name == "recurring").unwrap();
+      app.reports.table_state.select(Some(recurring_index));
+
+      let initial_report = app.report.clone();
+      let expected_selected_report = selected_report_name(&app).unwrap();
+
+      app.handle_input(KeyCode::Char('r')).await.unwrap();
+
+      assert_eq!(
+        selected_report_name(&app).as_deref(),
+        Some(expected_selected_report.as_str()),
+        "report combo select_on_move={select_on_move} close_on_select={close_on_select}"
+      );
+
+      let expected_active_report = if select_on_move {
+        expected_selected_report.as_str()
+      } else {
+        initial_report.as_str()
+      };
+      assert_eq!(
+        app.report.as_str(),
+        expected_active_report,
+        "report combo select_on_move={select_on_move} close_on_select={close_on_select}"
+      );
+    }
+  }
+
+  async fn test_report_menu_selection_config_combinations_move_to_top_when_selection_is_filtered_out() {
+    for (select_on_move, close_on_select) in [(false, false), (false, true), (true, false), (true, true)] {
+      let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+      assert!(app.update(true).await.is_ok());
+      configure_report_menu_selection(&mut app, select_on_move, close_on_select);
+
+      app.handle_input(app.keyconfig.report_menu).await.unwrap();
+      assert_eq!(app.mode, Mode::Tasks(Action::ReportMenu));
+
+      let day_index = app.reports.rows.iter().position(|row| row.name == "day").unwrap();
+      app.reports.table_state.select(Some(day_index));
+
+      let initial_report = app.report.clone();
+      for c in "re".chars() {
+        app.handle_input(KeyCode::Char(c)).await.unwrap();
+      }
+
+      assert_eq!(
+        selected_report_name(&app).as_deref(),
+        Some("ready"),
+        "report combo select_on_move={select_on_move} close_on_select={close_on_select}"
+      );
+
+      let expected_active_report = if select_on_move { "ready" } else { initial_report.as_str() };
+      assert_eq!(
+        app.report.as_str(),
+        expected_active_report,
         "report combo select_on_move={select_on_move} close_on_select={close_on_select}"
       );
     }
