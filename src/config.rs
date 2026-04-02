@@ -893,10 +893,7 @@ mod tests {
       config.color.get("color.uda.jirastatus.In Review"),
       Some(&Config::get_tcolor("black on bright cyan"))
     );
-    assert_eq!(
-      config.color.get("color.uda.jirastatus.To Do"),
-      Some(&Config::get_tcolor("bright white"))
-    );
+    assert_eq!(config.color.get("color.uda.jirastatus.To Do"), Some(&Config::get_tcolor("bright white")));
   }
 
   #[test]

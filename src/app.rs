@@ -4757,17 +4757,10 @@ mod tests {
     let app = TaskwarriorTui::new("next", false).await.unwrap();
     let mut task = app.task_by_id(1).unwrap();
 
-    task
-      .uda_mut()
-      .insert("jirastatus".to_string(), UDAValue::Str("In Review".to_string()));
-    assert_eq!(
-      app.style_for_task(&task),
-      Config::get_tcolor("black on bright cyan")
-    );
+    task.uda_mut().insert("jirastatus".to_string(), UDAValue::Str("In Review".to_string()));
+    assert_eq!(app.style_for_task(&task), Config::get_tcolor("black on bright cyan"));
 
-    task
-      .uda_mut()
-      .insert("jirastatus".to_string(), UDAValue::Str("To Do".to_string()));
+    task.uda_mut().insert("jirastatus".to_string(), UDAValue::Str("To Do".to_string()));
     assert_eq!(app.style_for_task(&task), Config::get_tcolor("bright white"));
   }
 
