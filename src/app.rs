@@ -132,6 +132,7 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
 pub enum Mode {
   Tasks(Action),
   Projects,
+  Timesheet,
   Calendar,
 }
 
@@ -183,6 +184,9 @@ pub struct TaskwarriorTui {
   pub changes: utils::Changeset,
   pub tasklist_vertical: bool,
   pub task_exe: String,
+  pub timesheet_data: String,
+  pub timesheet_scroll: u16,
+  pub timesheet_line_count: u16,
 }
 
 impl TaskwarriorTui {
@@ -276,6 +280,9 @@ impl TaskwarriorTui {
       requires_redraw: false,
       changes: utils::Changeset::default(),
       task_exe,
+      timesheet_data: String::new(),
+      timesheet_scroll: 0,
+      timesheet_line_count: 0,
     };
 
     for c in app.config.filter.chars() {
@@ -479,18 +486,20 @@ impl TaskwarriorTui {
     self.draw_tabs(f, tab_layout);
     match self.mode {
       Mode::Tasks(action) => self.draw_task(f, main_layout, action),
-      Mode::Calendar => self.draw_calendar(f, main_layout),
       Mode::Projects => self.draw_projects(f, main_layout),
+      Mode::Timesheet => self.draw_timesheet(f, main_layout),
+      Mode::Calendar => self.draw_calendar(f, main_layout),
     }
   }
 
   fn draw_tabs(&self, f: &mut Frame, layout: Rect) {
-    let titles: Vec<&str> = vec!["Tasks", "Projects", "Calendar"];
+    let titles: Vec<&str> = vec!["Tasks", "Projects", "Timesheet", "Calendar"];
     let tab_names: Vec<_> = titles.into_iter().map(Line::from).collect();
     let selected_tab = match self.mode {
       Mode::Tasks(_) => 0,
       Mode::Projects => 1,
-      Mode::Calendar => 2,
+      Mode::Timesheet => 2,
+      Mode::Calendar => 3,
     };
     let navbar_block = Block::default().style(self.config.uda_style_navbar);
     let context = Line::from(vec![
@@ -529,6 +538,27 @@ impl TaskwarriorTui {
   pub fn draw_projects(&mut self, f: &mut Frame, rect: Rect) {
     let data = self.projects.data.clone();
     let p = Paragraph::new(Text::from(&data[..]));
+    f.render_widget(p, rect);
+  }
+
+  pub fn update_timesheet(&mut self) -> Result<()> {
+    let output = std::process::Command::new(&self.task_exe)
+      .arg("rc.color=off")
+      .arg("rc._forcecolor=off")
+      .arg(format!("rc.defaultwidth={}", self.terminal_width))
+      .arg("timesheet")
+      .output()
+      .context("Unable to run `task timesheet`")?;
+    self.timesheet_data = String::from_utf8_lossy(&output.stdout).into_owned();
+    self.timesheet_line_count = self.timesheet_data.lines().count() as u16;
+    // Scroll to end so the most recent week is visible by default.
+    self.timesheet_scroll = self.timesheet_line_count.saturating_sub(self.terminal_height);
+    Ok(())
+  }
+
+  pub fn draw_timesheet(&mut self, f: &mut Frame, rect: Rect) {
+    let data = self.timesheet_data.clone();
+    let p = Paragraph::new(Text::from(data)).scroll((self.timesheet_scroll, 0));
     f.render_widget(p, rect);
   }
 
@@ -1526,6 +1556,7 @@ impl TaskwarriorTui {
       self.contexts.update_data(&self.task_exe)?;
       self.reports.update_data(&self.report, &Self::task_show_output(&self.task_exe)?);
       self.projects.update_data(&self.task_exe)?;
+      self.update_timesheet()?;
       self.update_tags();
       self.task_details.clear();
       self.task_details_modified.clear();
@@ -2820,6 +2851,27 @@ impl TaskwarriorTui {
         ProjectsState::handle_input(self, input)?;
         self.update(false).await?;
       }
+      Mode::Timesheet => {
+        if input == self.keyconfig.quit || input == KeyCode::Ctrl('c') {
+          self.should_quit = true;
+        } else if input == self.keyconfig.next_tab {
+          self.mode = Mode::Calendar;
+        } else if input == self.keyconfig.previous_tab {
+          self.mode = Mode::Projects;
+        } else if input == KeyCode::Up || input == self.keyconfig.up {
+          self.timesheet_scroll = self.timesheet_scroll.saturating_sub(1);
+        } else if input == KeyCode::Down || input == self.keyconfig.down {
+          self.timesheet_scroll = self.timesheet_scroll.saturating_add(1);
+        } else if input == KeyCode::PageUp || input == self.keyconfig.page_up {
+          self.timesheet_scroll = self.timesheet_scroll.saturating_sub(self.terminal_height);
+        } else if input == KeyCode::PageDown || input == self.keyconfig.page_down {
+          self.timesheet_scroll = self.timesheet_scroll.saturating_add(self.terminal_height);
+        }
+        // Clamp scroll: viewport is terminal height minus the tab bar row.
+        let viewport = self.terminal_height.saturating_sub(1);
+        let max_scroll = self.timesheet_line_count.saturating_sub(viewport);
+        self.timesheet_scroll = self.timesheet_scroll.min(max_scroll);
+      }
       Mode::Calendar => {
         if input == self.keyconfig.quit || input == KeyCode::Ctrl('c') {
           self.should_quit = true;
@@ -2828,7 +2880,7 @@ impl TaskwarriorTui {
             self.mode = Mode::Tasks(Action::Report);
           }
         } else if input == self.keyconfig.previous_tab {
-          self.mode = Mode::Projects;
+          self.mode = Mode::Timesheet;
         } else if input == KeyCode::Up || input == self.keyconfig.up {
           if self.calendar_year > 0 {
             self.calendar_year -= 1;

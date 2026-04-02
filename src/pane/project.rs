@@ -1,6 +1,6 @@
 use std::fmt;
 
-use anyhow::{Context as AnyhowContext, Result, anyhow};
+use anyhow::{anyhow, Context as AnyhowContext, Result};
 
 const COL_WIDTH: usize = 21;
 const PROJECT_HEADER: &str = "Name";
