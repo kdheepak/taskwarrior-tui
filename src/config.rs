@@ -313,21 +313,64 @@ impl Config {
   fn get_color_collection(data: &str) -> HashMap<String, Style> {
     let mut color_collection = HashMap::new();
     for line in data.split('\n') {
-      if line.starts_with("color.") {
-        let mut i = line.split(' ');
-        let attribute = i.next();
-        let line = i.collect::<Vec<_>>().join(" ");
-        let line = line.trim_start_matches(' ');
-        let tcolor = Self::get_tcolor(line);
-        if let Some(attr) = attribute {
-          color_collection.insert(attr.to_string(), tcolor);
-        };
+      if let Some((attribute, style)) = Self::parse_color_config(line) {
+        color_collection.insert(attribute, style);
       }
     }
     color_collection
   }
 
+  fn parse_color_config(line: &str) -> Option<(String, Style)> {
+    if !line.starts_with("color.") {
+      return None;
+    }
+
+    if let Some(delimiter) = Self::find_color_config_delimiter(line) {
+      let attribute = line[..delimiter].trim_end().to_string();
+      let style = Self::get_tcolor(line[delimiter..].trim_start());
+      return Some((attribute, style));
+    }
+
+    Some((line.trim_end().to_string(), Style::default()))
+  }
+
+  fn find_color_config_delimiter(line: &str) -> Option<usize> {
+    let bytes = line.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+      if bytes[i] == b' ' {
+        let start = i;
+        while i < bytes.len() && bytes[i] == b' ' {
+          i += 1;
+        }
+        // `task show` prints config entries in aligned columns, so the key/value
+        // boundary is usually the first run of 2+ spaces. That lets us keep
+        // single spaces inside color keys such as `color.uda.foo.In Review`.
+        if i - start >= 2 {
+          return Some(start);
+        }
+      } else {
+        i += 1;
+      }
+    }
+
+    for (delimiter, _) in line.match_indices(' ') {
+      // Some inputs may not preserve the padded column gap. In that case, scan
+      // each space and choose the first suffix that parses as a valid
+      // Taskwarrior color expression, treating everything before it as the key.
+      if Self::parse_tcolor(line[delimiter..].trim_start()).is_some() {
+        return Some(delimiter);
+      }
+    }
+
+    None
+  }
+
   pub fn get_tcolor(line: &str) -> Style {
+    Self::parse_tcolor(line).unwrap_or_default()
+  }
+
+  fn parse_tcolor(line: &str) -> Option<Style> {
     // Normalize spelling variants
     let line = line.replace("grey", "gray");
     let line = line.trim();
@@ -379,14 +422,14 @@ impl Config {
     let bg_is_bright = bg_raw.trim_start().starts_with("bright ");
 
     let mut style = Style::default();
-    if let Some(fg) = Self::parse_color(fg_color) {
-      style = style.fg(fg);
+    if !fg_color.is_empty() {
+      style = style.fg(Self::parse_color(fg_color)?);
     }
-    if let Some(bg) = Self::parse_color_bg(bg_color, bg_is_bright) {
-      style = style.bg(bg);
+    if !bg_color.is_empty() {
+      style = style.bg(Self::parse_color_bg(bg_color, bg_is_bright)?);
     }
     style = style.add_modifier(modifiers);
-    style
+    Some(style)
   }
 
   /// Parse a color name into a ratatui Color.
@@ -830,6 +873,27 @@ mod tests {
         .color_keywords
         .contains(&("todo".to_string(), Config::get_tcolor("underline yellow")))
     );
+  }
+
+  #[test]
+  fn test_config_collects_uda_colors_with_spaces_in_key() {
+    let data = [
+      "data.location /tmp/taskwarrior-tui-tests",
+      "rule.precedence.color uda.,tag.,project.",
+      "uda.priority.values H,M,L,",
+      "report.next.filter status:pending",
+      "color.uda.jirastatus.In Review  black on bright cyan",
+      "color.uda.jirastatus.To Do  bright white",
+    ]
+    .join("\n");
+
+    let config = Config::new(&data, "next").unwrap();
+
+    assert_eq!(
+      config.color.get("color.uda.jirastatus.In Review"),
+      Some(&Config::get_tcolor("black on bright cyan"))
+    );
+    assert_eq!(config.color.get("color.uda.jirastatus.To Do"), Some(&Config::get_tcolor("bright white")));
   }
 
   #[test]
