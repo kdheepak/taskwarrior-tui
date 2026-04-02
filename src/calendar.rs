@@ -10,7 +10,7 @@ use std::cmp::min;
 use chrono::{DateTime, Datelike, Duration, FixedOffset, Local, Month, NaiveDate, NaiveDateTime, TimeZone, format::Fixed};
 use ratatui::{
   buffer::Buffer,
-  layout::Rect,
+  layout::{Position, Rect},
   style::{Color, Modifier, Style},
   symbols,
   widgets::{Block, Widget},
@@ -110,6 +110,13 @@ impl Widget for Calendar<'_> {
       return;
     }
 
+    // Only write to the buffer when the position is inside the allocated area.
+    let set_string = |buf: &mut Buffer, x: u16, y: u16, s: &str, style: Style| {
+      if area.contains(Position { x, y }) {
+        buf.set_string(x, y, s, style);
+      }
+    };
+
     let style = self.style;
     let today = Local::now();
 
@@ -144,9 +151,9 @@ impl Widget for Calendar<'_> {
     let mut new_year = 0;
     let style = Style::default().add_modifier(Modifier::UNDERLINED);
     if self.year + new_year as i32 == today.year() {
-      buf.set_string(x, y, &s, self.today_style.add_modifier(Modifier::UNDERLINED));
+      set_string(buf, x, y, &s, self.today_style.add_modifier(Modifier::UNDERLINED));
     } else {
-      buf.set_string(x, y, &s, style);
+      set_string(buf, x, y, &s, style);
     }
 
     let start_x = (area.width - 3 * 7 * self.months_per_row as u16 - self.months_per_row as u16) / 2;
@@ -162,9 +169,9 @@ impl Widget for Calendar<'_> {
         let s = format!("{:^20}", month_names[m - 1]);
         let style = Style::default().bg(self.title_background_color);
         if m == today.month() as usize && self.year + new_year as i32 == today.year() {
-          buf.set_string(x, y, &s, self.today_style);
+          set_string(buf, x, y, &s, self.today_style);
         } else {
-          buf.set_string(x, y, &s, style);
+          set_string(buf, x, y, &s, style);
         }
         x += s.len() as u16 + 1;
       }
@@ -178,7 +185,7 @@ impl Widget for Calendar<'_> {
         } else {
           "Su Mo Tu We Th Fr Sa"
         };
-        buf.set_string(x, y, days_string, style.add_modifier(Modifier::UNDERLINED));
+        set_string(buf, x, y, days_string, style.add_modifier(Modifier::UNDERLINED));
         x += 21 + 1;
       }
       y += 1;
@@ -202,9 +209,9 @@ impl Widget for Calendar<'_> {
               style = self.date_style[i].1;
             }
             if d.1 == Local::now().date_naive() {
-              buf.set_string(x, y, s, self.today_style);
+              set_string(buf, x, y, &s, self.today_style);
             } else {
-              buf.set_string(x, y, s, style);
+              set_string(buf, x, y, &s, style);
             }
             x += 3;
             d.1 += Duration::days(1);
@@ -218,7 +225,7 @@ impl Widget for Calendar<'_> {
       }
       start_m += self.months_per_row;
       y += 2;
-      if y + 8 > area.height {
+      if y + 8 > area.y + area.height {
         break;
       } else if start_m >= 12 {
         start_m = 0;
@@ -239,7 +246,7 @@ impl Widget for Calendar<'_> {
         if self.year + new_year as i32 == today.year() {
           style = style.add_modifier(Modifier::BOLD);
         }
-        buf.set_string(x, y, &s, style);
+        set_string(buf, x, y, &s, style);
         y += 1;
       }
       y += 1;
