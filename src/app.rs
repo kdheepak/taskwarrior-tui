@@ -3245,10 +3245,6 @@ impl TaskwarriorTui {
               if self.error.is_some() {
                 self.previous_mode = Some(self.mode.clone());
                 self.mode = Mode::Tasks(Action::Error);
-              } else if self.config.uda_context_menu_select_on_move {
-                if self.config.uda_context_menu_close_on_select {
-                  self.mode = Mode::Tasks(Action::Report);
-                }
               } else {
                 match self.context_select() {
                   Ok(true) => {
@@ -3331,10 +3327,6 @@ impl TaskwarriorTui {
               if self.error.is_some() {
                 self.previous_mode = Some(self.mode.clone());
                 self.mode = Mode::Tasks(Action::Error);
-              } else if self.config.uda_report_menu_select_on_move {
-                if self.config.uda_report_menu_close_on_select {
-                  self.mode = Mode::Tasks(Action::Report);
-                }
               } else {
                 let data = Self::task_show_output(&self.task_exe)?;
                 match self.report_select(&data) {
@@ -4569,9 +4561,11 @@ mod tests {
     test_context_menu_enter_closes_menu().await;
     test_context_menu_enter_can_stay_open().await;
     test_context_menu_enter_with_no_matches_does_not_select().await;
+    test_context_menu_enter_selects_filtered_match_when_select_on_move_is_enabled().await;
     test_report_menu_enter_closes_menu().await;
     test_report_menu_enter_can_stay_open().await;
     test_report_menu_enter_with_no_matches_does_not_select().await;
+    test_report_menu_enter_selects_filtered_match_when_select_on_move_is_enabled().await;
     test_task_context().await;
     test_task_tomorrow().await;
     test_task_earlier_today().await;
@@ -4807,6 +4801,30 @@ mod tests {
     assert_eq!(app.current_context_filter, "");
   }
 
+  async fn test_context_menu_enter_selects_filtered_match_when_select_on_move_is_enabled() {
+    reset_test_context();
+
+    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    assert!(app.update(true).await.is_ok());
+    app.config.uda_context_menu_select_on_move = true;
+
+    app.handle_input(app.keyconfig.context_menu).await.unwrap();
+    assert_eq!(app.mode, Mode::Tasks(Action::ContextMenu));
+
+    for c in "finance".chars() {
+      app.handle_input(KeyCode::Char(c)).await.unwrap();
+    }
+
+    let fi = app.contexts.table_state.current_selection().unwrap();
+    let ri = app.contexts.filtered_indices()[fi];
+    let expected_context_filter = app.contexts.rows[ri].definition.clone();
+
+    app.handle_input(KeyCode::Char('\n')).await.unwrap();
+
+    assert_eq!(app.mode, Mode::Tasks(Action::Report));
+    assert_eq!(app.current_context_filter, expected_context_filter);
+  }
+
   async fn test_report_menu_enter_closes_menu() {
     let mut app = TaskwarriorTui::new("next", false).await.unwrap();
     assert!(app.update(true).await.is_ok());
@@ -4860,6 +4878,28 @@ mod tests {
     assert_eq!(app.mode, Mode::Tasks(Action::ReportMenu));
     assert_eq!(app.report, "next");
     assert_eq!(app.config.filter.trim(), "(status:pending or status:waiting)");
+  }
+
+  async fn test_report_menu_enter_selects_filtered_match_when_select_on_move_is_enabled() {
+    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    assert!(app.update(true).await.is_ok());
+    app.config.uda_report_menu_select_on_move = true;
+
+    app.handle_input(app.keyconfig.report_menu).await.unwrap();
+    assert_eq!(app.mode, Mode::Tasks(Action::ReportMenu));
+
+    for c in "day".chars() {
+      app.handle_input(KeyCode::Char(c)).await.unwrap();
+    }
+
+    let fi = app.reports.table_state.current_selection().unwrap();
+    let ri = app.reports.filtered_indices()[fi];
+    let expected_report = app.reports.rows[ri].name.clone();
+
+    app.handle_input(KeyCode::Char('\n')).await.unwrap();
+
+    assert_eq!(app.mode, Mode::Tasks(Action::Report));
+    assert_eq!(app.report, expected_report);
   }
 
   async fn test_task_context() {
