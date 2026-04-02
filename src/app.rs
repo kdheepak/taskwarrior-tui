@@ -4616,6 +4616,7 @@ mod tests {
     test_task_tags().await;
     test_task_style().await;
     test_task_style_keyword_color().await;
+    test_task_style_uda_color_with_spaces_in_value().await;
     test_task_report_alternate_style().await;
     test_context_menu_enter_closes_menu().await;
     test_context_menu_enter_can_stay_open().await;
@@ -4750,6 +4751,24 @@ mod tests {
 
     *task.description_mut() = "ordinary task".to_string();
     assert_eq!(app.style_for_task(&task), Style::default());
+  }
+
+  async fn test_task_style_uda_color_with_spaces_in_value() {
+    let app = TaskwarriorTui::new("next", false).await.unwrap();
+    let mut task = app.task_by_id(1).unwrap();
+
+    task
+      .uda_mut()
+      .insert("jirastatus".to_string(), UDAValue::Str("In Review".to_string()));
+    assert_eq!(
+      app.style_for_task(&task),
+      Config::get_tcolor("black on bright cyan")
+    );
+
+    task
+      .uda_mut()
+      .insert("jirastatus".to_string(), UDAValue::Str("To Do".to_string()));
+    assert_eq!(app.style_for_task(&task), Config::get_tcolor("bright white"));
   }
 
   async fn test_task_report_alternate_style() {

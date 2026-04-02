@@ -343,6 +343,9 @@ impl Config {
         while i < bytes.len() && bytes[i] == b' ' {
           i += 1;
         }
+        // `task show` prints config entries in aligned columns, so the key/value
+        // boundary is usually the first run of 2+ spaces. That lets us keep
+        // single spaces inside color keys such as `color.uda.foo.In Review`.
         if i - start >= 2 {
           return Some(start);
         }
@@ -352,6 +355,9 @@ impl Config {
     }
 
     for (delimiter, _) in line.match_indices(' ') {
+      // Some inputs may not preserve the padded column gap. In that case, scan
+      // each space and choose the first suffix that parses as a valid
+      // Taskwarrior color expression, treating everything before it as the key.
       if Self::parse_tcolor(line[delimiter..].trim_start()).is_some() {
         return Some(delimiter);
       }
