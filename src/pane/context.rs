@@ -1,6 +1,6 @@
 use std::fmt;
 
-use anyhow::{anyhow, Context as AnyhowContext, Result};
+use anyhow::{Context as AnyhowContext, Result, anyhow};
 
 const NAME: &str = "Name";
 const TYPE: &str = "Remaining";

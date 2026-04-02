@@ -545,6 +545,7 @@ impl TaskwarriorTui {
     let output = std::process::Command::new(&self.task_exe)
       .arg("rc.color=off")
       .arg("rc._forcecolor=off")
+      .arg("rc.verbose=nothing")
       .arg(format!("rc.defaultwidth={}", self.terminal_width))
       .arg("timesheet")
       .output()
@@ -557,8 +558,75 @@ impl TaskwarriorTui {
   }
 
   pub fn draw_timesheet(&mut self, f: &mut Frame, rect: Rect) {
-    let data = self.timesheet_data.clone();
-    let p = Paragraph::new(Text::from(data)).scroll((self.timesheet_scroll, 0));
+    let style_header = self.config.color.get("color.label").copied().unwrap_or_default();
+    let style_completed = self.config.color.get("color.completed").copied().unwrap_or_default();
+    let style_active = self.config.color.get("color.active").copied().unwrap_or_default();
+    let style_alternate = self.config.color.get("color.alternate").copied().unwrap_or_default();
+    let style_footnote = self.config.color.get("color.footnote").copied().unwrap_or_default();
+
+    // Regex to detect the summary footer line: "N completed, N started."
+    let summary_re = regex::Regex::new(r"^\d+ \w+").unwrap();
+
+    let mut lines: Vec<Line> = Vec::new();
+    let mut seen_header = false;
+    let mut week_index: usize = 0;
+    // Track the action style of the last task row so continuation lines match it.
+    let mut last_action_style = Style::default();
+
+    for line in self.timesheet_data.lines() {
+      let trimmed = line.trim();
+
+      // Detect the start of a new week block: lines like "W9 ...", "W10 ...", etc.
+      let is_week_header = trimmed.starts_with('W') && trimmed.len() > 1 && trimmed.chars().nth(1).is_some_and(|c| c.is_ascii_digit());
+
+      let style = if !seen_header && (trimmed.starts_with("Wk") || trimmed.starts_with("---")) {
+        // Column header and separator lines
+        if !trimmed.starts_with("---") {
+          seen_header = true;
+        }
+        style_header
+      } else if is_week_header {
+        week_index += 1;
+        let base = if week_index.is_multiple_of(2) {
+          style_alternate
+        } else {
+          Style::default()
+        };
+        // Week header lines don't have an action — reset action tracking.
+        last_action_style = base;
+        base
+      } else if trimmed.is_empty() {
+        // Blank separator between weeks — no style
+        Style::default()
+      } else if summary_re.is_match(trimmed) {
+        style_footnote
+      } else if trimmed.contains("Completed") {
+        let base = if week_index.is_multiple_of(2) {
+          style_alternate
+        } else {
+          Style::default()
+        };
+        let s = base.patch(style_completed);
+        last_action_style = s;
+        s
+      } else if trimmed.contains("Started") {
+        let base = if week_index.is_multiple_of(2) {
+          style_alternate
+        } else {
+          Style::default()
+        };
+        let s = base.patch(style_active);
+        last_action_style = s;
+        s
+      } else {
+        // Continuation lines and non-action rows — inherit the style of the parent row.
+        last_action_style
+      };
+
+      lines.push(Line::styled(line.to_string(), style));
+    }
+
+    let p = Paragraph::new(Text::from(lines)).scroll((self.timesheet_scroll, 0));
     f.render_widget(p, rect);
   }
 
