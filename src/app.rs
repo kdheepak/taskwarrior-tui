@@ -5195,7 +5195,7 @@ mod tests {
 
   async fn test_draw_empty_task_report() {
     let mut expected = Buffer::with_lines(vec![
-      " Tasks   Projects   Calendar           next [none]",
+      " Tasks   Projects   Timesheet   Calendanext [none]",
       "                                                  ",
       "                                                  ",
       "                                                  ",
@@ -5557,7 +5557,7 @@ mod tests {
 
   async fn test_draw_calendar() {
     let mut expected = Buffer::with_lines(vec![
-      " Tasks   Projects   Calendar           next [none]",
+      " Tasks   Projects   Timesheet   Calendanext [none]",
       "                                                  ",
       "                       2020                       ",
       "                                                  ",
@@ -5578,7 +5578,7 @@ mod tests {
       // First line
       expected[(i, 0)].set_style(Style::default().add_modifier(Modifier::REVERSED));
     }
-    for i in 20..=27 {
+    for i in 32..=38 {
       // Calendar
       expected[(i, 0)].set_style(Style::default().add_modifier(Modifier::BOLD).add_modifier(Modifier::REVERSED));
     }
