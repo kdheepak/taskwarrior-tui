@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.26.10](https://github.com/kdheepak/taskwarrior-tui/compare/v0.26.9...v0.26.10) - 2026-04-02
+
+### Fixed
+
+- Fix calendar crash on small windows ([#727](https://github.com/kdheepak/taskwarrior-tui/pull/727))
+- *(config)* parse color keys with spaces in attribute names ([#726](https://github.com/kdheepak/taskwarrior-tui/pull/726))
+- add auto-select for context and report menus ([#725](https://github.com/kdheepak/taskwarrior-tui/pull/725))
+- make enter select filtered report items when select-on-move ([#722](https://github.com/kdheepak/taskwarrior-tui/pull/722))
+
 ## [0.26.9](https://github.com/kdheepak/taskwarrior-tui/compare/v0.26.8...v0.26.9) - 2026-04-01
 
 ### Added
