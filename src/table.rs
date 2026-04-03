@@ -4,10 +4,9 @@ use std::{
   iter::{self, Iterator},
 };
 
-use cassowary::{
-  Expression, Solver,
+use kasuari::{
+  Expression, Solver, Strength, Variable,
   WeightedRelation::{EQ, GE, LE},
-  strength::{MEDIUM, REQUIRED, WEAK},
 };
 use ratatui::{
   buffer::Buffer,
@@ -17,6 +16,10 @@ use ratatui::{
 };
 use unicode_segmentation::{Graphemes, UnicodeSegmentation};
 use unicode_width::UnicodeWidthStr;
+
+const MEDIUM: Strength = Strength::MEDIUM;
+const REQUIRED: Strength = Strength::REQUIRED;
+const WEAK: Strength = Strength::WEAK;
 
 #[derive(Debug, Clone)]
 pub enum TableMode {
@@ -325,7 +328,7 @@ where
     let mut ccs = Vec::new();
     let mut variables = Vec::new();
     for i in 0..self.widths.len() {
-      let var = cassowary::Variable::new();
+      let var = Variable::new();
       variables.push(var);
       var_indices.insert(var, i);
     }
@@ -347,7 +350,7 @@ where
           | f64::from(area.width - 2 - (self.column_spacing * (variables.len() as u16 - 1))),
       )
       .unwrap();
-    solver.add_constraints(&ccs).unwrap();
+    solver.add_constraints(ccs).unwrap();
     let mut solved_widths = vec![0; variables.len()];
     for &(var, value) in solver.fetch_changes() {
       let index = var_indices[&var];
