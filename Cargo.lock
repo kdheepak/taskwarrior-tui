@@ -207,12 +207,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e748733b7cbc798e1434b6ac524f0c1ff2ab456fe201501e6497c8417a4fc33"
 
 [[package]]
-name = "cassowary"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df8670b8c7b9dae1793364eafadf7239c40d669904660c5960d74cfd80b46a53"
-
-[[package]]
 name = "castaway"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1992,7 +1986,6 @@ version = "0.26.10"
 dependencies = [
  "anyhow",
  "better-panic",
- "cassowary",
  "chrono",
  "clap",
  "clap_complete",
@@ -2000,6 +1993,7 @@ dependencies = [
  "dirs",
  "futures",
  "itertools",
+ "kasuari",
  "log",
  "log4rs",
  "path-clean",
