@@ -557,7 +557,7 @@ impl TaskwarriorTui {
     Ok(())
   }
 
-  pub fn draw_timesheet(&mut self, f: &mut Frame, rect: Rect) {
+  fn styled_timesheet_lines(&self) -> Vec<Line<'static>> {
     let style_header = self.config.color.get("color.label").copied().unwrap_or_default();
     let style_completed = self.config.color.get("color.completed").copied().unwrap_or_default();
     let style_active = self.config.color.get("color.active").copied().unwrap_or_default();
@@ -592,9 +592,18 @@ impl TaskwarriorTui {
         } else {
           Style::default()
         };
-        // Week header lines don't have an action — reset action tracking.
-        last_action_style = base;
-        base
+        if trimmed.contains("Completed") {
+          let s = base.patch(style_completed);
+          last_action_style = s;
+          s
+        } else if trimmed.contains("Started") {
+          let s = base.patch(style_active);
+          last_action_style = s;
+          s
+        } else {
+          last_action_style = base;
+          base
+        }
       } else if trimmed.is_empty() {
         // Blank separator between weeks — no style
         Style::default()
@@ -626,7 +635,11 @@ impl TaskwarriorTui {
       lines.push(Line::styled(line.to_string(), style));
     }
 
-    let p = Paragraph::new(Text::from(lines)).scroll((self.timesheet_scroll, 0));
+    lines
+  }
+
+  pub fn draw_timesheet(&mut self, f: &mut Frame, rect: Rect) {
+    let p = Paragraph::new(Text::from(self.styled_timesheet_lines())).scroll((self.timesheet_scroll, 0));
     f.render_widget(p, rect);
   }
 
