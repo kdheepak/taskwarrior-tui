@@ -1,6 +1,6 @@
 use crossterm::event::{
   KeyCode::{BackTab, Backspace, Char, Delete, Down, End, Enter, Esc, F, Home, Insert, Left, Null, PageDown, PageUp, Right, Tab, Up},
-  KeyEvent, KeyModifiers,
+  KeyEvent, KeyModifiers, MouseEventKind,
 };
 use futures::StreamExt;
 use log::{Level, LevelFilter, debug, error, info, log_enabled, trace, warn};
@@ -124,6 +124,21 @@ impl EventLoop {
                           }
                           crossterm::event::Event::Paste(paste) => {
                               _tx.send(Event::Paste(paste)).unwrap_or_else(|_| warn!("Unable to send paste event"));
+                          }
+                          crossterm::event::Event::Mouse(mouse) => {
+                              // Translate scroll wheel events into synthetic Up/Down keypresses
+                              // so the existing arrow-key handlers in app.rs scroll the task
+                              // list. Other mouse event kinds (clicks, drags, motion) are
+                              // intentionally ignored to avoid interfering with terminal text
+                              // selection.
+                              let key = match mouse.kind {
+                                  MouseEventKind::ScrollUp => Some(KeyCode::Up),
+                                  MouseEventKind::ScrollDown => Some(KeyCode::Down),
+                                  _ => None,
+                              };
+                              if let Some(key) = key {
+                                  _tx.send(Event::Input(key)).unwrap_or_else(|_| warn!("Unable to send {:?} event", key));
+                              }
                           }
                           _ => {}
                       }
