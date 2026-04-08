@@ -4694,6 +4694,8 @@ mod tests {
     );
 
     test_draw_task_report_with_extended_modify_command().await;
+    test_draw_timesheet_styles_week_headers_with_actions().await;
+    test_update_timesheet_uses_current_week_events().await;
     // test_draw_task_report();
     test_task_tags().await;
     test_task_style().await;
@@ -5682,6 +5684,160 @@ mod tests {
 
     assert_eq!(terminal.backend().size().unwrap(), expected.area.into());
     terminal.backend().assert_buffer(&expected);
+  }
+
+  async fn test_draw_timesheet_styles_week_headers_with_actions() {
+    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+
+    let header_style = Style::default().add_modifier(Modifier::BOLD);
+    let active_style = Style::default().fg(Color::Indexed(2));
+    let completed_style = Style::default().fg(Color::Indexed(1));
+    let alternate_style = Style::default().bg(Color::Indexed(4));
+    let footnote_style = Style::default().fg(Color::Indexed(3));
+
+    app.config.color.insert("color.label".to_string(), header_style);
+    app.config.color.insert("color.active".to_string(), active_style);
+    app.config.color.insert("color.completed".to_string(), completed_style);
+    app.config.color.insert("color.alternate".to_string(), alternate_style);
+    app.config.color.insert("color.footnote".to_string(), footnote_style);
+
+    app.timesheet_data = [
+      "Wk  Date       Day ID       Action    Project Due Task",
+      "--- ---------- --- -------- --------- ------- --- ----------------",
+      "W14 2026-04-05 Sun 1        Started               first-week-started",
+      "                   first-week continuation",
+      "",
+      "W15 2026-04-12 Sun 2        Started               second-week-started",
+      "                   fa6b0fe3 Completed             second-week-completed",
+      "2 completed, 2 started.",
+    ]
+    .join("\n");
+    app.timesheet_line_count = app.timesheet_data.lines().count() as u16;
+
+    let lines = app.styled_timesheet_lines();
+    assert_eq!(lines[2].style.fg, active_style.fg);
+    assert_eq!(lines[3].style.fg, active_style.fg);
+    assert_eq!(lines[5].style.fg, active_style.fg);
+    assert_eq!(lines[5].style.bg, alternate_style.bg);
+    assert_eq!(lines[6].style.fg, completed_style.fg);
+    assert_eq!(lines[6].style.bg, alternate_style.bg);
+    assert_eq!(lines[7].style.fg, footnote_style.fg);
+  }
+
+  async fn test_update_timesheet_uses_current_week_events() {
+    let started_description = "timesheet-started";
+    let completed_description = "timesheet-completed";
+    let now = Local::now();
+    let started_entry = now - chrono::Duration::minutes(4);
+    let started_start = now - chrono::Duration::minutes(3);
+    let completed_entry = now - chrono::Duration::minutes(2);
+    let completed_end = now - chrono::Duration::minutes(1);
+
+    fn task_datetime_arg(dt: DateTime<Local>) -> String {
+      dt.format("%Y-%m-%dT%H:%M:%S%:z").to_string()
+    }
+
+    fn created_task_id(output: &std::process::Output) -> u64 {
+      let stdout = String::from_utf8_lossy(&output.stdout);
+      let re = Regex::new(r"Created task (?P<task_id>\d+)\.").unwrap();
+      let caps = re.captures(&stdout).unwrap_or_else(|| panic!("unexpected `task add` output: {stdout}"));
+      caps["task_id"].parse::<u64>().unwrap()
+    }
+
+    fn undo_history(times: usize) {
+      for _ in 0..times {
+        std::process::Command::new(task_exe())
+          .arg("rc.confirmation=off")
+          .arg("undo")
+          .output()
+          .unwrap();
+      }
+    }
+
+    struct UndoGuard {
+      undo_count: usize,
+    }
+
+    impl UndoGuard {
+      fn new() -> Self {
+        Self { undo_count: 0 }
+      }
+
+      fn push(&mut self) {
+        self.undo_count += 1;
+      }
+    }
+
+    impl Drop for UndoGuard {
+      fn drop(&mut self) {
+        undo_history(self.undo_count);
+      }
+    }
+
+    let mut undo_guard = UndoGuard::new();
+
+    let started_output = std::process::Command::new(task_exe())
+      .arg("add")
+      .arg(format!("entry:{}", task_datetime_arg(started_entry)))
+      .arg(format!("start:{}", task_datetime_arg(started_start)))
+      .arg(started_description)
+      .output()
+      .unwrap();
+    assert!(started_output.status.success(), "{:?}", started_output);
+    let started_task_id = created_task_id(&started_output);
+    undo_guard.push();
+
+    let completed_output = std::process::Command::new(task_exe())
+      .arg("add")
+      .arg(format!("entry:{}", task_datetime_arg(completed_entry)))
+      .arg(completed_description)
+      .output()
+      .unwrap();
+    assert!(completed_output.status.success(), "{:?}", completed_output);
+    let completed_task_id = created_task_id(&completed_output);
+    undo_guard.push();
+
+    let modify_output = std::process::Command::new(task_exe())
+      .arg("rc.confirmation=off")
+      .arg(completed_task_id.to_string())
+      .arg("modify")
+      .arg("status:completed")
+      .arg(format!("entry:{}", task_datetime_arg(completed_entry)))
+      .arg(format!("end:{}", task_datetime_arg(completed_end)))
+      .output()
+      .unwrap();
+    assert!(modify_output.status.success(), "{:?}", modify_output);
+    undo_guard.push();
+
+    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    app.terminal_width = 80;
+    app.terminal_height = 10;
+    app.update_timesheet().unwrap();
+
+    assert!(
+      app.timesheet_data.contains("Wk  Date       Day ID       Action"),
+      "{}",
+      app.timesheet_data
+    );
+    assert!(app.timesheet_data.contains(&started_task_id.to_string()), "{}", app.timesheet_data);
+    assert!(app.timesheet_data.contains("Started"), "{}", app.timesheet_data);
+    assert!(app.timesheet_data.contains(started_description), "{}", app.timesheet_data);
+    assert!(app.timesheet_data.contains("Completed"), "{}", app.timesheet_data);
+    assert!(app.timesheet_data.contains(completed_description), "{}", app.timesheet_data);
+    assert!(app.timesheet_line_count >= 3);
+    assert_eq!(app.timesheet_scroll, 0);
+
+    let backend = TestBackend::new(80, 10);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal
+      .draw(|f| {
+        app.draw_timesheet(f, f.area());
+      })
+      .unwrap();
+
+    let view = buffer_view(terminal.backend().buffer());
+    assert!(view.contains(started_description), "{view}");
+    assert!(view.contains(completed_description), "{view}");
   }
 
   // #[test]
