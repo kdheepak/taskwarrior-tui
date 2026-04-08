@@ -132,6 +132,7 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
 pub enum Mode {
   Tasks(Action),
   Projects,
+  Timesheet,
   Calendar,
 }
 
@@ -183,6 +184,9 @@ pub struct TaskwarriorTui {
   pub changes: utils::Changeset,
   pub tasklist_vertical: bool,
   pub task_exe: String,
+  pub timesheet_data: String,
+  pub timesheet_scroll: u16,
+  pub timesheet_line_count: u16,
 }
 
 impl TaskwarriorTui {
@@ -276,6 +280,9 @@ impl TaskwarriorTui {
       requires_redraw: false,
       changes: utils::Changeset::default(),
       task_exe,
+      timesheet_data: String::new(),
+      timesheet_scroll: 0,
+      timesheet_line_count: 0,
     };
 
     for c in app.config.filter.chars() {
@@ -479,18 +486,20 @@ impl TaskwarriorTui {
     self.draw_tabs(f, tab_layout);
     match self.mode {
       Mode::Tasks(action) => self.draw_task(f, main_layout, action),
-      Mode::Calendar => self.draw_calendar(f, main_layout),
       Mode::Projects => self.draw_projects(f, main_layout),
+      Mode::Timesheet => self.draw_timesheet(f, main_layout),
+      Mode::Calendar => self.draw_calendar(f, main_layout),
     }
   }
 
   fn draw_tabs(&self, f: &mut Frame, layout: Rect) {
-    let titles: Vec<&str> = vec!["Tasks", "Projects", "Calendar"];
+    let titles: Vec<&str> = vec!["Tasks", "Projects", "Timesheet", "Calendar"];
     let tab_names: Vec<_> = titles.into_iter().map(Line::from).collect();
     let selected_tab = match self.mode {
       Mode::Tasks(_) => 0,
       Mode::Projects => 1,
-      Mode::Calendar => 2,
+      Mode::Timesheet => 2,
+      Mode::Calendar => 3,
     };
     let navbar_block = Block::default().style(self.config.uda_style_navbar);
     let context = Line::from(vec![
@@ -529,6 +538,108 @@ impl TaskwarriorTui {
   pub fn draw_projects(&mut self, f: &mut Frame, rect: Rect) {
     let data = self.projects.data.clone();
     let p = Paragraph::new(Text::from(&data[..]));
+    f.render_widget(p, rect);
+  }
+
+  pub fn update_timesheet(&mut self) -> Result<()> {
+    let output = std::process::Command::new(&self.task_exe)
+      .arg("rc.color=off")
+      .arg("rc._forcecolor=off")
+      .arg("rc.verbose=nothing")
+      .arg(format!("rc.defaultwidth={}", self.terminal_width))
+      .arg("timesheet")
+      .output()
+      .context("Unable to run `task timesheet`")?;
+    self.timesheet_data = String::from_utf8_lossy(&output.stdout).into_owned();
+    self.timesheet_line_count = self.timesheet_data.lines().count() as u16;
+    // Scroll to end so the most recent week is visible by default.
+    self.timesheet_scroll = self.timesheet_line_count.saturating_sub(self.terminal_height);
+    Ok(())
+  }
+
+  fn styled_timesheet_lines(&self) -> Vec<Line<'static>> {
+    let style_header = self.config.color.get("color.label").copied().unwrap_or_default();
+    let style_completed = self.config.color.get("color.completed").copied().unwrap_or_default();
+    let style_active = self.config.color.get("color.active").copied().unwrap_or_default();
+    let style_alternate = self.config.color.get("color.alternate").copied().unwrap_or_default();
+    let style_footnote = self.config.color.get("color.footnote").copied().unwrap_or_default();
+
+    // Regex to detect the summary footer line: "N completed, N started."
+    let summary_re = regex::Regex::new(r"^\d+ \w+").unwrap();
+
+    let mut lines: Vec<Line> = Vec::new();
+    let mut seen_header = false;
+    let mut week_index: usize = 0;
+    // Track the action style of the last task row so continuation lines match it.
+    let mut last_action_style = Style::default();
+
+    for line in self.timesheet_data.lines() {
+      let trimmed = line.trim();
+
+      // Detect the start of a new week block: lines like "W9 ...", "W10 ...", etc.
+      let is_week_header = trimmed.starts_with('W') && trimmed.len() > 1 && trimmed.chars().nth(1).is_some_and(|c| c.is_ascii_digit());
+
+      let style = if !seen_header && (trimmed.starts_with("Wk") || trimmed.starts_with("---")) {
+        // Column header and separator lines
+        if !trimmed.starts_with("---") {
+          seen_header = true;
+        }
+        style_header
+      } else if is_week_header {
+        week_index += 1;
+        let base = if week_index.is_multiple_of(2) {
+          style_alternate
+        } else {
+          Style::default()
+        };
+        if trimmed.contains("Completed") {
+          let s = base.patch(style_completed);
+          last_action_style = s;
+          s
+        } else if trimmed.contains("Started") {
+          let s = base.patch(style_active);
+          last_action_style = s;
+          s
+        } else {
+          last_action_style = base;
+          base
+        }
+      } else if trimmed.is_empty() {
+        // Blank separator between weeks — no style
+        Style::default()
+      } else if summary_re.is_match(trimmed) {
+        style_footnote
+      } else if trimmed.contains("Completed") {
+        let base = if week_index.is_multiple_of(2) {
+          style_alternate
+        } else {
+          Style::default()
+        };
+        let s = base.patch(style_completed);
+        last_action_style = s;
+        s
+      } else if trimmed.contains("Started") {
+        let base = if week_index.is_multiple_of(2) {
+          style_alternate
+        } else {
+          Style::default()
+        };
+        let s = base.patch(style_active);
+        last_action_style = s;
+        s
+      } else {
+        // Continuation lines and non-action rows — inherit the style of the parent row.
+        last_action_style
+      };
+
+      lines.push(Line::styled(line.to_string(), style));
+    }
+
+    lines
+  }
+
+  pub fn draw_timesheet(&mut self, f: &mut Frame, rect: Rect) {
+    let p = Paragraph::new(Text::from(self.styled_timesheet_lines())).scroll((self.timesheet_scroll, 0));
     f.render_widget(p, rect);
   }
 
@@ -1526,6 +1637,7 @@ impl TaskwarriorTui {
       self.contexts.update_data(&self.task_exe)?;
       self.reports.update_data(&self.report, &Self::task_show_output(&self.task_exe)?);
       self.projects.update_data(&self.task_exe)?;
+      self.update_timesheet()?;
       self.update_tags();
       self.task_details.clear();
       self.task_details_modified.clear();
@@ -2891,6 +3003,27 @@ impl TaskwarriorTui {
         ProjectsState::handle_input(self, input)?;
         self.update(false).await?;
       }
+      Mode::Timesheet => {
+        if input == self.keyconfig.quit || input == KeyCode::Ctrl('c') {
+          self.should_quit = true;
+        } else if input == self.keyconfig.next_tab {
+          self.mode = Mode::Calendar;
+        } else if input == self.keyconfig.previous_tab {
+          self.mode = Mode::Projects;
+        } else if input == KeyCode::Up || input == self.keyconfig.up {
+          self.timesheet_scroll = self.timesheet_scroll.saturating_sub(1);
+        } else if input == KeyCode::Down || input == self.keyconfig.down {
+          self.timesheet_scroll = self.timesheet_scroll.saturating_add(1);
+        } else if input == KeyCode::PageUp || input == self.keyconfig.page_up {
+          self.timesheet_scroll = self.timesheet_scroll.saturating_sub(self.terminal_height);
+        } else if input == KeyCode::PageDown || input == self.keyconfig.page_down {
+          self.timesheet_scroll = self.timesheet_scroll.saturating_add(self.terminal_height);
+        }
+        // Clamp scroll: viewport is terminal height minus the tab bar row.
+        let viewport = self.terminal_height.saturating_sub(1);
+        let max_scroll = self.timesheet_line_count.saturating_sub(viewport);
+        self.timesheet_scroll = self.timesheet_scroll.min(max_scroll);
+      }
       Mode::Calendar => {
         if input == self.keyconfig.quit || input == KeyCode::Ctrl('c') {
           self.should_quit = true;
@@ -2899,7 +3032,7 @@ impl TaskwarriorTui {
             self.mode = Mode::Tasks(Action::Report);
           }
         } else if input == self.keyconfig.previous_tab {
-          self.mode = Mode::Projects;
+          self.mode = Mode::Timesheet;
         } else if input == KeyCode::Up || input == self.keyconfig.up {
           if self.calendar_year > 0 {
             self.calendar_year -= 1;
@@ -4612,6 +4745,8 @@ mod tests {
     );
 
     test_draw_task_report_with_extended_modify_command().await;
+    test_draw_timesheet_styles_week_headers_with_actions().await;
+    test_update_timesheet_uses_current_week_events().await;
     // test_draw_task_report();
     test_task_tags().await;
     test_task_style().await;
@@ -5672,7 +5807,7 @@ mod tests {
 
   async fn test_draw_empty_task_report() {
     let mut expected = Buffer::with_lines(vec![
-      " Tasks   Projects   Calendar           next [none]",
+      " Tasks   Projects   Timesheet   Calendanext [none]",
       "                                                  ",
       "                                                  ",
       "                                                  ",
@@ -6034,7 +6169,7 @@ mod tests {
 
   async fn test_draw_calendar() {
     let mut expected = Buffer::with_lines(vec![
-      " Tasks   Projects   Calendar           next [none]",
+      " Tasks   Projects   Timesheet   Calendanext [none]",
       "                                                  ",
       "                       2020                       ",
       "                                                  ",
@@ -6055,7 +6190,7 @@ mod tests {
       // First line
       expected[(i, 0)].set_style(Style::default().add_modifier(Modifier::REVERSED));
     }
-    for i in 20..=27 {
+    for i in 32..=38 {
       // Calendar
       expected[(i, 0)].set_style(Style::default().add_modifier(Modifier::BOLD).add_modifier(Modifier::REVERSED));
     }
@@ -6146,6 +6281,160 @@ mod tests {
 
     assert_eq!(terminal.backend().size().unwrap(), expected.area.into());
     terminal.backend().assert_buffer(&expected);
+  }
+
+  async fn test_draw_timesheet_styles_week_headers_with_actions() {
+    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+
+    let header_style = Style::default().add_modifier(Modifier::BOLD);
+    let active_style = Style::default().fg(Color::Indexed(2));
+    let completed_style = Style::default().fg(Color::Indexed(1));
+    let alternate_style = Style::default().bg(Color::Indexed(4));
+    let footnote_style = Style::default().fg(Color::Indexed(3));
+
+    app.config.color.insert("color.label".to_string(), header_style);
+    app.config.color.insert("color.active".to_string(), active_style);
+    app.config.color.insert("color.completed".to_string(), completed_style);
+    app.config.color.insert("color.alternate".to_string(), alternate_style);
+    app.config.color.insert("color.footnote".to_string(), footnote_style);
+
+    app.timesheet_data = [
+      "Wk  Date       Day ID       Action    Project Due Task",
+      "--- ---------- --- -------- --------- ------- --- ----------------",
+      "W14 2026-04-05 Sun 1        Started               first-week-started",
+      "                   first-week continuation",
+      "",
+      "W15 2026-04-12 Sun 2        Started               second-week-started",
+      "                   fa6b0fe3 Completed             second-week-completed",
+      "2 completed, 2 started.",
+    ]
+    .join("\n");
+    app.timesheet_line_count = app.timesheet_data.lines().count() as u16;
+
+    let lines = app.styled_timesheet_lines();
+    assert_eq!(lines[2].style.fg, active_style.fg);
+    assert_eq!(lines[3].style.fg, active_style.fg);
+    assert_eq!(lines[5].style.fg, active_style.fg);
+    assert_eq!(lines[5].style.bg, alternate_style.bg);
+    assert_eq!(lines[6].style.fg, completed_style.fg);
+    assert_eq!(lines[6].style.bg, alternate_style.bg);
+    assert_eq!(lines[7].style.fg, footnote_style.fg);
+  }
+
+  async fn test_update_timesheet_uses_current_week_events() {
+    let started_description = "timesheet-started";
+    let completed_description = "timesheet-completed";
+    let now = Local::now();
+    let started_entry = now - chrono::Duration::minutes(4);
+    let started_start = now - chrono::Duration::minutes(3);
+    let completed_entry = now - chrono::Duration::minutes(2);
+    let completed_end = now - chrono::Duration::minutes(1);
+
+    fn task_datetime_arg(dt: DateTime<Local>) -> String {
+      dt.format("%Y-%m-%dT%H:%M:%S%:z").to_string()
+    }
+
+    fn created_task_id(output: &std::process::Output) -> u64 {
+      let stdout = String::from_utf8_lossy(&output.stdout);
+      let re = Regex::new(r"Created task (?P<task_id>\d+)\.").unwrap();
+      let caps = re.captures(&stdout).unwrap_or_else(|| panic!("unexpected `task add` output: {stdout}"));
+      caps["task_id"].parse::<u64>().unwrap()
+    }
+
+    fn undo_history(times: usize) {
+      for _ in 0..times {
+        std::process::Command::new(task_exe())
+          .arg("rc.confirmation=off")
+          .arg("undo")
+          .output()
+          .unwrap();
+      }
+    }
+
+    struct UndoGuard {
+      undo_count: usize,
+    }
+
+    impl UndoGuard {
+      fn new() -> Self {
+        Self { undo_count: 0 }
+      }
+
+      fn push(&mut self) {
+        self.undo_count += 1;
+      }
+    }
+
+    impl Drop for UndoGuard {
+      fn drop(&mut self) {
+        undo_history(self.undo_count);
+      }
+    }
+
+    let mut undo_guard = UndoGuard::new();
+
+    let started_output = std::process::Command::new(task_exe())
+      .arg("add")
+      .arg(format!("entry:{}", task_datetime_arg(started_entry)))
+      .arg(format!("start:{}", task_datetime_arg(started_start)))
+      .arg(started_description)
+      .output()
+      .unwrap();
+    assert!(started_output.status.success(), "{:?}", started_output);
+    let started_task_id = created_task_id(&started_output);
+    undo_guard.push();
+
+    let completed_output = std::process::Command::new(task_exe())
+      .arg("add")
+      .arg(format!("entry:{}", task_datetime_arg(completed_entry)))
+      .arg(completed_description)
+      .output()
+      .unwrap();
+    assert!(completed_output.status.success(), "{:?}", completed_output);
+    let completed_task_id = created_task_id(&completed_output);
+    undo_guard.push();
+
+    let modify_output = std::process::Command::new(task_exe())
+      .arg("rc.confirmation=off")
+      .arg(completed_task_id.to_string())
+      .arg("modify")
+      .arg("status:completed")
+      .arg(format!("entry:{}", task_datetime_arg(completed_entry)))
+      .arg(format!("end:{}", task_datetime_arg(completed_end)))
+      .output()
+      .unwrap();
+    assert!(modify_output.status.success(), "{:?}", modify_output);
+    undo_guard.push();
+
+    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    app.terminal_width = 80;
+    app.terminal_height = 10;
+    app.update_timesheet().unwrap();
+
+    assert!(
+      app.timesheet_data.contains("Wk  Date       Day ID       Action"),
+      "{}",
+      app.timesheet_data
+    );
+    assert!(app.timesheet_data.contains(&started_task_id.to_string()), "{}", app.timesheet_data);
+    assert!(app.timesheet_data.contains("Started"), "{}", app.timesheet_data);
+    assert!(app.timesheet_data.contains(started_description), "{}", app.timesheet_data);
+    assert!(app.timesheet_data.contains("Completed"), "{}", app.timesheet_data);
+    assert!(app.timesheet_data.contains(completed_description), "{}", app.timesheet_data);
+    assert!(app.timesheet_line_count >= 3);
+    assert_eq!(app.timesheet_scroll, 0);
+
+    let backend = TestBackend::new(80, 10);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal
+      .draw(|f| {
+        app.draw_timesheet(f, f.area());
+      })
+      .unwrap();
+
+    let view = buffer_view(terminal.backend().buffer());
+    assert!(view.contains(started_description), "{view}");
+    assert!(view.contains(completed_description), "{view}");
   }
 
   // #[test]
