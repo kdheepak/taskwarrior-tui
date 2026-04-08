@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.26.12](https://github.com/kdheepak/taskwarrior-tui/compare/v0.26.11...v0.26.12) - 2026-04-08
+
+### Added
+
+- scroll task list with mouse wheel ([#738](https://github.com/kdheepak/taskwarrior-tui/pull/738))
+
 ## [0.26.11](https://github.com/kdheepak/taskwarrior-tui/compare/v0.26.10...v0.26.11) - 2026-04-08
 
 ### Added
