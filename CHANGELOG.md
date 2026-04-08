@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.26.11](https://github.com/kdheepak/taskwarrior-tui/compare/v0.26.10...v0.26.11) - 2026-04-08
+
+### Added
+
+- add "timesheet" tab ([#728](https://github.com/kdheepak/taskwarrior-tui/pull/728))
+
+### Other
+
+- *(deps)* narrow `tokio`'s featureset; remove unused `tokio-stream` ([#731](https://github.com/kdheepak/taskwarrior-tui/pull/731))
+- *(deps)* `cassowary` -> `kasuari` ([#734](https://github.com/kdheepak/taskwarrior-tui/pull/734))
+- *(deps)* remove unused features; remove unused deps ([#732](https://github.com/kdheepak/taskwarrior-tui/pull/732))
+
 ## [0.26.10](https://github.com/kdheepak/taskwarrior-tui/compare/v0.26.9...v0.26.10) - 2026-04-02
 
 ### Fixed
