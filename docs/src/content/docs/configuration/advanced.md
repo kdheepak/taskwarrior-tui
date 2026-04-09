@@ -21,7 +21,8 @@ uda.taskwarrior-tui.unmark.indicator=
 uda.taskwarrior-tui.mark-selection.indicator=⦿
 uda.taskwarrior-tui.unmark-selection.indicator=⦾
 uda.taskwarrior-tui.calendar.months-per-row=4
-uda.taskwarrior-tui.task-report.show-info=true
+uda.taskwarrior-tui.task-report.info-show=true
+uda.taskwarrior-tui.task-report.info-location=auto
 uda.taskwarrior-tui.task-report.looping=true
 uda.taskwarrior-tui.task-report.use-alternate-style=true
 uda.taskwarrior-tui.task-report.jump-on-task-add=true
@@ -56,6 +57,17 @@ uda.taskwarrior-tui.style.command.error= # default: Red foreground
 See [color configuration](./colors.md) for supported color formats and additional TUI style keys such as `uda.taskwarrior-tui.style.navbar` and `uda.taskwarrior-tui.style.command`.
 
 The `uda.taskwarrior-tui.task-report.next.filter` variable defines the default view at program startup. Set this to any preconfigured report from `task reports`, or create your own report in Taskwarrior and specify its name here.
+
+## Legacy Config Aliases
+
+The following older keys are still accepted for backward compatibility, but they are legacy, should be migrated to the newer names, and will be removed in a future release:
+
+```plaintext
+uda.taskwarrior-tui.task-report.show-info      -> uda.taskwarrior-tui.task-report.info-show
+uda.taskwarrior-tui.tasklist.vertical          -> uda.taskwarrior-tui.task-report.info-location
+```
+
+For the legacy `tasklist.vertical` option, `true` maps to `bottom` and `false` maps to `right`. If both a legacy key and its newer replacement are set, the newer key takes precedence.
 
 ## Command-Line Options
 

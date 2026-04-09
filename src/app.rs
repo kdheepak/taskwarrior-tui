@@ -42,8 +42,7 @@ use crate::{
   action::Action,
   calendar::Calendar,
   completion::{CompletionList, get_start_word_under_cursor},
-  config,
-  config::Config,
+  config::{Config, TaskInfoLocation},
   datetime,
   event::{Event, KeyCode},
   help::Help,
@@ -159,7 +158,7 @@ pub struct TaskwarriorTui {
   pub mode: Mode,
   pub previous_mode: Option<Mode>,
   pub config: Config,
-  pub task_report_show_info: bool,
+  pub task_report_info_show: bool,
   pub task_report_height: u16,
   pub task_details_scroll: u16,
   pub task_details_defaultwidth: u16,
@@ -182,7 +181,7 @@ pub struct TaskwarriorTui {
   pub event_loop: crate::event::EventLoop,
   pub requires_redraw: bool,
   pub changes: utils::Changeset,
-  pub tasklist_vertical: bool,
+  pub task_info_location_override: Option<TaskInfoLocation>,
   pub task_exe: String,
   pub timesheet_data: String,
   pub timesheet_scroll: u16,
@@ -255,8 +254,8 @@ impl TaskwarriorTui {
       task_report_height: 0,
       task_details_scroll: 0,
       task_details_defaultwidth: 0,
-      task_report_show_info: c.uda_task_report_show_info,
-      tasklist_vertical: c.uda_tasklist_vertical,
+      task_report_info_show: c.uda_task_report_info_show,
+      task_info_location_override: None,
       config: c,
       task_report_table: TaskReportTable::new(&data, report, &task_exe)?,
       calendar_year: Local::now().year(),
@@ -671,6 +670,26 @@ impl TaskwarriorTui {
     f.render_widget(c, layout);
   }
 
+  fn task_info_location(&self, width: u16) -> TaskInfoLocation {
+    self
+      .task_info_location_override
+      .unwrap_or(self.config.uda_task_report_info_location)
+      .resolve(width)
+  }
+
+  fn toggle_task_info_location(&mut self) {
+    let next = match self.task_info_location(self.terminal_width) {
+      TaskInfoLocation::Bottom => TaskInfoLocation::Right,
+      TaskInfoLocation::Right => TaskInfoLocation::Bottom,
+      TaskInfoLocation::Auto => unreachable!("task info location should always resolve to bottom or right"),
+    };
+    self.task_info_location_override = match (self.config.uda_task_report_info_location, self.task_info_location_override) {
+      (TaskInfoLocation::Auto, Some(_)) => None,
+      (configured, _) if configured == next => None,
+      _ => Some(next),
+    };
+  }
+
   pub fn draw_task(&mut self, f: &mut Frame, layout: Rect, action: Action) {
     let rects = Layout::default()
       .direction(Direction::Vertical)
@@ -678,10 +697,11 @@ impl TaskwarriorTui {
       .split(layout);
 
     // render task report and task details if required
-    if self.task_report_show_info {
-      let direction = match self.tasklist_vertical {
-        true => Direction::Vertical,
-        false => Direction::Horizontal,
+    if self.task_report_info_show {
+      let direction = match self.task_info_location(rects[0].width) {
+        TaskInfoLocation::Bottom => Direction::Vertical,
+        TaskInfoLocation::Right => Direction::Horizontal,
+        TaskInfoLocation::Auto => unreachable!("task info location should always resolve to bottom or right"),
       };
       let split_task_layout = Layout::default()
         .direction(direction)
@@ -1650,7 +1670,7 @@ impl TaskwarriorTui {
     }
     self.cursor_fix();
     self.update_task_table_state();
-    if self.task_report_show_info {
+    if self.task_report_info_show {
       self.update_task_details().await?;
     }
     self.selection_fix();
@@ -3396,9 +3416,9 @@ impl TaskwarriorTui {
               }
             }
           } else if input == self.keyconfig.zoom {
-            self.task_report_show_info = !self.task_report_show_info;
+            self.task_report_info_show = !self.task_report_info_show;
           } else if input == self.keyconfig.transpose {
-            self.tasklist_vertical = !self.tasklist_vertical
+            self.toggle_task_info_location();
           } else if input == self.keyconfig.context_menu {
             self.contexts.search.clear();
             // Pre-select the active context.
@@ -4536,6 +4556,51 @@ mod tests {
   #[test]
   fn test_centered_rect() {
     assert_eq!(centered_rect(50, 50, Rect::new(0, 0, 100, 100)), Rect::new(25, 25, 50, 50));
+  }
+
+  #[tokio::test]
+  async fn test_task_info_location_auto_and_override() {
+    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    app.config.uda_task_report_info_location = TaskInfoLocation::Auto;
+
+    assert_eq!(app.task_info_location(TaskInfoLocation::AUTO_WIDTH_THRESHOLD), TaskInfoLocation::Bottom);
+    assert_eq!(
+      app.task_info_location(TaskInfoLocation::AUTO_WIDTH_THRESHOLD + 1),
+      TaskInfoLocation::Right
+    );
+
+    app.terminal_width = TaskInfoLocation::AUTO_WIDTH_THRESHOLD;
+    app.toggle_task_info_location();
+    assert_eq!(app.task_info_location_override, Some(TaskInfoLocation::Right));
+    assert_eq!(app.task_info_location(TaskInfoLocation::AUTO_WIDTH_THRESHOLD), TaskInfoLocation::Right);
+
+    app.toggle_task_info_location();
+    assert_eq!(app.task_info_location_override, None);
+    assert_eq!(
+      app.task_info_location(TaskInfoLocation::AUTO_WIDTH_THRESHOLD + 1),
+      TaskInfoLocation::Right
+    );
+  }
+
+  #[tokio::test]
+  async fn test_task_info_location_fixed_toggle_returns_to_configured_value() {
+    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    app.config.uda_task_report_info_location = TaskInfoLocation::Bottom;
+    app.terminal_width = TaskInfoLocation::AUTO_WIDTH_THRESHOLD + 1;
+
+    app.toggle_task_info_location();
+    assert_eq!(app.task_info_location_override, Some(TaskInfoLocation::Right));
+    assert_eq!(
+      app.task_info_location(TaskInfoLocation::AUTO_WIDTH_THRESHOLD + 1),
+      TaskInfoLocation::Right
+    );
+
+    app.toggle_task_info_location();
+    assert_eq!(app.task_info_location_override, None);
+    assert_eq!(
+      app.task_info_location(TaskInfoLocation::AUTO_WIDTH_THRESHOLD + 1),
+      TaskInfoLocation::Bottom
+    );
   }
 
   fn setup() {
@@ -5838,7 +5903,7 @@ mod tests {
     }
 
     let mut app = TaskwarriorTui::new("next", false).await.unwrap();
-    app.tasklist_vertical = true;
+    app.task_info_location_override = Some(TaskInfoLocation::Bottom);
 
     app.task_report_next();
     app.context_next();
@@ -6081,7 +6146,7 @@ mod tests {
     }
 
     let mut app = TaskwarriorTui::new("next", false).await.unwrap();
-    app.tasklist_vertical = true;
+    app.task_info_location_override = Some(TaskInfoLocation::Bottom);
 
     app.task_report_next();
     app.context_next();
@@ -6137,14 +6202,14 @@ mod tests {
 
     let backend = TestBackend::new(50, 15);
     let mut terminal = Terminal::new(backend).unwrap();
-    app.task_report_show_info = !app.task_report_show_info;
+    app.task_report_info_show = !app.task_report_info_show;
     terminal
       .draw(|f| {
         app.draw(f);
         app.draw(f);
       })
       .unwrap();
-    app.task_report_show_info = !app.task_report_show_info;
+    app.task_report_info_show = !app.task_report_info_show;
     terminal
       .draw(|f| {
         app.draw(f);

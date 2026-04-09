@@ -1,7 +1,6 @@
 use std::{collections::HashMap, error::Error, str};
 
 use anyhow::{Context, Result};
-use crossterm::terminal::size;
 use ratatui::{
   style::{Color, Modifier, Style},
   symbols::{bar::FULL, line::DOUBLE_VERTICAL},
@@ -44,6 +43,39 @@ pub struct Uda {
   urgency: Option<f64>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TaskInfoLocation {
+  #[default]
+  Auto,
+  Bottom,
+  Right,
+}
+
+impl TaskInfoLocation {
+  pub const AUTO_WIDTH_THRESHOLD: u16 = 160;
+
+  fn from_config_value(value: &str) -> Option<Self> {
+    let value = value.trim();
+    if value.eq_ignore_ascii_case("auto") {
+      Some(Self::Auto)
+    } else if value.eq_ignore_ascii_case("bottom") {
+      Some(Self::Bottom)
+    } else if value.eq_ignore_ascii_case("right") {
+      Some(Self::Right)
+    } else {
+      None
+    }
+  }
+
+  pub fn resolve(self, width: u16) -> Self {
+    match self {
+      Self::Auto if width <= Self::AUTO_WIDTH_THRESHOLD => Self::Bottom,
+      Self::Auto => Self::Right,
+      value => value,
+    }
+  }
+}
+
 #[derive(Debug)]
 pub struct Config {
   pub enabled: bool,
@@ -66,7 +98,7 @@ pub struct Config {
   pub uda_task_detail_prefetch: usize,
   pub uda_task_report_use_all_tasks_for_completion: bool,
   pub uda_task_report_use_alternate_style: bool,
-  pub uda_task_report_show_info: bool,
+  pub uda_task_report_info_show: bool,
   pub uda_task_report_looping: bool,
   pub uda_task_report_jump_to_task_on_add: bool,
   pub uda_selection_indicator: String,
@@ -102,7 +134,7 @@ pub struct Config {
   pub uda_background_process: String,
   pub uda_background_process_period: usize,
   pub uda_quick_tag_name: String,
-  pub uda_tasklist_vertical: bool,
+  pub uda_task_report_info_location: TaskInfoLocation,
   pub uda_task_report_prompt_on_undo: bool,
   pub uda_task_report_prompt_on_delete: bool,
   pub uda_task_report_prompt_on_done: bool,
@@ -148,7 +180,7 @@ impl Config {
     let uda_task_detail_prefetch = Self::get_uda_task_detail_prefetch(data);
     let uda_task_report_use_all_tasks_for_completion = Self::get_uda_task_report_use_all_tasks_for_completion(data);
     let uda_task_report_use_alternate_style = Self::get_uda_task_report_use_alternate_style(data);
-    let uda_task_report_show_info = Self::get_uda_task_report_show_info(data);
+    let uda_task_report_info_show = Self::get_uda_task_report_info_show(data);
     let uda_task_report_looping = Self::get_uda_task_report_looping(data);
     let uda_task_report_jump_to_task_on_add = Self::get_uda_task_report_jump_to_task_on_add(data);
     let uda_selection_indicator = Self::get_uda_selection_indicator(data);
@@ -199,7 +231,7 @@ impl Config {
     let uda_style_help_gauge = uda_style_help_gauge.unwrap_or_else(|| Style::default().fg(Color::Gray));
     let uda_style_command_error = uda_style_command_error.unwrap_or_else(|| Style::default().fg(Color::Red));
     let uda_quick_tag_name = Self::get_uda_quick_tag_name(data);
-    let uda_tasklist_vertical = Self::get_uda_tasklist_vertical(data);
+    let uda_task_report_info_location = Self::get_uda_task_report_info_location(data);
     let uda_task_report_prompt_on_undo = Self::get_uda_task_report_prompt_on_undo(data);
     let uda_task_report_prompt_on_delete = Self::get_uda_task_report_prompt_on_delete(data);
     let uda_task_report_prompt_on_done = Self::get_uda_task_report_prompt_on_done(data);
@@ -231,7 +263,7 @@ impl Config {
       uda_task_detail_prefetch,
       uda_task_report_use_all_tasks_for_completion,
       uda_task_report_use_alternate_style,
-      uda_task_report_show_info,
+      uda_task_report_info_show,
       uda_task_report_looping,
       uda_task_report_jump_to_task_on_add,
       uda_selection_indicator,
@@ -266,7 +298,7 @@ impl Config {
       uda_background_process,
       uda_background_process_period,
       uda_quick_tag_name,
-      uda_tasklist_vertical,
+      uda_task_report_info_location,
       uda_task_report_prompt_on_undo,
       uda_task_report_prompt_on_delete,
       uda_task_report_prompt_on_done,
@@ -651,8 +683,9 @@ impl Config {
       .unwrap_or(true)
   }
 
-  fn get_uda_task_report_show_info(data: &str) -> bool {
-    Self::get_config("uda.taskwarrior-tui.task-report.show-info", data)
+  fn get_uda_task_report_info_show(data: &str) -> bool {
+    Self::get_config("uda.taskwarrior-tui.task-report.info-show", data)
+      .or_else(|| Self::get_config("uda.taskwarrior-tui.task-report.show-info", data))
       .unwrap_or_default()
       .get_bool()
       .unwrap_or(true)
@@ -837,13 +870,17 @@ impl Config {
     }
   }
 
-  fn get_uda_tasklist_vertical(data: &str) -> bool {
-    Self::get_config("uda.taskwarrior-tui.tasklist.vertical", data)
+  fn get_uda_task_report_info_location(data: &str) -> TaskInfoLocation {
+    Self::get_config("uda.taskwarrior-tui.task-report.info-location", data)
+      .as_deref()
+      .and_then(TaskInfoLocation::from_config_value)
+      .or_else(|| {
+        Self::get_config("uda.taskwarrior-tui.tasklist.vertical", data)
+          .unwrap_or_default()
+          .get_bool()
+          .map(|vertical| if vertical { TaskInfoLocation::Bottom } else { TaskInfoLocation::Right })
+      })
       .unwrap_or_default()
-      .get_bool()
-      // Vertical mode is disabled by default if the option is not set and the terminal is not wide
-      // enough.
-      .unwrap_or(size().unwrap_or((50, 15)).0 <= 160)
   }
 }
 
@@ -1261,6 +1298,23 @@ mod tests {
   }
 
   #[test]
+  fn test_get_uda_task_report_info_show_defaults_to_true() {
+    assert!(Config::get_uda_task_report_info_show(""));
+  }
+
+  #[test]
+  fn test_get_uda_task_report_info_show_can_be_disabled() {
+    let data = "uda.taskwarrior-tui.task-report.info-show false";
+    assert!(!Config::get_uda_task_report_info_show(data));
+  }
+
+  #[test]
+  fn test_get_uda_task_report_info_show_supports_legacy_show_info_key() {
+    let data = "uda.taskwarrior-tui.task-report.show-info false";
+    assert!(!Config::get_uda_task_report_info_show(data));
+  }
+
+  #[test]
   fn test_get_uda_report_menu_close_on_select_defaults_to_true() {
     assert!(Config::get_uda_report_menu_close_on_select(""));
   }
@@ -1269,6 +1323,63 @@ mod tests {
   fn test_get_uda_report_menu_close_on_select_can_be_disabled() {
     let data = "uda.taskwarrior-tui.report-menu.close-on-select false";
     assert!(!Config::get_uda_report_menu_close_on_select(data));
+  }
+
+  #[test]
+  fn test_get_uda_task_report_info_location_defaults_to_auto() {
+    assert_eq!(Config::get_uda_task_report_info_location(""), TaskInfoLocation::Auto);
+  }
+
+  #[test]
+  fn test_get_uda_task_report_info_location_parses_bottom() {
+    let data = "uda.taskwarrior-tui.task-report.info-location bottom";
+    assert_eq!(Config::get_uda_task_report_info_location(data), TaskInfoLocation::Bottom);
+  }
+
+  #[test]
+  fn test_get_uda_task_report_info_location_parses_right() {
+    let data = "uda.taskwarrior-tui.task-report.info-location right";
+    assert_eq!(Config::get_uda_task_report_info_location(data), TaskInfoLocation::Right);
+  }
+
+  #[test]
+  fn test_get_uda_task_report_info_location_supports_legacy_tasklist_vertical_true() {
+    let data = "uda.taskwarrior-tui.tasklist.vertical true";
+    assert_eq!(Config::get_uda_task_report_info_location(data), TaskInfoLocation::Bottom);
+  }
+
+  #[test]
+  fn test_get_uda_task_report_info_location_supports_legacy_tasklist_vertical_false() {
+    let data = "uda.taskwarrior-tui.tasklist.vertical false";
+    assert_eq!(Config::get_uda_task_report_info_location(data), TaskInfoLocation::Right);
+  }
+
+  #[test]
+  fn test_get_uda_task_report_info_location_prefers_new_key_over_legacy_key() {
+    let data = [
+      "uda.taskwarrior-tui.task-report.info-location right",
+      "uda.taskwarrior-tui.tasklist.vertical true",
+    ]
+    .join("\n");
+    assert_eq!(Config::get_uda_task_report_info_location(&data), TaskInfoLocation::Right);
+  }
+
+  #[test]
+  fn test_get_uda_task_report_info_location_invalid_values_fall_back_to_auto() {
+    let data = "uda.taskwarrior-tui.task-report.info-location sideways";
+    assert_eq!(Config::get_uda_task_report_info_location(data), TaskInfoLocation::Auto);
+  }
+
+  #[test]
+  fn test_task_info_location_auto_resolves_from_width() {
+    assert_eq!(
+      TaskInfoLocation::Auto.resolve(TaskInfoLocation::AUTO_WIDTH_THRESHOLD),
+      TaskInfoLocation::Bottom
+    );
+    assert_eq!(
+      TaskInfoLocation::Auto.resolve(TaskInfoLocation::AUTO_WIDTH_THRESHOLD + 1),
+      TaskInfoLocation::Right
+    );
   }
 
   #[test]
