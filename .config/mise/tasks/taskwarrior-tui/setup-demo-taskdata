@@ -28,19 +28,20 @@ data.location=${taskdata}
 
 uda.priority.values=H,M,,L
 
-color.alternate=
-color.active=black on color114
-color.completed=bright black
-color.tag.next=black on color203
-color.tagged=black on color221
+color.alternate=on color235
+color.label=bold color153
+color.active=black on color151
+color.completed=color244
+color.tag.next=black on color221
+color.tagged=black on color188
 color.project.demo=bold color81
 color.tag.finance=black on color117
-color.keyword.Annotate=bold color219
-color.keyword.Filter=bold color215
+color.keyword.Annotate=bold color212
+color.keyword.Filter=bold color214
 color.keyword.Mark=bold color203
 color.keyword.Show=bold color81
-color.keyword.Start=bold color114
-color.keyword.Toggle=bold color141
+color.keyword.Start=bold color120
+color.keyword.Toggle=bold color111
 
 rc.debug=off
 rc.confirmation=off
@@ -55,13 +56,13 @@ context.work=-personal -private
 context.personal=+personal -private
 context.finance=+finance -private
 
-report.next.labels=ID,Active,Age,Deps,P,Project,Tag,Recur,S,Due,Until,Description,Urg
-report.next.columns=id,start.age,entry.age,depends,priority,project,tags,recur,scheduled.countdown,due.relative,until.remaining,description.truncated_count,urgency
+report.next.labels=ID,Active,Age,Project,Tags,Description
+report.next.columns=id,start.age,entry.age,project,tags,description.truncated_count
 report.next.filter=status:pending -private
 report.next.sort=entry-
 
-report.completed.labels=ID,Active,Age,Deps,P,Project,Tag,Recur,S,Due,Until,Description,Urg
-report.completed.columns=id,start.age,entry.age,depends,priority,project,tags,recur,scheduled.countdown,due.relative,until.remaining,description.truncated_count,urgency
+report.completed.labels=ID,Done,Project,Tags,Description
+report.completed.columns=id,end.age,project,tags,description.truncated_count
 report.completed.filter=status:completed
 report.completed.sort=end-
 
@@ -76,12 +77,22 @@ uda.taskwarrior-tui.task-report.jump-to-task-on-add=true
 uda.taskwarrior-tui.task-report.prompt-on-undo=false
 uda.taskwarrior-tui.task-report.prompt-on-delete=false
 uda.taskwarrior-tui.task-report.prompt-on-done=false
+uda.taskwarrior-tui.task-report.use-alternate-style=true
+uda.taskwarrior-tui.task-report.show-info=true
+uda.taskwarrior-tui.tasklist.vertical=true
+uda.taskwarrior-tui.style.navbar=bold black on color153
+uda.taskwarrior-tui.style.command=bold black on color153
+uda.taskwarrior-tui.style.command.error=bold color203
 uda.taskwarrior-tui.style.report.selection=bold black on color153
+uda.taskwarrior-tui.style.report.scrollbar=color117
+uda.taskwarrior-tui.style.report.scrollbar.area=color239
+uda.taskwarrior-tui.style.report.completion-pane=black on color188
+uda.taskwarrior-tui.style.report.completion-pane-highlight=bold black on color153
 uda.taskwarrior-tui.style.context.active=bold black on color153
-uda.taskwarrior-tui.style.report-menu.active=bold black on color153
-uda.taskwarrior-tui.style.title=color117
+uda.taskwarrior-tui.style.report-menu.active=bold black on color214
+uda.taskwarrior-tui.style.title=bold color153
 uda.taskwarrior-tui.style.title.border=color81
-uda.taskwarrior-tui.style.help.gauge=color117
+uda.taskwarrior-tui.style.help.gauge=color214
 uda.taskwarrior-tui.context-menu.close-on-select=true
 uda.taskwarrior-tui.report-menu.close-on-select=true
 EOF
