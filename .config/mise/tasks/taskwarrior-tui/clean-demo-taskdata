@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+#MISE description="Remove local demo fixture data used by VHS tapes"
+#USAGE about "Remove the generated Taskwarrior demo data used by VHS tapes"
+set -euo pipefail
+
+rm -rf "${TASKDATA}" "${TASKRC}" "${TASKWARRIOR_TUI_DATA}" "${TASKWARRIOR_TUI_CONFIG}"

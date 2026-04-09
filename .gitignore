@@ -22,3 +22,5 @@ tmp
 docs/.astro/
 docs/node_modules/
 site/
+*.gif
+*.mp4

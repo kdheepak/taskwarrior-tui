@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+#MISE description="Prepare local demo fixture data used by VHS tapes"
+#USAGE about "Write demo Taskwarrior config and import the local demo fixture data used by VHS tapes"
+set -euo pipefail
+
+taskrc="${TASKRC:?TASKRC is required; run via mise or export it first.}"
+taskdata="${TASKDATA:?TASKDATA is required; run via mise or export it first.}"
+tui_data="${TASKWARRIOR_TUI_DATA:?TASKWARRIOR_TUI_DATA is required; run via mise or export it first.}"
+tui_config="${TASKWARRIOR_TUI_CONFIG:?TASKWARRIOR_TUI_CONFIG is required; run via mise or export it first.}"
+
+if [ -n "${TASKWARRIOR_TUI_TASKWARRIOR_CLI:-}" ]; then
+    task_cli="${TASKWARRIOR_TUI_TASKWARRIOR_CLI}"
+else
+    install_dir="${TASKWARRIOR_INSTALL_DIR:?TASKWARRIOR_INSTALL_DIR is required; run via mise or export it first.}"
+    task_cli="${install_dir}/bin/task"
+fi
+
+if [ ! -x "${task_cli}" ]; then
+    printf "Taskwarrior CLI not found: %s\n" "${task_cli}" >&2
+    exit 1
+fi
+
+rm -rf "${taskdata}" "${taskrc}" "${tui_data}" "${tui_config}"
+mkdir -p "$(dirname "${taskrc}")" "${tui_data}" "${tui_config}"
+
+cat > "${taskrc}" <<EOF
+data.location=${taskdata}
+
+uda.priority.values=H,M,,L
+
+color.alternate=
+color.active=black on color114
+color.completed=bright black
+color.tag.next=black on color203
+color.tagged=black on color221
+color.project.demo=bold color81
+color.tag.finance=black on color117
+color.keyword.Annotate=bold color219
+color.keyword.Filter=bold color215
+color.keyword.Mark=bold color203
+color.keyword.Show=bold color81
+color.keyword.Start=bold color114
+color.keyword.Toggle=bold color141
+
+rc.debug=off
+rc.confirmation=off
+rc.bulk=0
+rc.dependency.confirmation=off
+rc.recurrence.confirmation=off
+
+journal.time=on
+detection=off
+
+context.work=-personal -private
+context.personal=+personal -private
+context.finance=+finance -private
+
+report.next.labels=ID,Active,Age,Deps,P,Project,Tag,Recur,S,Due,Until,Description,Urg
+report.next.columns=id,start.age,entry.age,depends,priority,project,tags,recur,scheduled.countdown,due.relative,until.remaining,description.truncated_count,urgency
+report.next.filter=status:pending -private
+report.next.sort=entry-
+
+report.completed.labels=ID,Active,Age,Deps,P,Project,Tag,Recur,S,Due,Until,Description,Urg
+report.completed.columns=id,start.age,entry.age,depends,priority,project,tags,recur,scheduled.countdown,due.relative,until.remaining,description.truncated_count,urgency
+report.completed.filter=status:completed
+report.completed.sort=end-
+
+uda.issue.type=numeric
+uda.issue.label=Issue
+
+uda.person.type=string
+uda.person.label=Person
+
+uda.taskwarrior-tui.task-report.pre-fill-task-meta-data=false
+uda.taskwarrior-tui.task-report.jump-to-task-on-add=true
+uda.taskwarrior-tui.task-report.prompt-on-undo=false
+uda.taskwarrior-tui.task-report.prompt-on-delete=false
+uda.taskwarrior-tui.task-report.prompt-on-done=false
+uda.taskwarrior-tui.style.report.selection=bold black on color153
+uda.taskwarrior-tui.style.context.active=bold black on color153
+uda.taskwarrior-tui.style.report-menu.active=bold black on color153
+uda.taskwarrior-tui.style.title=color117
+uda.taskwarrior-tui.style.title.border=color81
+uda.taskwarrior-tui.style.help.gauge=color117
+uda.taskwarrior-tui.context-menu.close-on-select=true
+uda.taskwarrior-tui.report-menu.close-on-select=true
+EOF
+
+"${task_cli}" import rc.hooks=0 tests/data/demo.json >/dev/null
+"${task_cli}" add rc.hooks=0 "Review quarterly budget" project:demo +finance >/dev/null
+"${task_cli}" context none >/dev/null 2>&1 || true

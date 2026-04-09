@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+#MISE description="Build taskwarrior-tui and render a VHS tape against local demo data"
+#USAGE about "Build taskwarrior-tui, prepare local demo data, and render a VHS tape"
+#MISE depends=["taskwarrior-tui:setup-demo-taskdata"]
+#MISE depends_post=["taskwarrior-tui:clean-demo-taskdata"]
+set -euo pipefail
+
+usage() {
+    echo "usage: vhs PATH/TO/TAPE" >&2
+}
+
+if [ "$#" -ne 1 ]; then
+    usage
+    exit 2
+fi
+
+tape="$1"
+
+if [ ! -f "${tape}" ]; then
+    echo "Tape not found: ${tape}" >&2
+    exit 1
+fi
+
+if ! command -v vhs >/dev/null 2>&1; then
+    printf "vhs is required on PATH to render %s.\n" "${tape}" >&2
+    exit 1
+fi
+
+if [ -n "${TASKWARRIOR_TUI_TASKWARRIOR_CLI:-}" ]; then
+    task_cli="${TASKWARRIOR_TUI_TASKWARRIOR_CLI}"
+else
+    install_dir="${TASKWARRIOR_INSTALL_DIR:?TASKWARRIOR_INSTALL_DIR is required; run via mise or export it first.}"
+    task_cli="${install_dir}/bin/task"
+fi
+
+if [ ! -x "${task_cli}" ]; then
+    printf "Taskwarrior CLI not found: %s\n" "${task_cli}" >&2
+    exit 1
+fi
+
+export TASKWARRIOR_TUI_TASKWARRIOR_CLI="${task_cli}"
+
+cargo build
+vhs "${tape}"
