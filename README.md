@@ -25,33 +25,7 @@ A Terminal User Interface (TUI) for [Taskwarrior](https://taskwarrior.org/) that
 - tab completion
 - colors based on taskwarrior
 
-![](https://user-images.githubusercontent.com/1813121/159858280-3ca31e9a-fc38-4547-a92d-36a7758cf5dc.gif)
-
-### Showcase
-
-<details>
-<summary><b>Demo</b>: (video)</summary>
-<a href="https://www.youtube.com/watch?v=0ZdkfNrIAcw"><img src="https://img.youtube.com/vi/0ZdkfNrIAcw/0.jpg" /></a>
-</details>
-
-<details>
-  <summary><b>User Interface</b>: (gif)</summary>
-  <img src="https://user-images.githubusercontent.com/1813121/113251568-bdef2380-927f-11eb-8cb6-5d95b00eee53.gif"></img>
-</details>
-
-<details>
-  <summary><b>Multiple selection</b>: (gif)</summary>
-  <img src="https://user-images.githubusercontent.com/1813121/113252636-4e7a3380-9281-11eb-821d-874c86d11105.gif"></img>
-</details>
-
-<details>
-  <summary><b>Tab completion</b>: (gif)</summary>
-  <img src="https://user-images.githubusercontent.com/1813121/113711977-cfcb2f00-96a2-11eb-8b06-9fd17903561d.gif"></img>
-  <img src="https://user-images.githubusercontent.com/1813121/152730495-f0abd6b9-d710-44e6-a7f9-c15a68cc8233.png"></img>
-  <img src="https://user-images.githubusercontent.com/1813121/152730497-44ce00d1-3a7c-4658-80d1-4df8d161cab8.png"></img>
-  <img src="https://user-images.githubusercontent.com/1813121/152730498-cd75efed-d2c0-48e6-b82f-594e0a2a5dff.png"></img>
-  <img src="https://user-images.githubusercontent.com/1813121/152731028-7ec9b388-37f6-4aa1-994c-0e4e8e0c205a.png"></img>
-</details>
+https://github.com/user-attachments/assets/a3c4f79b-3967-4904-b614-8bbd500c54c2
 
 ### Documentation
 
