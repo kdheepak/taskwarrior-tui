@@ -35,7 +35,10 @@ Type "a"
 Sleep 250ms
 Type "Filter demo: live filter to this task"
 Ctrl+E
-Type " project:demo"
+Type " project:de"
+Sleep 300ms
+Tab
+Sleep 500ms
 Enter
 Sleep 2200ms
 
@@ -58,7 +61,10 @@ Type "a"
 Sleep 250ms
 Type "Annotate demo: capture a note on this task"
 Ctrl+E
-Type " project:demo"
+Type " project:de"
+Sleep 300ms
+Tab
+Sleep 500ms
 Enter
 Sleep 2200ms
 
@@ -76,7 +82,10 @@ Type "a"
 Sleep 250ms
 Type "Start demo: toggle this task"
 Ctrl+E
-Type " project:demo"
+Type " project:de"
+Sleep 300ms
+Tab
+Sleep 500ms
 Enter
 Sleep 2200ms
 
@@ -89,7 +98,10 @@ Type "a"
 Sleep 250ms
 Type "Toggle demo: add and remove the 'next' tag"
 Ctrl+E
-Type " project:demo"
+Type " project:de"
+Sleep 300ms
+Tab
+Sleep 500ms
 Enter
 Sleep 2200ms
 
@@ -102,7 +114,10 @@ Type "a"
 Sleep 250ms
 Type "Mark demo tasks as done together"
 Ctrl+E
-Type " project:demo"
+Type " project:de"
+Sleep 300ms
+Tab
+Sleep 500ms
 Enter
 Sleep 2200ms
 
@@ -110,7 +125,10 @@ Type "/"
 Sleep 250ms
 Ctrl+U
 Sleep 200ms
-Type "project:demo"
+Type "project:de"
+Sleep 300ms
+Tab
+Sleep 500ms
 Enter
 Sleep 2200ms
 
