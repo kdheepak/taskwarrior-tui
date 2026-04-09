@@ -4593,10 +4593,15 @@ mod tests {
     app.terminal_width = TaskInfoLocation::AUTO_WIDTH_THRESHOLD;
     app.toggle_task_info_location();
     assert_eq!(app.task_info_location_override, Some(TaskInfoLocation::Right));
+    assert_eq!(app.task_info_location_override_width, Some(TaskInfoLocation::AUTO_WIDTH_THRESHOLD));
     assert_eq!(app.task_info_location(TaskInfoLocation::AUTO_WIDTH_THRESHOLD), TaskInfoLocation::Right);
 
-    app.toggle_task_info_location();
+    assert_eq!(
+      app.task_info_location(TaskInfoLocation::AUTO_WIDTH_THRESHOLD + 1),
+      TaskInfoLocation::Right
+    );
     assert_eq!(app.task_info_location_override, None);
+    assert_eq!(app.task_info_location_override_width, None);
     assert_eq!(
       app.task_info_location(TaskInfoLocation::AUTO_WIDTH_THRESHOLD + 1),
       TaskInfoLocation::Right
@@ -4611,6 +4616,7 @@ mod tests {
 
     app.toggle_task_info_location();
     assert_eq!(app.task_info_location_override, Some(TaskInfoLocation::Right));
+    assert_eq!(app.task_info_location_override_width, None);
     assert_eq!(
       app.task_info_location(TaskInfoLocation::AUTO_WIDTH_THRESHOLD + 1),
       TaskInfoLocation::Right
@@ -4618,6 +4624,7 @@ mod tests {
 
     app.toggle_task_info_location();
     assert_eq!(app.task_info_location_override, None);
+    assert_eq!(app.task_info_location_override_width, None);
     assert_eq!(
       app.task_info_location(TaskInfoLocation::AUTO_WIDTH_THRESHOLD + 1),
       TaskInfoLocation::Bottom
