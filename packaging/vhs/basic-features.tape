@@ -7,165 +7,149 @@ Require task
 
 Set Shell bash
 Set Theme "Builtin Dark"
-Set FontSize 20
-Set Width 1800
-Set Height 980
-Set Padding 20
-Set Margin 20
-Set MarginFill "#11111b"
-Set BorderRadius 10
+Set FontSize 18
+Set Width 1160
+Set Height 820
+Set Padding 12
+Set Margin 12
+Set MarginFill "#0b1220"
+Set BorderRadius 12
 Set Framerate 30
-Set PlaybackSpeed 0.45
+Set PlaybackSpeed 0.75
 Set CursorBlink false
-Set TypingSpeed 85ms
+Set TypingSpeed 80ms
 
 Hide
 Type "./target/debug/taskwarrior-tui"
 Enter
 Show
 
-Sleep 4000ms
+Sleep 2500ms
 
 Type "j"
-Sleep 1200ms
-Type "j"
-Sleep 1500ms
+Sleep 800ms
+Type "k"
+Sleep 1000ms
 
 Type "a"
-Sleep 300ms
-Type "Filter demo: narrow to this task project:demo"
+Sleep 250ms
+Type "Filter demo: live filter to this task"
+Ctrl+E
+Type " project:demo"
 Enter
-Sleep 3600ms
+Sleep 2200ms
 
 Type "/"
-Sleep 300ms
-Ctrl+U
 Sleep 250ms
+Ctrl+U
+Sleep 200ms
 Type "Filter demo"
 Enter
-Sleep 3200ms
+Sleep 2200ms
 
 Type "/"
-Sleep 300ms
-Ctrl+U
 Sleep 250ms
+Ctrl+U
+Sleep 200ms
 Enter
+Sleep 1200ms
+
+Type "a"
+Sleep 250ms
+Type "Annotate demo: capture a note on this task"
+Ctrl+E
+Type " project:demo"
+Enter
+Sleep 2200ms
+
+Type "z"
+Sleep 1200ms
+Type "A"
+Sleep 250ms
+Type "Annotation demo"
+Enter
+Sleep 2200ms
+Type "z"
+Sleep 1000ms
+
+Type "a"
+Sleep 250ms
+Type "Start demo: toggle this task"
+Ctrl+E
+Type " project:demo"
+Enter
+Sleep 2200ms
+
+Type "s"
+Sleep 2200ms
+Type "s"
 Sleep 1800ms
 
 Type "a"
-Sleep 300ms
-Type "Annotate demo: capture a note on this task project:demo"
+Sleep 250ms
+Type "Toggle demo: add and remove the 'next' tag"
+Ctrl+E
+Type " project:demo"
 Enter
-Sleep 3400ms
+Sleep 2200ms
 
-Type "z"
-Sleep 1800ms
-Type "A"
-Sleep 400ms
-Type "Annotation during the demo"
-Enter
-Sleep 3600ms
-Type "z"
+Type "t"
+Sleep 2000ms
+Type "t"
 Sleep 1600ms
 
 Type "a"
-Sleep 300ms
-Type "Start demo: toggle this task project:demo"
+Sleep 250ms
+Type "Mark demo tasks as done together"
+Ctrl+E
+Type " project:demo"
 Enter
-Sleep 3400ms
-
-Type "s"
-Sleep 3600ms
-Type "s"
-Sleep 3200ms
-
-Type "a"
-Sleep 300ms
-Type "Toggle demo: add and remove the next tag project:demo"
-Enter
-Sleep 3400ms
-
-Type "t"
-Sleep 3200ms
-Type "t"
-Sleep 3200ms
-
-Type "a"
-Sleep 300ms
-Type "Mark demo tasks as done together project:demo"
-Enter
-Sleep 3600ms
+Sleep 2200ms
 
 Type "/"
-Sleep 300ms
-Ctrl+U
 Sleep 250ms
+Ctrl+U
+Sleep 200ms
 Type "project:demo"
 Enter
-Sleep 3600ms
+Sleep 2200ms
 
 Type "g"
-Sleep 900ms
+Sleep 600ms
 Type "v"
-Sleep 1000ms
+Sleep 700ms
 Type "j"
-Sleep 900ms
+Sleep 600ms
 Type "v"
-Sleep 1000ms
+Sleep 700ms
 Type "j"
-Sleep 900ms
+Sleep 600ms
 Type "v"
-Sleep 1000ms
-Type "j"
-Sleep 900ms
-Type "v"
-Sleep 1800ms
+Sleep 1200ms
 Type "d"
-Sleep 4200ms
-
-Type "/"
-Sleep 300ms
-Ctrl+U
-Sleep 250ms
-Enter
-Sleep 1800ms
-
-Type "c"
-Sleep 500ms
-Type "finance"
-Enter
-Sleep 3600ms
-Type "c"
-Sleep 500ms
-Type "none"
-Enter
 Sleep 2600ms
 
-Type "R"
-Sleep 500ms
-Type "completed"
+Type "/"
+Sleep 250ms
+Ctrl+U
+Sleep 200ms
 Enter
-Sleep 3600ms
+Sleep 1200ms
+
 Type "R"
-Sleep 500ms
-Type "next"
+Sleep 350ms
+Type "completed"
 Enter
 Sleep 2600ms
 
 Type "?"
-Sleep 2000ms
-Type "jjjjjjjjjjjjjjjjjjjj"
-Sleep 1200ms
-Type "jjjjjjjjjjjjjjjjjjjj"
-Sleep 1200ms
-Type "jjjjjjjjjjjjjjjjjjjj"
-Sleep 1200ms
-Type "jjjjjjjjjjjjjjjjjjjj"
-Sleep 1200ms
-Type "jjjjjjjjjjjjjjjjjjjj"
-Sleep 2200ms
+Sleep 1400ms
+Type "jjjjjjjjjjjjjjjjjjjjjjjj"
+Sleep 700ms
+Type "jjjjjjjjjjjjjjjjjjjjjjjj"
+Sleep 1400ms
 Escape
-Sleep 1800ms
+Sleep 1000ms
 
 Type "q"
-Sleep 800ms
+Sleep 600ms
