@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.0](https://github.com/kdheepak/taskwarrior-tui/compare/v0.26.12...v0.27.0) - 2026-04-09
+
+### Added
+
+- [**breaking**] auto functionality for task info show ([#743](https://github.com/kdheepak/taskwarrior-tui/pull/743))
+
+### Other
+
+- Add information about quick-tag to documentation ([#746](https://github.com/kdheepak/taskwarrior-tui/pull/746))
+- Update README.md ([#745](https://github.com/kdheepak/taskwarrior-tui/pull/745))
+- Add demo vhs tape ([#742](https://github.com/kdheepak/taskwarrior-tui/pull/742))
+
 ## [0.26.12](https://github.com/kdheepak/taskwarrior-tui/compare/v0.26.11...v0.26.12) - 2026-04-08
 
 ### Added
