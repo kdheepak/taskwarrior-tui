@@ -66,16 +66,18 @@ Replace `next` with the report you open in `taskwarrior-tui`, and replace `<uuid
 Try these temporary `taskrc` changes one at a time:
 
 ```plaintext
-uda.taskwarrior-tui.task-report.show-info=0
+uda.taskwarrior-tui.task-report.info-show=0
 uda.taskwarrior-tui.task-report.task-detail-prefetch=0
 uda.taskwarrior-tui.tick-rate=0
 ```
 
 What they help isolate:
 
-- `task-report.show-info=0` disables the task details pane.
+- `task-report.info-show=0` disables the task details pane.
 - `task-detail-prefetch=0` keeps the details pane on, but reduces prefetching while you move through tasks.
 - `tick-rate=0` disables periodic refresh ticks.
+
+`task-report.show-info=0` is still accepted as a legacy alias for backward compatibility, but `task-report.info-show=0` is the preferred spelling and the legacy alias will be removed in a future release.
 
 Restore your normal settings after the test.
 
