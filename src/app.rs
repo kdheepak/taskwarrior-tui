@@ -182,6 +182,7 @@ pub struct TaskwarriorTui {
   pub requires_redraw: bool,
   pub changes: utils::Changeset,
   pub task_info_location_override: Option<TaskInfoLocation>,
+  pub task_info_location_override_width: Option<u16>,
   pub task_exe: String,
   pub timesheet_data: String,
   pub timesheet_scroll: u16,
@@ -256,6 +257,7 @@ impl TaskwarriorTui {
       task_details_defaultwidth: 0,
       task_report_info_show: c.uda_task_report_info_show,
       task_info_location_override: None,
+      task_info_location_override_width: None,
       config: c,
       task_report_table: TaskReportTable::new(&data, report, &task_exe)?,
       calendar_year: Local::now().year(),
@@ -670,7 +672,15 @@ impl TaskwarriorTui {
     f.render_widget(c, layout);
   }
 
-  fn task_info_location(&self, width: u16) -> TaskInfoLocation {
+  fn task_info_location(&mut self, width: u16) -> TaskInfoLocation {
+    if self.config.uda_task_report_info_location == TaskInfoLocation::Auto
+      && self.task_info_location_override_width.is_some()
+      && self.task_info_location_override_width != Some(width)
+    {
+      self.task_info_location_override = None;
+      self.task_info_location_override_width = None;
+    }
+
     self
       .task_info_location_override
       .unwrap_or(self.config.uda_task_report_info_location)
@@ -683,11 +693,22 @@ impl TaskwarriorTui {
       TaskInfoLocation::Right => TaskInfoLocation::Bottom,
       TaskInfoLocation::Auto => unreachable!("task info location should always resolve to bottom or right"),
     };
-    self.task_info_location_override = match (self.config.uda_task_report_info_location, self.task_info_location_override) {
-      (TaskInfoLocation::Auto, Some(_)) => None,
-      (configured, _) if configured == next => None,
-      _ => Some(next),
-    };
+
+    if self.config.uda_task_report_info_location == TaskInfoLocation::Auto {
+      if self.task_info_location_override_width == Some(self.terminal_width) {
+        self.task_info_location_override = None;
+        self.task_info_location_override_width = None;
+      } else {
+        self.task_info_location_override = Some(next);
+        self.task_info_location_override_width = Some(self.terminal_width);
+      }
+    } else if self.config.uda_task_report_info_location == next {
+      self.task_info_location_override = None;
+      self.task_info_location_override_width = None;
+    } else {
+      self.task_info_location_override = Some(next);
+      self.task_info_location_override_width = None;
+    }
   }
 
   pub fn draw_task(&mut self, f: &mut Frame, layout: Rect, action: Action) {
