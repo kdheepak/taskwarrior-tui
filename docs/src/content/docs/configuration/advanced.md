@@ -47,6 +47,7 @@ uda.taskwarrior-tui.context-menu.close-on-select=true
 uda.taskwarrior-tui.report-menu.select-on-move=false
 uda.taskwarrior-tui.report-menu.close-on-select=true
 uda.taskwarrior-tui.tabs.change-focus-rotate=false
+uda.taskwarrior-tui.quick-tag.name=next
 # UI chrome styles (support all Taskwarrior color formats)
 uda.taskwarrior-tui.style.title=         # default: LightCyan foreground
 uda.taskwarrior-tui.style.title.border=  # default: White foreground
@@ -72,6 +73,18 @@ For the legacy `tasklist.vertical` option, `true` maps to `bottom` and `false` m
 ## Command-Line Options
 
 `-r` specifies a report to be shown and overrides `uda.taskwarrior-tui.task-report.next.filter` for that instance.
+
+## Configure Quick Tag
+
+The quick-tag action toggles a single tag on the selected task. By default it uses the tag `next`, and the default keybinding is `t`.
+
+Configure the tag name in your `taskrc` with a bare tag value:
+
+```plaintext
+uda.taskwarrior-tui.quick-tag.name=next
+```
+
+Do not include a leading `+`. `taskwarrior-tui` adds and removes the tag for you, so `next` becomes `+next` or `-next` when you trigger the quick-tag action.
 
 ## Configure User-Defined Shortcuts
 
