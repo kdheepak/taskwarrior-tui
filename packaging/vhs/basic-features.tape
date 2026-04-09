@@ -35,7 +35,17 @@ Type "a"
 Sleep 250ms
 Type "Filter demo: live filter to this task"
 Ctrl+E
-Type " project:de"
+Type " p"
+Sleep 300ms
+Tab
+Sleep 500ms
+Tab
+Sleep 500ms
+Tab
+Sleep 500ms
+Enter
+Sleep 300ms
+Type "de"
 Sleep 300ms
 Tab
 Sleep 500ms
