@@ -68,7 +68,7 @@ jobs:
           echo "breaking_change=false" >> $GITHUB_OUTPUT
         fi
     - name: Sync breaking-change label
-      uses: actions/github-script@v8
+      uses: actions/github-script@v9
       env:
         BREAKING_CHANGE: ${{ steps.check_breaking_change.outputs.breaking_change }}
       with:
