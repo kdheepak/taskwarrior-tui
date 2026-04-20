@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.1](https://github.com/kdheepak/taskwarrior-tui/compare/v0.27.0...v0.27.1) - 2026-04-20
+
+### Other
+
+- *(deps)* bump the cargo-dependencies group with 3 updates ([#753](https://github.com/kdheepak/taskwarrior-tui/pull/753))
+- *(deps)* bump the cargo-dependencies group with 2 updates ([#751](https://github.com/kdheepak/taskwarrior-tui/pull/751))
+- *(deps)* bump softprops/action-gh-release from 2 to 3 ([#750](https://github.com/kdheepak/taskwarrior-tui/pull/750))
+- *(deps)* bump actions/github-script from 8 to 9 ([#749](https://github.com/kdheepak/taskwarrior-tui/pull/749))
+- fix jump-to-task-on-add config key ([#747](https://github.com/kdheepak/taskwarrior-tui/pull/747))
+
 ## [0.27.0](https://github.com/kdheepak/taskwarrior-tui/compare/v0.26.12...v0.27.0) - 2026-04-09
 
 ### Added
