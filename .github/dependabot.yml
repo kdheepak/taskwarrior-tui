@@ -9,6 +9,12 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      github-actions-dependencies:
+        patterns:
+          - "*"
+    cooldown:
+      default-days: 7
   - package-ecosystem: "cargo"
     directory: "/"
     schedule:
@@ -16,3 +22,5 @@ updates:
     groups:
       cargo-dependencies:
         patterns: ["*"]
+    cooldown:
+      default-days: 7
