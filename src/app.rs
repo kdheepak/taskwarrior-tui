@@ -1499,8 +1499,13 @@ impl TaskwarriorTui {
         }
       } else if tag_name == "project." {
         if let Some(p) = task.project() {
-          let s = self.config.color.get(&format!("color.project.{}", p)).copied().unwrap_or_default();
-          style = style.patch(s);
+          for (key, s) in &self.config.color {
+            if let Some(rule_project) = key.strip_prefix("color.project.") {
+              if p.starts_with(rule_project) {
+                style = style.patch(*s);
+              }
+            }
+          }
         }
       } else if tag_name == "keyword." {
         let desc = task.description();
