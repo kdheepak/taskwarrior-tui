@@ -14,8 +14,8 @@ jobs:
     name: Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: jdx/mise-action@v4
+      - uses: actions/checkout@v6.0.3
+      - uses: jdx/mise-action@v4.1.0
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: cargo-${{ runner.os }}
@@ -25,8 +25,8 @@ jobs:
     name: Test Suite
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: jdx/mise-action@v4
+      - uses: actions/checkout@v6.0.3
+      - uses: jdx/mise-action@v4.1.0
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: cargo-${{ runner.os }}
@@ -57,8 +57,8 @@ jobs:
     name: Rustfmt
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: jdx/mise-action@v4
+      - uses: actions/checkout@v6.0.3
+      - uses: jdx/mise-action@v4.1.0
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: cargo-${{ runner.os }}
@@ -68,8 +68,8 @@ jobs:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: jdx/mise-action@v4
+      - uses: actions/checkout@v6.0.3
+      - uses: jdx/mise-action@v4.1.0
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: cargo-${{ runner.os }}
