@@ -1,4 +1,4 @@
-use std::{error::Error, process::Command};
+use std::{collections::HashMap, error::Error, process::Command};
 
 use anyhow::Result;
 use chrono::{Datelike, Local, NaiveDateTime};
@@ -6,6 +6,7 @@ use itertools::join;
 use task_hookrs::{task::Task, uda::UDAValue};
 use unicode_truncate::UnicodeTruncateStr;
 use unicode_width::UnicodeWidthStr;
+use uuid::Uuid;
 
 use crate::{datetime, utils};
 
@@ -117,6 +118,7 @@ pub struct TaskReportTable {
   pub description_width: usize,
   pub date_time_vague_precise: bool,
   pub date_format: String,
+  pub child_counts: HashMap<Uuid, usize>,
 }
 
 impl TaskReportTable {
@@ -165,6 +167,7 @@ impl TaskReportTable {
       description_width: 100,
       date_time_vague_precise: false,
       date_format: "%Y-%m-%d".to_string(),
+      child_counts: HashMap::new(),
     };
     task_report_table.export_headers(Some(data), report, task_exe)?;
     Ok(task_report_table)
@@ -262,6 +265,14 @@ impl TaskReportTable {
       let mut item = vec![];
       for name in &self.columns {
         let s = self.get_string_attribute(name, task, tasks);
+        let s = if name == "description" || name.starts_with("description.") {
+          match self.child_counts.get(task.uuid()).copied().unwrap_or(0) {
+            0 => s,
+            n => format!("\u{25b8}{} {}", n, s),
+          }
+        } else {
+          s
+        };
         item.push(s);
       }
       self.tasks.push(item);

@@ -38,6 +38,10 @@ pub struct KeyConfig {
   pub report_menu: KeyCode,
   pub next_tab: KeyCode,
   pub previous_tab: KeyCode,
+  pub traverse_down: KeyCode,
+  pub traverse_up: KeyCode,
+  pub subtask: KeyCode,
+  pub subtask_sibling: KeyCode,
   pub priority_h: KeyCode,
   pub priority_m: KeyCode,
   pub priority_l: KeyCode,
@@ -87,6 +91,10 @@ impl Default for KeyConfig {
       report_menu: KeyCode::Char('R'),
       next_tab: KeyCode::Char(']'),
       previous_tab: KeyCode::Char('['),
+      traverse_down: KeyCode::Char('\n'),
+      traverse_up: KeyCode::Esc,
+      subtask: KeyCode::Char('w'),
+      subtask_sibling: KeyCode::Char('W'),
       priority_h: KeyCode::Char('H'),
       priority_m: KeyCode::Char('M'),
       priority_l: KeyCode::Char('L'),
@@ -142,6 +150,10 @@ impl KeyConfig {
     let report_menu = Self::get_config("uda.taskwarrior-tui.keyconfig.report-menu", data);
     let next_tab = Self::get_config("uda.taskwarrior-tui.keyconfig.next-tab", data);
     let previous_tab = Self::get_config("uda.taskwarrior-tui.keyconfig.previous-tab", data);
+    let traverse_down = Self::get_config("uda.taskwarrior-tui.keyconfig.traverse-down", data);
+    let traverse_up = Self::get_config("uda.taskwarrior-tui.keyconfig.traverse-up", data);
+    let subtask = Self::get_config("uda.taskwarrior-tui.keyconfig.subtask", data);
+    let subtask_sibling = Self::get_config("uda.taskwarrior-tui.keyconfig.subtask-sibling", data);
     let shortcut0 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut0", data);
     let shortcut1 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut1", data);
     let shortcut2 = Self::get_config("uda.taskwarrior-tui.keyconfig.shortcut2", data);
@@ -182,6 +194,10 @@ impl KeyConfig {
     self.report_menu = report_menu.unwrap_or(self.report_menu);
     self.next_tab = next_tab.unwrap_or(self.next_tab);
     self.previous_tab = previous_tab.unwrap_or(self.previous_tab);
+    self.traverse_down = traverse_down.unwrap_or(self.traverse_down);
+    self.traverse_up = traverse_up.unwrap_or(self.traverse_up);
+    self.subtask = subtask.unwrap_or(self.subtask);
+    self.subtask_sibling = subtask_sibling.unwrap_or(self.subtask_sibling);
     self.shortcut0 = shortcut0.unwrap_or(self.shortcut0);
     self.shortcut1 = shortcut1.unwrap_or(self.shortcut1);
     self.shortcut2 = shortcut2.unwrap_or(self.shortcut2);
