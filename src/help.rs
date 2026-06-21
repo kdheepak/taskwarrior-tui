@@ -47,6 +47,8 @@ fn keycode_for(name: &str, kc: &KeyConfig) -> KeyCode {
     "delete" => kc.delete,
     "zoom" => kc.zoom,
     "annotate" => kc.annotate,
+    "subtask" => kc.subtask,
+    "subtask_sibling" => kc.subtask_sibling,
     "shell" => kc.shell,
     "shortcut0" => kc.shortcut0,
     "shortcut1" => kc.shortcut1,
