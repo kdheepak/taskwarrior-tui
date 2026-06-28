@@ -14,7 +14,7 @@ jobs:
     name: Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: jdx/mise-action@v4
       - uses: Swatinem/rust-cache@v2
         with:
@@ -25,14 +25,14 @@ jobs:
     name: Test Suite
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: jdx/mise-action@v4
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: cargo-${{ runner.os }}
       - name: Restore cached Taskwarrior build
         id: taskwarrior-cache
-        uses: actions/cache@v5
+        uses: actions/cache@v5.0.5
         with:
           path: tmp/taskwarrior-install
           key: ${{ runner.os }}-taskwarrior-${{ hashFiles('.config/mise.toml', '.config/mise/tasks/taskwarrior-tui/build-taskwarrior') }}
@@ -57,7 +57,7 @@ jobs:
     name: Rustfmt
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: jdx/mise-action@v4
       - uses: Swatinem/rust-cache@v2
         with:
@@ -68,7 +68,7 @@ jobs:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: jdx/mise-action@v4
       - uses: Swatinem/rust-cache@v2
         with:
