@@ -4318,8 +4318,36 @@ impl TaskwarriorTui {
         "depends:".to_string(),
         "tag:".to_string(),
         "recur:".to_string(),
+        "until:".to_string(),
       ] {
         self.completion_list.insert(("attribute".to_string(), s));
+      }
+      for s in [
+        "daily",
+        "weekdays",
+        "weekly",
+        "biweekly",
+        "fortnight",
+        "monthly",
+        "bimonthly",
+        "quarterly",
+        "semiannual",
+        "yearly",
+        "biyearly",
+        "2d",
+        "3d",
+        "2w",
+        "2m",
+        "3m",
+        "6m",
+        "2y",
+      ] {
+        self.completion_list.insert(("recur".to_string(), s.to_string()));
+      }
+      for task in tasks {
+        if let Some(r) = task.recur() {
+          self.completion_list.insert(("recur".to_string(), r.to_string()));
+        }
       }
     }
 
