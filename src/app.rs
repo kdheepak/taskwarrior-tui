@@ -41,6 +41,7 @@ use versions::Versioning;
 use crate::{
   action::Action,
   calendar::Calendar,
+  column_menu::ColumnMenu,
   completion::{CompletionList, get_start_word_under_cursor},
   config::{Config, TaskInfoLocation},
   datetime,
@@ -177,6 +178,7 @@ pub struct TaskwarriorTui {
   pub projects: ProjectsState,
   pub contexts: ContextsState,
   pub reports: ReportsState,
+  pub column_menu: ColumnMenu,
   pub task_version: Versioning,
   pub error: Option<String>,
   pub event_loop: crate::event::EventLoop,
@@ -276,6 +278,7 @@ impl TaskwarriorTui {
       projects: ProjectsState::new(),
       contexts: ContextsState::new(),
       reports: ReportsState::new(),
+      column_menu: ColumnMenu::new(),
       task_version,
       error: None,
       event_loop,
@@ -1023,6 +1026,20 @@ impl TaskwarriorTui {
         );
         self.draw_report_menu(f, 80, 50);
       }
+      Action::ColumnMenu => {
+        self.draw_command(
+          f,
+          rects[1],
+          self.filter.as_str(),
+          ("Filter Tasks".into(), None),
+          Self::get_position(&self.filter),
+          false,
+          self.error.clone(),
+          None,
+        );
+        let area = centered_rect(50, 60, f.area());
+        self.column_menu.draw(f, area, self.config.uda_style_report_selection);
+      }
       Action::DonePrompt => {
         let label = if task_ids.len() > 1 {
           format!("Done Tasks {}?", task_ids.join(","))
@@ -1669,7 +1686,33 @@ impl TaskwarriorTui {
 
   fn get_task_report(&mut self) -> (Vec<Vec<String>>, Vec<String>) {
     self.task_report_table.generate_table(&self.tasks);
-    let (tasks, headers) = self.task_report_table.simplify_table();
+    let (mut tasks, mut headers) = self.task_report_table.simplify_table();
+
+    // Drop columns the user hid via the column menu, keeping
+    // `visible_columns` aligned with the display table.
+    let hidden = self.column_menu.hidden_for(&self.report);
+    if !hidden.is_empty() {
+      let keep: Vec<bool> = self.task_report_table.visible_columns.iter().map(|c| !hidden.contains(c)).collect();
+      let filter = |row: Vec<String>| -> Vec<String> {
+        row
+          .into_iter()
+          .enumerate()
+          .filter(|(i, _)| keep.get(*i).copied().unwrap_or(true))
+          .map(|(_, e)| e)
+          .collect()
+      };
+      tasks = tasks.into_iter().map(filter).collect();
+      headers = filter(headers);
+      self.task_report_table.visible_columns = self
+        .task_report_table
+        .visible_columns
+        .drain(..)
+        .enumerate()
+        .filter(|(i, _)| keep.get(*i).copied().unwrap_or(true))
+        .map(|(_, e)| e)
+        .collect();
+    }
+
     (tasks, headers)
   }
 
@@ -3477,6 +3520,11 @@ impl TaskwarriorTui {
               .unwrap_or(0);
             self.reports.table_state.select(Some(active_pos));
             self.mode = Mode::Tasks(Action::ReportMenu);
+          } else if input == self.keyconfig.column_menu {
+            self
+              .column_menu
+              .sync(&self.report, &self.task_report_table.columns, &self.task_report_table.labels);
+            self.mode = Mode::Tasks(Action::ColumnMenu);
           } else if input == self.keyconfig.previous_tab {
             if self.config.uda_change_focus_rotate {
               self.mode = Mode::Calendar;
@@ -3610,6 +3658,27 @@ impl TaskwarriorTui {
             _ => {}
           }
         }
+        Action::ColumnMenu => match input {
+          KeyCode::Esc => {
+            self.mode = Mode::Tasks(Action::Report);
+          }
+          KeyCode::Char(' ') | KeyCode::Char('\n') => {
+            self.column_menu.toggle_current(&self.report);
+          }
+          KeyCode::Char('a') => {
+            self.column_menu.reset(&self.report);
+          }
+          _ if input == KeyCode::Down || input == self.keyconfig.down => {
+            self.column_menu.next();
+          }
+          _ if input == KeyCode::Up || input == self.keyconfig.up => {
+            self.column_menu.previous();
+          }
+          _ if input == self.keyconfig.quit => {
+            self.mode = Mode::Tasks(Action::Report);
+          }
+          _ => {}
+        },
         Action::HelpPopup => {
           if input == self.keyconfig.quit || input == KeyCode::Esc {
             self.mode = Mode::Tasks(Action::Report);

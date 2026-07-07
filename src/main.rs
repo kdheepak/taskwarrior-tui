@@ -7,6 +7,7 @@ mod action;
 mod app;
 mod calendar;
 mod cli;
+mod column_menu;
 mod completion;
 mod config;
 mod datetime;
