@@ -119,6 +119,9 @@ pub struct Config {
   pub uda_style_context_active: Style,
   pub uda_style_report_menu_active: Style,
   pub uda_style_report_selection: Style,
+  pub uda_style_report_near_description: Style,
+  pub uda_urgency_dynamic_color: bool,
+  pub uda_urgency_color_cap: f64,
   pub uda_style_calendar_title: Style,
   pub uda_style_calendar_today: Style,
   pub uda_style_navbar: Style,
@@ -214,6 +217,14 @@ impl Config {
     let uda_shortcuts = Self::get_uda_shortcuts(data);
     let uda_background_process = Self::get_uda_background_process(data);
     let uda_background_process_period = Self::get_uda_background_process_period(data);
+    let uda_style_report_near_description = Self::get_uda_style("report.near-description", data).unwrap_or_default();
+    let uda_urgency_dynamic_color = Self::get_config("uda.taskwarrior-tui.urgency.dynamic-color", data)
+      .and_then(|s| s.get_bool())
+      .unwrap_or(true);
+    let uda_urgency_color_cap = Self::get_config("uda.taskwarrior-tui.urgency.color-cap", data)
+      .and_then(|s| s.parse::<f64>().ok())
+      .filter(|v| *v > 0.0)
+      .unwrap_or(15.0);
     let uda_style_report_selection = uda_style_report_selection.unwrap_or_default();
     let uda_style_report_scrollbar = uda_style_report_scrollbar.unwrap_or_else(|| Style::default().fg(Color::Black));
     let uda_style_report_scrollbar_area = uda_style_report_scrollbar_area.unwrap_or_default();
@@ -280,6 +291,9 @@ impl Config {
       uda_selection_reverse,
       uda_calendar_months_per_row,
       uda_style_report_selection,
+      uda_style_report_near_description,
+      uda_urgency_dynamic_color,
+      uda_urgency_color_cap,
       uda_style_report_scrollbar,
       uda_style_report_scrollbar_area,
       uda_style_calendar_title,
