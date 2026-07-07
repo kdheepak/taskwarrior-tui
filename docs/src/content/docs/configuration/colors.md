@@ -140,3 +140,24 @@ color.scheduled=color109
 ```
 
 See [advanced configuration](./advanced.md) for TUI-specific style keys.
+
+## Dynamic urgency color
+
+The urgency column gets its own foreground color on a green -> yellow -> red
+gradient, scaled proportionally to the most urgent visible task. A single
+outlier cannot compress the scale beyond the configured cap.
+
+```plaintext
+uda.taskwarrior-tui.urgency.dynamic-color=true   # enabled by default
+uda.taskwarrior-tui.urgency.color-cap=15         # urgency value where the gradient saturates
+```
+
+## Near-description tint
+
+Columns rendered next to the description can be tinted so they stand out from
+it. Empty (the default) leaves them untouched:
+
+```plaintext
+uda.taskwarrior-tui.style.report.near-description=rgb541
+```
+

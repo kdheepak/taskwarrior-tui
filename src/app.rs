@@ -54,6 +54,7 @@ use crate::{
     project::ProjectsState,
     report::ReportsState,
   },
+  report_style::CellStyleContext,
   scrollbar::Scrollbar,
   table::{Row, Table, TableMode, TaskwarriorTuiTableState},
   task_report::TaskReportTable,
@@ -1594,8 +1595,22 @@ impl TaskwarriorTui {
     let mut rows = vec![];
     let mut highlight_style = Style::default();
     let mut pos = 0;
+
+    let columns = &self.task_report_table.visible_columns;
+    let max_urgency = self.tasks.iter().filter_map(|t| t.urgency().copied()).fold(0.0_f64, f64::max);
+    let cell_style_context = CellStyleContext {
+      urgency_col: columns.iter().position(|c| c == "urgency" || c.starts_with("urgency.")),
+      description_col: columns.iter().position(|c| c == "description" || c.starts_with("description.")),
+      column_count: headers.len(),
+      urgency_cap: self.config.uda_urgency_color_cap,
+      urgency_denom: CellStyleContext::denom(max_urgency, self.config.uda_urgency_color_cap),
+      dynamic_urgency: self.config.uda_urgency_dynamic_color,
+      near_description_style: self.config.uda_style_report_near_description,
+    };
+
     for (i, task) in tasks.iter().enumerate() {
       let style = self.task_report_row_style(i, &self.tasks[i]);
+      let cell_styles = cell_style_context.cell_styles(self.tasks[i].urgency().copied());
       if i == selected {
         pos = i;
         highlight_style = style.patch(self.config.uda_style_report_selection);
@@ -1615,7 +1630,7 @@ impl TaskwarriorTui {
           highlight_style = highlight_style.add_modifier(Modifier::REVERSED);
         }
       }
-      rows.push(Row::StyledData(task.iter(), style));
+      rows.push(Row::CellStyledData(task.iter(), style, cell_styles));
     }
 
     let constraints: Vec<Constraint> = widths
