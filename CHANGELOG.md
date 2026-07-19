@@ -6,6 +6,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.1](https://github.com/kdheepak/taskwarrior-tui/compare/v0.27.0...v0.27.1) - 2026-07-19
+
+### Other
+
+- *(deps)* bump the github-actions-dependencies group with 3 updates ([#788](https://github.com/kdheepak/taskwarrior-tui/pull/788))
+- *(deps)* bump regex from 1.12.4 to 1.13.0 in the cargo-dependencies group ([#787](https://github.com/kdheepak/taskwarrior-tui/pull/787))
+- *(deps)* bump the github-actions-dependencies group across 1 directory with 3 updates ([#785](https://github.com/kdheepak/taskwarrior-tui/pull/785))
+- *(deps)* bump the cargo-dependencies group across 1 directory with 11 updates ([#786](https://github.com/kdheepak/taskwarrior-tui/pull/786))
+- *(deps)* bump the cargo-dependencies group with 2 updates ([#760](https://github.com/kdheepak/taskwarrior-tui/pull/760))
+- *(deps)* bump the cargo-dependencies group across 1 directory with 2 updates ([#759](https://github.com/kdheepak/taskwarrior-tui/pull/759))
+- Update dependabot.yml ([#755](https://github.com/kdheepak/taskwarrior-tui/pull/755))
+- *(deps)* bump the cargo-dependencies group with 3 updates ([#753](https://github.com/kdheepak/taskwarrior-tui/pull/753))
+- *(deps)* bump the cargo-dependencies group with 2 updates ([#751](https://github.com/kdheepak/taskwarrior-tui/pull/751))
+- *(deps)* bump softprops/action-gh-release from 2 to 3 ([#750](https://github.com/kdheepak/taskwarrior-tui/pull/750))
+- *(deps)* bump actions/github-script from 8 to 9 ([#749](https://github.com/kdheepak/taskwarrior-tui/pull/749))
+- fix jump-to-task-on-add config key ([#747](https://github.com/kdheepak/taskwarrior-tui/pull/747))
+
 ## [0.27.0](https://github.com/kdheepak/taskwarrior-tui/compare/v0.26.12...v0.27.0) - 2026-04-09
 
 ### Added
