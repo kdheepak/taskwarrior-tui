@@ -32,7 +32,7 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v7
-      - uses: jdx/mise-action@v4
+      - uses: jdx/mise-action@v4.2.0
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: cargo-${{ runner.os }}
@@ -46,7 +46,7 @@ jobs:
           path: target/debian/taskwarrior-tui.deb
       - name: Releasing assets
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@v3.0.1
         with:
           files: |
             target/debian/*.deb
@@ -59,7 +59,7 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v7
-      - uses: jdx/mise-action@v4
+      - uses: jdx/mise-action@v4.2.0
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: cargo-${{ runner.os }}
@@ -75,7 +75,7 @@ jobs:
           path: target/release/rpmbuild/RPMS/x86_64/taskwarrior-tui-*.x86_64.rpm
       - name: Releasing assets
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@v3.0.1
         with:
           files: |
             target/release/rpmbuild/RPMS/x86_64/taskwarrior-tui-*.x86_64.rpm
@@ -88,7 +88,7 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v7
-      - uses: jdx/mise-action@v4
+      - uses: jdx/mise-action@v4.2.0
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: cargo-${{ runner.os }}
