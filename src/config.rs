@@ -101,6 +101,7 @@ pub struct Config {
   pub uda_task_report_info_show: bool,
   pub uda_task_report_looping: bool,
   pub uda_task_report_jump_to_task_on_add: bool,
+  pub uda_nested: bool,
   pub uda_selection_indicator: String,
   pub uda_mark_highlight_indicator: String,
   pub uda_unmark_highlight_indicator: String,
@@ -183,6 +184,7 @@ impl Config {
     let uda_task_report_info_show = Self::get_uda_task_report_info_show(data);
     let uda_task_report_looping = Self::get_uda_task_report_looping(data);
     let uda_task_report_jump_to_task_on_add = Self::get_uda_task_report_jump_to_task_on_add(data);
+    let uda_nested = Self::get_uda_nested(data);
     let uda_selection_indicator = Self::get_uda_selection_indicator(data);
     let uda_mark_highlight_indicator = Self::get_uda_mark_highlight_indicator(data);
     let uda_unmark_highlight_indicator = Self::get_uda_unmark_highlight_indicator(data);
@@ -266,6 +268,7 @@ impl Config {
       uda_task_report_info_show,
       uda_task_report_looping,
       uda_task_report_jump_to_task_on_add,
+      uda_nested,
       uda_selection_indicator,
       uda_mark_highlight_indicator,
       uda_unmark_highlight_indicator,
@@ -696,6 +699,13 @@ impl Config {
       .unwrap_or_default()
       .get_bool()
       .unwrap_or(true)
+  }
+
+  fn get_uda_nested(data: &str) -> bool {
+    Self::get_config("uda.taskwarrior-tui.nested", data)
+      .unwrap_or_default()
+      .get_bool()
+      .unwrap_or(false)
   }
 
   fn get_uda_task_report_looping(data: &str) -> bool {
