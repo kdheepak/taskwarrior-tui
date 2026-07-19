@@ -69,7 +69,7 @@ jobs:
       MACOSX_DEPLOYMENT_TARGET: 10.7
     steps:
       - uses: actions/checkout@v7
-      - uses: jdx/mise-action@v4
+      - uses: jdx/mise-action@v4.2.0
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: cargo-${{ runner.os }}-${{ matrix.target }}
@@ -119,7 +119,7 @@ jobs:
           pattern: taskwarrior-tui-*
           merge-multiple: true
       - name: Releasing assets
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@v3.0.1
         with:
           files: |
             release-artifacts/*.tar.gz
