@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: jdx/mise-action@v4.2.0
+      - uses: jdx/mise-action@v4.2.3
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: coverage-${{ runner.os }}
@@ -44,7 +44,7 @@ jobs:
       - name: Gather coverage data
         run: mise run taskwarrior-tui:coverage
       - name: Coveralls upload
-        uses: coverallsapp/github-action@v2
+        uses: coverallsapp/github-action@v2.3.6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           file: ./target/debug/coverage/lcov
