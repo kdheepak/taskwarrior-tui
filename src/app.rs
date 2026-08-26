@@ -1561,7 +1561,8 @@ impl TaskwarriorTui {
     }
 
     // now start trimming
-    while (widths.iter().sum::<usize>() as u16) >= maximum_column_width - (headers.len()) as u16 {
+    let trim_target = maximum_column_width.saturating_sub(headers.len() as u16) as usize;
+    while widths.iter().sum::<usize>() >= trim_target {
       let index = widths.iter().position(|i| i == widths.iter().max().unwrap_or(&0)).unwrap_or_default();
       if widths[index] == 1 {
         break;
