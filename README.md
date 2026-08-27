@@ -105,6 +105,15 @@ uda.taskwarrior-tui.report.next.filter=(status:pending or status:waiting)
 
 </details>
 
+<details>
+<summary>Enabling nested tasks (experimental)</summary>
+
+```.sh
+task config uda.taskwarrior-tui.nested true 
+```
+
+</details>
+
 ### References / Resources
 
 If you like `taskwarrior-tui`, please consider donating to

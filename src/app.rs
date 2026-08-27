@@ -154,6 +154,9 @@ pub struct TaskwarriorTui {
   pub current_selection_uuid: Option<Uuid>,
   pub current_selection_id: Option<u64>,
   pub task_report_table: TaskReportTable,
+  pub nested: bool,
+  pub focus_stack: Vec<(String, String)>,
+  pub subtask_parent: Option<String>,
   pub calendar_year: i32,
   pub mode: Mode,
   pub previous_mode: Option<Mode>,
@@ -256,6 +259,9 @@ impl TaskwarriorTui {
       task_details_scroll: 0,
       task_details_defaultwidth: 0,
       task_report_info_show: c.uda_task_report_info_show,
+      nested: c.uda_nested,
+      focus_stack: vec![],
+      subtask_parent: None,
       task_info_location_override: None,
       task_info_location_override_width: None,
       config: c,
@@ -503,17 +509,28 @@ impl TaskwarriorTui {
       Mode::Calendar => 3,
     };
     let navbar_block = Block::default().style(self.config.uda_style_navbar);
-    let context = Line::from(vec![
-      Span::from(&self.report),
-      Span::from(" "),
-      Span::from("["),
-      Span::from(if self.current_context.is_empty() {
-        "none"
-      } else {
-        &self.current_context
-      }),
-      Span::from("]"),
-    ]);
+    let context = Line::from(
+      vec![
+        Span::from(&self.report),
+        Span::from(" "),
+        Span::from("["),
+        Span::from(if self.current_context.is_empty() {
+          "none"
+        } else {
+          &self.current_context
+        }),
+        Span::from("]"),
+      ]
+      .into_iter()
+      .chain(
+        self
+          .focus_stack
+          .iter()
+          .filter(|_| matches!(self.mode, Mode::Tasks(_)))
+          .flat_map(|(_, d)| [Span::from(" \u{203a} "), Span::from(d.as_str())]),
+      )
+      .collect::<Vec<_>>(),
+    );
     let tabs = Tabs::new(tab_names)
       .block(navbar_block.clone())
       .select(selected_tab)
@@ -971,7 +988,14 @@ impl TaskwarriorTui {
           rects[1],
           self.command.as_str(),
           (
-            Span::styled("Add Task", Style::default().add_modifier(Modifier::BOLD)),
+            Span::styled(
+              match &self.subtask_parent {
+                None => "Add Task",
+                Some(p) if self.focus_stack.last().map(|(u, _)| u) == Some(p) => "Add Sub-Task Here",
+                Some(_) => "Add Sub-Task",
+              },
+              Style::default().add_modifier(Modifier::BOLD),
+            ),
             self
               .history_status
               .as_ref()
@@ -1675,6 +1699,7 @@ impl TaskwarriorTui {
       if self.config.uda_task_report_use_all_tasks_for_completion {
         self.export_all_tasks()?;
       }
+      self.update_child_counts();
       self.contexts.update_data(&self.task_exe)?;
       self.reports.update_data(&self.report, &Self::task_show_output(&self.task_exe)?);
       self.projects.update_data(&self.task_exe)?;
@@ -1877,6 +1902,7 @@ impl TaskwarriorTui {
     let mut command = std::process::Command::new(&self.task_exe);
     command.arg("context").arg(context);
     command.output()?;
+    self.focus_stack.clear();
     Ok(true)
   }
 
@@ -1974,6 +2000,7 @@ impl TaskwarriorTui {
     }
 
     self.task_report_table.export_headers(Some(data), &self.report, &self.task_exe)?;
+    self.focus_stack.clear();
     Ok(true)
   }
 
@@ -2208,6 +2235,31 @@ impl TaskwarriorTui {
     Ok(())
   }
 
+  fn focus_filter(&self) -> Option<String> {
+    if !self.nested {
+      return None;
+    }
+    Some(match self.focus_stack.last() {
+      Some((uuid, _)) => format!("partof:{}", uuid),
+      None => "partof.none:".to_string(),
+    })
+  }
+
+  fn report_filter(&self, extra: Option<&str>) -> String {
+    let base = self.filter.as_str().trim();
+    if !self.nested {
+      return base.to_string();
+    }
+    let mut parts: Vec<&str> = base
+      .split_whitespace()
+      .filter(|w| !w.starts_with("partof:") && !w.starts_with("partof."))
+      .collect();
+    if let Some(term) = extra {
+      parts.push(term);
+    }
+    parts.join(" ")
+  }
+
   pub fn export_tasks(&mut self) -> Result<()> {
     let mut task = std::process::Command::new(&self.task_exe);
 
@@ -2219,7 +2271,8 @@ impl TaskwarriorTui {
       .arg("rc._forcecolor=off");
     // .arg("rc.verbose:override=false");
 
-    if let Some(args) = shlex::split(format!(r#"rc.report.{}.filter='{}'"#, self.report, self.filter.trim()).trim()) {
+    let report_filter = self.report_filter(self.focus_filter().as_deref());
+    if let Some(args) = shlex::split(format!(r#"rc.report.{}.filter='{}'"#, self.report, report_filter).trim()) {
       for arg in args {
         task.arg(arg);
       }
@@ -2269,6 +2322,100 @@ impl TaskwarriorTui {
       self.error = Some(format!("Cannot run `{:?}` - ({}) error:\n{}", &task, output.status, error));
     }
 
+    Ok(())
+  }
+
+  fn update_child_counts(&mut self) {
+    if !self.nested {
+      self.task_report_table.child_counts.clear();
+      return;
+    }
+
+    let mut task = std::process::Command::new(&self.task_exe);
+
+    task
+      .arg("rc.json.array=on")
+      .arg("rc.confirmation=off")
+      .arg("rc.json.depends.array=on")
+      .arg("rc.color=off")
+      .arg("rc._forcecolor=off");
+
+    let report_filter = self.report_filter(Some("partof.any:"));
+    if let Some(args) = shlex::split(format!(r#"rc.report.{}.filter='{}'"#, self.report, report_filter).trim()) {
+      for arg in args {
+        task.arg(arg);
+      }
+    }
+
+    if !self.current_context_filter.trim().is_empty() && self.task_version >= *TASKWARRIOR_VERSION_SUPPORTED {
+      if let Some(args) = shlex::split(&self.current_context_filter) {
+        for arg in args {
+          task.arg(arg);
+        }
+      }
+    } else if !self.current_context_filter.trim().is_empty() {
+      task.arg(format!("'\\({}\\)'", self.current_context_filter));
+    }
+
+    task.arg("export");
+
+    if self.task_version >= *TASKWARRIOR_VERSION_SUPPORTED {
+      task.arg(&self.report);
+    }
+
+    let mut counts: HashMap<Uuid, usize> = HashMap::new();
+    match task.output() {
+      Ok(output) if output.status.success() => {
+        let data = String::from_utf8_lossy(&output.stdout);
+        let tasks: Vec<Task> = import(data.as_bytes()).unwrap_or_default();
+        for t in &tasks {
+          if let Some(UDAValue::Str(p)) = t.uda().get("partof")
+            && let Ok(uuid) = Uuid::parse_str(p)
+          {
+            *counts.entry(uuid).or_default() += 1;
+          }
+        }
+      }
+      Ok(output) => debug!("Unable to compute child counts: {}", String::from_utf8_lossy(&output.stderr)),
+      Err(e) => debug!("Unable to run child-count export: {}", e),
+    }
+    self.task_report_table.child_counts = counts;
+  }
+
+  fn begin_task_add(&mut self, subtask_parent: Option<String>) {
+    self.subtask_parent = subtask_parent;
+    self.mode = Mode::Tasks(Action::Add);
+    self.command_history.reset();
+    self.history_status = Some(format!(
+      "{} / {}",
+      self
+        .command_history
+        .history_index()
+        .unwrap_or_else(|| self.command_history.history_len().saturating_sub(1))
+        .saturating_add(1),
+      self.command_history.history_len()
+    ));
+    self.update_completion_list();
+  }
+
+  async fn traverse_down(&mut self) -> Result<()> {
+    let Some(task) = self.task_current() else {
+      return Ok(());
+    };
+    self.focus_stack.push((task.uuid().to_string(), task.description().to_string()));
+    self.update(true).await?;
+    self.current_selection = 0;
+    self.current_selection_uuid = None;
+    self.current_selection_id = None;
+    self.update_task_table_state();
+    Ok(())
+  }
+
+  async fn traverse_up(&mut self) -> Result<()> {
+    if let Some((uuid, _)) = self.focus_stack.pop() {
+      self.current_selection_uuid = Uuid::parse_str(&uuid).ok();
+      self.update(true).await?;
+    }
     Ok(())
   }
 
@@ -2551,6 +2698,10 @@ impl TaskwarriorTui {
   pub fn task_add(&mut self) -> Result<(), String> {
     let mut command = std::process::Command::new(&self.task_exe);
     command.arg("add");
+
+    if let Some(uuid) = self.subtask_parent.take() {
+      command.arg(format!("partof:{}", uuid));
+    }
 
     let shell = self.command.as_str();
 
@@ -3117,8 +3268,22 @@ impl TaskwarriorTui {
     if let Mode::Tasks(task_mode) = &self.mode {
       match task_mode {
         Action::Report => {
-          if input == KeyCode::Esc {
+          if self.nested && !self.focus_stack.is_empty() && (input == KeyCode::Esc || input == self.keyconfig.traverse_up) {
+            self.traverse_up().await?;
+          } else if input == KeyCode::Esc {
             self.marked.clear();
+          } else if self.nested && input == self.keyconfig.traverse_down {
+            self.traverse_down().await?;
+          } else if self.nested && input == self.keyconfig.subtask {
+            let parent = self
+              .task_current()
+              .map(|t| t.uuid().to_string())
+              .or_else(|| self.focus_stack.last().map(|(u, _)| u.clone()));
+            self.begin_task_add(parent);
+          } else if self.nested && input == self.keyconfig.subtask_sibling {
+            if let Some(uuid) = self.focus_stack.last().map(|(u, _)| u.clone()) {
+              self.begin_task_add(Some(uuid));
+            }
           } else if input == self.keyconfig.quit || input == KeyCode::Ctrl('c') {
             self.should_quit = true;
           } else if input == self.keyconfig.select {
@@ -3992,6 +4157,7 @@ impl TaskwarriorTui {
             } else {
               self.reset_command();
               self.history_status = None;
+              self.subtask_parent = None;
               self.mode = Mode::Tasks(Action::Report);
             }
           }
