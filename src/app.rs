@@ -153,6 +153,7 @@ pub struct TaskwarriorTui {
   pub current_selection: usize,
   pub current_selection_uuid: Option<Uuid>,
   pub current_selection_id: Option<u64>,
+  pub selection_follow: bool,
   pub task_report_table: TaskReportTable,
   pub calendar_year: i32,
   pub mode: Mode,
@@ -245,6 +246,7 @@ impl TaskwarriorTui {
       current_selection: 0,
       current_selection_uuid: None,
       current_selection_id: None,
+      selection_follow: true,
       current_context_filter: "".to_string(),
       current_context: "".to_string(),
       command: LineBuffer::with_capacity(MAX_LINE),
@@ -1663,12 +1665,14 @@ impl TaskwarriorTui {
     if force || self.dirty || self.tasks_changed_since(self.last_export).unwrap_or(true) {
       self.get_context()?;
       let task_uuids = self.selected_task_uuids();
-      if self.current_selection_uuid.is_none()
+      if self.selection_follow
+        && self.current_selection_uuid.is_none()
         && self.current_selection_id.is_none()
         && let [uuid] = task_uuids.as_slice()
       {
         self.current_selection_uuid = Some(*uuid);
       }
+      self.selection_follow = true;
 
       self.task_report_table.export_headers(None, &self.report, &self.task_exe)?;
       self.export_tasks()?;
@@ -2441,8 +2445,8 @@ impl TaskwarriorTui {
       None => Err(format!("Unable to run shortcut number {}: shlex::split(`{}`) failed.", s, shell)),
     };
 
-    if let [uuid] = task_uuids.as_slice() {
-      self.current_selection_uuid = Some(*uuid);
+    if !self.config.uda_task_report_jump_to_task_on_modify {
+      self.selection_follow = false;
     }
 
     self.resume_tui().await.unwrap();
@@ -2492,8 +2496,8 @@ impl TaskwarriorTui {
       None => Err(format!("Cannot shlex split `{}`", shell)),
     };
 
-    if let [uuid] = task_uuids.as_slice() {
-      self.current_selection_uuid = Some(*uuid);
+    if !self.config.uda_task_report_jump_to_task_on_modify {
+      self.selection_follow = false;
     }
 
     r
