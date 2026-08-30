@@ -34,7 +34,7 @@ task-hookrs = "0.9.0"
 tokio = { version = "1.52.3", features = ["macros", "process", "rt-multi-thread", "sync", "time"] }
 ratatui = "0.30"
 unicode-segmentation = "1.13.2"
-unicode-truncate = "2.0.1"
+unicode-truncate = "3.0.0"
 unicode-width = "0.2.2"
 uuid = "1.23.1"
 versions = "7.0.0"
