@@ -32,7 +32,7 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v7
-      - uses: jdx/mise-action@v4.2.4
+      - uses: jdx/mise-action@v4.2.5
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: cargo-${{ runner.os }}
@@ -59,7 +59,7 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v7
-      - uses: jdx/mise-action@v4.2.4
+      - uses: jdx/mise-action@v4.2.5
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: cargo-${{ runner.os }}
@@ -88,7 +88,7 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v7
-      - uses: jdx/mise-action@v4.2.4
+      - uses: jdx/mise-action@v4.2.5
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: cargo-${{ runner.os }}
