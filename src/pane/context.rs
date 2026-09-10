@@ -109,35 +109,7 @@ impl ContextsState {
     let output = Command::new(task_exe).arg("context").output()?;
     let data = String::from_utf8_lossy(&output.stdout);
 
-    self.rows = vec![];
-    for (i, line) in data.trim().split('\n').enumerate() {
-      if line.starts_with("  ") && line.trim().starts_with("write") {
-        continue;
-      }
-      if line.starts_with("  ") && !(line.trim().ends_with("yes") || line.trim().ends_with("no")) {
-        let definition = line.trim();
-        if let Some(c) = self.rows.last_mut() {
-          c.definition = format!("{} {}", c.definition, definition);
-        }
-        continue;
-      }
-      let line = line.trim();
-      if line.is_empty() || line == "Use 'task context none' to unset the current context." {
-        continue;
-      }
-      if i == 0 || i == 1 {
-        continue;
-      }
-      let mut s = line.split_whitespace();
-      let name = s.next().unwrap_or_default();
-      let typ = s.next().unwrap_or_default();
-      let active = s.last().unwrap_or_default();
-      let definition = line.replacen(name, "", 1);
-      let definition = definition.replacen(typ, "", 1);
-      let definition = definition.strip_suffix(active).unwrap_or_default();
-      let context = ContextDetails::new(name.to_string(), definition.trim().to_string(), active.to_string(), typ.to_string());
-      self.rows.push(context);
-    }
+    self.rows = Self::parse(&data);
     if self.rows.iter().any(|r| r.active != "no") {
       self.rows.insert(
         0,
@@ -150,5 +122,86 @@ impl ContextsState {
       );
     }
     Ok(())
+  }
+
+  fn parse(data: &str) -> Vec<ContextDetails> {
+    let mut rows: Vec<ContextDetails> = vec![];
+    for (i, line) in data.trim().split('\n').enumerate() {
+      if line.starts_with("  ") && line.trim().starts_with("write") {
+        continue;
+      }
+      if line.starts_with("  ") && !(line.trim().ends_with("yes") || line.trim().ends_with("no")) {
+        let definition = line.trim();
+        if let Some(c) = rows.last_mut() {
+          c.definition = format!("{} {}", c.definition, definition);
+        }
+        continue;
+      }
+      let line = line.trim();
+      if line.is_empty() || line == "Use 'task context none' to unset the current context." {
+        continue;
+      }
+      // Skip the header row and, on taskwarrior 2.x, the dashed separator row under it.
+      // taskwarrior 3.x underlines the header instead, so the first context sits on line 1.
+      if i == 0 || line.chars().all(|c| c == '-' || c == ' ') {
+        continue;
+      }
+      let mut s = line.split_whitespace();
+      let name = s.next().unwrap_or_default();
+      let typ = s.next().unwrap_or_default();
+      let active = s.last().unwrap_or_default();
+      let definition = line.replacen(name, "", 1);
+      let definition = definition.replacen(typ, "", 1);
+      let definition = definition.strip_suffix(active).unwrap_or_default();
+      rows.push(ContextDetails::new(
+        name.to_string(),
+        definition.trim().to_string(),
+        active.to_string(),
+        typ.to_string(),
+      ));
+    }
+    rows
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn names(rows: &[ContextDetails]) -> Vec<&str> {
+    rows.iter().map(|r| r.name.as_str()).collect()
+  }
+
+  #[test]
+  fn parse_taskwarrior_3_output_keeps_first_context() {
+    let data = [
+      "",
+      "\x1b[4mName   \x1b[0m \x1b[4mType \x1b[0m \x1b[4mDefinition   \x1b[0m \x1b[4mActive\x1b[0m",
+      "agent  read  project:agent no",
+      "       write project:agent no",
+      "comms  read  +comms        yes",
+      "       write +comms        no",
+      "",
+      "Use 'task context none' to unset the current context.",
+    ]
+    .join("\n");
+    let rows = ContextsState::parse(&data);
+    assert_eq!(names(&rows), ["agent", "comms"]);
+    assert_eq!(rows[0].definition, "project:agent");
+    assert_eq!(rows[1].active, "yes");
+  }
+
+  #[test]
+  fn parse_taskwarrior_2_output_skips_separator() {
+    let data = [
+      "",
+      "Name   Type  Definition    Active",
+      "-----  ----- ------------- ------",
+      "agent  read  project:agent no",
+      "       write project:agent no",
+    ]
+    .join("\n");
+    let rows = ContextsState::parse(&data);
+    assert_eq!(names(&rows), ["agent"]);
   }
 }
