@@ -108,6 +108,10 @@ where
 {
   Data(D),
   StyledData(D, Style),
+  /// Row style plus optional per-cell style overrides. Cell styles are
+  /// patched on top of the row style (or the highlight style when selected),
+  /// so a cell override that only sets a foreground keeps the row background.
+  CellStyledData(D, Style, Vec<Option<Style>>),
 }
 
 /// A widget to display data in formatted columns
@@ -448,34 +452,53 @@ where
         }
       });
       for (i, row) in self.rows.skip(state.offset).take(remaining).enumerate() {
-        let (data, style, symbol) = match row {
-          Row::Data(d) | Row::StyledData(d, _) if Some(i) == state.current_selection().map(|s| s - state.offset) => match state.mode {
-            TableMode::MultipleSelection => {
-              if state.marked.contains(&(i + state.offset)) {
-                (d, highlight_style, mark_highlight_symbol.to_string())
-              } else {
-                (d, highlight_style, unmark_highlight_symbol.to_string())
-              }
-            }
-            TableMode::SingleSelection => (d, highlight_style, highlight_symbol.to_string()),
-          },
-          Row::Data(d) => {
-            if state.marked.contains(&(i + state.offset)) {
-              (d, default_style, mark_symbol.to_string())
+        let is_selected = Some(i) == state.current_selection().map(|s| s - state.offset);
+        let selected_symbol = |marked: bool| match state.mode {
+          TableMode::MultipleSelection => {
+            if marked {
+              mark_highlight_symbol.to_string()
             } else {
-              (d, default_style, blank_symbol.to_string())
+              unmark_highlight_symbol.to_string()
+            }
+          }
+          TableMode::SingleSelection => highlight_symbol.to_string(),
+        };
+        let marked = state.marked.contains(&(i + state.offset));
+        let (data, style, symbol, cell_styles) = match row {
+          Row::Data(d) => {
+            if is_selected {
+              (d, highlight_style, selected_symbol(marked), Vec::new())
+            } else if marked {
+              (d, default_style, mark_symbol.to_string(), Vec::new())
+            } else {
+              (d, default_style, blank_symbol.to_string(), Vec::new())
             }
           }
           Row::StyledData(d, s) => {
-            if state.marked.contains(&(i + state.offset)) {
-              (d, s, mark_symbol.to_string())
+            if is_selected {
+              (d, highlight_style, selected_symbol(marked), Vec::new())
+            } else if marked {
+              (d, s, mark_symbol.to_string(), Vec::new())
             } else {
-              (d, s, blank_symbol.to_string())
+              (d, s, blank_symbol.to_string(), Vec::new())
+            }
+          }
+          Row::CellStyledData(d, s, cs) => {
+            if is_selected {
+              (d, highlight_style, selected_symbol(marked), cs)
+            } else if marked {
+              (d, s, mark_symbol.to_string(), cs)
+            } else {
+              (d, s, blank_symbol.to_string(), cs)
             }
           }
         };
         x = table_area.left();
         for (c, (w, elt)) in solved_widths.iter().zip(data).enumerate() {
+          let cell_style = match cell_styles.get(c).copied().flatten() {
+            Some(cs) => style.patch(cs),
+            None => style,
+          };
           let s = if c == 0 {
             buf.set_stringn(
               x,
@@ -516,7 +539,7 @@ where
               format!("{elt:<width$}", elt = elt, width = *w as usize)
             }
           };
-          buf.set_stringn(x, y + i as u16, s, *w as usize, style);
+          buf.set_stringn(x, y + i as u16, s, *w as usize, cell_style);
           x += *w + self.column_spacing;
         }
       }

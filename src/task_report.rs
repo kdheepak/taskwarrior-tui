@@ -112,6 +112,9 @@ fn taskwarrior_to_chrono(fmt: &str) -> String {
 pub struct TaskReportTable {
   pub labels: Vec<String>,
   pub columns: Vec<String>,
+  /// Column names still present after `simplify_table` removes empty columns;
+  /// indices here match the display table, unlike `columns`.
+  pub visible_columns: Vec<String>,
   pub tasks: Vec<Vec<String>>,
   pub virtual_tags: Vec<String>,
   pub description_width: usize,
@@ -160,6 +163,7 @@ impl TaskReportTable {
     let mut task_report_table = Self {
       labels: vec![],
       columns: vec![],
+      visible_columns: vec![],
       tasks: vec![vec![]],
       virtual_tags: virtual_tags.iter().map(ToString::to_string).collect::<Vec<_>>(),
       description_width: 100,
@@ -271,6 +275,7 @@ impl TaskReportTable {
   pub fn simplify_table(&mut self) -> (Vec<Vec<String>>, Vec<String>) {
     // find which columns are empty
     if self.tasks.is_empty() {
+      self.visible_columns = vec![];
       return (vec![], vec![]);
     }
 
@@ -301,6 +306,15 @@ impl TaskReportTable {
       .iter()
       .enumerate()
       .filter(|&(i, _)| null_columns[i] != 0)
+      .map(|(_, e)| e.clone())
+      .collect();
+
+    // keep column names aligned with the filtered display table
+    self.visible_columns = self
+      .columns
+      .iter()
+      .enumerate()
+      .filter(|&(i, _)| i < null_columns.len() && null_columns[i] != 0)
       .map(|(_, e)| e.clone())
       .collect();
 
