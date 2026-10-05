@@ -14,6 +14,7 @@ use tokio::{
 pub enum Event<I> {
   Input(I),
   Paste(String),
+  Resize,
   Tick,
   Closed,
 }
@@ -144,6 +145,11 @@ fn translate(event: crossterm::event::Event) -> Option<Event<KeyCode>> {
       MouseEventKind::ScrollDown => Some(Event::Input(KeyCode::Down)),
       _ => None,
     },
+    // A resize can leave the terminal grid out of step with ratatui's buffer.
+    // tmux drops rows off the top when a pane shrinks, and a shrink followed by
+    // a regrow between two draws ends at the size ratatui last saw, so its
+    // autoresize never clears and the shifted rows stay on screen for good.
+    crossterm::event::Event::Resize(_, _) => Some(Event::Resize),
     _ => None,
   }
 }
@@ -161,6 +167,11 @@ mod tests {
       row: 0,
       modifiers: KeyModifiers::NONE,
     })
+  }
+
+  #[test]
+  fn test_translate_forwards_resize() {
+    assert!(matches!(translate(CrosstermEvent::Resize(62, 35)), Some(Event::Resize)));
   }
 
   #[test]
