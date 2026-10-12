@@ -15,6 +15,7 @@ mod help;
 mod history;
 mod keyconfig;
 mod pane;
+mod report_style;
 mod scrollbar;
 mod table;
 mod task_report;
