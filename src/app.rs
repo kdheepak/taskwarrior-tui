@@ -385,6 +385,15 @@ impl TaskwarriorTui {
             debug!("Received paste of {} bytes", paste.len());
             self.handle_paste(&paste);
           }
+          Event::Resize => {
+            debug!("Resize event");
+            // resize() clears the screen and resets the back buffer, so the next
+            // draw repaints every cell. terminal.clear() would do the same, but it
+            // first queries the cursor position, and that query times out while
+            // the event stream is reading stdin.
+            let size = terminal.size()?;
+            terminal.resize(Rect::new(0, 0, size.width, size.height))?;
+          }
           Event::Tick => {
             debug!("Tick event");
             self.update(false).await?;
