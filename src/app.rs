@@ -2221,7 +2221,7 @@ impl TaskwarriorTui {
         }
       }
     } else {
-      self.error = Some(format!("Cannot run `{:?}` - ({}) error:\n{}", &task, output.status, error));
+      self.error = Some(format!("Cannot run `{:?}` - ({}) error:\n{}", task, output.status, error));
     }
 
     Ok(())
@@ -2286,7 +2286,7 @@ impl TaskwarriorTui {
         }
       }
     } else {
-      self.error = Some(format!("Cannot run `{:?}` - ({}) error:\n{}", &task, output.status, error));
+      self.error = Some(format!("Cannot run `{:?}` - ({}) error:\n{}", task, output.status, error));
     }
 
     Ok(())
@@ -4391,7 +4391,7 @@ impl TaskwarriorTui {
         if let Some(tags) = task.tags() {
           for tag in tags {
             if !virtual_tags.contains(tag) {
-              self.completion_list.insert(("+".to_string(), format!("+{}", &tag)));
+              self.completion_list.insert(("+".to_string(), format!("+{}", tag)));
             }
           }
         }
@@ -4399,7 +4399,7 @@ impl TaskwarriorTui {
       for task in tasks {
         if let Some(project) = task.project() {
           let p = if project.contains(' ') {
-            format!(r#""{}""#, &project)
+            format!(r#""{}""#, project)
           } else {
             project.to_string()
           };

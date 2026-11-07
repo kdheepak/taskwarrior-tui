@@ -27,7 +27,7 @@ impl HistoryContext {
         .expect("Unable to create configuration directory for taskwarrior-tui")
     };
 
-    std::fs::create_dir_all(&data_path).unwrap_or_else(|_| panic!("Unable to create configuration directory in {:?}", &data_path));
+    std::fs::create_dir_all(&data_path).unwrap_or_else(|_| panic!("Unable to create configuration directory in {:?}", data_path));
 
     let data_path = data_path.join(filename);
 

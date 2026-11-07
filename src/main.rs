@@ -168,8 +168,8 @@ fn main() -> Result<()> {
   initialize_logging();
 
   debug!("getting matches from clap...");
-  debug!("report = {:?}", &report);
-  debug!("config = {:?}", &config);
+  debug!("report = {:?}", report);
+  debug!("config = {:?}", config);
 
   let r = tokio::runtime::Builder::new_multi_thread()
     .enable_all()
