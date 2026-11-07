@@ -1,4 +1,4 @@
-_taskwarrior-tui() {
+_taskwarrior__tui() {
     local i cur prev opts cmd
     COMPREPLY=()
     if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
@@ -72,7 +72,7 @@ _taskwarrior-tui() {
 }
 
 if [[ "${BASH_VERSINFO[0]}" -eq 4 && "${BASH_VERSINFO[1]}" -ge 4 || "${BASH_VERSINFO[0]}" -gt 4 ]]; then
-    complete -F _taskwarrior-tui -o nosort -o bashdefault -o default taskwarrior-tui
+    complete -F _taskwarrior__tui -o nosort -o bashdefault -o default taskwarrior-tui
 else
-    complete -F _taskwarrior-tui -o bashdefault -o default taskwarrior-tui
+    complete -F _taskwarrior__tui -o bashdefault -o default taskwarrior-tui
 fi
