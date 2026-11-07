@@ -2178,6 +2178,7 @@ impl TaskwarriorTui {
       .arg("rc.json.array=on")
       .arg("rc.confirmation=off")
       .arg("rc.json.depends.array=on")
+      .arg("rc.defaultheight=0")
       .arg("rc.color=off")
       .arg("rc._forcecolor=off");
     // .arg("rc.verbose:override=false");
@@ -2224,6 +2225,7 @@ impl TaskwarriorTui {
       .arg("rc.json.array=on")
       .arg("rc.confirmation=off")
       .arg("rc.json.depends.array=on")
+      .arg("rc.defaultheight=0")
       .arg("rc.color=off")
       .arg("rc._forcecolor=off");
     // .arg("rc.verbose:override=false");
