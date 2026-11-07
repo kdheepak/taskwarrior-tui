@@ -370,7 +370,11 @@ impl TaskwarriorTui {
   pub async fn run(&mut self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> {
     loop {
       if self.requires_redraw {
-        terminal.clear()?;
+        // `Terminal::clear` queries the cursor position, which reads from crossterm's shared event
+        // reader and times out when the event loop task is polling it. `resize` clears the
+        // viewport and resets the back buffer without that query.
+        let size = terminal.size()?;
+        terminal.resize(ratatui::layout::Rect::new(0, 0, size.width, size.height))?;
         self.requires_redraw = false;
       }
       terminal.draw(|f| self.draw(f))?;
