@@ -1,4 +1,4 @@
-use std::{collections::HashMap, error::Error, str};
+use std::{collections::HashMap, str};
 
 use anyhow::{Context, Result};
 use ratatui::{
@@ -32,15 +32,6 @@ impl TaskWarriorBool for str {
       None
     }
   }
-}
-
-#[derive(Debug)]
-pub struct Uda {
-  label: String,
-  kind: String,
-  values: Option<Vec<String>>,
-  default: Option<String>,
-  urgency: Option<f64>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -78,13 +69,10 @@ impl TaskInfoLocation {
 
 #[derive(Debug)]
 pub struct Config {
-  pub enabled: bool,
   pub color: HashMap<String, Style>,
   pub color_keywords: Vec<(String, Style)>,
   pub filter: String,
   pub data_location: String,
-  pub obfuscate: bool,
-  pub print_empty_columns: bool,
   pub due: usize,
   pub weekstart: bool,
   pub rule_precedence_color: Vec<String>,
@@ -126,8 +114,6 @@ pub struct Config {
   pub uda_style_command: Style,
   pub uda_style_report_completion_pane: Style,
   pub uda_style_report_completion_pane_highlight: Style,
-  pub uda_style_title: Style,
-  pub uda_style_title_border: Style,
   pub uda_style_help_gauge: Style,
   pub uda_style_command_error: Style,
   pub uda_shortcuts: Vec<String>,
@@ -144,17 +130,10 @@ pub struct Config {
   pub uda_context_menu_close_on_select: bool,
   pub uda_report_menu_select_on_move: bool,
   pub uda_report_menu_close_on_select: bool,
-  pub uda: Vec<Uda>,
 }
 
 impl Config {
   pub fn new(data: &str, report: &str) -> Result<Self> {
-    let bool_collection = Self::get_bool_collection();
-
-    let enabled = true;
-    let obfuscate = bool_collection.get("obfuscate").copied().unwrap_or(false);
-    let print_empty_columns = bool_collection.get("print_empty_columns").copied().unwrap_or(false);
-
     let color = Self::get_color_collection(data);
     let color_keywords: Vec<(String, Style)> = color
       .iter()
@@ -209,8 +188,6 @@ impl Config {
     let uda_style_report_menu_active = Self::get_uda_style("report-menu.active", data);
     let uda_style_report_completion_pane = Self::get_uda_style("report.completion-pane", data);
     let uda_style_report_completion_pane_highlight = Self::get_uda_style("report.completion-pane-highlight", data);
-    let uda_style_title = Self::get_uda_style("title", data);
-    let uda_style_title_border = Self::get_uda_style("title.border", data);
     let uda_style_help_gauge = Self::get_uda_style("help.gauge", data);
     let uda_style_command_error = Self::get_uda_style("command.error", data);
     let uda_shortcuts = Self::get_uda_shortcuts(data);
@@ -228,8 +205,6 @@ impl Config {
     let uda_style_report_completion_pane =
       uda_style_report_completion_pane.unwrap_or_else(|| Style::default().fg(Color::Black).bg(Color::Rgb(223, 223, 223)));
     let uda_style_report_completion_pane_highlight = uda_style_report_completion_pane_highlight.unwrap_or(uda_style_report_completion_pane);
-    let uda_style_title = uda_style_title.unwrap_or_else(|| Style::default().fg(Color::LightCyan));
-    let uda_style_title_border = uda_style_title_border.unwrap_or_else(|| Style::default().fg(Color::White));
     let uda_style_help_gauge = uda_style_help_gauge.unwrap_or_else(|| Style::default().fg(Color::Gray));
     let uda_style_command_error = uda_style_command_error.unwrap_or_else(|| Style::default().fg(Color::Red));
     let uda_quick_tag_name = Self::get_uda_quick_tag_name(data);
@@ -244,13 +219,10 @@ impl Config {
     let uda_task_report_date_time_vague_more_precise = Self::get_uda_task_report_date_time_vague_more_precise(data);
 
     Ok(Self {
-      enabled,
       color,
       color_keywords,
       filter,
       data_location,
-      obfuscate,
-      print_empty_columns,
       due,
       weekstart,
       rule_precedence_color,
@@ -293,8 +265,6 @@ impl Config {
       uda_style_report_menu_active,
       uda_style_report_completion_pane,
       uda_style_report_completion_pane_highlight,
-      uda_style_title,
-      uda_style_title_border,
       uda_style_help_gauge,
       uda_style_command_error,
       uda_shortcuts,
@@ -310,12 +280,7 @@ impl Config {
       uda_report_menu_select_on_move,
       uda_report_menu_close_on_select,
       uda_task_report_date_time_vague_more_precise,
-      uda: vec![],
     })
-  }
-
-  fn get_bool_collection() -> HashMap<String, bool> {
-    HashMap::new()
   }
 
   fn get_uda_background_process(data: &str) -> String {

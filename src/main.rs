@@ -1,6 +1,3 @@
-#![allow(dead_code)]
-#![allow(unused_imports)]
-#![allow(unused_variables)]
 #![allow(clippy::too_many_arguments)]
 
 mod action;
@@ -18,37 +15,27 @@ mod pane;
 mod scrollbar;
 mod table;
 mod task_report;
-mod ui;
 mod utils;
 
 use std::{
-  env,
-  error::Error,
-  io::{self, Write},
-  panic,
+  env, io, panic,
   path::{Path, PathBuf},
-  time::Duration,
 };
 
 use anyhow::Result;
-use app::{Mode, TaskwarriorTui};
 use crossterm::{
   cursor,
-  event::{DisableBracketedPaste, DisableMouseCapture, EnableMouseCapture, EventStream},
+  event::{DisableBracketedPaste, DisableMouseCapture},
   execute,
-  terminal::{Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+  terminal::{LeaveAlternateScreen, disable_raw_mode},
 };
-use futures::stream::{FuturesUnordered, StreamExt};
-use log::{Level, LevelFilter, debug, error, info, log_enabled, trace, warn};
+use log::{LevelFilter, debug, warn};
 use log4rs::{
   append::file::FileAppender,
   config::{Appender, Config, Logger, Root},
   encode::pattern::PatternEncoder,
 };
 use path_clean::PathClean;
-use ratatui::{Terminal, backend::CrosstermBackend};
-
-use crate::{action::Action, event::Event, keyconfig::KeyConfig};
 
 const LOG_PATTERN: &str = "{d(%Y-%m-%d %H:%M:%S)} | {l} | {f}:{L} | {m}{n}";
 

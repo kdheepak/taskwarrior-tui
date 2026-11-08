@@ -1,39 +1,31 @@
 use std::{
-  borrow::Borrow,
-  cmp::Ordering,
   collections::{HashMap, HashSet},
   convert::TryInto,
   fs, io,
-  io::{Read, Write},
   path::Path,
-  sync::{Arc, Mutex, mpsc},
-  time::{Duration, Instant, SystemTime},
+  time::{Duration, SystemTime},
 };
 
 use anyhow::{Context as AnyhowContext, Result, anyhow};
-use chrono::{DateTime, Datelike, FixedOffset, Local, NaiveDate, NaiveDateTime, TimeZone, Timelike};
+use chrono::{Datelike, Local, NaiveDateTime};
 use crossterm::{
   event::{DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture},
   execute,
-  style::style,
   terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use futures::SinkExt;
-use log::{Level, LevelFilter, debug, error, info, log_enabled, trace, warn};
+use log::{debug, info, trace};
 use ratatui::{
   Frame, Terminal,
-  backend::{Backend, CrosstermBackend},
-  layout::{Alignment, Constraint, Direction, Layout, Margin, Position, Rect},
+  backend::CrosstermBackend,
+  layout::{Constraint, Direction, Layout, Margin, Position, Rect},
   style::{Color, Modifier, Style},
-  symbols::bar::FULL,
   text::{Line, Span, Text},
-  widgets::{Block, BorderType, Borders, Clear, Gauge, LineGauge, List, ListItem, Paragraph, Tabs, Wrap},
+  widgets::{Block, BorderType, Borders, Clear, LineGauge, List, ListItem, Paragraph, Tabs, Wrap},
 };
 use regex::Regex;
-use rustyline::{At, Editor, Word, history::SearchDirection as HistoryDirection, line_buffer::LineBuffer};
+use rustyline::{At, Word, history::SearchDirection as HistoryDirection, line_buffer::LineBuffer};
 use std::sync::LazyLock;
-use task_hookrs::{date::Date, import::import, project::Project, status::TaskStatus, task::Task, uda::UDAValue};
-use unicode_segmentation::{Graphemes, UnicodeSegmentation};
+use task_hookrs::{date::Date, import::import, status::TaskStatus, task::Task, uda::UDAValue};
 use unicode_width::UnicodeWidthStr;
 use uuid::Uuid;
 use versions::Versioning;
@@ -48,21 +40,15 @@ use crate::{
   help::Help,
   history::HistoryContext,
   keyconfig::KeyConfig,
-  pane::{
-    Pane,
-    context::{ContextDetails, ContextsState},
-    project::ProjectsState,
-    report::ReportsState,
-  },
+  pane::{Pane, context::ContextsState, project::ProjectsState, report::ReportsState},
   scrollbar::Scrollbar,
   table::{Row, Table, TableMode, TaskwarriorTuiTableState},
   task_report::TaskReportTable,
-  ui, utils,
+  utils,
 };
 
 const MAX_LINE: usize = 4096;
 
-static START_TIME: LazyLock<Instant> = LazyLock::new(Instant::now);
 static TASKWARRIOR_VERSION_SUPPORTED: LazyLock<Versioning> = LazyLock::new(|| Versioning::new("3.0.0").unwrap());
 
 #[derive(Debug)]
@@ -543,14 +529,6 @@ impl TaskwarriorTui {
     f.render_widget(Paragraph::new(Text::from(context)).block(navbar_block), rects[1]);
   }
 
-  pub fn draw_debug(&mut self, f: &mut Frame) {
-    let area = centered_rect(50, 50, f.area());
-    f.render_widget(Clear, area);
-    let t = format!("{}", self.current_selection);
-    let p = Paragraph::new(Text::from(t)).block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded));
-    f.render_widget(p, area);
-  }
-
   pub fn draw_projects(&mut self, f: &mut Frame, rect: Rect) {
     let data = self.projects.data.clone();
     let p = Paragraph::new(Text::from(&data[..]));
@@ -657,23 +635,6 @@ impl TaskwarriorTui {
   pub fn draw_timesheet(&mut self, f: &mut Frame, rect: Rect) {
     let p = Paragraph::new(Text::from(self.styled_timesheet_lines())).scroll((self.timesheet_scroll, 0));
     f.render_widget(p, rect);
-  }
-
-  fn style_for_project(&self, project: &[String]) -> Style {
-    let virtual_tag_names_in_precedence = &self.config.rule_precedence_color;
-    let mut style = Style::default();
-    for tag_name in virtual_tag_names_in_precedence.iter().rev() {
-      if tag_name.as_str() == "project." {
-        let s = self
-          .config
-          .color
-          .get(&format!("color.project.{}", project[0]))
-          .copied()
-          .unwrap_or_default();
-        style = style.patch(s);
-      }
-    }
-    style
   }
 
   pub fn draw_calendar(&mut self, f: &mut Frame, layout: Rect) {
@@ -796,17 +757,11 @@ impl TaskwarriorTui {
           .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).title(title))
           .wrap(Wrap { trim: true });
         f.render_widget(p, rect);
-        // draw error pop up
-        let rects = Layout::default()
-          .direction(Direction::Vertical)
-          .constraints([Constraint::Min(0)].as_ref())
-          .split(f.area());
       }
       Action::Report => {
         // reset error when entering Action::Report
         self.previous_mode = None;
         self.error = None;
-        let position = Self::get_position(&self.command);
         self.draw_command(
           f,
           rects[1],
@@ -1430,7 +1385,7 @@ impl TaskwarriorTui {
       return;
     }
     let selected = self.current_selection;
-    let task_id = self.tasks[selected].id().unwrap_or_default();
+    let _task_id = self.tasks[selected].id().unwrap_or_default();
     let task_uuid = *self.tasks[selected].uuid();
 
     let data = match self.task_details.get(&task_uuid) {
@@ -1455,6 +1410,7 @@ impl TaskwarriorTui {
     self.task_details_scroll = self.task_details_scroll.saturating_add(1);
   }
 
+  #[cfg(test)]
   fn task_by_index(&self, i: usize) -> Option<Task> {
     let tasks = &self.tasks;
     if i >= tasks.len() { None } else { Some(tasks[i].clone()) }
@@ -1565,7 +1521,7 @@ impl TaskwarriorTui {
         break;
       }
     }
-    for (i, header) in headers.iter().enumerate() {
+    for (i, _header) in headers.iter().enumerate() {
       if i == 0 {
         // always give ID a couple of extra for indicator
         widths[i] += self.config.uda_selection_indicator.as_str().width();
@@ -2304,7 +2260,7 @@ impl TaskwarriorTui {
       if self.tasks.is_empty() {
         break;
       }
-      let task_id = self.tasks[s].id().unwrap_or_default();
+      let _task_id = self.tasks[s].id().unwrap_or_default();
       let task_uuid = *self.tasks[s].uuid();
       task_uuids.push(task_uuid);
     }
@@ -2852,7 +2808,7 @@ impl TaskwarriorTui {
     self.pause_tui().await.unwrap();
 
     let selected = self.current_selection;
-    let task_id = self.tasks[selected].id().unwrap_or_default();
+    let _task_id = self.tasks[selected].id().unwrap_or_default();
     let task_uuid = *self.tasks[selected].uuid();
 
     let r = std::process::Command::new(&self.task_exe)
@@ -2971,7 +2927,6 @@ impl TaskwarriorTui {
       }
       if task.recur().is_some() {
         add_tag(task, "RECURRING".to_string());
-        let r = task.recur().unwrap();
       }
       if let Some(d) = task.due() {
         let status = task.status();
@@ -3022,7 +2977,7 @@ impl TaskwarriorTui {
   pub fn toggle_mark(&mut self) {
     if !self.tasks.is_empty() {
       let selected = self.current_selection;
-      let task_id = self.tasks[selected].id().unwrap_or_default();
+      let _task_id = self.tasks[selected].id().unwrap_or_default();
       let task_uuid = *self.tasks[selected].uuid();
 
       if !self.marked.insert(task_uuid) {
@@ -4534,22 +4489,25 @@ pub fn remove_tag(task: &mut Task, tag: &str) {
 #[allow(clippy::single_char_pattern)]
 mod tests {
   use std::{
-    ffi::OsStr,
     fmt::Write,
     fs::File,
-    io,
+    io::Read,
     path::{Path, PathBuf},
   };
 
-  use ratatui::{backend::TestBackend, buffer::Buffer};
+  use chrono::{DateTime, TimeZone, Timelike};
+  use ratatui::{
+    backend::{Backend, TestBackend},
+    buffer::Buffer,
+  };
+  use unicode_segmentation::UnicodeSegmentation;
 
   use super::*;
 
   fn get_taskdata_path() -> PathBuf {
     let taskdata_env_var = std::env::var("TASKDATA").expect("TASKDATA environment variable not set.");
-    let taskdata_path = Path::new(&taskdata_env_var).to_owned();
 
-    taskdata_path
+    Path::new(&taskdata_env_var).to_owned()
   }
 
   fn task_exe() -> String {
@@ -4652,7 +4610,6 @@ mod tests {
   }
 
   fn setup() {
-    use std::process::Stdio;
     let mut f = File::open(get_taskdata_path().parent().unwrap().join("export.json")).unwrap();
     let mut s = String::new();
     f.read_to_string(&mut s).unwrap();
@@ -4982,7 +4939,7 @@ mod tests {
     assert_eq!(style, Style::default());
 
     let task = app.task_by_id(11).unwrap();
-    let style = app.style_for_task(&task);
+    let _style = app.style_for_task(&task);
   }
 
   async fn test_task_style_keyword_color() {
@@ -5753,7 +5710,7 @@ mod tests {
     let now = Local::now();
     let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
 
-    let mut command = std::process::Command::new(&task_exe());
+    let mut command = std::process::Command::new(task_exe());
     command.arg("add");
     let tomorrow = now + chrono::Duration::days(1);
     let message = format!(
@@ -5783,7 +5740,7 @@ mod tests {
     let task = app.task_by_id(task_id).unwrap();
     assert_task_has_tags(&task, &["DUE", "MONTH", "PENDING", "QUARTER", "TOMORROW", "UDA", "UNBLOCKED", "YEAR"]);
 
-    let output = std::process::Command::new(&task_exe())
+    let _output = std::process::Command::new(task_exe())
       .arg("rc.confirmation=off")
       .arg("undo")
       .output()
@@ -5804,9 +5761,9 @@ mod tests {
     assert_eq!(app.current_context_filter, "");
 
     let now = Local::now();
-    let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
+    let _now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
 
-    let mut command = std::process::Command::new(&task_exe());
+    let mut command = std::process::Command::new(task_exe());
     command.arg("add");
     let message = "'new task for testing earlier today' due:now";
 
@@ -5843,7 +5800,7 @@ mod tests {
       ],
     );
 
-    let output = std::process::Command::new(&task_exe())
+    let _output = std::process::Command::new(task_exe())
       .arg("rc.confirmation=off")
       .arg("undo")
       .output()
@@ -5866,7 +5823,7 @@ mod tests {
     let now = Local::now();
     let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
 
-    let mut command = std::process::Command::new(&task_exe());
+    let mut command = std::process::Command::new(task_exe());
     command.arg("add");
     let later_today = now
       .with_hour(23)
@@ -5906,7 +5863,7 @@ mod tests {
       &["DUE", "DUETODAY", "MONTH", "PENDING", "QUARTER", "TODAY", "UDA", "UNBLOCKED", "YEAR"],
     );
 
-    let output = std::process::Command::new(&task_exe())
+    let _output = std::process::Command::new(task_exe())
       .arg("rc.confirmation=off")
       .arg("undo")
       .output()
@@ -5963,7 +5920,7 @@ mod tests {
     assert_eq!(app.current_context_filter, "");
 
     let now = Local::now();
-    let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
+    let _now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
 
     app.update(true).await.unwrap();
 
@@ -6012,7 +5969,7 @@ mod tests {
     assert_eq!(app.current_context_filter, "");
 
     let now = Local::now();
-    let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
+    let _now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
 
     app.mode = Mode::Tasks(Action::Modify);
     match app.task_table_state.mode() {
@@ -6141,6 +6098,8 @@ mod tests {
     terminal.backend().assert_buffer(&expected2);
   }
 
+  #[tokio::test]
+  #[ignore = "Legacy test was previously disabled; needs review before enabling"]
   async fn test_draw_task_report() {
     let mut expected = Buffer::with_lines(vec![
       "╭Task|Calendar───────────────────────────────────╮",
@@ -6206,9 +6165,9 @@ mod tests {
     assert_eq!(app.current_context_filter, "");
 
     let now = Local::now();
-    let now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
+    let _now = TimeZone::from_utc_datetime(now.offset(), &now.naive_utc());
 
-    let mut command = std::process::Command::new(&task_exe());
+    let mut command = std::process::Command::new(task_exe());
     command.arg("add");
     let message = "'new task 1 for testing draw' priority:U";
 
@@ -6224,7 +6183,7 @@ mod tests {
     let task_id = caps["task_id"].parse::<u64>().unwrap();
     assert_eq!(task_id, total_tasks + 1);
 
-    let mut command = std::process::Command::new(&task_exe());
+    let mut command = std::process::Command::new(task_exe());
     command.arg("add");
     let message = "'new task 2 for testing draw' priority:U +none";
 
@@ -6265,12 +6224,12 @@ mod tests {
       })
       .unwrap();
 
-    let output = std::process::Command::new(&task_exe())
+    let _output = std::process::Command::new(task_exe())
       .arg("rc.confirmation=off")
       .arg("undo")
       .output()
       .unwrap();
-    let output = std::process::Command::new(&task_exe())
+    let _output = std::process::Command::new(task_exe())
       .arg("rc.confirmation=off")
       .arg("undo")
       .output()
@@ -6550,7 +6509,8 @@ mod tests {
     assert!(view.contains(completed_description), "{view}");
   }
 
-  // #[test]
+  #[tokio::test]
+  #[ignore = "Legacy test was previously disabled; needs review before enabling"]
   async fn test_draw_context_menu() {
     let mut expected = Buffer::with_lines(vec![
       "╭Context───────────────────────────────────────────────────────────────────────╮",
@@ -6609,7 +6569,8 @@ mod tests {
     terminal.backend().assert_buffer(&expected);
   }
 
-  // #[test]
+  #[tokio::test]
+  #[ignore = "Legacy test was previously disabled; needs review before enabling"]
   async fn test_graphemes() {
     dbg!("写作业".graphemes(true).count());
     dbg!(UnicodeWidthStr::width("写作业"));
@@ -6642,7 +6603,8 @@ mod tests {
     dbg!(position);
   }
 
-  // #[test]
+  #[tokio::test]
+  #[ignore = "Legacy test was previously disabled; needs review before enabling"]
   async fn test_taskwarrior_tui_completion() {
     let mut app = TaskwarriorTui::new("next", false).await.unwrap();
     app.handle_input(KeyCode::Char('z')).await.unwrap();

@@ -1,7 +1,7 @@
 use std::{
   collections::{HashMap, HashSet},
   fmt::Display,
-  iter::{self, Iterator},
+  iter::Iterator,
 };
 
 use kasuari::{
@@ -14,7 +14,6 @@ use ratatui::{
   style::Style,
   widgets::{Block, StatefulWidget, Widget},
 };
-use unicode_segmentation::{Graphemes, UnicodeSegmentation};
 use unicode_width::UnicodeWidthStr;
 
 const MEDIUM: Strength = Strength::MEDIUM;
@@ -76,20 +75,6 @@ impl TaskwarriorTuiTableState {
     }
   }
 
-  pub fn unmark(&mut self, index: Option<usize>) {
-    if let Some(i) = index {
-      self.marked.remove(&i);
-    }
-  }
-
-  pub fn toggle_mark(&mut self, index: Option<usize>) {
-    if let Some(i) = index
-      && !self.marked.insert(i)
-    {
-      self.marked.remove(&i);
-    }
-  }
-
   pub fn marked(&'_ self) -> std::collections::hash_set::Iter<'_, usize> {
     self.marked.iter()
   }
@@ -106,7 +91,6 @@ where
   D: Iterator,
   D::Item: Display,
 {
-  Data(D),
   StyledData(D, Style),
 }
 
@@ -125,14 +109,12 @@ where
 ///             Row::StyledData(["Row11", "Row12", "Row13"].into_iter(), row_style),
 ///             Row::StyledData(["Row21", "Row22", "Row23"].into_iter(), row_style),
 ///             Row::StyledData(["Row31", "Row32", "Row33"].into_iter(), row_style),
-///             Row::Data(["Row41", "Row42", "Row43"].into_iter())
+///             Row::StyledData(["Row41", "Row42", "Row43"].into_iter(), row_style)
 ///         ].into_iter()
 ///     )
 ///     .block(Block::default().title("Table"))
 ///     .header_style(Style::default().fg(Color::Yellow))
-///     .widths(&[Constraint::Length(5), Constraint::Length(5), Constraint::Length(10)])
-///     .style(Style::default().fg(Color::White))
-///     .column_spacing(1);
+///     .widths(&[Constraint::Length(5), Constraint::Length(5), Constraint::Length(10)]);
 /// ```
 #[derive(Debug, Clone)]
 pub struct Table<'a, H, R> {
@@ -220,14 +202,6 @@ where
     self
   }
 
-  pub fn header<II>(mut self, header: II) -> Table<'a, H, R>
-  where
-    II: IntoIterator<Item = H::Item, IntoIter = H>,
-  {
-    self.header = header.into_iter();
-    self
-  }
-
   pub fn header_style(mut self, style: Style) -> Table<'a, H, R> {
     self.header_style = style;
     self
@@ -243,19 +217,6 @@ where
       "Percentages should be between 0 and 100 inclusively."
     );
     self.widths = widths;
-    self
-  }
-
-  pub fn rows<II>(mut self, rows: II) -> Table<'a, H, R>
-  where
-    II: IntoIterator<Item = Row<D>, IntoIter = R>,
-  {
-    self.rows = rows.into_iter();
-    self
-  }
-
-  pub fn style(mut self, style: Style) -> Table<'a, H, R> {
-    self.style = style;
     self
   }
 
@@ -286,16 +247,6 @@ where
 
   pub fn highlight_style(mut self, highlight_style: Style) -> Table<'a, H, R> {
     self.highlight_style = highlight_style;
-    self
-  }
-
-  pub fn column_spacing(mut self, spacing: u16) -> Table<'a, H, R> {
-    self.column_spacing = spacing;
-    self
-  }
-
-  pub fn header_gap(mut self, gap: u16) -> Table<'a, H, R> {
-    self.header_gap = gap;
     self
   }
 }
@@ -433,7 +384,6 @@ where
     };
 
     // Draw rows
-    let default_style = Style::default();
     if y < table_area.bottom() {
       let remaining = (table_area.bottom() - y) as usize;
 
@@ -449,7 +399,7 @@ where
       });
       for (i, row) in self.rows.skip(state.offset).take(remaining).enumerate() {
         let (data, style, symbol) = match row {
-          Row::Data(d) | Row::StyledData(d, _) if Some(i) == state.current_selection().map(|s| s - state.offset) => match state.mode {
+          Row::StyledData(d, _) if Some(i) == state.current_selection().map(|s| s - state.offset) => match state.mode {
             TableMode::MultipleSelection => {
               if state.marked.contains(&(i + state.offset)) {
                 (d, highlight_style, mark_highlight_symbol.to_string())
@@ -459,13 +409,6 @@ where
             }
             TableMode::SingleSelection => (d, highlight_style, highlight_symbol.to_string()),
           },
-          Row::Data(d) => {
-            if state.marked.contains(&(i + state.offset)) {
-              (d, default_style, mark_symbol.to_string())
-            } else {
-              (d, default_style, blank_symbol.to_string())
-            }
-          }
           Row::StyledData(d, s) => {
             if state.marked.contains(&(i + state.offset)) {
               (d, s, mark_symbol.to_string())

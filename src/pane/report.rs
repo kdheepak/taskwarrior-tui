@@ -2,10 +2,6 @@ use std::collections::HashSet;
 
 use crate::table::TaskwarriorTuiTableState;
 
-const NAME: &str = "Name";
-const DESCRIPTION: &str = "Description";
-const ACTIVE: &str = "Active";
-
 #[derive(Debug, Clone, Default)]
 pub struct ReportDetails {
   pub name: String,
@@ -21,7 +17,6 @@ impl ReportDetails {
 
 pub struct ReportsState {
   pub table_state: TaskwarriorTuiTableState,
-  pub columns: Vec<String>,
   pub rows: Vec<ReportDetails>,
   /// Current search query typed by the user inside the popup.
   pub search: String,
@@ -31,18 +26,9 @@ impl ReportsState {
   pub(crate) fn new() -> Self {
     Self {
       table_state: TaskwarriorTuiTableState::default(),
-      columns: vec![NAME.to_string(), DESCRIPTION.to_string(), ACTIVE.to_string()],
       rows: vec![],
       search: String::new(),
     }
-  }
-
-  pub fn len(&self) -> usize {
-    self.rows.len()
-  }
-
-  pub fn is_empty(&self) -> bool {
-    self.rows.is_empty()
   }
 
   /// Returns the indices into `self.rows` that match the current search query.

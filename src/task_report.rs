@@ -1,17 +1,12 @@
-use std::{error::Error, process::Command};
+use std::process::Command;
 
 use anyhow::Result;
-use chrono::{Datelike, Local, NaiveDateTime};
+use chrono::{Local, NaiveDateTime};
 use itertools::join;
 use task_hookrs::{task::Task, uda::UDAValue};
 use unicode_truncate::UnicodeTruncateStr;
-use unicode_width::UnicodeWidthStr;
 
 use crate::{datetime, utils};
-
-pub fn format_date_time(dt: NaiveDateTime) -> String {
-  datetime::format_local_date_time(&dt)
-}
 
 pub fn format_date(dt: NaiveDateTime, format: Option<String>) -> String {
   let format_str = format.unwrap_or("%Y-%m-%d".to_string());

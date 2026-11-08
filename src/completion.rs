@@ -1,22 +1,5 @@
-use std::{error::Error, io};
-
-use log::{Level, LevelFilter, debug, error, info, log_enabled, trace, warn};
-use ratatui::{
-  Terminal,
-  layout::{Constraint, Direction, Layout},
-  style::{Color, Modifier, Style},
-  text::{Line, Span},
-  widgets::{Block, Borders, List, ListItem, ListState},
-};
-use rustyline::{
-  Context,
-  error::ReadlineError,
-  highlight::{Highlighter, MatchingBracketHighlighter},
-  hint::Hinter,
-  history::FileHistory,
-  line_buffer::LineBuffer,
-};
-use unicode_segmentation::{Graphemes, UnicodeSegmentation};
+use ratatui::widgets::ListState;
+use rustyline::{Context, history::FileHistory};
 use unicode_width::UnicodeWidthStr;
 
 pub fn get_start_word_under_cursor(line: &str, cursor_pos: usize) -> usize {
@@ -74,19 +57,6 @@ pub struct CompletionList {
 }
 
 impl CompletionList {
-  pub fn new() -> CompletionList {
-    CompletionList {
-      state: ListState::default(),
-      current: String::new(),
-      pos: 0,
-      helper: TaskwarriorTuiCompletionHelper {
-        candidates: vec![],
-        context: String::new(),
-        input: String::new(),
-      },
-    }
-  }
-
   pub fn with_items(items: Vec<(String, String)>) -> CompletionList {
     let mut candidates = vec![];
     for i in items {
@@ -188,7 +158,7 @@ impl CompletionList {
   pub fn candidates(&self) -> Vec<Completion> {
     let hist = FileHistory::new();
     let ctx = rustyline::Context::new(&hist);
-    let (pos, candidates) = self.helper.complete(&self.current, self.pos, &ctx).unwrap();
+    let (_pos, candidates) = self.helper.complete(&self.current, self.pos, &ctx).unwrap();
     candidates
   }
 

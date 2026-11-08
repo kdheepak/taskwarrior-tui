@@ -7,15 +7,15 @@ use unicode_width::UnicodeWidthStr;
 pub struct Changeset {}
 
 impl DeleteListener for Changeset {
-  fn delete(&mut self, idx: usize, string: &str, _: Direction) {}
+  fn delete(&mut self, _idx: usize, _string: &str, _: Direction) {}
 }
 
 impl ChangeListener for Changeset {
-  fn insert_char(&mut self, idx: usize, c: char) {}
+  fn insert_char(&mut self, _idx: usize, _c: char) {}
 
-  fn insert_str(&mut self, idx: usize, string: &str) {}
+  fn insert_str(&mut self, _idx: usize, _string: &str) {}
 
-  fn replace(&mut self, idx: usize, old: &str, new: &str) {}
+  fn replace(&mut self, _idx: usize, _old: &str, _new: &str) {}
 }
 
 pub fn display_control_chars(text: &str) -> String {

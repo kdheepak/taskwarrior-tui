@@ -1,14 +1,11 @@
 use crossterm::event::{
   KeyCode::{BackTab, Backspace, Char, Delete, Down, End, Enter, Esc, F, Home, Insert, Left, Null, PageDown, PageUp, Right, Tab, Up},
-  KeyEvent, KeyModifiers, MouseEventKind,
+  KeyModifiers, MouseEventKind,
 };
 use futures::StreamExt;
-use log::{Level, LevelFilter, debug, error, info, log_enabled, trace, warn};
+use log::warn;
 use serde::{Deserialize, Serialize};
-use tokio::{
-  sync::{mpsc, oneshot},
-  task::JoinHandle,
-};
+use tokio::sync::mpsc;
 
 #[derive(Debug, Clone)]
 pub enum Event<I> {
@@ -48,15 +45,14 @@ pub enum KeyCode {
 
 pub struct EventLoop {
   pub rx: mpsc::UnboundedReceiver<Event<KeyCode>>,
-  pub tx: mpsc::UnboundedSender<Event<KeyCode>>,
   pub abort: mpsc::UnboundedSender<()>,
-  pub tick_rate: std::time::Duration,
+  _tx: mpsc::UnboundedSender<Event<KeyCode>>,
 }
 
 impl EventLoop {
   pub fn new(tick_rate: Option<std::time::Duration>, init: bool) -> Self {
     let (tx, rx) = mpsc::unbounded_channel();
-    let _tx = tx.clone();
+    let keepalive = tx.clone();
     let should_tick = tick_rate.is_some();
     let tick_rate = tick_rate.unwrap_or(std::time::Duration::from_millis(250));
 
@@ -71,19 +67,19 @@ impl EventLoop {
 
           tokio::select! {
               _ = abort_recv.recv() => {
-                  _tx.send(Event::Closed).unwrap_or_else(|_| warn!("Unable to send Closed event"));
-                  _tx.send(Event::Tick).unwrap_or_else(|_| warn!("Unable to send Tick event"));
+                  tx.send(Event::Closed).unwrap_or_else(|_| warn!("Unable to send Closed event"));
+                  tx.send(Event::Tick).unwrap_or_else(|_| warn!("Unable to send Tick event"));
                   break;
               },
               _ = delay, if should_tick => {
-                  _tx.send(Event::Tick).unwrap_or_else(|_| warn!("Unable to send Tick event"));
+                  tx.send(Event::Tick).unwrap_or_else(|_| warn!("Unable to send Tick event"));
               },
-              _ = _tx.closed() => break,
+              _ = tx.closed() => break,
               maybe_event = event => {
                   if let Some(Ok(event)) = maybe_event
                       && let Some(event) = translate(event)
                   {
-                      _tx.send(event).unwrap_or_else(|e| warn!("Unable to send {:?} event", e.0));
+                      tx.send(event).unwrap_or_else(|e| warn!("Unable to send {:?} event", e.0));
                   }
               }
           }
@@ -91,7 +87,7 @@ impl EventLoop {
       });
     }
 
-    Self { tx, rx, tick_rate, abort }
+    Self { rx, abort, _tx: keepalive }
   }
 }
 

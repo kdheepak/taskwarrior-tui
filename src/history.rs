@@ -1,13 +1,7 @@
-use std::{
-  fs::File,
-  path::{Path, PathBuf},
-};
+use std::path::PathBuf;
 
-use anyhow::{Result, anyhow};
-use rustyline::{
-  error::ReadlineError,
-  history::{DefaultHistory, History, SearchDirection},
-};
+use anyhow::Result;
+use rustyline::history::{DefaultHistory, History, SearchDirection};
 
 pub struct HistoryContext {
   history: DefaultHistory,
@@ -52,10 +46,6 @@ impl HistoryContext {
   pub fn write(&mut self) -> Result<()> {
     self.history.save(&self.data_path)?;
     Ok(())
-  }
-
-  pub fn history(&self) -> &DefaultHistory {
-    &self.history
   }
 
   pub fn history_index(&self) -> Option<usize> {

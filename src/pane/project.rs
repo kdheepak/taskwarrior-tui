@@ -1,57 +1,17 @@
-use std::fmt;
+use anyhow::{Context as AnyhowContext, Result};
 
-use anyhow::{Context as AnyhowContext, Result, anyhow};
+use std::{collections::HashSet, process::Command};
 
-const COL_WIDTH: usize = 21;
-const PROJECT_HEADER: &str = "Name";
-const REMAINING_TASK_HEADER: &str = "Remaining";
-const AVG_AGE_HEADER: &str = "Avg age";
-const COMPLETE_HEADER: &str = "Complete";
-
-use std::{
-  cmp::min,
-  collections::{HashMap, HashSet},
-  error::Error,
-  process::{Command, Output},
-};
-
-use chrono::{Datelike, Duration, Local, Month, NaiveDate, NaiveDateTime, TimeZone};
-use itertools::Itertools;
-use ratatui::{
-  buffer::Buffer,
-  layout::Rect,
-  style::{Color, Modifier, Style},
-  symbols,
-  widgets::{Block, Widget},
-};
 use task_hookrs::project::Project;
-use uuid::Uuid;
 
-use crate::{
-  action::Action,
-  app::{Mode, TaskwarriorTui},
-  event::KeyCode,
-  pane::Pane,
-  table::TaskwarriorTuiTableState,
-  utils::Changeset,
-};
+use crate::{app::TaskwarriorTui, event::KeyCode, pane::Pane, table::TaskwarriorTuiTableState, utils::Changeset};
 
 pub struct ProjectsState {
   pub(crate) list: Vec<Project>,
   pub table_state: TaskwarriorTuiTableState,
   pub current_selection: usize,
   pub marked: HashSet<Project>,
-  pub columns: Vec<String>,
-  pub rows: Vec<ProjectDetails>,
   pub data: String,
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct ProjectDetails {
-  name: Project,
-  remaining: usize,
-  avg_age: String,
-  complete: String,
 }
 
 impl ProjectsState {
@@ -61,14 +21,7 @@ impl ProjectsState {
       table_state: TaskwarriorTuiTableState::default(),
       current_selection: 0,
       marked: HashSet::default(),
-      columns: vec![
-        PROJECT_HEADER.to_string(),
-        REMAINING_TASK_HEADER.to_string(),
-        AVG_AGE_HEADER.to_string(),
-        COMPLETE_HEADER.to_string(),
-      ],
       data: Default::default(),
-      rows: vec![],
     }
   }
 
@@ -100,24 +53,8 @@ impl ProjectsState {
     }
   }
 
-  pub fn simplified_view(&mut self) -> (Vec<Vec<String>>, Vec<String>) {
-    let rows = self
-      .rows
-      .iter()
-      .map(|c| vec![c.name.clone(), c.remaining.to_string(), c.avg_age.to_string(), c.complete.clone()])
-      .collect();
-    let headers = self.columns.clone();
-    (rows, headers)
-  }
-
-  pub fn last_line(&self, line: &str) -> bool {
-    let words = line.trim().split(' ').map(|s| s.trim()).collect::<Vec<&str>>();
-    words.len() == 2 && words[0].chars().all(|c| c.is_numeric()) && (words[1] == "project" || words[1] == "projects")
-  }
-
   pub fn update_data(&mut self, task_exe: &str) -> Result<()> {
     self.list.clear();
-    self.rows.clear();
     let output = Command::new(task_exe)
       .arg("summary")
       .output()

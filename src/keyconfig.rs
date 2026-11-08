@@ -1,7 +1,5 @@
-use std::{collections::HashSet, error::Error, hash::Hash};
-
 use anyhow::{Result, anyhow};
-use log::{error, info, warn};
+use log::error;
 use serde::{Deserialize, Serialize};
 
 use crate::event::KeyCode;
@@ -263,9 +261,4 @@ impl KeyConfig {
 fn has_just_one_char(s: &str) -> bool {
   let mut chars = s.chars();
   chars.next().is_some() && chars.next().is_none()
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
 }

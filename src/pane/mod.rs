@@ -1,5 +1,3 @@
-use std::ops::Index;
-
 use anyhow::Result;
 
 use crate::{

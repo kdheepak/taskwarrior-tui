@@ -1,39 +1,8 @@
-use std::fmt;
+use anyhow::Result;
 
-use anyhow::{Context as AnyhowContext, Result, anyhow};
+use std::process::Command;
 
-const NAME: &str = "Name";
-const TYPE: &str = "Remaining";
-const DEFINITION: &str = "Avg age";
-const ACTIVE: &str = "Complete";
-
-use std::{
-  cmp,
-  cmp::min,
-  collections::{HashMap, HashSet},
-  error::Error,
-  process::{Command, Output},
-};
-
-use chrono::{Datelike, Duration, Local, Month, NaiveDate, NaiveDateTime, TimeZone};
-use itertools::Itertools;
-use ratatui::{
-  buffer::Buffer,
-  layout::{Alignment, Rect},
-  style::{Color, Modifier, Style},
-  symbols,
-  text::{Line, Span, Text},
-  widgets::{Block, BorderType, Borders, Clear, Paragraph, StatefulWidget, Widget},
-};
-use uuid::Uuid;
-
-use crate::{
-  action::Action,
-  app::{Mode, TaskwarriorTui},
-  event::KeyCode,
-  pane::Pane,
-  table::TaskwarriorTuiTableState,
-};
+use crate::table::TaskwarriorTuiTableState;
 
 #[derive(Debug, Clone, Default)]
 pub struct ContextDetails {
@@ -56,8 +25,6 @@ impl ContextDetails {
 
 pub struct ContextsState {
   pub table_state: TaskwarriorTuiTableState,
-  pub report_height: u16,
-  pub columns: Vec<String>,
   pub rows: Vec<ContextDetails>,
   /// Current search query typed by the user inside the popup.
   pub search: String,
@@ -67,25 +34,9 @@ impl ContextsState {
   pub(crate) fn new() -> Self {
     Self {
       table_state: TaskwarriorTuiTableState::default(),
-      report_height: 0,
-      columns: vec![NAME.to_string(), TYPE.to_string(), DEFINITION.to_string(), ACTIVE.to_string()],
       rows: vec![],
       search: String::new(),
     }
-  }
-
-  pub fn simplified_view(&mut self) -> (Vec<Vec<String>>, Vec<String>) {
-    let rows = self
-      .rows
-      .iter()
-      .map(|c| vec![c.name.clone(), c.type_.clone(), c.definition.clone(), c.active.clone()])
-      .collect();
-    let headers = self.columns.clone();
-    (rows, headers)
-  }
-
-  pub fn len(&self) -> usize {
-    self.rows.len()
   }
 
   /// Returns the indices into `self.rows` (after filtering to `type_ == "read"`)

@@ -4,10 +4,6 @@ pub fn local_from_utc(utc: &NaiveDateTime) -> DateTime<Local> {
   Local.from_utc_datetime(utc)
 }
 
-pub fn format_local_date_time(utc: &NaiveDateTime) -> String {
-  local_from_utc(utc).format("%Y-%m-%d %H:%M:%S").to_string()
-}
-
 pub fn format_local_date(utc: &NaiveDateTime, format: &str) -> String {
   local_from_utc(utc).format(format).to_string()
 }
