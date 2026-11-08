@@ -2316,22 +2316,11 @@ impl TaskwarriorTui {
 
   pub fn task_log(&mut self) -> Result<(), String> {
     let mut command = std::process::Command::new(&self.task_exe);
-
     command.arg("log");
 
     let shell = self.command.as_str();
-
     match shlex::split(shell) {
-      Some(cmd) => {
-        for s in cmd {
-          command.arg(&s);
-        }
-        let output = command.output();
-        match output {
-          Ok(_) => Ok(()),
-          Err(_) => Err(format!("Cannot run `task log {}`. Check documentation for more information", shell)),
-        }
-      }
+      Some(args) => Self::run_task_command(command.args(args)).map(|_| ()),
       None => Err(format!("Unable to run `{:?}`: shlex::split(`{}`) failed.", command, shell)),
     }
   }
@@ -2432,39 +2421,15 @@ impl TaskwarriorTui {
     }
 
     let task_uuids = self.selected_task_uuids();
-
-    let mut command = std::process::Command::new(&self.task_exe);
-    command.arg("rc.bulk=0");
-    command.arg("rc.confirmation=off");
-    command.arg("rc.dependency.confirmation=off");
-    command.arg("rc.recurrence.confirmation=off");
+    let mut command = self.noninteractive_task_command();
     for task_uuid in &task_uuids {
       command.arg(task_uuid.to_string());
     }
     command.arg("modify");
 
     let shell = self.modify.as_str();
-
     let r = match shlex::split(shell) {
-      Some(cmd) => {
-        for s in cmd {
-          command.arg(&s);
-        }
-        let output = command.output();
-        match output {
-          Ok(o) => {
-            if o.status.success() {
-              Ok(())
-            } else {
-              Err(format!("Modify failed. {}", String::from_utf8_lossy(&o.stdout)))
-            }
-          }
-          Err(_) => Err(format!(
-            "Cannot run `task {:?} modify {}`. Check documentation for more information",
-            task_uuids, shell,
-          )),
-        }
-      }
+      Some(args) => Self::run_task_command(command.args(args)).map(|_| ()),
       None => Err(format!("Cannot shlex split `{}`", shell)),
     };
 
@@ -2481,40 +2446,15 @@ impl TaskwarriorTui {
     }
 
     let task_uuids = self.selected_task_uuids();
-
-    let mut command = std::process::Command::new(&self.task_exe);
-    command.arg("rc.bulk=0");
-    command.arg("rc.confirmation=off");
-    command.arg("rc.dependency.confirmation=off");
-    command.arg("rc.recurrence.confirmation=off");
+    let mut command = self.noninteractive_task_command();
     for task_uuid in &task_uuids {
       command.arg(task_uuid.to_string());
     }
     command.arg("annotate");
 
     let shell = self.command.as_str();
-
     let r = match shlex::split(shell) {
-      Some(cmd) => {
-        for s in cmd {
-          command.arg(&s);
-        }
-        let output = command.output();
-        match output {
-          Ok(o) => {
-            if o.status.success() {
-              Ok(())
-            } else {
-              Err(format!("Annotate failed. {}", String::from_utf8_lossy(&o.stdout)))
-            }
-          }
-          Err(_) => Err(format!(
-            "Cannot run `task {} annotate {}`. Check documentation for more information",
-            task_uuids.iter().map(ToString::to_string).collect::<Vec<String>>().join(" "),
-            shell
-          )),
-        }
-      }
+      Some(args) => Self::run_task_command(command.args(args)).map(|_| ()),
       None => Err(format!("Cannot shlex split `{}`", shell)),
     };
 
@@ -2529,57 +2469,38 @@ impl TaskwarriorTui {
     command.arg("add");
 
     let shell = self.command.as_str();
-
     match shlex::split(shell) {
-      Some(cmd) => {
-        for s in cmd {
-          command.arg(&s);
+      Some(args) => {
+        let output = Self::run_task_command(command.args(args))?;
+        let data = String::from_utf8_lossy(&output.stdout);
+        let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
+        if self.config.uda_task_report_jump_to_task_on_add
+          && let Some(caps) = re.captures(&data)
+        {
+          self.current_selection_id = Some(caps["task_id"].parse::<u64>().unwrap_or_default());
         }
-        let output = command.output();
-        match output {
-          Ok(output) => {
-            if output.status.code() == Some(0) {
-              let data = String::from_utf8_lossy(&output.stdout);
-              let re = Regex::new(r"^Created task (?P<task_id>\d+).\n$").unwrap();
-              if self.config.uda_task_report_jump_to_task_on_add
-                && let Some(caps) = re.captures(&data)
-              {
-                self.current_selection_id = Some(caps["task_id"].parse::<u64>().unwrap_or_default());
-              }
-              Ok(())
-            } else {
-              Err(format!("Error: {}", String::from_utf8_lossy(&output.stderr)))
-            }
-          }
-          Err(e) => Err(format!("Cannot run `{:?}`: {}", command, e)),
-        }
+        Ok(())
       }
       None => Err(format!("Unable to run `{:?}`: shlex::split(`{}`) failed.", command, shell)),
     }
   }
 
   pub fn task_virtual_tags(task_uuid: Uuid, task_exe: &str) -> Result<String, String> {
-    let output = std::process::Command::new(task_exe).arg(format!("{}", task_uuid)).output();
-
-    match output {
-      Ok(output) => {
-        let data = String::from_utf8_lossy(&output.stdout);
-        for line in data.split('\n') {
-          for prefix in &["Virtual tags", "Virtual"] {
-            if line.starts_with(prefix) {
-              let line = line.to_string();
-              let line = line.replace(prefix, "");
-              return Ok(line);
-            }
-          }
+    let output = Self::run_task_command(std::process::Command::new(task_exe).arg(task_uuid.to_string()))?;
+    let data = String::from_utf8_lossy(&output.stdout);
+    for line in data.split('\n') {
+      for prefix in &["Virtual tags", "Virtual"] {
+        if line.starts_with(prefix) {
+          let line = line.to_string();
+          let line = line.replace(prefix, "");
+          return Ok(line);
         }
-        Err(format!(
-          "Cannot find any tags for `task {}`. Check documentation for more information",
-          task_uuid
-        ))
       }
-      Err(_) => Err(format!("Cannot run `task {}`. Check documentation for more information", task_uuid)),
     }
+    Err(format!(
+      "Cannot find any tags for `task {}`. Check documentation for more information",
+      task_uuid
+    ))
   }
 
   pub fn task_start_stop(&mut self) -> Result<(), String> {
@@ -2591,22 +2512,13 @@ impl TaskwarriorTui {
 
     for task_uuid in &task_uuids {
       let mut command = "start";
-      for tag in TaskwarriorTui::task_virtual_tags(*task_uuid, &self.task_exe)
-        .unwrap_or_default()
-        .split(' ')
-      {
+      for tag in TaskwarriorTui::task_virtual_tags(*task_uuid, &self.task_exe)?.split(' ') {
         if tag == "ACTIVE" {
           command = "stop";
         }
       }
 
-      let output = std::process::Command::new(&self.task_exe)
-        .arg(task_uuid.to_string())
-        .arg(command)
-        .output();
-      if output.is_err() {
-        return Err(format!("Error running `task {}` for task `{}`.", command, task_uuid));
-      }
+      Self::run_task_command(std::process::Command::new(&self.task_exe).arg(task_uuid.to_string()).arg(command))?;
     }
 
     if let [uuid] = task_uuids.as_slice() {
@@ -2635,15 +2547,12 @@ impl TaskwarriorTui {
           }
         }
 
-        let output = std::process::Command::new(&self.task_exe)
-          .arg(task_uuid.to_string())
-          .arg("modify")
-          .arg(tag_to_set)
-          .output();
-
-        if output.is_err() {
-          return Err(format!("Error running `task modify {}` for task `{}`.", tag_to_set, task_uuid,));
-        }
+        Self::run_task_command(
+          std::process::Command::new(&self.task_exe)
+            .arg(task_uuid.to_string())
+            .arg("modify")
+            .arg(tag_to_set),
+        )?;
       }
     }
 
@@ -2654,10 +2563,10 @@ impl TaskwarriorTui {
     Ok(())
   }
 
-  fn run_task_command(cmd: &mut std::process::Command) -> Result<(), String> {
+  fn run_task_command(cmd: &mut std::process::Command) -> Result<std::process::Output, String> {
     let output = cmd.output().map_err(|err| format!("Cannot run `{cmd:?}`: {err}"))?;
     if output.status.success() {
-      return Ok(());
+      return Ok(output);
     }
 
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -2666,18 +2575,23 @@ impl TaskwarriorTui {
     Err(format!("Command `{cmd:?}` failed ({status}): {detail}", status = output.status))
   }
 
+  fn noninteractive_task_command(&self) -> std::process::Command {
+    let mut command = std::process::Command::new(&self.task_exe);
+    command
+      .arg("rc.bulk=0")
+      .arg("rc.confirmation=off")
+      .arg("rc.dependency.confirmation=off")
+      .arg("rc.recurrence.confirmation=off");
+    command
+  }
+
   fn task_selected_command(&mut self, operation: &str) -> Result<(), String> {
     if self.tasks.is_empty() {
       return Ok(());
     }
 
     let task_uuids = self.selected_task_uuids();
-    let mut cmd = std::process::Command::new(&self.task_exe);
-    cmd
-      .arg("rc.bulk=0")
-      .arg("rc.confirmation=off")
-      .arg("rc.dependency.confirmation=off")
-      .arg("rc.recurrence.confirmation=off");
+    let mut cmd = self.noninteractive_task_command();
     for task_uuid in &task_uuids {
       cmd.arg(task_uuid.to_string());
     }
@@ -2703,46 +2617,27 @@ impl TaskwarriorTui {
     let mut priority_arg = String::from("priority:");
     priority_arg.push_str(priority);
     let task_uuids = self.selected_task_uuids();
-    let mut cmd = std::process::Command::new(&self.task_exe);
-    cmd
-      .arg("rc.bulk=0")
-      .arg("rc.confirmation=off")
-      .arg("rc.dependency.confirmation=off")
-      .arg("rc.recurrence.confirmation=off")
-      .arg("modify")
-      .arg(&priority_arg);
+    let mut cmd = self.noninteractive_task_command();
+    cmd.arg("modify").arg(&priority_arg);
     for task_uuid in &task_uuids {
       cmd.arg(task_uuid.to_string());
     }
-    let output = cmd.output();
-    let r = match output {
-      Ok(_) => Ok(()),
-      Err(_) => Err(format!(
-        "Cannot run `task modify priority` for task `{}`. Check documentation for more information",
-        task_uuids.iter().map(ToString::to_string).collect::<Vec<String>>().join(" ")
-      )),
-    };
+    Self::run_task_command(&mut cmd)?;
     self.current_selection_uuid = None;
     self.current_selection_id = None;
-    r
+    Ok(())
   }
 
   pub fn task_undo(&mut self) -> Result<(), String> {
-    let output = std::process::Command::new(&self.task_exe).arg("rc.confirmation=off").arg("undo").output();
-
-    match output {
-      Ok(output) => {
-        let data = String::from_utf8_lossy(&output.stdout);
-        let re = Regex::new(r"(?P<task_uuid>[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})").unwrap();
-        if let Some(caps) = re.captures(&data)
-          && let Ok(uuid) = Uuid::parse_str(&caps["task_uuid"])
-        {
-          self.current_selection_uuid = Some(uuid);
-        }
-        Ok(())
-      }
-      Err(_) => Err("Cannot run `task undo`. Check documentation for more information".to_string()),
+    let output = Self::run_task_command(std::process::Command::new(&self.task_exe).arg("rc.confirmation=off").arg("undo"))?;
+    let data = String::from_utf8_lossy(&output.stdout);
+    let re = Regex::new(r"(?P<task_uuid>[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})").unwrap();
+    if let Some(caps) = re.captures(&data)
+      && let Ok(uuid) = Uuid::parse_str(&caps["task_uuid"])
+    {
+      self.current_selection_uuid = Some(uuid);
     }
+    Ok(())
   }
 
   pub fn task_duplicate(&mut self) -> Result<(), String> {
@@ -2751,36 +2646,16 @@ impl TaskwarriorTui {
     }
 
     let task_uuids = self.selected_task_uuids();
-
-    let mut command = std::process::Command::new(&self.task_exe);
-    command.arg("rc.bulk=0");
-    command.arg("rc.confirmation=off");
-    command.arg("rc.dependency.confirmation=off");
-    command.arg("rc.recurrence.confirmation=off");
+    let mut command = self.noninteractive_task_command();
     for task_uuid in &task_uuids {
       command.arg(task_uuid.to_string());
     }
     command.arg("duplicate");
 
-    let output = command.output();
-    let r = match output {
-      Ok(o) => {
-        if o.status.success() {
-          Ok(())
-        } else {
-          Err(format!("Modify failed. {}", String::from_utf8_lossy(&o.stdout)))
-        }
-      }
-      Err(_) => Err(format!(
-        "Cannot run `task {:?} duplicate`. Check documentation for more information",
-        task_uuids,
-      )),
-    };
-
+    let r = Self::run_task_command(&mut command).map(|_| ());
     if let [uuid] = task_uuids.as_slice() {
       self.current_selection_uuid = Some(*uuid);
     }
-
     r
   }
 
@@ -4541,7 +4416,10 @@ mod tests {
   fn test_run_task_command_checks_exit_status() {
     let mut command = std::process::Command::new("/bin/sh");
     command.args(["-c", "printf 'normal output'; printf 'warning' >&2; exit 0"]);
-    assert!(TaskwarriorTui::run_task_command(&mut command).is_ok());
+    let output = TaskwarriorTui::run_task_command(&mut command).unwrap();
+    assert!(output.status.success());
+    assert_eq!(output.stdout, b"normal output");
+    assert_eq!(output.stderr, b"warning");
 
     let mut command = std::process::Command::new("/bin/sh");
     command.args(["-c", "printf 'ignored stdout'; printf 'hook rejected operation' >&2; exit 7"]);
@@ -4600,6 +4478,399 @@ mod tests {
     app.task_delete().unwrap();
     assert_eq!(app.current_selection_uuid, Some(uuid));
     assert_eq!(app.current_selection_id, id);
+  }
+
+  #[cfg(unix)]
+  struct TaskCommandStub {
+    dir: PathBuf,
+  }
+
+  #[cfg(unix)]
+  impl TaskCommandStub {
+    fn new(body: &str) -> Self {
+      use std::{
+        os::unix::fs::PermissionsExt,
+        sync::atomic::{AtomicUsize, Ordering},
+      };
+
+      static NEXT_ID: AtomicUsize = AtomicUsize::new(0);
+      let dir = loop {
+        let dir = std::env::temp_dir().join(format!(
+          "taskwarrior-tui-command-{}-{}",
+          std::process::id(),
+          NEXT_ID.fetch_add(1, Ordering::Relaxed)
+        ));
+        match fs::create_dir(&dir) {
+          Ok(()) => break dir,
+          Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
+          Err(error) => panic!("{error}"),
+        }
+      };
+      let stub = Self { dir };
+      let script = format!(
+        "#!/bin/sh\nset -eu\ndir=${{0%/*}}\ncall=0\nif [ -f \"$dir/count\" ]; then read -r call < \"$dir/count\"; fi\ncall=$((call + 1))\nprintf '%s\\n' \"$call\" > \"$dir/count\"\nprintf '%s\\000' \"$@\" > \"$dir/args-$call\"\n{body}\n"
+      );
+      fs::write(stub.executable(), script).unwrap();
+      fs::set_permissions(stub.executable(), fs::Permissions::from_mode(0o700)).unwrap();
+      stub
+    }
+
+    fn output(stdout: &str, stderr: &str, status: i32) -> Self {
+      let stub = Self::new(&format!("cat \"$dir/stdout\"\ncat \"$dir/stderr\" >&2\nexit {status}"));
+      fs::write(stub.dir.join("stdout"), stdout).unwrap();
+      fs::write(stub.dir.join("stderr"), stderr).unwrap();
+      stub
+    }
+
+    fn executable(&self) -> String {
+      self.dir.join("task").to_str().unwrap().to_owned()
+    }
+
+    fn calls(&self) -> Vec<Vec<String>> {
+      if !self.dir.join("count").exists() {
+        return vec![];
+      }
+      let count = fs::read_to_string(self.dir.join("count")).unwrap().trim().parse::<usize>().unwrap();
+      (1..=count)
+        .map(|call| {
+          fs::read_to_string(self.dir.join(format!("args-{call}")))
+            .unwrap()
+            .split_terminator('\0')
+            .map(str::to_owned)
+            .collect()
+        })
+        .collect()
+    }
+  }
+
+  #[cfg(unix)]
+  impl Drop for TaskCommandStub {
+    fn drop(&mut self) {
+      let _ = fs::remove_dir_all(&self.dir);
+    }
+  }
+
+  #[cfg(unix)]
+  async fn test_mutation_commands_check_failures() {
+    type Mutation = fn(&mut TaskwarriorTui) -> Result<(), String>;
+    let operations: [(&str, Mutation); 9] = [
+      ("priority", |app| app.task_priority("H")),
+      ("quick_tag", TaskwarriorTui::task_quick_tag),
+      ("start_stop", TaskwarriorTui::task_start_stop),
+      ("add", TaskwarriorTui::task_add),
+      ("modify", TaskwarriorTui::task_modify),
+      ("annotate", TaskwarriorTui::task_annotate),
+      ("log", TaskwarriorTui::task_log),
+      ("duplicate", TaskwarriorTui::task_duplicate),
+      ("undo", TaskwarriorTui::task_undo),
+    ];
+    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    assert!(app.tasks.len() >= 3);
+    app.current_selection = 0;
+    let uuid = *app.tasks[0].uuid();
+    let hint = *app.tasks[1].uuid();
+    let task_count = app.tasks.len();
+    app.tasks[0].set_tags(Some(vec!["existing".to_owned()]));
+    app.command.update("'quoted description' project:work", 0, &mut app.changes);
+    app.modify.update("'quoted description' project:work", 0, &mut app.changes);
+    app.config.uda_task_report_jump_to_task_on_modify = false;
+
+    for (name, operation) in operations {
+      let stub = TaskCommandStub::new(
+        "if [ \"$#\" -eq 1 ]; then printf 'Virtual tags PENDING\\n'; exit 0; fi\nprintf 'ignored stdout\\n'\nprintf 'hook rejected mutation\\n' >&2\nexit 7",
+      );
+      let missing = stub.dir.join("missing-task");
+      let launch_error = std::process::Command::new(&missing).output().unwrap_err().to_string();
+      for launch_failure in [false, true] {
+        app.task_exe = if launch_failure {
+          missing.to_str().unwrap().to_owned()
+        } else {
+          stub.executable()
+        };
+        app.current_selection_uuid = Some(hint);
+        app.current_selection_id = Some(9001);
+        app.selection_follow = true;
+        let error = operation(&mut app).unwrap_err();
+        assert!(error.contains(&app.task_exe), "{name}: {error}");
+        if launch_failure {
+          assert!(error.starts_with("Cannot run `"), "{name}: {error}");
+          assert!(error.contains(&launch_error), "{name}: {error}");
+        } else {
+          assert!(error.ends_with("failed (exit status: 7): hook rejected mutation"), "{name}: {error}");
+          assert!(!error.contains("ignored stdout"), "{name}: {error}");
+        }
+        if !matches!(name, "add" | "log" | "undo") {
+          assert!(error.contains(&uuid.to_string()), "{name}: {error}");
+        }
+        let expected_hint = if matches!(name, "annotate" | "duplicate") { uuid } else { hint };
+        assert_eq!(app.current_selection_uuid, Some(expected_hint), "{name}");
+        assert_eq!(app.current_selection_id, Some(9001), "{name}");
+        assert_eq!(app.selection_follow, name != "modify", "{name}");
+        assert_eq!(app.tasks.len(), task_count, "{name}");
+        assert_eq!(stub.calls().len(), if name == "start_stop" { 2 } else { 1 }, "{name}");
+      }
+    }
+  }
+
+  #[cfg(unix)]
+  async fn test_mutation_commands_preserve_arguments_and_parsing() {
+    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    assert!(app.tasks.len() >= 3);
+    app.tasks.truncate(3);
+    app.marked = app.tasks.iter().map(|task| *task.uuid()).collect();
+    app.task_table_state.multiple_selection();
+    app.update_task_table_state();
+    let uuids: Vec<String> = app.selected_task_uuids().iter().map(ToString::to_string).collect();
+    let selected_uuid = *app.tasks[0].uuid();
+    let hint = Uuid::nil();
+    let stub = TaskCommandStub::output("normal output\n", "warning\n", 0);
+    app.task_exe = stub.executable();
+    let input = r#""two words" 'project:quoted value' "" "literal;$(false)""#;
+    let extra = ["two words", "project:quoted value", "", "literal;$(false)"];
+    app.command.update(input, 0, &mut app.changes);
+    app.modify.update(input, 0, &mut app.changes);
+    app.current_selection_uuid = Some(hint);
+    app.current_selection_id = Some(9001);
+    let overrides = [
+      "rc.bulk=0",
+      "rc.confirmation=off",
+      "rc.dependency.confirmation=off",
+      "rc.recurrence.confirmation=off",
+    ];
+    let base_args = || overrides.iter().map(|arg| arg.to_string()).collect::<Vec<_>>();
+    let mut expected = vec![];
+
+    app.task_priority("H").unwrap();
+    assert_eq!(app.current_selection_uuid, None);
+    assert_eq!(app.current_selection_id, None);
+    let mut args = base_args();
+    args.extend(["modify".to_owned(), "priority:H".to_owned()]);
+    args.extend(uuids.clone());
+    expected.push(args);
+
+    for single_selection in [false, true] {
+      if single_selection {
+        app.task_table_state.single_selection();
+        app.current_selection = 0;
+      }
+      let selected_uuids: Vec<String> = app.selected_task_uuids().iter().map(ToString::to_string).collect();
+      for name in ["modify", "annotate", "duplicate"] {
+        app.current_selection_uuid = Some(hint);
+        app.current_selection_id = Some(9001);
+        app.selection_follow = true;
+        app.config.uda_task_report_jump_to_task_on_modify = false;
+        match name {
+          "modify" => app.task_modify(),
+          "annotate" => app.task_annotate(),
+          _ => app.task_duplicate(),
+        }
+        .unwrap();
+        let mut args = base_args();
+        args.extend(selected_uuids.clone());
+        args.push(name.to_owned());
+        if name != "duplicate" {
+          args.extend(extra.iter().map(|arg| arg.to_string()));
+        }
+        expected.push(args);
+        let expected_hint = if single_selection && name != "modify" { selected_uuid } else { hint };
+        assert_eq!(app.current_selection_uuid, Some(expected_hint));
+        assert_eq!(app.current_selection_id, Some(9001));
+        assert_eq!(app.selection_follow, name != "modify");
+      }
+    }
+    app.task_add().unwrap();
+    app.task_log().unwrap();
+    for name in ["add", "log"] {
+      let mut args = vec![name.to_owned()];
+      args.extend(extra.iter().map(|arg| arg.to_string()));
+      expected.push(args);
+    }
+    app.task_undo().unwrap();
+    expected.push(vec!["rc.confirmation=off".to_owned(), "undo".to_owned()]);
+    assert_eq!(stub.calls(), expected);
+
+    app.task_table_state.single_selection();
+    app.current_selection = 0;
+    for invalid in ["'unterminated", "\"unterminated", "trailing\\"] {
+      app.command.update(invalid, 0, &mut app.changes);
+      app.modify.update(invalid, 0, &mut app.changes);
+      for name in ["modify", "annotate", "add", "log"] {
+        app.current_selection_uuid = Some(*app.tasks[1].uuid());
+        app.selection_follow = true;
+        let error = match name {
+          "modify" => app.task_modify(),
+          "annotate" => app.task_annotate(),
+          "add" => app.task_add(),
+          _ => app.task_log(),
+        }
+        .unwrap_err();
+        assert!(error.contains("shlex") && error.contains(invalid), "{name}: {error}");
+        assert_eq!(
+          app.current_selection_uuid,
+          Some(if name == "annotate" { selected_uuid } else { *app.tasks[1].uuid() })
+        );
+        assert_eq!(app.current_selection_id, Some(9001));
+        assert_eq!(app.selection_follow, name != "modify");
+      }
+      assert_eq!(stub.calls(), expected);
+    }
+  }
+
+  #[cfg(unix)]
+  async fn test_add_and_undo_only_follow_successful_output() {
+    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    let hint = *app.tasks[0].uuid();
+    app.command.update("'quoted description'", 0, &mut app.changes);
+    for (stdout, jump, status, expected_id) in [
+      ("Created task 4242.\n", true, 0, 4242),
+      ("Created task 4242.\n", false, 0, 9001),
+      ("Created task 4242.\n", true, 7, 9001),
+      ("Created task 4242.\n", false, 7, 9001),
+      ("Created task 4242.\nHook output\n", true, 0, 9001),
+      ("prefix Created task 4242.\n", true, 0, 9001),
+      ("Created task 4242.", true, 0, 9001),
+    ] {
+      let stub = TaskCommandStub::output(stdout, "", status);
+      app.task_exe = stub.executable();
+      app.config.uda_task_report_jump_to_task_on_add = jump;
+      app.current_selection_uuid = Some(hint);
+      app.current_selection_id = Some(9001);
+      let result = app.task_add();
+      if status == 0 {
+        result.unwrap();
+      } else {
+        let error = result.unwrap_err();
+        assert!(error.ends_with(&format!("failed (exit status: 7): {}", stdout.trim())), "{error}");
+      }
+      assert_eq!(app.current_selection_uuid, Some(hint));
+      assert_eq!(app.current_selection_id, Some(expected_id), "{stdout:?}, jump={jump}, status={status}");
+      assert_eq!(stub.calls(), vec![vec!["add", "quoted description"]]);
+    }
+
+    let restored = Uuid::parse_str("12345678-abcd-4abc-8def-123456789abc").unwrap();
+    let output = format!("Restored {}.\nOther task: {}\n", restored.to_string().to_uppercase(), hint);
+    for (stdout, status, expected_uuid) in [
+      (output.as_str(), 0, restored),
+      (output.as_str(), 7, hint),
+      ("No undoable changes.\n", 0, hint),
+    ] {
+      let stub = TaskCommandStub::output(stdout, "", status);
+      app.task_exe = stub.executable();
+      app.current_selection_uuid = Some(hint);
+      app.current_selection_id = Some(9001);
+      let result = app.task_undo();
+      if status == 0 {
+        result.unwrap();
+      } else {
+        let error = result.unwrap_err();
+        assert!(error.ends_with(&format!("failed (exit status: 7): {}", stdout.trim())), "{error}");
+      }
+      assert_eq!(app.current_selection_uuid, Some(expected_uuid));
+      assert_eq!(app.current_selection_id, Some(9001));
+      assert_eq!(stub.calls(), vec![vec!["rc.confirmation=off", "undo"]]);
+    }
+  }
+
+  #[cfg(unix)]
+  async fn test_start_stop_and_quick_tag_toggles() {
+    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    app.current_selection = 0;
+    let uuid = app.tasks[0].uuid().to_string();
+    let hint = *app.tasks[1].uuid();
+    for (stdout, status, detail) in [
+      ("Virtual tags ACTIVE\n", 7, "query rejected"),
+      ("No virtual tags here.\n", 0, "Cannot find any tags"),
+    ] {
+      let stub = TaskCommandStub::output(stdout, "query rejected\n", status);
+      app.task_exe = stub.executable();
+      app.current_selection_uuid = Some(hint);
+      app.current_selection_id = Some(9001);
+      let error = app.task_start_stop().unwrap_err();
+      assert!(error.contains(detail) && error.contains(&uuid), "{error}");
+      if status != 0 {
+        assert!(error.contains(&stub.executable()) && error.contains("exit status: 7"), "{error}");
+      }
+      assert_eq!(stub.calls(), vec![vec![uuid.as_str()]]);
+      assert_eq!(app.current_selection_uuid, Some(hint));
+      assert_eq!(app.current_selection_id, Some(9001));
+    }
+    for (stdout, operation) in [
+      ("Virtual tags PENDING\n", "start"),
+      ("Virtual tags ACTIVE PENDING\n", "stop"),
+      ("Virtual ACTIVE\n", "stop"),
+      ("Virtual tags INACTIVE PENDING\n", "start"),
+    ] {
+      let stub = TaskCommandStub::output(stdout, "", 0);
+      app.task_exe = stub.executable();
+      app.current_selection_uuid = Some(hint);
+      app.task_start_stop().unwrap();
+      assert_eq!(stub.calls(), vec![vec![uuid.as_str()], vec![uuid.as_str(), operation]]);
+      assert_eq!(app.current_selection_uuid, Some(*app.tasks[0].uuid()));
+      assert_eq!(app.current_selection_id, Some(9001));
+    }
+    app.config.uda_quick_tag_name = "review".to_owned();
+    for (tags, tag_arg) in [
+      (vec!["existing".to_owned()], "+review"),
+      (vec!["existing".to_owned(), "review".to_owned()], "-review"),
+    ] {
+      let stub = TaskCommandStub::output("", "", 0);
+      app.task_exe = stub.executable();
+      app.tasks[0].set_tags(Some(tags.clone()));
+      app.current_selection_uuid = Some(hint);
+      app.task_quick_tag().unwrap();
+      assert_eq!(stub.calls(), vec![vec![uuid.as_str(), "modify", tag_arg]]);
+      assert_eq!(app.current_selection_uuid, Some(*app.tasks[0].uuid()));
+      assert_eq!(app.current_selection_id, Some(9001));
+      assert_eq!(app.tasks[0].tags(), Some(&tags));
+    }
+  }
+
+  #[cfg(unix)]
+  async fn test_per_task_mutations_stop_after_first_failure() {
+    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    assert!(app.tasks.len() >= 3);
+    app.tasks.truncate(3);
+    for task in &mut app.tasks {
+      task.set_tags(Some(vec!["existing".to_owned()]));
+    }
+    app.config.uda_quick_tag_name = "review".to_owned();
+    app.marked = app.tasks.iter().map(|task| *task.uuid()).collect();
+    app.task_table_state.multiple_selection();
+    app.update_task_table_state();
+    let marked = app.marked.clone();
+    let selected: HashSet<String> = app.selected_task_uuids().iter().map(ToString::to_string).collect();
+    assert_eq!(selected.len(), 3);
+    for (start_stop, fail_call) in [(false, 2), (true, 4), (true, 3)] {
+      let stub = TaskCommandStub::new(&format!(
+        "if [ \"$call\" -eq {fail_call} ]; then printf 'hook rejected mutation for %s\\n' \"$1\" >&2; exit 7; fi\nif [ \"$#\" -eq 1 ]; then printf 'Virtual tags PENDING\\n'; exit 0; fi\nprintf '%s\\n' \"$1\" >> \"$dir/applied\""
+      ));
+      app.task_exe = stub.executable();
+      app.current_selection_uuid = Some(Uuid::nil());
+      app.current_selection_id = Some(9001);
+      let error = if start_stop { app.task_start_stop() } else { app.task_quick_tag() }.unwrap_err();
+      let calls = stub.calls();
+      let first = calls.first().unwrap()[0].as_str();
+      let failed = calls.last().unwrap()[0].as_str();
+      assert_ne!(first, failed);
+      assert!(selected.contains(first) && selected.contains(failed));
+      assert!(
+        error.contains(&stub.executable()) && error.contains(failed) && error.contains("exit status: 7"),
+        "{error}"
+      );
+      assert!(error.ends_with(&format!("hook rejected mutation for {failed}")), "{error}");
+      assert!(!error.contains(first), "{error}");
+      let expected = match fail_call {
+        3 => vec![vec![first], vec![first, "start"], vec![failed]],
+        4 => vec![vec![first], vec![first, "start"], vec![failed], vec![failed, "start"]],
+        _ => vec![vec![first, "modify", "+review"], vec![failed, "modify", "+review"]],
+      };
+      assert_eq!(calls, expected);
+      assert_eq!(fs::read_to_string(stub.dir.join("applied")).unwrap(), format!("{first}\n"));
+      assert_eq!(app.current_selection_uuid, Some(Uuid::nil()));
+      assert_eq!(app.current_selection_id, Some(9001));
+      assert_eq!(app.marked, marked);
+      assert_eq!(app.task_table_state.marked().count(), 3);
+    }
   }
 
   #[test]
@@ -4870,6 +5141,14 @@ mod tests {
     // test_draw_task_report();
     #[cfg(unix)]
     test_selected_commands_preserve_selection_on_failure().await;
+    #[cfg(unix)]
+    {
+      test_mutation_commands_check_failures().await;
+      test_mutation_commands_preserve_arguments_and_parsing().await;
+      test_add_and_undo_only_follow_successful_output().await;
+      test_start_stop_and_quick_tag_toggles().await;
+      test_per_task_mutations_stop_after_first_failure().await;
+    }
     test_task_tags().await;
     test_task_style().await;
     test_task_style_keyword_color().await;
