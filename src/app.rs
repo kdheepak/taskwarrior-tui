@@ -2654,13 +2654,24 @@ impl TaskwarriorTui {
     Ok(())
   }
 
-  pub fn task_delete(&mut self) -> Result<(), String> {
+  fn run_task_command(cmd: &mut std::process::Command) -> Result<(), String> {
+    let output = cmd.output().map_err(|err| format!("Cannot run `{cmd:?}`: {err}"))?;
+    if output.status.success() {
+      return Ok(());
+    }
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let detail = if stderr.trim().is_empty() { stdout.trim() } else { stderr.trim() };
+    Err(format!("Command `{cmd:?}` failed ({status}): {detail}", status = output.status))
+  }
+
+  fn task_selected_command(&mut self, operation: &str) -> Result<(), String> {
     if self.tasks.is_empty() {
       return Ok(());
     }
 
     let task_uuids = self.selected_task_uuids();
-
     let mut cmd = std::process::Command::new(&self.task_exe);
     cmd
       .arg("rc.bulk=0")
@@ -2670,46 +2681,19 @@ impl TaskwarriorTui {
     for task_uuid in &task_uuids {
       cmd.arg(task_uuid.to_string());
     }
-    cmd.arg("delete");
-    let output = cmd.output();
-    let r = match output {
-      Ok(_) => Ok(()),
-      Err(_) => Err(format!(
-        "Cannot run `task delete` for tasks `{}`. Check documentation for more information",
-        task_uuids.iter().map(ToString::to_string).collect::<Vec<String>>().join(" ")
-      )),
-    };
+    cmd.arg(operation);
+    Self::run_task_command(&mut cmd)?;
     self.current_selection_uuid = None;
     self.current_selection_id = None;
-    r
+    Ok(())
+  }
+
+  pub fn task_delete(&mut self) -> Result<(), String> {
+    self.task_selected_command("delete")
   }
 
   pub fn task_done(&mut self) -> Result<(), String> {
-    if self.tasks.is_empty() {
-      return Ok(());
-    }
-    let task_uuids = self.selected_task_uuids();
-    let mut cmd = std::process::Command::new(&self.task_exe);
-    cmd
-      .arg("rc.bulk=0")
-      .arg("rc.confirmation=off")
-      .arg("rc.dependency.confirmation=off")
-      .arg("rc.recurrence.confirmation=off");
-    for task_uuid in &task_uuids {
-      cmd.arg(task_uuid.to_string());
-    }
-    cmd.arg("done");
-    let output = cmd.output();
-    let r = match output {
-      Ok(_) => Ok(()),
-      Err(_) => Err(format!(
-        "Cannot run `task done` for task `{}`. Check documentation for more information",
-        task_uuids.iter().map(ToString::to_string).collect::<Vec<String>>().join(" ")
-      )),
-    };
-    self.current_selection_uuid = None;
-    self.current_selection_id = None;
-    r
+    self.task_selected_command("done")
   }
 
   pub fn task_priority(&mut self, priority: &str) -> Result<(), String> {
@@ -4552,6 +4536,72 @@ mod tests {
     view
   }
 
+  #[cfg(unix)]
+  #[test]
+  fn test_run_task_command_checks_exit_status() {
+    let mut command = std::process::Command::new("/bin/sh");
+    command.args(["-c", "printf 'normal output'; printf 'warning' >&2; exit 0"]);
+    assert!(TaskwarriorTui::run_task_command(&mut command).is_ok());
+
+    let mut command = std::process::Command::new("/bin/sh");
+    command.args(["-c", "printf 'ignored stdout'; printf 'hook rejected operation' >&2; exit 7"]);
+    let error = TaskwarriorTui::run_task_command(&mut command).unwrap_err();
+    assert!(error.ends_with("failed (exit status: 7): hook rejected operation"), "{error}");
+
+    let mut command = std::process::Command::new("/bin/sh");
+    command.args(["-c", "printf 'failure on stdout'; exit 1"]);
+    let error = TaskwarriorTui::run_task_command(&mut command).unwrap_err();
+    assert!(error.ends_with("failed (exit status: 1): failure on stdout"), "{error}");
+  }
+
+  #[test]
+  fn test_run_task_command_reports_launch_error() {
+    let missing_executable = std::env::temp_dir()
+      .join(format!("taskwarrior-tui-missing-{}", std::process::id()))
+      .join("task");
+    let expected_error = std::process::Command::new(&missing_executable).output().unwrap_err();
+    let error = TaskwarriorTui::run_task_command(&mut std::process::Command::new(&missing_executable)).unwrap_err();
+    assert!(error.contains(&missing_executable.display().to_string()), "{error}");
+    assert!(error.contains(&expected_error.to_string()), "{error}");
+  }
+
+  #[cfg(unix)]
+  async fn test_selected_commands_preserve_selection_on_failure() {
+    let mut app = TaskwarriorTui::new("next", false).await.unwrap();
+    assert!(!app.tasks.is_empty());
+    let uuid = *app.tasks[0].uuid();
+    let id = app.tasks[0].id();
+    let original_tasks = app.tasks.len();
+
+    for operation in [TaskwarriorTui::task_done, TaskwarriorTui::task_delete] {
+      for executable in ["/usr/bin/false", "/nonexistent/taskwarrior-tui/task"] {
+        app.task_exe = executable.to_string();
+        app.current_selection_uuid = Some(uuid);
+        app.current_selection_id = id;
+        let error = operation(&mut app).unwrap_err();
+        assert!(error.contains(executable), "{error}");
+        assert!(error.contains(&uuid.to_string()), "{error}");
+        assert_eq!(app.current_selection_uuid, Some(uuid));
+        assert_eq!(app.current_selection_id, id);
+        assert_eq!(app.tasks.len(), original_tasks);
+      }
+
+      app.task_exe = "/usr/bin/true".to_string();
+      operation(&mut app).unwrap();
+      assert_eq!(app.current_selection_uuid, None);
+      assert_eq!(app.current_selection_id, None);
+    }
+
+    app.tasks.clear();
+    app.task_exe = "/nonexistent/taskwarrior-tui/task".to_string();
+    app.current_selection_uuid = Some(uuid);
+    app.current_selection_id = id;
+    app.task_done().unwrap();
+    app.task_delete().unwrap();
+    assert_eq!(app.current_selection_uuid, Some(uuid));
+    assert_eq!(app.current_selection_id, id);
+  }
+
   #[test]
   fn test_centered_rect() {
     assert_eq!(centered_rect(50, 50, Rect::new(0, 0, 100, 100)), Rect::new(25, 25, 50, 50));
@@ -4818,6 +4868,8 @@ mod tests {
     test_draw_timesheet_styles_week_headers_with_actions().await;
     test_update_timesheet_uses_current_week_events().await;
     // test_draw_task_report();
+    #[cfg(unix)]
+    test_selected_commands_preserve_selection_on_failure().await;
     test_task_tags().await;
     test_task_style().await;
     test_task_style_keyword_color().await;
