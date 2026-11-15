@@ -539,6 +539,7 @@ impl TaskwarriorTui {
     let output = std::process::Command::new(&self.task_exe)
       .arg("rc.color=off")
       .arg("rc._forcecolor=off")
+      .arg("rc.fontunderline=off")
       .arg("rc.verbose=nothing")
       .arg(format!("rc.defaultwidth={}", self.terminal_width))
       .arg("timesheet")
